@@ -1,0 +1,22 @@
+
+==========================================================================
+结构体检汇总 (ERROR=必改 WARN=人工核 UA=欠识别待重建不计FAIL)
+楼        层数   ERROR    WARN  状态
+c006     11       0      17  CAUTION
+c009      6      37      33  FAIL
+c022      7       0       2  CAUTION
+c027      8       0       3  CAUTION
+c044      7       0       9  CAUTION
+c045      7       0      10  CAUTION
+c079      6       0       1  CAUTION
+c080      6       0       3  CAUTION
+c083      6       0       1  CAUTION
+c084      6       0       1  CAUTION
+c085      6       0       1  CAUTION
+c086      6       0       1  CAUTION
+c103      6       0       8  CAUTION
+c104      5       0       8  UNDER欠识别
+c116      4       0      10  CAUTION
+--------------------------------------------------------------------------
+合计 ERROR=37 WARN=108  FAIL 楼=1/48
+逐栋报告在 _qa/<楼>_qa.txt

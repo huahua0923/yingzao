@@ -1,0 +1,62 @@
+{
+ "name": "c006",
+ "title": "第六教学楼（逸夫楼）",
+ "dxf": "D:\\dxf_output\\C006-第六教学楼（逸夫楼）.dxf",
+ "wall_layer": "4.2墙体",
+ "column_layer": "4.1结构柱",
+ "x_range": [
+  1013235,
+  1611850
+ ],
+ "offset": 135000,
+ "cx": 1077705.0,
+ "cy": 75610,
+ "rooms": "D:\\gym3d\\data\\buildings\\c006\\rooms.json",
+ "out_dir": "D:\\gym3d\\data\\buildings\\c006\\floors",
+ "classifier": "line",
+ "door_min_points": 10,
+ "stair_points": 5,
+ "wall_min": 0.05,
+ "wall_max": 0.40,
+ "wall_extend": 0.15,
+ "wall_fallback": 0.15,
+ "wall_thicknesses": [0.06, 0.12, 0.24, 0.27, 0.35, 0.38],
+ "door_w_single": 1.0,
+ "door_w_double": 1.5,
+ "door_depth": 0.5,
+ "outline_buf": 0.15,
+ "open_r": 0.35,
+ "outline_close_r": 2.0,
+ "parapet_margin": 0.5,
+ "layer_height": 4.2,
+ "slab": 0.2,
+ "floor_plans": [
+  [1077705, 89295, 1013235, 1142175],
+  [1077705, 224295, 1013235, 1142175],
+  [1077705, 359295, 1013235, 1142175],
+  [1077705, 494295, 1013235, 1142175],
+  [1077705, 629295, 1013235, 1142175],
+  [1077705, 764295, 1013235, 1142175],
+  [1547380, 84494, 1482910, 1611850],
+  [1547380, 219495, 1482910, 1611850],
+  [1547380, 354495, 1482910, 1611850],
+  [1547380, 489495, 1482910, 1611850],
+  [1547380, 624495, 1482910, 1611850]
+ ],
+ "transition": {
+  "6": {
+   "slab_from": 0,
+   "wall_x": [1524310, 1570450]
+  }
+ },
+ "outline_unify_floors": [0, 1, 2, 3, 4, 5],
+ "style": {
+  "facade": "#a4533d",
+  "inner": "#cfc9bd",
+  "roof": "#6b5a4a",
+  "roofType": "flat",
+  "parapet": "#6a4a40",
+  "glass": "#789cb8",
+  "door": "#8a5a38"
+ }
+}

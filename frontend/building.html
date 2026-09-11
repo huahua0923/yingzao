@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教学楼 · 整栋立体模型</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #15151f; }
+  #bar { position: fixed; left: 14px; top: 12px; z-index: 6; display: flex; align-items: center; gap: 8px; }
+  #bar label { color: #9aa0b5; font: 13px "Microsoft YaHei", sans-serif; }
+  #bar select { padding: 5px 8px; background: #20242f; color: #dfe3f0; border: 1px solid #3a4154;
+                border-radius: 5px; font: 13px "Microsoft YaHei", sans-serif; max-width: 260px; }
+  #bar select:focus { outline: none; border-color: #33ff99; }
+  #bar #bname { color: #8fe0a8; font: 600 14px "Microsoft YaHei", sans-serif; margin-left: 6px;
+                text-shadow: 0 0 6px rgba(0,0,0,.6); white-space: nowrap; }
+  #hint { position: fixed; left: 14px; top: 44px; color: #9aa0b5; font: 13px/1.7 "Microsoft YaHei", sans-serif;
+          pointer-events: none; user-select: none; }
+  #hint b { color: #dfe3f0; }
+  #floors { position: fixed; left: 14px; top: 118px; z-index: 5; display: flex; gap: 6px; flex-wrap: wrap; }
+  #floors button { padding: 6px 12px; background: #20242f; color: #9aa0b5; border: 1px solid #3a4154;
+                   border-radius: 5px; font: 13px "Microsoft YaHei", sans-serif; cursor: pointer; }
+  #floors button:hover { color: #dfe3f0; border-color: #5a6478; }
+  #floors button.active { background: #2a4a3a; color: #33ff99; border-color: #33ff99; }
+  #tag { display: none; position: fixed; z-index: 10; padding: 3px 9px; background: #20242f;
+         color: #dfe3f0; border: 1px solid #3a4154; border-radius: 4px;
+         font: 12px/1.5 "Microsoft YaHei", sans-serif; pointer-events: none; white-space: nowrap; }
+  #info { display: none; position: fixed; right: 14px; top: 12px; z-index: 10; padding: 10px 14px;
+          background: rgba(20, 23, 32, .92); color: #c8cddb; border: 1px solid #3a4154;
+          border-radius: 6px; font: 13px/1.9 "Microsoft YaHei", sans-serif; max-width: 280px; }
+  #info .t { color: #33ff99; font-weight: 700; font-size: 14px; }
+  #info b { color: #8f96a8; font-weight: 400; margin-right: 4px; }
+  #info .tip { color: #6f7690; font-size: 11px; margin-top: 4px; }
+  #panel { position: fixed; right: 14px; bottom: 14px; z-index: 20; width: 224px;
+           background: rgba(20, 23, 32, .94); color: #c8cddb; border: 1px solid #3a4154;
+           border-radius: 8px; font: 13px/1.6 "Microsoft YaHei", sans-serif; }
+  #panel summary { cursor: pointer; padding: 8px 12px; color: #dfe3f0; font-weight: 600; user-select: none; }
+  #panel .body { padding: 0 12px 12px; }
+  #panel label { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; }
+  #panel label span { color: #9aa0b5; }
+  #panel input, #panel select { width: 84px; padding: 3px 6px; background: #20242f; color: #dfe3f0;
+                                border: 1px solid #3a4154; border-radius: 4px; font: 12px "Microsoft YaHei", sans-serif; }
+  #panel button { width: 100%; margin-top: 8px; padding: 6px; background: #2a4a3a; color: #33ff99;
+                  border: 1px solid #33ff99; border-radius: 5px; cursor: pointer; font: 13px "Microsoft YaHei", sans-serif; }
+  #panel button:hover { background: #33604a; }
+  #panel #pathFrom, #panel #pathTo { width: 118px; }
+  #panel #pathClear { background: #3a2b2b; color: #ff9d9d; border-color: #7a3a3a; }
+  #panel #pathClear:hover { background: #4a3636; }
+  #panel #pathInfo { margin-top: 8px; color: #9aa0b5; font-size: 12px; line-height: 1.6; white-space: pre-line; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <label>建筑</label>
+  <select id="buildingSel"></select>
+  <span id="bname"></span>
+</div>
+<div id="hint">
+  <b>拖拽</b>旋转 &nbsp; <b>滚轮</b>缩放 &nbsp; <b>右键拖拽</b>平移<br>
+  <b>悬停</b>看构件名 &nbsp; <b>点击房间地面</b>看数据库信息（编号/面积/用途/单位）<br>
+  标准墙厚(外 0.30/内 0.24) · 外立面开窗 · 门 2.1m 高
+</div>
+<div id="floors">
+  <button data-f="all" class="active">全部</button>
+  <span id="floorBtns"></span>
+  <button id="wallToggle" class="active">墙体 ✓</button>
+  <button id="wallTransparentToggle">墙体透明 ✗</button>
+  <button id="winToggle">窗户 ✗</button>
+</div>
+<div id="tag"></div>
+<div id="info"></div>
+<div id="panel">
+  <details open>
+    <summary>构件参数</summary>
+    <div class="body">
+      <label><span>窗宽 (m)</span><input id="p_win_w" type="number" step="0.1" min="0.4" value="2.0"></label>
+      <label><span>窗高 (m)</span><input id="p_win_h" type="number" step="0.1" min="0.4" value="1.5"></label>
+      <label><span>窗台高 (m)</span><input id="p_win_sill" type="number" step="0.1" min="0" value="0.9"></label>
+      <label><span>窗间距 (m)</span><input id="p_win_spacing" type="number" step="0.5" min="2" value="6.5"></label>
+      <button id="p_apply">重新生成</button>
+    </div>
+  </details>
+  <details open>
+    <summary>路径规划</summary>
+    <div class="body">
+      <label><span>起点</span><select id="pathFrom"></select></label>
+      <label><span>终点</span><select id="pathTo"></select></label>
+      <button id="pathGo">规划路径</button>
+      <button id="pathClear">清除路径</button>
+      <div id="pathInfo"></div>
+    </div>
+  </details>
+</div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// 标准参数（fetch data/spec.json；失败回退内置常量，两条渲染路径同源）
+const DEFAULT_SPEC = {
+  floor_h: 4.2, slab_t: 0.2, wall_h: 4.0,
+  outer_wall_t: 0.30, inner_wall_t: 0.24,
+  door_h: 2.4, door_panel_t: 0.05,
+  column_w: 0.5, column_d: 0.5,
+  win_sill: 0.9, win_h: 1.5, win_w: 2.0, win_spacing: 6.5,
+  win_in_depth: 0.40, win_out: 0.06, glass_t: 0.04, win_frame_t: 0.06,
+  win_margin: 1.5, win_min_seg: 3.5, win_min_run: 2.0,
+  roof_t: 0.2, parapet_h: 0.9, parapet_t: 0.5,
+  stair_landing: 0.15,
+};
+let S = DEFAULT_SPEC;
+
+let FLOOR_COUNT = 5;          // 由当前建筑的楼层数覆盖
+let LAYER_HEIGHT = 4.2;       // 层高(m)，由 spec.floor_h 覆盖
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x171a23);
+scene.fog = new THREE.Fog(0x171a23, 260, 760);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.5, 1600);
+camera.position.set(105, 82, 122);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a3a44, 0.55));
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.6);
+sun.position.set(70, 140, 60);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 500;
+const sc = 140;
+sun.shadow.camera.left = -sc; sun.shadow.camera.right = sc;
+sun.shadow.camera.top = sc; sun.shadow.camera.bottom = -sc;
+sun.shadow.bias = -0.0002;
+sun.shadow.normalBias = 0.03;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x8899cc, 0.6);
+rim.position.set(-60, 45, -55);
+scene.add(rim);
+
+const ROOM_PAD = 0.05;   // 房间色块厚度：贴在楼板顶上方，避免与楼板 z-fighting
+const baseMat = new THREE.MeshStandardMaterial({ color: 0xa8c8e8, roughness: 0.9 });   // 地面浅蓝（楼板铺满整层，走廊/墙下也盖住，房间色块只作点击层）
+let wallInnerMat = new THREE.MeshStandardMaterial({ color: 0xcfc9bd, roughness: 0.9, metalness: 0.0 });
+let wallOuterMat = new THREE.MeshStandardMaterial({ color: 0xa4533d, roughness: 0.85, metalness: 0.0 });
+let parapetMat = new THREE.MeshStandardMaterial({ color: 0x5a4a40, roughness: 0.8 });
+let roofMat = new THREE.MeshStandardMaterial({ color: 0x434b4a, roughness: 0.85 });
+let glassMat = new THREE.MeshStandardMaterial({ color: 0x789cb8, roughness: 0.06, metalness: 0.05, transparent: true, opacity: 0.6, depthWrite: false, emissive: 0x223a4d, emissiveIntensity: 0.6 });
+let winFrameMat = new THREE.MeshStandardMaterial({ color: 0xc2c7ce, roughness: 0.45, metalness: 0.35 });   // 铝合金窗框（金属度降 0.35，避免反射蓝色环境把框染深蓝/黑）
+let doorMat = new THREE.MeshStandardMaterial({ color: 0x8a5a38, roughness: 0.55, metalness: 0.05 });
+const stairMat = new THREE.MeshStandardMaterial({ color: 0xd0c198, roughness: 0.7 });
+const columnMat = new THREE.MeshStandardMaterial({ color: 0x9aa2b0, roughness: 0.7, metalness: 0.05 });
+const shaftMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.8, metalness: 0.1 });
+
+// 墙体透明：半透明看穿内部（区别于「墙体 ✓」的完全隐藏）
+let wallsTransparent = false;
+const WALL_TRANSPARENT_OPACITY = 0.25;
+
+function hexColor(hex, fallback) {
+  const c = new THREE.Color(fallback);
+  if (typeof hex === 'string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) c.set(hex);
+  return c;
+}
+// 外观样式：读 spec.style 上色（外墙/内墙/屋顶/玻璃/门），外墙不透明 → 实心建筑
+function applyStyle() {
+  const st = S.style || {};
+  wallOuterMat.color.copy(hexColor(st.facade, 0xa4533d));
+  wallOuterMat.transparent = wallsTransparent; wallOuterMat.opacity = wallsTransparent ? WALL_TRANSPARENT_OPACITY : 1;
+  wallOuterMat.roughness = 0.85; wallOuterMat.metalness = 0.0;
+  wallInnerMat.color.copy(hexColor(st.inner, 0xcfc9bd));
+  wallInnerMat.transparent = wallsTransparent; wallInnerMat.opacity = wallsTransparent ? WALL_TRANSPARENT_OPACITY : 1;
+  roofMat.color.copy(hexColor(st.roof, 0x434b4a));
+  parapetMat.color.copy(hexColor(st.parapet || st.roof, 0x5a4a40));
+  glassMat.color.copy(hexColor(st.glass, 0x789cb8));
+  doorMat.color.copy(hexColor(st.door, 0x8a5a38));
+}
+const roomColor = (p) => {
+  if (p === '实验准备室') return 0xb9c8d4;   // 蓝灰
+  if (p === '值班室') return 0xd8c6a8;       // 暖橙
+  return 0xa8c8e8;                            // 实验室 浅蓝
+};
+
+function makeShape(pts, holes) {
+  const s = new THREE.Shape();
+  s.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]);
+  s.closePath();
+  if (holes) for (const h of holes) if (h && h.length >= 3) s.holes.push(makeHolePath(h));
+  return s;
+}
+function makeHolePath(pts) {
+  const hp = new THREE.Path();
+  hp.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) hp.lineTo(pts[i][0], pts[i][1]);
+  hp.closePath();
+  return hp;
+}
+function addExtrude(shape, holes, depth, mat, y0) {
+  if (holes) for (const h of holes) shape.holes.push(makeHolePath(h));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotateX(-Math.PI / 2);          // shape(xy) 挤 z -> xz 平面挤出 y(高)
+  mesh.position.y = y0 || 0;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// 实例化盒子：把大量同材质 BoxGeometry 合并成一个 InstancedMesh（1 个 draw call）。
+// list: [{sx,sy,sz,x,y,z,data}]；data 存 userData.instances，点击经 instanceId 反查。
+function addInstancedBoxes(list, group, mat) {
+  if (!list.length) return;
+  const geo = new THREE.BoxGeometry(1, 1, 1);   // 单位盒模板，逐实例 scale 出真实尺寸
+  const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+  const m4 = new THREE.Matrix4();
+  list.forEach((b, idx) => {
+    m4.makeScale(b.sx, b.sy, b.sz);
+    m4.setPosition(b.x, b.y, b.z);
+    mesh.setMatrixAt(idx, m4);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.castShadow = false; mesh.receiveShadow = false;
+  mesh.userData = { instances: list.map((b) => b.data) };
+  group.add(mesh);
+  wallMeshes.push(mesh);
+}
+
+// ---------- 前端布窗（与 Python facade_windows 等价，参数可调） ----------
+function pointToSegDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const L2 = dx * dx + dy * dy;
+  if (L2 === 0) return Math.hypot(px - ax, py - ay);
+  let t = ((px - ax) * dx + (py - ay) * dy) / L2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function polyBoundaryDist(px, py, outline) {
+  let d = Infinity;
+  for (let i = 0; i < outline.length; i++) {
+    const a = outline[i], b = outline[(i + 1) % outline.length];
+    d = Math.min(d, pointToSegDist(px, py, a[0], a[1], b[0], b[1]));
+  }
+  return d;
+}
+function pointInPoly(px, py, poly) {
+  // 射线法（奇偶规则）：判断点是否落在多边形（含墙环薄带）内部
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function facadeWindows(floor, spec) {
+  // 沿外墙实心段长边等距布窗（合成数据，DXF 无窗），与 Python facade_windows 等价
+  const windows = [];
+  const outline = floor.outline;
+  for (const w of floor.walls) {
+    if (w.type !== 'outer') continue;
+    const poly = w.poly;
+    for (let i = 0; i < poly.length; i++) {
+      const ax = poly[i][0], ay = poly[i][1];
+      const bx = poly[(i + 1) % poly.length][0], by = poly[(i + 1) % poly.length][1];
+      const L = Math.hypot(bx - ax, by - ay);
+      if (L < spec.win_min_seg) continue;
+      const mx = (ax + bx) / 2, my = (ay + by) / 2;
+      if (polyBoundaryDist(mx, my, outline) >= spec.outer_wall_t * 0.5) continue;  // 只留外皮面：内皮面距外轮廓=墙厚0.24，半厚0.12剔除，否则内皮也布窗（窗翻倍）
+      const dx = (bx - ax) / L, dy = (by - ay) / L;
+      let nx = dy, ny = -dx;  // 沿墙方向旋 90° 得法线
+      // 内法线探测：不能靠质心（凹墙如南凹口侧墙，质心在凹口侧=朝外，会把法线翻反）。
+      // 直接从外皮中点往法线方向探 0.02，落在墙环内的那侧才是"往墙里"的内法线。
+      if (!pointInPoly(mx + nx * 0.02, my + ny * 0.02, poly)) { nx = -nx; ny = -ny; }
+      const run = L - 2 * spec.win_margin;
+      if (run < spec.win_min_run) continue;
+      const nwin = Math.floor(run / spec.win_spacing) + 1;
+      const step = run / nwin;
+      for (let k = 0; k < nwin; k++) {
+        const s = spec.win_margin + step * k + step / 2;
+        const cx = ax + dx * s, cy = ay + dy * s;
+        windows.push({
+          wallId: w.id,
+          x: +cx.toFixed(3), y: +cy.toFixed(3),
+          w: spec.win_w, h: spec.win_h, sill: spec.win_sill,
+          horiz: Math.abs(dx) >= Math.abs(dy),
+          dx: +dx.toFixed(3), dy: +dy.toFixed(3),
+          nx: +nx.toFixed(3), ny: +ny.toFixed(3),
+        });
+      }
+    }
+  }
+  return windows;
+}
+
+const shellGroup = new THREE.Group();
+scene.add(shellGroup);
+const shellFloorGroups = [];
+const floorGroups = [];
+const wallMeshes = [];
+const roofMeshes = [];   // 屋面板/女儿墙：浏览单层时隐藏，看进楼内
+
+async function loadSpec(dir) {
+  try {
+    const res = await fetch(`${dir}/spec.json`);
+    if (res.ok) S = Object.assign({}, DEFAULT_SPEC, await res.json());
+  } catch (e) { console.warn('加载 spec.json 失败，回退内置常量', e); }
+}
+async function loadFloors(dir, count) {
+  const floors = [];
+  for (let F = 0; F < count; F++) {
+    const res = await fetch(`${dir}/floors/floor${F}.json`);
+    if (!res.ok) throw new Error(`${dir}/floors/floor${F}.json ${res.status}`);
+    floors.push(await res.json());
+  }
+  return floors;
+}
+
+function makeFlight(xCenter, width, yStart, yEnd, zBase, rise, N, mat, parent, F, idx) {
+  const tread = (yEnd - yStart) / N;
+  for (let i = 0; i < N; i++) {
+    const yC = yStart + (i + 0.5) * tread;
+    const geo = new THREE.BoxGeometry(width, rise, tread);
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(xCenter, zBase + i * rise + rise / 2, -yC);
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData = { type: '楼梯', label: `${F + 1}层楼梯 #${idx + 1}`, color: '#d0c198', floor: F };
+    parent.add(m);
+  }
+}
+
+// 窗洞不再用「单个带洞 extrude」：窗洞横跨墙厚、恰好贴在 band（墙环）的里外两条边界上，THREE 的
+// ExtrudeGeometry（ShapeUtils.triangulateShape → earcut）会把「贴边界的洞」当退化丢掉（墙皮实心、玻璃被埋），
+// 内缩 eps 又会留 2mm 不透明墙皮盖住整扇窗（从外看仍是实墙）。故窗带改为拆成「墙段盒子」、窗位留真缺口，
+// 见 renderWindowBandSegments —— 等价 SU 的「画窗轮廓 → 推穿成洞」。
+// 玻璃：半透明薄板，居中于墙厚（略内嵌于窗框），四周比窗洞内缩一框料厚（win_frame_t）。
+function addGlass(win, y0, parent, F) {
+  const ft = S.win_frame_t;
+  const geo = new THREE.BoxGeometry(win.w - 2 * ft, win.h - 2 * ft, S.glass_t);
+  const m = new THREE.Mesh(geo, glassMat);
+  m.rotation.y = Math.atan2(win.dy, win.dx);
+  const recess = S.outer_wall_t / 2;   // 玻璃坐进窗框中央（墙厚中线）
+  m.position.set(win.x + win.nx * recess, y0 + S.win_sill + win.h / 2, -win.y - win.ny * recess);
+  m.userData = { type: '窗', label: `${F + 1}层窗`, color: '#789cb8', floor: F };
+  wallMeshes.push(m);
+  parent.add(m);
+}
+
+// 窗框（SU 铝合金框）：四根框料围住窗洞，跨满墙厚、外皮齐平；玻璃内嵌
+function addWindowFrame(win, y0, parent, F) {
+  const ft = S.win_frame_t;
+  const wallT = S.outer_wall_t;
+  const half = win.w / 2;
+  const sillTop = y0 + S.win_sill;
+  const winTop = sillTop + S.win_h;
+  const recess = wallT / 2;              // 框中心在墙厚中线，外皮齐平（窗洞已整墙厚打通，框外皮与墙外皮共面不重叠）
+  const rotY = Math.atan2(win.nx, -win.ny);   // 厚度轴(Z)对齐内法线（凹墙内法线被翻转，atan2(dy,dx)会把框厚度朝外）
+  const vMid = (sillTop + winTop) / 2;
+  // [宽(沿墙), 高(竖直), 沿墙中心偏移, 竖直中心高度]
+  const members = [
+    [win.w,     ft,      0,              winTop - ft / 2],  // 上框
+    [win.w,     ft,      0,              sillTop + ft / 2], // 下框
+    [ft,        win.h,   -half + ft / 2, vMid],             // 左框
+    [ft,        win.h,   +half - ft / 2, vMid],             // 右框
+  ];
+  for (const [w, h, alongOff, vC] of members) {
+    const geo = new THREE.BoxGeometry(w, h, wallT);
+    const m = new THREE.Mesh(geo, winFrameMat);
+    m.rotation.y = rotY;
+    const cx = win.x + win.dx * alongOff + win.nx * recess;
+    const cz = -win.y - win.dy * alongOff - win.ny * recess;
+    m.position.set(cx, vC, cz);
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData = { type: '窗框', label: `${F + 1}层窗框`, color: '#' + winFrameMat.color.getHexString(), floor: F };
+    wallMeshes.push(m);
+    parent.add(m);
+  }
+}
+
+// 窗带墙段：把外皮直段拆成一块块「墙段盒子」，窗所在段按窗位切开留真缺口（= SU 推穿成洞）。
+function renderWindowBandSegments(w, wins, outline, yBottom, depth, F, parent, label) {
+  const wallT = S.outer_wall_t;
+  const poly = w.poly;
+  const n = poly.length;
+  // 1) 外皮边 = 边中点到外轮廓 < 半墙厚；内法线用 pointInPoly 探（凹墙质心会翻反，不能靠质心）
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    const ax = poly[i][0], ay = poly[i][1];
+    const bx = poly[(i + 1) % n][0], by = poly[(i + 1) % n][1];
+    const L = Math.hypot(bx - ax, by - ay);
+    if (L < 1e-6) continue;
+    const mx = (ax + bx) / 2, my = (ay + by) / 2;
+    if (polyBoundaryDist(mx, my, outline) >= wallT * 0.5) continue;  // 非外皮边（内皮面）
+    const dx = (bx - ax) / L, dy = (by - ay) / L;
+    let nx = dy, ny = -dx;
+    if (!pointInPoly(mx + nx * 0.02, my + ny * 0.02, poly)) { nx = -nx; ny = -ny; }
+    edges.push({ ax, ay, bx, by, dx, dy, nx, ny, L, wins: [] });
+  }
+  // 2) 窗归到最近的边
+  for (const win of wins) {
+    let best = null, bestD = 1e9;
+    for (const e of edges) {
+      const d = pointToSegDist(win.x, win.y, e.ax, e.ay, e.bx, e.by);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    if (best && bestD < 0.3) best.wins.push(win);
+  }
+  // 3) 每条外皮边按窗位切成 [start,end] 墙块，每块一个盒子
+  for (const e of edges) {
+    const cuts = e.wins
+      .map(win => ({ t: (win.x - e.ax) * e.dx + (win.y - e.ay) * e.dy, half: win.w / 2 }))
+      .sort((p, q) => p.t - q.t);
+    const segs = [];
+    let cur = 0;
+    for (const c of cuts) {
+      if (c.t - c.half > cur + 1e-3) segs.push([cur, c.t - c.half]);
+      cur = Math.max(cur, c.t + c.half);
+    }
+    if (e.L - cur > 1e-3) segs.push([cur, e.L]);
+    for (const [s0, s1] of segs) {
+      const len = s1 - s0;
+      if (len < 1e-3) continue;
+      const cxm = e.ax + e.dx * ((s0 + s1) / 2);
+      const cym = e.ay + e.dy * ((s0 + s1) / 2);
+      const geo = new THREE.BoxGeometry(len, depth, wallT);
+      const m = new THREE.Mesh(geo, wallOuterMat);
+      m.rotation.y = Math.atan2(e.nx, -e.ny);   // 厚度轴(Z)对齐内法线（凹墙内法线被翻转，不能固定 atan2(dy,dx)）
+      m.position.set(cxm + e.nx * wallT / 2, yBottom + depth / 2, -(cym + e.ny * wallT / 2));
+      m.castShadow = false; m.receiveShadow = false;
+      m.userData = { type: '外墙', label: `${F + 1}层${label}`, color: '#8b8e98', floor: F };
+      wallMeshes.push(m);
+      parent.add(m);
+    }
+  }
+}
+
+// 外墙三段：底(无窗) + 窗带(真洞) + 顶(无窗) + 玻璃/窗框
+function renderWindowedWall(w, wins, z, F, parent, outline) {
+  const y0 = z + S.slab_t;
+  const sillTop = y0 + S.win_sill;
+  const winTop = sillTop + S.win_h;
+  const wallTop = y0 + w.height;
+  const base = makeShape(w.poly, w.holes);
+  for (const [depth, bY, label] of [
+    [sillTop - y0, y0, '外墙下段'],
+    [wallTop - winTop, winTop, '外墙上段'],
+  ]) {
+    const m = addExtrude(base, [], depth, wallOuterMat, bY);
+    m.castShadow = false; m.receiveShadow = false;
+    m.userData = { type: '外墙', label: `${F + 1}层${label}`, color: '#8b8e98', floor: F };
+    wallMeshes.push(m);
+    parent.add(m);
+  }
+  renderWindowBandSegments(w, wins, outline, sillTop, winTop - sillTop, F, parent, '外墙窗带');
+  for (const win of wins) { addWindowFrame(win, y0, parent, F); addGlass(win, y0, parent, F); }
+}
+
+// 中央主体女儿墙：沿 outline 每边外扩一圈薄墙（含北边）
+function renderParapetRing(outline, y0, F, parent, label = '中央女儿墙') {
+  const t = S.parapet_t, h = S.parapet_h;
+  let cx = 0, cy = 0;
+  for (const p of outline) { cx += p[0]; cy += p[1]; }
+  cx /= outline.length; cy /= outline.length;
+  const n = outline.length;
+  for (let i = 0; i < n; i++) {
+    const a = outline[i], b = outline[(i + 1) % n];
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const L = Math.hypot(dx, dy);
+    if (L < 1e-6) continue;
+    let nx = dy / L, ny = -dx / L;                      // 法线
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    if ((mx - cx) * nx + (my - cy) * ny < 0) { nx = -nx; ny = -ny; }   // 朝外
+    const geo = new THREE.BoxGeometry(L, h, t);
+    const m = new THREE.Mesh(geo, parapetMat);
+    m.rotation.y = Math.atan2(dy, dx);
+    m.position.set(mx + nx * t / 2, y0 + h / 2, -(my + ny * t / 2));
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData = { type: '女儿墙', label: `${F + 1}层${label}`, color: '#' + parapetMat.color.getHexString(), floor: F };
+    roofMeshes.push(m);
+    parent.add(m);
+  }
+}
+
+// 双坡屋顶（苏式坡顶）：沿长轴设脊，两侧坡面下到两檐，两端山墙三角封口
+function renderGableRoof(outline, roofY, F, parent) {
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+  for (const p of outline) {
+    if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+    if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+  }
+  const w = maxX - minX, d = maxY - minY;
+  if (w < 0.5 || d < 0.5) return null;
+  const rise = Math.min(w, d) * 0.42;   // 坡高 ≈ 0.42 短跨
+  const horiz = w >= d;                 // 长轴 x → 脊沿 x
+  const V = (x, y, h) => new THREE.Vector3(x, h, -y);
+  const verts = [];
+  const tri = (a, b, c) => { verts.push(V(a[0], a[1], a[2]), V(b[0], b[1], b[2]), V(c[0], c[1], c[2])); };
+  const cy = (minY + maxY) / 2, cx = (minX + maxX) / 2;
+  if (horiz) {
+    tri([minX, minY, roofY], [maxX, minY, roofY], [maxX, cy, roofY + rise]);
+    tri([minX, minY, roofY], [maxX, cy, roofY + rise], [minX, cy, roofY + rise]);
+    tri([minX, cy, roofY + rise], [maxX, cy, roofY + rise], [maxX, maxY, roofY]);
+    tri([minX, cy, roofY + rise], [maxX, maxY, roofY], [minX, maxY, roofY]);
+    tri([minX, minY, roofY], [minX, cy, roofY + rise], [minX, maxY, roofY]);
+    tri([maxX, minY, roofY], [maxX, maxY, roofY], [maxX, cy, roofY + rise]);
+  } else {
+    tri([minX, minY, roofY], [minX, maxY, roofY], [cx, maxY, roofY + rise]);
+    tri([minX, minY, roofY], [cx, maxY, roofY + rise], [cx, minY, roofY + rise]);
+    tri([cx, minY, roofY + rise], [cx, maxY, roofY + rise], [maxX, maxY, roofY]);
+    tri([cx, minY, roofY + rise], [maxX, maxY, roofY], [maxX, minY, roofY]);
+    tri([minX, minY, roofY], [cx, minY, roofY + rise], [maxX, minY, roofY]);
+    tri([minX, maxY, roofY], [maxX, maxY, roofY], [cx, maxY, roofY + rise]);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts.flatMap((v) => [v.x, v.y, v.z]), 3));
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, roofMat);
+  m.castShadow = true; m.receiveShadow = true;
+  m.userData = { type: '屋顶', label: '坡屋顶', color: '#' + roofMat.color.getHexString(), floor: F };
+  parent.add(m);
+  roofMeshes.push(m);
+  return m;
+}
+
+function renderFloor(g, F) {
+  const z = F * LAYER_HEIGHT;
+  const isTop = !!g.roof;
+  const shell = new THREE.Group();
+  const interior = new THREE.Group();
+  interior.name = `floor-${F}`;
+  // 窗户：前端按当前 spec 动态生成（参数可调，与 Python facade_windows 等价）。
+  // 合成窗默认关闭（windowsVisible=false）：外墙渲成整片实墙；打开后才开洞 + 贴玻璃。
+  const allWindows = windowsVisible ? facadeWindows(g, S) : [];
+
+  // 楼板：楼梯井 + 电梯井都开洞（竖井贯通）。电梯井每层都开（含首层，井道从首层起竖，
+  // 顶层设备间楼板也开洞让井道穿入机房；屋顶板单独渲染为实心，覆盖井顶）。
+  const slabHoles = [];
+  if (F > 0) {
+    for (const s of (g.stairwells || [])) {
+      slabHoles.push([[s.x0, s.yBot], [s.x1, s.yBot], [s.x1, s.yTop], [s.x0, s.yTop]]);
+    }
+  }
+  for (const e of (g.elevators || [])) {
+    slabHoles.push([[e.x0, e.y0], [e.x1, e.y0], [e.x1, e.y1], [e.x0, e.y1]]);
+  }
+  const slab = addExtrude(makeShape(g.outline), slabHoles.length ? slabHoles : null, S.slab_t, baseMat, z);
+  slab.userData = { type: '楼板', label: `${F + 1}层楼板`, color: '#2a2f3a', floor: F };
+  shell.add(slab);
+
+  // 房间色块
+  g.rooms.forEach((r) => {
+    const c = roomColor(r.purpose);
+    const m = addExtrude(makeShape(r.poly), null, ROOM_PAD,
+      new THREE.MeshStandardMaterial({ color: c, roughness: 0.95 }), z + S.slab_t);
+    m.userData = { type: '房间', id: r.id, number: r.number, floor: F,
+                   label: `${r.number} ${r.purpose || ''}`.trim(),
+                   color: '#' + c.toString(16).padStart(6, '0') };
+    interior.add(m);
+  });
+
+  // 墙（唯一墙源，按 type）：外墙开窗三段挤，内墙普通挤，女儿墙贴楼板标高
+  g.walls.forEach((w, i) => {
+    const wins = allWindows.filter((win) => win.wallId === w.id);
+    if (w.type === 'outer' && wins.length) {
+      renderWindowedWall(w, wins, z, F, shell, g.outline);
+      return;
+    }
+    let y0, h, mat, type;
+    if (w.type === 'parapet') {
+      // 翼楼屋面女儿墙：贴本层楼板标高（level=slab）
+      y0 = z; h = w.height; mat = parapetMat; type = '女儿墙';
+    } else {
+      y0 = z + S.slab_t; h = w.height; mat = w.type === 'outer' ? wallOuterMat : wallInnerMat;
+      type = w.type === 'outer' ? '外墙' : '内墙';
+    }
+    const m = addExtrude(makeShape(w.poly, w.holes), null, h, mat, y0);
+    if (w.type !== 'parapet') { m.castShadow = false; m.receiveShadow = false; }
+    m.userData = { type, label: `${F + 1}层${type} #${i + 1}`, color: '#a6adb9', thickness: w.thickness, height: w.height, floor: F };
+    (w.type === 'parapet' ? roofMeshes : wallMeshes).push(m);
+    (w.type === 'outer' || w.type === 'parapet' ? shell : interior).add(m);
+  });
+
+  // 门：嵌进墙洞的木色板（高 2.1）；落在电梯井口 0.7m 内的门 = 电梯门（金属色 + 标签）
+  const elevs = g.elevators || [];
+  const isElevDoor = (d) => elevs.some((e) => {
+    const dx = Math.max(e.x0 - d.x, 0, d.x - e.x1);
+    const dy = Math.max(e.y0 - d.y, 0, d.y - e.y1);
+    return Math.hypot(dx, dy) < 0.7;
+  });
+  // 门 + 门头过梁：InstancedMesh 一次性画完（158 门 → 1 个 draw call，158 过梁 → ≤2 个）。
+  // 单位盒做模板，逐实例写 scale/position；点击经 instanceId 反查 userData.instances 取数据。
+  const doorPanels = { door: [], shaft: [] };   // 门扇按材质分桶（电梯门=shaftMat）
+  const lintels = { outer: [], inner: [] };     // 过梁按外/内墙材质分桶
+  g.doors.forEach((d, i) => {
+    const h = d.h || S.door_h, t = S.door_panel_t;
+    const isElev = isElevDoor(d);
+    const data = {
+      type: isElev ? '电梯门' : '门',
+      label: isElev ? `${F + 1}层电梯门 #${i + 1}` : `${F + 1}层门 #${i + 1}${d.outer ? '（外墙）' : '（内墙）'}`,
+      color: isElev ? '#8b929e' : '#c4965c', floor: F,
+      w: d.w, h, horiz: d.horiz, outer: d.outer, isElev,
+    };
+    const sx = d.horiz ? d.w : t, sz = d.horiz ? t : d.w;   // 横门 w×h×t，竖门 t×h×w
+    (isElev ? doorPanels.shaft : doorPanels.door).push({
+      sx, sy: h, sz, x: d.x, y: z + S.slab_t + h / 2, z: -d.y, data,
+    });
+    // 门头过梁：门洞在墙 poly 里挖穿到墙顶，按挖洞盒边界在门顶以上补回墙（门洞只到门高）。
+    const w0 = z + S.slab_t, wallTop = w0 + S.wall_h, doorTop = w0 + h;
+    if (doorTop < wallTop && d.bx0 != null) {
+      const lw = d.bx1 - d.bx0, ld = d.by1 - d.by0, lh = wallTop - doorTop;
+      (d.outer ? lintels.outer : lintels.inner).push({
+        sx: lw, sy: lh, sz: ld,
+        x: (d.bx0 + d.bx1) / 2, y: doorTop + lh / 2, z: -((d.by0 + d.by1) / 2),
+        data: { type: '门头过梁', label: `${F + 1}层门头墙`, color: '#a6adb9', floor: F },
+      });
+    }
+  });
+  addInstancedBoxes(doorPanels.door, interior, doorMat);
+  addInstancedBoxes(doorPanels.shaft, interior, shaftMat);
+  addInstancedBoxes(lintels.outer, shell, wallOuterMat);
+  addInstancedBoxes(lintels.inner, interior, wallInnerMat);
+
+  // 电梯井：井道墙 = 混凝土核心筒（四边薄墙，全高），井道内空腔由楼板洞贯通
+  elevs.forEach((e, i) => {
+    const ew = e.x1 - e.x0, ed = e.y1 - e.y0;
+    const cx = (e.x0 + e.x1) / 2, cy = (e.y0 + e.y1) / 2;
+    const t = 0.15, H = S.wall_h;
+    const segs = [
+      [ew + t * 2, t, cx, e.y0 - t / 2],   // 南边
+      [ew + t * 2, t, cx, e.y1 + t / 2],   // 北边
+      [t, ed + t * 2, e.x0 - t / 2, cy],   // 西边
+      [t, ed + t * 2, e.x1 + t / 2, cy],   // 东边
+    ];
+    segs.forEach(([w, d, px, py], j) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), shaftMat);
+      m.position.set(px, z + S.slab_t + H / 2, -py);
+      m.castShadow = true; m.receiveShadow = true;
+      m.userData = { type: '电梯井', label: `${F + 1}层电梯井墙 #${i + 1}-${j + 1}`, color: '#6b7280', floor: F, shaftW: e.w, shaftD: e.d };
+      shell.add(m);
+    });
+  });
+
+  // 入口台阶（仅首层）
+  g.stairs.forEach((s, i) => {
+    const top = 0.60 - i * 0.15;
+    const back = s.nosing - 0.30;
+    const depth = s.nosing - back;
+    const geo = new THREE.BoxGeometry(2 * s.hw, 0.15, depth);
+    const m = new THREE.Mesh(geo, stairMat);
+    m.position.set(0, z + top - 0.075, -(back + depth / 2));
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData = { type: '台阶', label: `台阶 #${i + 1}`, color: '#d0c198', floor: F };
+    interior.add(m);
+  });
+
+  // 室内楼梯井：跑数自动判型（1=直跑 / 2=双跑 / 3=双分式），各跑用实测 x0/x1 定位
+  // 顶层（无上层楼板）不画任何楼梯——楼梯井只剩楼板洞（下一层楼梯的到达点）
+  g.stairwells.forEach((s, idx) => {
+    if (isTop) return;
+    const W = s.x1 - s.x0;
+    const D = s.yTop - s.yBot;
+    const N = Math.max(2, s.steps);
+    const midH = LAYER_HEIGHT / 2;
+    const cx = (s.x0 + s.x1) / 2;
+    const stype = s.type || 'double';
+    const flights = s.flights || [];
+    const ld = Math.min(1.2, D * 0.3);
+    const halfRise = LAYER_HEIGHT / (2 * N);
+    const fw = (f) => f.x1 - f.x0;         // 跑宽
+    const fcx = (f) => (f.x0 + f.x1) / 2;  // 跑中心 x
+
+    if (stype === 'bifurcated' && flights.length >= 3) {
+      // 双分式：中跑（宽）先上到平台，平台后分左右两窄跑反向各上半层高
+      const k = Math.floor(flights.length / 2);
+      const mid = flights[k];
+      const sides = flights.filter((_, i) => i !== k);
+      makeFlight(fcx(mid), fw(mid), s.yBot, s.yTop, z, halfRise, N, stairMat, shell, F, idx);
+      for (const f of sides) {
+        makeFlight(fcx(f), fw(f), s.yTop, s.yBot, z + midH, halfRise, N, stairMat, shell, F, idx);
+      }
+      const landing = new THREE.Mesh(new THREE.BoxGeometry(W, S.stair_landing, ld), stairMat);
+      landing.position.set(cx, z + midH - S.stair_landing / 2, -(s.yTop - ld / 2));
+      landing.castShadow = true; landing.receiveShadow = true;
+      shell.add(landing);
+    } else if (stype === 'straight' || flights.length === 1) {
+      // 直跑：单跑全宽，一层高内 N 步
+      makeFlight(cx, W, s.yBot, s.yTop, z, LAYER_HEIGHT / N, N, stairMat, shell, F, idx);
+    } else {
+      // double：双跑平行（两条跑反向各上半层高）
+      if (flights.length >= 2) {
+        makeFlight(fcx(flights[0]), fw(flights[0]), s.yBot, s.yTop, z, halfRise, N, stairMat, shell, F, idx);
+        makeFlight(fcx(flights[flights.length - 1]), fw(flights[flights.length - 1]), s.yTop, s.yBot, z + midH, halfRise, N, stairMat, shell, F, idx);
+      } else {
+        const flightW = W / 2;
+        makeFlight(cx - flightW / 2, flightW, s.yBot, s.yTop, z, halfRise, N, stairMat, shell, F, idx);
+        makeFlight(cx + flightW / 2, flightW, s.yTop, s.yBot, z + midH, halfRise, N, stairMat, shell, F, idx);
+      }
+      const landing = new THREE.Mesh(new THREE.BoxGeometry(W, S.stair_landing, ld), stairMat);
+      landing.position.set(cx, z + midH - S.stair_landing / 2, -(s.yTop - ld / 2));
+      landing.castShadow = true; landing.receiveShadow = true;
+      shell.add(landing);
+    }
+  });
+
+  // 结构柱（每层贯通）
+  g.columns.forEach((c, i) => {
+    const geo = new THREE.BoxGeometry(c.w, S.wall_h, c.d);
+    const m = new THREE.Mesh(geo, columnMat);
+    m.position.set(c.x, z + S.slab_t + S.wall_h / 2, -c.y);
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData = { type: '结构柱', label: `${F + 1}层结构柱 #${i + 1}`, color: '#9aa2b0', floor: F, w: c.w, d: c.d };
+    shell.add(m);
+  });
+
+  // 屋顶 + 中央女儿墙（仅顶层）；浏览单层时由 setFloor 隐藏，可看进楼内
+  if (isTop) {
+    const topY = z + S.floor_h;
+    const st = S.style || {};
+    if (st.roofType === 'gable') {
+      renderGableRoof(g.outline, topY, F, shell);   // 苏式坡顶（无女儿墙，屋面出檐）
+    } else {
+      const roof = addExtrude(makeShape(g.outline), null, S.roof_t, roofMat, topY);
+      roof.userData = { type: '屋顶', label: '屋面板', color: '#' + roofMat.color.getHexString(), floor: F };
+      shell.add(roof);
+      roofMeshes.push(roof);
+      renderParapetRing(g.outline, topY, F, shell);
+    }
+    // 翼楼屋面楼板：阶梯结构下翼楼屋面 = 下层满 footprint − 顶层中央主体，
+    // 标高在本层楼板底部 z（= 下一层顶部），与翼楼屋面女儿墙同标高。
+    const wingRoof = g.roof && g.roof.wingRoof;
+    if (wingRoof) {
+      wingRoof.forEach((wr) => {
+        const m = addExtrude(makeShape(wr), null, S.roof_t, roofMat, z);
+        m.userData = { type: '屋顶', label: '翼楼屋面板', color: '#' + roofMat.color.getHexString(), floor: F };
+        shell.add(m);
+        roofMeshes.push(m);
+        renderParapetRing(wr, z, F, shell, '翼楼女儿墙');   // 翼楼屋面女儿墙（同 GLB add_parapet）
+      });
+    }
+  }
+
+  shellGroup.add(shell);
+  shellFloorGroups.push(shell);
+  floorGroups.push(interior);
+  scene.add(interior);
+}
+
+// ---------- 楼层切换 ----------
+const allBtn = document.querySelector('#floors button[data-f="all"]');
+let floorBtns = [allBtn];
+let currentFloor = 'all';
+function buildFloorButtons(count) {
+  const box = document.getElementById('floorBtns');
+  box.innerHTML = '';
+  const btns = [allBtn];
+  for (let f = 0; f < count; f++) {
+    const b = document.createElement('button');
+    b.dataset.f = String(f);
+    b.textContent = `${f + 1}层`;
+    b.addEventListener('click', () => setFloor(f));
+    box.appendChild(b);
+    btns.push(b);
+  }
+  floorBtns = btns;
+}
+function setFloor(f) {
+  currentFloor = f;
+  floorBtns.forEach(b => b.classList.toggle('active', String(b.dataset.f) === String(f)));
+  floorGroups.forEach((g, i) => { g.visible = (f === 'all' || i === f); });
+  shellFloorGroups.forEach((g, i) => { g.visible = (f === 'all' || i === f); });
+  // 浏览单层时隐藏屋顶/女儿墙，看清该层内部
+  roofMeshes.forEach((m) => { m.visible = (f === 'all'); });
+}
+allBtn.addEventListener('click', () => setFloor('all'));
+
+// ---------- 墙体显隐 ----------
+let wallsVisible = true;
+const wallBtn = document.getElementById('wallToggle');
+function setWalls(v) {
+  wallsVisible = v;
+  wallMeshes.forEach(m => { m.visible = v; });
+  wallBtn.classList.toggle('active', v);
+  wallBtn.textContent = v ? '墙体 ✓' : '墙体 ✗';
+}
+wallBtn.addEventListener('click', () => setWalls(!wallsVisible));
+
+// ---------- 墙体透明（半透明看穿内部，墙体仍在、可见但不遮挡） ----------
+const wallTransparentBtn = document.getElementById('wallTransparentToggle');
+function setWallsTransparent(v) {
+  wallsTransparent = v;
+  const op = v ? WALL_TRANSPARENT_OPACITY : 1;
+  [wallOuterMat, wallInnerMat].forEach((mat) => {
+    mat.transparent = v;
+    mat.opacity = op;
+    mat.depthWrite = !v;
+    mat.needsUpdate = true;
+  });
+  wallTransparentBtn.classList.toggle('active', v);
+  wallTransparentBtn.textContent = v ? '墙体透明 ✓' : '墙体透明 ✗';
+}
+wallTransparentBtn.addEventListener('click', () => setWallsTransparent(!wallsTransparent));
+
+// ---------- 窗户显隐（合成窗默认关，打开后重新生成外墙开洞+玻璃） ----------
+let windowsVisible = false;
+const winBtn = document.getElementById('winToggle');
+function setWindows(v) {
+  windowsVisible = v;
+  winBtn.classList.toggle('active', v);
+  winBtn.textContent = v ? '窗户 ✓' : '窗户 ✗';
+  rebuild();
+}
+winBtn.addEventListener('click', () => setWindows(!windowsVisible));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, (FLOOR_COUNT * LAYER_HEIGHT) / 2, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.update();
+
+// ---------- 点击识别 ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const tag = document.getElementById('tag');
+const info = document.getElementById('info');
+const pickables = [];
+
+function isEffectivelyVisible(obj) {
+  while (obj) {
+    if (obj.visible === false) return false;
+    obj = obj.parent;
+  }
+  return true;
+}
+
+const API_BASE = 'http://localhost:8123';
+const roomMap = {};
+fetch(API_BASE + '/api/rooms')
+  .then(res => res.json())
+  .then(res => { for (const r of (res.data || [])) roomMap[r.id] = r; })
+  .catch(err => console.error('加载房间数据失败：', err));
+
+function setRay(ev) {
+  pointer.x = (ev.clientX / innerWidth) * 2 - 1;
+  pointer.y = -(ev.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+}
+
+function describeFace(n) {
+  const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+  if (ay > 0.85) return n.y > 0 ? '顶面（朝上）' : '底面（朝下）';
+  if (ax > 0.85) return n.x > 0 ? '东立面' : '西立面';
+  if (az > 0.85) return n.z > 0 ? '南立面' : '北立面';
+  return '斜/角面';
+}
+
+let selected = null, origMat = null, selectedInstance = null;
+// 命中数据反查：InstancedMesh 按 instanceId 取 userData.instances[i]，普通 mesh 取 userData
+function resolveHitData(hit) {
+  const obj = hit.object;
+  if (hit.instanceId != null && obj.userData && Array.isArray(obj.userData.instances)) {
+    return obj.userData.instances[hit.instanceId];
+  }
+  return obj.userData;
+}
+function select(mesh, instanceId) {
+  clearSelect();
+  if (instanceId != null) {
+    // InstancedMesh：instanceColor 高亮单实例。先全白避免其它实例被默认黑染色，再单绿。
+    if (mesh.instanceColor == null) {
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(mesh.count * 3).fill(1), 3);
+    }
+    selected = mesh; selectedInstance = instanceId;
+    mesh.setColorAt(instanceId, new THREE.Color(0x33ff99));
+    mesh.instanceColor.needsUpdate = true;
+    return;
+  }
+  selected = mesh; origMat = mesh.material;
+  const m2 = origMat.clone();
+  m2.emissive = new THREE.Color(0x33ff99);
+  m2.emissiveIntensity = 0.55;
+  mesh.material = m2;
+}
+function clearSelect() {
+  if (!selected) return;
+  if (selectedInstance != null) {
+    selected.setColorAt(selectedInstance, new THREE.Color(1, 1, 1));
+    selected.instanceColor.needsUpdate = true;
+    selectedInstance = null;
+  } else {
+    selected.material.dispose();
+    selected.material = origMat;
+  }
+  selected = null; origMat = null;
+}
+
+renderer.domElement.addEventListener('pointermove', (ev) => {
+  setRay(ev);
+  const hits = raycaster.intersectObjects(pickables, false)
+    .filter((h) => isEffectivelyVisible(h.object))
+    .map((h) => ({ hit: h, u: resolveHitData(h) }))
+    .filter((x) => x.u && x.u.type);
+  if (hits.length) {
+    const u = hits[0].u;
+    tag.style.display = 'block';
+    tag.style.left = (ev.clientX + 14) + 'px';
+    tag.style.top = (ev.clientY + 14) + 'px';
+    tag.textContent = `${u.type} · ${u.label || ''}`;
+  } else {
+    tag.style.display = 'none';
+  }
+});
+
+function buildInfo(u, n, p) {
+  const F = u.floor != null ? (u.floor + 1) + '层' : '—';
+  const face = `<div><b>面</b> ${describeFace(n)}</div>`;
+  const pos = `<div><b>位置</b> x=${p.x.toFixed(2)} y=${p.y.toFixed(2)} z=${p.z.toFixed(2)}</div>`;
+  if (u.type === '房间') {
+    const room = (u.id != null) ? roomMap[u.id] : null;
+    if (room) {
+      return `<div class="t">房间 ${room.number || ''}</div>` +
+        `<div><b>楼层</b> ${room.floor != null ? (room.floor + 1) + '层' : '—'}</div>` +
+        `<div><b>名称</b> ${room.name || '—'}</div>` +
+        `<div><b>面积</b> ${room.area_m2 != null ? room.area_m2.toFixed(2) + ' m²' : (room.area_label || '—')}</div>` +
+        (room.area_label ? `<div><b>标注面积</b> ${room.area_label}</div>` : '') +
+        `<div><b>用途</b> ${room.purpose || '—'}</div>` +
+        `<div><b>使用单位</b> ${room.dept || '—'}</div>` +
+        face + pos + `<div class="tip">数据来自数据库 lihua_twin.rooms</div>`;
+    }
+    return `<div class="t">房间 ${u.label || ''}</div>` + face + pos +
+      `<div class="tip">该房间暂无数据库记录</div>`;
+  }
+  const head = `<div class="t">${u.type}${u.label ? ' · ' + u.label : ''}</div>`;
+  let body = `<div><b>楼层</b> ${F}</div>`;
+  if (u.type === '门' || u.type === '电梯门') {
+    body += `<div><b>门宽</b> ${u.w != null ? u.w.toFixed(2) + ' m' : '—'}</div>`;
+    body += `<div><b>门高</b> ${u.h != null ? u.h.toFixed(2) + ' m' : '—'}</div>`;
+    body += `<div><b>朝向</b> ${u.horiz ? '横向（东西）' : '纵向（南北）'}</div>`;
+    body += `<div><b>位置</b> ${u.outer ? '外墙' : '内墙'}${u.isElev ? ' · 电梯门' : ''}</div>`;
+  } else if (u.type === '电梯井') {
+    body += `<div><b>井道尺寸</b> ${u.shaftW != null ? u.shaftW.toFixed(2) + ' × ' + u.shaftD.toFixed(2) + ' m' : '—'}</div>`;
+    body += `<div class="tip">竖井贯通全楼，各层楼板开洞</div>`;
+  } else if (u.type === '结构柱') {
+    body += `<div><b>截面</b> ${u.w != null ? u.w.toFixed(2) + ' × ' + u.d.toFixed(2) + ' m' : '—'}</div>`;
+  } else if (u.type === '外墙' || u.type === '内墙' || u.type === '女儿墙') {
+    body += `<div><b>墙厚</b> ${u.thickness != null ? u.thickness.toFixed(2) + ' m' : '—'}</div>`;
+    body += `<div><b>墙高</b> ${u.height != null ? u.height.toFixed(2) + ' m' : '—'}</div>`;
+  }
+  return head + body + face + pos;
+}
+
+renderer.domElement.addEventListener('click', (ev) => {
+  setRay(ev);
+  // 所有块体可点击：房间查 DB，其余构件显示类型/尺寸/位置等详细信息
+  const hits = raycaster.intersectObjects(pickables, false)
+    .filter((h) => isEffectivelyVisible(h.object))
+    .map((h) => ({ hit: h, u: resolveHitData(h) }))
+    .filter((x) => x.u && x.u.type);
+  if (!hits.length) { clearSelect(); info.style.display = 'none'; return; }
+  const { hit, u } = hits[0];
+  const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+  const p = hit.point;
+  info.innerHTML = buildInfo(u, n, p);
+  info.style.display = 'block';
+  select(hit.object, hit.instanceId);
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- 参数面板：窗户填参生成（楼梯类型由几何自动判定，无需设置） ----------
+let loadedFloors = [];
+const pWinW = document.getElementById('p_win_w');
+const pWinH = document.getElementById('p_win_h');
+const pWinSill = document.getElementById('p_win_sill');
+const pWinSpacing = document.getElementById('p_win_spacing');
+const pApply = document.getElementById('p_apply');
+
+function clearBuilding() {
+  floorGroups.forEach((g) => scene.remove(g));
+  shellFloorGroups.forEach((g) => shellGroup.remove(g));
+  floorGroups.length = 0;
+  shellFloorGroups.length = 0;
+  wallMeshes.length = 0;
+  roofMeshes.length = 0;
+  pickables.length = 0;
+  clearPath();
+}
+function rebuild() {
+  clearBuilding();
+  loadedFloors.forEach(renderFloor);
+  scene.traverse((o) => { if (o.isMesh) pickables.push(o); });
+  setFloor(currentFloor);
+  setWalls(wallsVisible);
+}
+function applyParams() {
+  S.win_w = parseFloat(pWinW.value) || S.win_w;
+  S.win_h = parseFloat(pWinH.value) || S.win_h;
+  S.win_sill = parseFloat(pWinSill.value) || S.win_sill;
+  S.win_spacing = parseFloat(pWinSpacing.value) || S.win_spacing;
+  rebuild();
+}
+pApply.addEventListener('click', applyParams);
+
+// ---------- 建筑选择器 ----------
+const buildingSel = document.getElementById('buildingSel');
+const buildings = [];
+let currentBuilding = null;
+
+function syncPanel() {
+  pWinW.value = S.win_w; pWinH.value = S.win_h;
+  pWinSill.value = S.win_sill; pWinSpacing.value = S.win_spacing;
+}
+function frameCamera() {
+  // 按当前建筑的 footprint 外包盒 + 高度自适应取景（各楼尺寸差异大，固定机位会裁切）
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+  for (const f of loadedFloors) for (const [x, y] of f.outline) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  if (!isFinite(minX)) return;
+  const w = Math.max(maxX - minX, 1), d = Math.max(maxY - minY, 1);
+  const h = FLOOR_COUNT * LAYER_HEIGHT;
+  const r = Math.hypot(w, d) * 0.5;
+  const dist = Math.max(r * 1.6, h * 1.3, 30);
+  const cx = (minX + maxX) / 2, cy = h / 2, cz = -(minY + maxY) / 2;
+  camera.position.set(cx + dist * 0.8, cy + dist * 0.65, cz + dist * 0.8);
+  controls.target.set(cx, cy, cz);
+  controls.update();
+}
+function resetView() {
+  clearSelect();
+  info.style.display = 'none';
+  currentFloor = 'all';
+  frameCamera();
+}
+function setBname(b) {
+  const label = b.title ? `${b.title}（${b.name}）` : b.name;
+  const el = document.getElementById('bname');
+  if (el) el.textContent = label;
+  document.title = `${b.title ? b.title + ' · ' : ''}整栋立体模型`;
+}
+async function loadBuilding(b) {
+  setBname(b);
+  if (currentBuilding === b.name) return;
+  currentBuilding = b.name;
+  S = Object.assign({}, DEFAULT_SPEC);
+  await loadSpec(b.dir);
+  applyStyle();
+  LAYER_HEIGHT = S.floor_h || 4.2;
+  FLOOR_COUNT = b.floors;
+  loadedFloors = await loadFloors(b.dir, b.floors);
+  syncPanel();
+  buildFloorButtons(FLOOR_COUNT);
+  resetView();
+  rebuild();
+}
+buildingSel.addEventListener('change', () => {
+  const b = buildings.find((x) => x.name === buildingSel.value);
+  if (b) loadBuilding(b).catch((err) => console.error('切换建筑失败：', err));
+});
+
+fetch('data/buildings/index.json')
+  .then((res) => { if (!res.ok) throw new Error(`index.json ${res.status}`); return res.json(); })
+  .then((list) => {
+    for (const b of list) {
+      buildings.push(b);
+      const opt = document.createElement('option');
+      opt.value = b.name;
+      opt.textContent = `${b.title}（${b.floors}层）`;
+      buildingSel.appendChild(opt);
+    }
+    const def = buildings[0] || { name: 'lihua', title: '理化楼', floors: FLOOR_COUNT, layer_height: 4.2, dir: 'data' };
+    buildingSel.value = def.name;
+    return loadBuilding(def);
+  })
+  .catch((err) => {
+    console.error('加载建筑清单失败，回退基线 data/', err);
+    loadSpec('data')
+      .then(() => { applyStyle(); LAYER_HEIGHT = S.floor_h || 4.2; return loadFloors('data', FLOOR_COUNT); })
+      .then((floors) => {
+        loadedFloors = floors;
+        syncPanel();
+        buildFloorButtons(FLOOR_COUNT);
+        rebuild();
+      })
+      .catch((e2) => console.error('加载楼层几何失败：', e2));
+  });
+
+// ---------- 路径规划：读 /api/path 的 3D 折线，画成管状路径 ----------
+const pathGroup = new THREE.Group();
+scene.add(pathGroup);
+const WALK_H = 0.35;   // 路径悬浮高度（楼板顶上方，避开房间色块）
+const PATH_R = 0.09;   // 路径管半径
+const pathMat = new THREE.MeshStandardMaterial({ color: 0x2ee6a0, roughness: 0.35, emissive: 0x2ee6a0, emissiveIntensity: 0.5 });
+const pathStartMat = new THREE.MeshStandardMaterial({ color: 0x2ee6a0, roughness: 0.3, emissive: 0x2ee6a0, emissiveIntensity: 0.9 });
+const pathEndMat = new THREE.MeshStandardMaterial({ color: 0x4d9fff, roughness: 0.3, emissive: 0x4d9fff, emissiveIntensity: 0.9 });
+
+const pathFrom = document.getElementById('pathFrom');
+const pathTo = document.getElementById('pathTo');
+const pathGo = document.getElementById('pathGo');
+const pathClear = document.getElementById('pathClear');
+const pathInfo = document.getElementById('pathInfo');
+
+// floor JSON (x, y) + 楼层高 z → THREE 世界 (x, z+WALK_H, -y)
+function toWorld3(p) { return new THREE.Vector3(p[0], p[2] + WALK_H, -p[1]); }
+
+function segCylinder(a, b, mat) {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const len = dir.length();
+  if (len < 1e-4) return null;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(PATH_R, PATH_R, len, 8), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  return m;
+}
+
+function clearPath() {
+  while (pathGroup.children.length) {
+    const c = pathGroup.children.pop();
+    if (c.geometry) c.geometry.dispose();
+  }
+}
+
+function drawPath(pts) {
+  clearPath();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const m = segCylinder(toWorld3(pts[i]), toWorld3(pts[i + 1]), pathMat);
+    if (m) pathGroup.add(m);
+  }
+  const a = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), pathStartMat);
+  a.position.copy(toWorld3(pts[0]));
+  pathGroup.add(a);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), pathEndMat);
+  b.position.copy(toWorld3(pts[pts.length - 1]));
+  pathGroup.add(b);
+}
+
+function buildRoomSelects(rooms) {
+  const sorted = rooms.slice().sort((a, b) => (a.floor - b.floor) || String(a.number).localeCompare(String(b.number)));
+  const byFloor = {};
+  for (const r of sorted) (byFloor[r.floor] = byFloor[r.floor] || []).push(r);
+  const fill = (sel) => {
+    sel.innerHTML = '';
+    for (const f of Object.keys(byFloor).sort((a, b) => a - b)) {
+      const og = document.createElement('optgroup');
+      og.label = `${Number(f) + 1}层`;
+      for (const r of byFloor[f]) {
+        const o = document.createElement('option');
+        o.value = r.number;
+        o.textContent = `${r.number}${r.purpose ? ' · ' + r.purpose : ''}`;
+        og.appendChild(o);
+      }
+      sel.appendChild(og);
+    }
+  };
+  fill(pathFrom); fill(pathTo);
+}
+
+pathGo.addEventListener('click', async () => {
+  const from = pathFrom.value, to = pathTo.value;
+  if (!from || !to) { pathInfo.textContent = '请先选择起终点'; return; }
+  if (from === to) { pathInfo.textContent = '起终点相同'; clearPath(); return; }
+  pathInfo.textContent = '计算中…';
+  try {
+    const res = await fetch(`${API_BASE}/api/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    const j = await res.json();
+    if (!j.success) { pathInfo.textContent = '规划失败：' + (j.error || '未知错误'); clearPath(); return; }
+    drawPath(j.data.path);
+    const f0 = j.data.src.floor, f1 = j.data.dst.floor;
+    pathInfo.textContent = `${j.data.length_m} m · ${j.data.path.length} 折点` + (f0 === f1 ? '' : `\n${f0 + 1}层 → ${f1 + 1}层`);
+  } catch (e) {
+    pathInfo.textContent = '请求失败：' + e.message;
+  }
+});
+
+pathClear.addEventListener('click', () => { clearPath(); pathInfo.textContent = ''; });
+
+fetch(API_BASE + '/api/rooms')
+  .then(res => res.json())
+  .then(res => buildRoomSelects(res.data || []))
+  .catch(err => console.error('加载房间列表失败：', err));
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+// 调试钩子：供无头浏览器/自动化「自己看」检查场景状态，不影响正常交互
+window.__gym3d = { scene, camera, renderer, controls, wallMeshes, THREE, get info() { return renderer.info; } };
+</script>
+</body>
+</html>

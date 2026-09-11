@@ -1,0 +1,43 @@
+chore: 建立 git 基线（忽略规则 + 口令引出口 + pre-refactor 锚点）
+
+重构前的地基提交。仓库 4.6 GB 里 4.5 GB 是产物与依赖，这一步把「代码」与
+「产物」分开，让后面每个阶段都有可回退的锚点 —— 在此之前回退手段为零，
+而 data/ 全量重建 GLB 实测要 448 分钟。
+
+新增
+* .gitignore / .gitattributes：data/、_scratch 的三个探针目录、GLB 备份、
+  node_modules、dist、.env、*.bak*、*.orig* 全部排除。入库 364 个文件 / 1.4 MB，
+  无单文件超 2 MB。*.orig* 用通配而不是 *.orig_*，因为库里还有 .orig2 变体；
+  frontend/dist 不带尾斜杠，否则只匹配「已存在的目录」，对尚未构建的 dist 无效。
+* .gitattributes：* text=auto eol=lf。开发在 Windows、部署到 Linux，shell 脚本
+  带 CRLF 过去会直接 bad interpreter，本仓库已经被 profile.json 的 CRLF/LF 混杂坑过。
+* requirements-compute.txt（本机建模，== 精确锁版本）与 requirements-server.txt
+  （服务器只发产物）。后者的**缺席清单**才是重点：服务器 venv 里没有 ezdxf /
+  shapely / trimesh，任何触发建模的代码路径不是被权限拦住，而是 import 不进来。
+* 重构方案·后端前端.md：把已批准的路线图放进仓库，避免方案只存在于对话里。
+
+安全
+* 删除两处硬编码口令。原 LIHUA_DB_PASSWORD 的默认值 postgres123 经确认是**活的
+  凭据**（lihua_twin.rooms 8290 行），而它已经跟着源码存在了很久 —— 凭据一旦进过
+  git 历史，删提交洗不掉，只能轮换。所以这次不是「补一个默认值」而是**取消默认值**：
+  新增 backend/db/db_config.py 作为唯一读取点，读不到就抛 MissingDbPassword 拒绝连接。
+  load_rooms_db.py / serve_rooms.py 一并改走它。
+* .env（已忽略）保存本机口令，.env.example 只留键名。
+
+修复
+* pre-commit 钩子的密钥扫描误报「从环境变量读口令」这一行 —— 而钩子给出的建议恰恰
+  是「请用环境变量替代」，自相矛盾。给排除表补上 os.environ / os.getenv /
+  变量透传三类，字面量照旧被拦（已造一个假字面量自测，钩子仍能拦住）。
+  仓库内副本与 ~/.git-templates 模板同步修补，换行保持 LF。
+
+文档
+* README：规模更新为 49 栋 / 360 楼层 JSON / 57 GLB；铁律 10 从「不是 git 仓库」
+  改写为 git 与 data/ 的职责边界；新增「配置：先复制 .env」与「备份与回退」两节
+  （.gitignore 里两处「见 README」现在有落点了）；已知缺口按当前状态改写。
+
+验收
+* python -c "import db_config; psycopg.connect(**db_params())" → 8290 行，与改造前一致
+* 启 serve_rooms.py 实测 curl /api/rooms?building=c006&floor=2 → success=true，28 间
+* 清空 LIHUA_DB_PASSWORD 后 db_params() 正确抛 MissingDbPassword（守卫有效）
+* 全仓扫描 postgres123 → 仅命中已被忽略的 .env
+* bash .git/hooks/pre-commit → 通过

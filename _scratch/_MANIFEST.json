@@ -1,0 +1,863 @@
+{
+ "ts": "20260910_173717",
+ "root": "D:\\gym3d",
+ "scratch": "D:\\gym3d\\_scratch",
+ "moved": [
+  {
+   "name": "_anno_inspect",
+   "size": 1093,
+   "sha256": "27c46aba63a3deba7e8af86a414b2ddf6c7b2f9212504a528c33353ce3c72ce3",
+   "mtime": "2026-09-09 11:10:22",
+   "src": "D:\\gym3d\\_anno_inspect.py",
+   "dst": "D:\\gym3d\\_scratch\\_anno_inspect.py"
+  },
+  {
+   "name": "_ascii_facade",
+   "size": 1609,
+   "sha256": "755611cc99514aa61e4c11638340aa1a7dc621842245da8cc11aab2e224292fa",
+   "mtime": "2026-09-09 00:06:08",
+   "src": "D:\\gym3d\\_ascii_facade.py",
+   "dst": "D:\\gym3d\\_scratch\\_ascii_facade.py"
+  },
+  {
+   "name": "_axis_inspect",
+   "size": 2707,
+   "sha256": "6c39dee8b2348c5575aa057b015bcd54c15c0d9825c93ce49fc99dba6d9ccbb3",
+   "mtime": "2026-09-09 09:53:52",
+   "src": "D:\\gym3d\\_axis_inspect.py",
+   "dst": "D:\\gym3d\\_scratch\\_axis_inspect.py"
+  },
+  {
+   "name": "_c031_ascii",
+   "size": 1231,
+   "sha256": "cefd511100a72ba95dafc41265d4c547be7bc45e59e28ed18a5f653d064e6480",
+   "mtime": "2026-09-09 02:19:04",
+   "src": "D:\\gym3d\\_c031_ascii.py",
+   "dst": "D:\\gym3d\\_scratch\\_c031_ascii.py"
+  },
+  {
+   "name": "_c031_bands",
+   "size": 1429,
+   "sha256": "c53b27a61ab66c865c3a568dd8c8f3d29fffc439e07e4edb0fa9701a89a74117",
+   "mtime": "2026-09-09 02:21:08",
+   "src": "D:\\gym3d\\_c031_bands.py",
+   "dst": "D:\\gym3d\\_scratch\\_c031_bands.py"
+  },
+  {
+   "name": "_c031_roomcheck",
+   "size": 2872,
+   "sha256": "8e186bede1e73d9737952b40973be8e040e9aa06133a5b1a8557d5110c4c69c9",
+   "mtime": "2026-09-09 02:21:46",
+   "src": "D:\\gym3d\\_c031_roomcheck.py",
+   "dst": "D:\\gym3d\\_scratch\\_c031_roomcheck.py"
+  },
+  {
+   "name": "_c034_doorprobe",
+   "size": 2358,
+   "sha256": "6cd5720b4b44897c1071547b5880afd7b3f250eb315b801cbe07e652c0832f9d",
+   "mtime": "2026-09-09 03:44:56",
+   "src": "D:\\gym3d\\_c034_doorprobe.py",
+   "dst": "D:\\gym3d\\_scratch\\_c034_doorprobe.py"
+  },
+  {
+   "name": "_c041_apply_remap",
+   "size": 2221,
+   "sha256": "c8b8ae4c4a28267562ccf578e45bf1a3d14a0a636c1beb3b182122def66ea64b",
+   "mtime": "2026-09-10 10:33:50",
+   "src": "D:\\gym3d\\_c041_apply_remap.py",
+   "dst": "D:\\gym3d\\_scratch\\_c041_apply_remap.py"
+  },
+  {
+   "name": "_c041_flip_floororder",
+   "size": 2626,
+   "sha256": "2c72526db293eb17d13da042fd5b597f818ee9c2af44104fa3c29a95f43924b0",
+   "mtime": "2026-09-10 10:32:46",
+   "src": "D:\\gym3d\\_c041_flip_floororder.py",
+   "dst": "D:\\gym3d\\_scratch\\_c041_flip_floororder.py"
+  },
+  {
+   "name": "_c041_remap_rooms",
+   "size": 2112,
+   "sha256": "3d49f65c200735f4ebeff00f93888ca8de311694739786e1fb47a8aa68b51a96",
+   "mtime": "2026-09-10 10:34:05",
+   "src": "D:\\gym3d\\_c041_remap_rooms.py",
+   "dst": "D:\\gym3d\\_scratch\\_c041_remap_rooms.py"
+  },
+  {
+   "name": "_c041_roomfloors",
+   "size": 1809,
+   "sha256": "f30172b4c6da233ebb0eea2d022af0bbfd50ca49b868e7a3c3cf9d860c9eaa82",
+   "mtime": "2026-09-10 10:32:17",
+   "src": "D:\\gym3d\\_c041_roomfloors.py",
+   "dst": "D:\\gym3d\\_scratch\\_c041_roomfloors.py"
+  },
+  {
+   "name": "_columns_fix_zerovol",
+   "size": 1863,
+   "sha256": "5f932751b1414afe20a29b552258fdceed6187fe9180ff1610466821afd77083",
+   "mtime": "2026-09-09 03:20:56",
+   "src": "D:\\gym3d\\_columns_fix_zerovol.py",
+   "dst": "D:\\gym3d\\_scratch\\_columns_fix_zerovol.py"
+  },
+  {
+   "name": "_curve_delivered_check",
+   "size": 10469,
+   "sha256": "9bf4654cbd58acd62aaf0f06172206d3fde574d29c863dc671cc1aca1030c232",
+   "mtime": "2026-09-10 11:17:55",
+   "src": "D:\\gym3d\\_curve_delivered_check.py",
+   "dst": "D:\\gym3d\\_scratch\\_curve_delivered_check.py"
+  },
+  {
+   "name": "_curve_layer_breakdown",
+   "size": 2932,
+   "sha256": "f248d752aa901f6e6fa6e7a524c95b35114a3ecd357e99735264c98dc7565808",
+   "mtime": "2026-09-10 10:57:17",
+   "src": "D:\\gym3d\\_curve_layer_breakdown.py",
+   "dst": "D:\\gym3d\\_scratch\\_curve_layer_breakdown.py"
+  },
+  {
+   "name": "_curve_wall_census",
+   "size": 4998,
+   "sha256": "8b5bc8fa5aae257d1ca4d50d88c11933b4da4dc91a902840dba29e6b7740e189",
+   "mtime": "2026-09-10 10:52:12",
+   "src": "D:\\gym3d\\_curve_wall_census.py",
+   "dst": "D:\\gym3d\\_scratch\\_curve_wall_census.py"
+  },
+  {
+   "name": "_diag_frozen_outline",
+   "size": 8139,
+   "sha256": "e506ce8ffb9ac11f52ef575a3db0539ddcc543b2f8eb626e6a750b8f849186cc",
+   "mtime": "2026-09-10 11:19:12",
+   "src": "D:\\gym3d\\_diag_frozen_outline.py",
+   "dst": "D:\\gym3d\\_scratch\\_diag_frozen_outline.py"
+  },
+  {
+   "name": "_doors_displace_scan",
+   "size": 2916,
+   "sha256": "99bee4f0494fd84115255ee3cb7cf835dc302413b75b06d751cd1bac9152d9cc",
+   "mtime": "2026-09-09 03:27:17",
+   "src": "D:\\gym3d\\_doors_displace_scan.py",
+   "dst": "D:\\gym3d\\_scratch\\_doors_displace_scan.py"
+  },
+  {
+   "name": "_doors_rebuild",
+   "size": 4713,
+   "sha256": "0871c02f137174f2c39cfec42c6ab826814ee6fdaca47d3263ed70cd9ed23f81",
+   "mtime": "2026-09-10 16:50:54",
+   "src": "D:\\gym3d\\_doors_rebuild.py",
+   "dst": "D:\\gym3d\\_scratch\\_doors_rebuild.py"
+  },
+  {
+   "name": "_dryrun_curve_c041",
+   "size": 6689,
+   "sha256": "2da36b1e049a05b99df9408f60c506b1139a687d7020d2708467390823c2dd9a",
+   "mtime": "2026-09-10 10:55:13",
+   "src": "D:\\gym3d\\_dryrun_curve_c041.py",
+   "dst": "D:\\gym3d\\_scratch\\_dryrun_curve_c041.py"
+  },
+  {
+   "name": "_dump_curves",
+   "size": 2050,
+   "sha256": "79bbc938bf8f245a0b0f48191e576c1152dc7506052a5064295f5dd6fed7bc23",
+   "mtime": "2026-09-10 10:58:08",
+   "src": "D:\\gym3d\\_dump_curves.py",
+   "dst": "D:\\gym3d\\_scratch\\_dump_curves.py"
+  },
+  {
+   "name": "_dxf_gapcheck",
+   "size": 2988,
+   "sha256": "33bc9ed77f2980634afe7bf99231d9eaa6df43a3d1f14d8a778b5168ae531979",
+   "mtime": "2026-09-09 11:23:23",
+   "src": "D:\\gym3d\\_dxf_gapcheck.py",
+   "dst": "D:\\gym3d\\_scratch\\_dxf_gapcheck.py"
+  },
+  {
+   "name": "_dxf_plan_ascii",
+   "size": 3965,
+   "sha256": "5992a6fdc7bc2b94899f72857bbb1d92e1d64576fabe69ee1383ca14c913a685",
+   "mtime": "2026-09-09 02:50:25",
+   "src": "D:\\gym3d\\_dxf_plan_ascii.py",
+   "dst": "D:\\gym3d\\_scratch\\_dxf_plan_ascii.py"
+  },
+  {
+   "name": "_fix_uniform",
+   "size": 2586,
+   "sha256": "8f9782d9b14292e6304c2f217e4c577702903d59fb461dec2b7dccc4f44aa85c",
+   "mtime": "2026-09-08 22:02:41",
+   "src": "D:\\gym3d\\_fix_uniform.py",
+   "dst": "D:\\gym3d\\_scratch\\_fix_uniform.py"
+  },
+  {
+   "name": "_floor_order_check",
+   "size": 4513,
+   "sha256": "702da1fef10a1b6b213d375ff9633d5f7f97b559042a11d75d2c18c44a88c6a8",
+   "mtime": "2026-09-10 10:40:21",
+   "src": "D:\\gym3d\\_floor_order_check.py",
+   "dst": "D:\\gym3d\\_scratch\\_floor_order_check.py"
+  },
+  {
+   "name": "_giant_inspect",
+   "size": 1168,
+   "sha256": "66f2c4b5cfa50746a3da98683baf5153fc4776a0454c76d436b26dda28160660",
+   "mtime": "2026-09-09 03:43:41",
+   "src": "D:\\gym3d\\_giant_inspect.py",
+   "dst": "D:\\gym3d\\_scratch\\_giant_inspect.py"
+  },
+  {
+   "name": "_overlay_region",
+   "size": 3325,
+   "sha256": "09eb912a97bdc4bf08bb743d617878e00a3c39947e167673a0157e6e3e2e2966",
+   "mtime": "2026-09-09 15:48:50",
+   "src": "D:\\gym3d\\_overlay_region.py",
+   "dst": "D:\\gym3d\\_scratch\\_overlay_region.py"
+  },
+  {
+   "name": "_patch_classify_curve",
+   "size": 5456,
+   "sha256": "d45ddcebfabe1c750e63338d606ffad9afbcd14d271e56ae9bb6692426274450",
+   "mtime": "2026-09-10 10:47:41",
+   "src": "D:\\gym3d\\_patch_classify_curve.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_classify_curve.py"
+  },
+  {
+   "name": "_patch_del_key",
+   "size": 2314,
+   "sha256": "6571c9687458bcd94b70e1470033d356d2cde5e2311998df71dfd260843d4219",
+   "mtime": "2026-09-10 11:53:18",
+   "src": "D:\\gym3d\\_patch_del_key.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_del_key.py"
+  },
+  {
+   "name": "_patch_outline_copy",
+   "size": 2297,
+   "sha256": "0c266406b30ef5154321513bc285aa5056479b59138601e48ed85132311d2363",
+   "mtime": "2026-09-10 16:24:30",
+   "src": "D:\\gym3d\\_patch_outline_copy.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_outline_copy.py"
+  },
+  {
+   "name": "_patch_pair_curved",
+   "size": 4139,
+   "sha256": "a1da5119d2d3b64b6a6fa16d380d5f020d3cadb384366684f5f9d2105204e4ef",
+   "mtime": "2026-09-10 10:54:31",
+   "src": "D:\\gym3d\\_patch_pair_curved.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_pair_curved.py"
+  },
+  {
+   "name": "_patch_pilot_bak",
+   "size": 1755,
+   "sha256": "ca02f44563c2dd37b18c16756bc2cdf6edc2666f2d9260f7ff7c93e6c4aaf322",
+   "mtime": "2026-09-10 11:21:13",
+   "src": "D:\\gym3d\\_patch_pilot_bak.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_pilot_bak.py"
+  },
+  {
+   "name": "_patch_pilot_nl",
+   "size": 1780,
+   "sha256": "530e16457cacaaff95911211d463f067bd910a13e4957acec1f3d6f8074a207a",
+   "mtime": "2026-09-10 11:20:45",
+   "src": "D:\\gym3d\\_patch_pilot_nl.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_pilot_nl.py"
+  },
+  {
+   "name": "_patch_pilot_qa",
+   "size": 2260,
+   "sha256": "6caa813d1e2273eb3b9cad3b5ded9fedfcaa7f6efd1c119cd1ac372bdb60126b",
+   "mtime": "2026-09-10 11:52:22",
+   "src": "D:\\gym3d\\_patch_pilot_qa.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_pilot_qa.py"
+  },
+  {
+   "name": "_patch_xrange_filter",
+   "size": 4716,
+   "sha256": "2a79707fcfe12dbd90687ef23e5c042076cdf7baee6a807655c1eab2c2188d4f",
+   "mtime": "2026-09-10 11:17:53",
+   "src": "D:\\gym3d\\_patch_xrange_filter.py",
+   "dst": "D:\\gym3d\\_scratch\\_patch_xrange_filter.py"
+  },
+  {
+   "name": "_pilot_frozen_fix",
+   "size": 8788,
+   "sha256": "654f3794f77c3f5928a65f00c64f1895db901206c1bdebbc16a24006d363e7df",
+   "mtime": "2026-09-10 11:52:25",
+   "src": "D:\\gym3d\\_pilot_frozen_fix.py",
+   "dst": "D:\\gym3d\\_scratch\\_pilot_frozen_fix.py"
+  },
+  {
+   "name": "_pilot_pair_curved",
+   "size": 4631,
+   "sha256": "bb7ed1308eaa73486d11ce8d95a9cfa39f25655e74925aaaddee5d68c3edb792",
+   "mtime": "2026-09-10 10:59:49",
+   "src": "D:\\gym3d\\_pilot_pair_curved.py",
+   "dst": "D:\\gym3d\\_scratch\\_pilot_pair_curved.py"
+  },
+  {
+   "name": "_probe_arcblock",
+   "size": 4538,
+   "sha256": "f089ca5d34033bde492d9cff8f2824cf01072da2dc818e3b2b977cfde082e94e",
+   "mtime": "2026-09-10 11:54:04",
+   "src": "D:\\gym3d\\_probe_arcblock.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_arcblock.py"
+  },
+  {
+   "name": "_probe_c006_arcwalls",
+   "size": 2174,
+   "sha256": "788f17b695d68cc4882d95eaf787b87393b0e7af8e8ab1efb4b1e8fc8b7823e1",
+   "mtime": "2026-09-10 17:11:18",
+   "src": "D:\\gym3d\\_probe_c006_arcwalls.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_arcwalls.py"
+  },
+  {
+   "name": "_probe_c006_bands",
+   "size": 1867,
+   "sha256": "bb23c292ed0838b0a4942fb628f3f1e3f67e07317aea331cf9114d2e9f82d53d",
+   "mtime": "2026-09-10 17:12:04",
+   "src": "D:\\gym3d\\_probe_c006_bands.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_bands.py"
+  },
+  {
+   "name": "_probe_c006_diag",
+   "size": 2455,
+   "sha256": "791d09b32c87af90aba228db2e5d098b1dbb1a96d22329f87f413d4b5812773b",
+   "mtime": "2026-09-10 17:11:44",
+   "src": "D:\\gym3d\\_probe_c006_diag.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_diag.py"
+  },
+  {
+   "name": "_probe_c006_outline",
+   "size": 5235,
+   "sha256": "50cef20ab7eefad4c156e09695bcc12651f325fdc218e13b7ae967f230268ef9",
+   "mtime": "2026-09-10 17:05:56",
+   "src": "D:\\gym3d\\_probe_c006_outline.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_outline.py"
+  },
+  {
+   "name": "_probe_c006_refmatrix",
+   "size": 2791,
+   "sha256": "8c73a1f76b81e3c62c471d950bd4effcffcfe666aaf38a184952f4518835f017",
+   "mtime": "2026-09-10 17:07:13",
+   "src": "D:\\gym3d\\_probe_c006_refmatrix.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_refmatrix.py"
+  },
+  {
+   "name": "_probe_c006_shift",
+   "size": 2966,
+   "sha256": "3c1007451bf86514b942cfe52bdf28a7f3d886a4112afd3b01d507e696570c53",
+   "mtime": "2026-09-10 17:06:34",
+   "src": "D:\\gym3d\\_probe_c006_shift.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_shift.py"
+  },
+  {
+   "name": "_probe_c006_towers",
+   "size": 3757,
+   "sha256": "29d5c9e237211b035406d2c5d071ab6dca4431828290072bdb6537219a5a2968",
+   "mtime": "2026-09-10 11:55:40",
+   "src": "D:\\gym3d\\_probe_c006_towers.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_towers.py"
+  },
+  {
+   "name": "_probe_c006_walldiff",
+   "size": 2294,
+   "sha256": "e5129ed8f2ce71431eb630548e303564b60886555c97891107eb3aeeb8a13141",
+   "mtime": "2026-09-10 17:11:29",
+   "src": "D:\\gym3d\\_probe_c006_walldiff.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c006_walldiff.py"
+  },
+  {
+   "name": "_probe_c009_columns",
+   "size": 2356,
+   "sha256": "ad893db671ce94a97981c5121f0712fc74cd095087f5441c846c14cf8cbae79c",
+   "mtime": "2026-09-10 11:50:02",
+   "src": "D:\\gym3d\\_probe_c009_columns.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c009_columns.py"
+  },
+  {
+   "name": "_probe_c009_f0_arcs",
+   "size": 3897,
+   "sha256": "2fc5a5bab67e932a9836ddacf68f3e844710f1eadf7e36ab564bc4232f8eaba8",
+   "mtime": "2026-09-10 11:21:40",
+   "src": "D:\\gym3d\\_probe_c009_f0_arcs.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c009_f0_arcs.py"
+  },
+  {
+   "name": "_probe_c009_floor0",
+   "size": 3568,
+   "sha256": "1d3cfd9cfc614d58f49fd6c2f89e424b6e8afdc39384f87d3f82ea291664aeed",
+   "mtime": "2026-09-10 11:49:34",
+   "src": "D:\\gym3d\\_probe_c009_floor0.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c009_floor0.py"
+  },
+  {
+   "name": "_probe_c009_raw",
+   "size": 3581,
+   "sha256": "d9c9f19a74690b628115cbe8598a7f360d40089c1908c3c093e312cfb7905eb0",
+   "mtime": "2026-09-10 11:49:49",
+   "src": "D:\\gym3d\\_probe_c009_raw.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c009_raw.py"
+  },
+  {
+   "name": "_probe_c009_titles",
+   "size": 2102,
+   "sha256": "18dd28443bf38b00fdd6f312797bad4e4778fd5bfea939b059563f54b398b0ef",
+   "mtime": "2026-09-10 11:50:25",
+   "src": "D:\\gym3d\\_probe_c009_titles.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c009_titles.py"
+  },
+  {
+   "name": "_probe_c009_ybands",
+   "size": 2244,
+   "sha256": "1ff9e64a03b0eca638c0cbbfce8795e0b368b70c0025768f3a1d01e9b045f9fd",
+   "mtime": "2026-09-10 11:50:38",
+   "src": "D:\\gym3d\\_probe_c009_ybands.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c009_ybands.py"
+  },
+  {
+   "name": "_probe_c019_outerdist",
+   "size": 2633,
+   "sha256": "78ca97612c2255ddfc8294a74720cf4033e241841c122360ec896d612c3fba08",
+   "mtime": "2026-09-10 17:17:50",
+   "src": "D:\\gym3d\\_probe_c019_outerdist.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c019_outerdist.py"
+  },
+  {
+   "name": "_probe_c019_swallow",
+   "size": 3966,
+   "sha256": "30993d0b571f4374ed3797b26c0ed1805931289a17fda447926710cd38140fd7",
+   "mtime": "2026-09-10 17:17:03",
+   "src": "D:\\gym3d\\_probe_c019_swallow.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_c019_swallow.py"
+  },
+  {
+   "name": "_probe_close_r",
+   "size": 3397,
+   "sha256": "0c586d32dbf20fef712d07e34095f2e9de1b9a44f8e9a0b7c2e03cf53933a460",
+   "mtime": "2026-09-10 11:56:22",
+   "src": "D:\\gym3d\\_probe_close_r.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_close_r.py"
+  },
+  {
+   "name": "_probe_closed_door",
+   "size": 4781,
+   "sha256": "f0f4263d0808b4bb9bd59a6b63cf1fc308d5ad8f68d98c873f2bc1c248571fd4",
+   "mtime": "2026-09-10 16:30:48",
+   "src": "D:\\gym3d\\_probe_closed_door.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_closed_door.py"
+  },
+  {
+   "name": "_probe_colgrid",
+   "size": 2368,
+   "sha256": "4bb880fce65df3654bd3dc40ba5760a54ffd4059268893b418027b1b47584a71",
+   "mtime": "2026-09-09 00:19:52",
+   "src": "D:\\gym3d\\_probe_colgrid.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_colgrid.py"
+  },
+  {
+   "name": "_probe_curve_sampling",
+   "size": 2458,
+   "sha256": "7ee5980c7b430c7e68a8beb475ac5359010813a52f3f6f897cf8a62114aca032",
+   "mtime": "2026-09-10 10:57:40",
+   "src": "D:\\gym3d\\_probe_curve_sampling.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_curve_sampling.py"
+  },
+  {
+   "name": "_probe_delivered_towers",
+   "size": 2826,
+   "sha256": "4e6e0607d9b09058c3dfec557871e719d6a8154c2a8d350b34a8a5175f9293be",
+   "mtime": "2026-09-10 11:57:42",
+   "src": "D:\\gym3d\\_probe_delivered_towers.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_delivered_towers.py"
+  },
+  {
+   "name": "_probe_door_fix_sim",
+   "size": 4835,
+   "sha256": "e8acfbfcdd792682403e335e938c82e0f5dbbd4d5db5602869cf9a0faef0a2c2",
+   "mtime": "2026-09-10 16:58:53",
+   "src": "D:\\gym3d\\_probe_door_fix_sim.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_door_fix_sim.py"
+  },
+  {
+   "name": "_probe_door_precision",
+   "size": 5620,
+   "sha256": "dffb159e217f761386fe0d07f03943614a700f87ac033b3d7d666f125a6efa6f",
+   "mtime": "2026-09-10 16:43:05",
+   "src": "D:\\gym3d\\_probe_door_precision.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_door_precision.py"
+  },
+  {
+   "name": "_probe_door_rule_ab",
+   "size": 2791,
+   "sha256": "3f85d6bb41a959376278f639b9b9cc1857c0acae757b861da4b0a852439f6256",
+   "mtime": "2026-09-10 16:44:41",
+   "src": "D:\\gym3d\\_probe_door_rule_ab.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_door_rule_ab.py"
+  },
+  {
+   "name": "_probe_door_symbol_fleet",
+   "size": 6101,
+   "sha256": "5431a6fb5aa29b7aaaf167045b3db8a90c7a582c77d59cdfd6304aaeb1d33c6c",
+   "mtime": "2026-09-10 16:34:02",
+   "src": "D:\\gym3d\\_probe_door_symbol_fleet.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_door_symbol_fleet.py"
+  },
+  {
+   "name": "_probe_door_symbol_shape",
+   "size": 3554,
+   "sha256": "3dfd89a23e56227afa19eb9d7483c10daa9c7ea87862f89c76c2572b5c370ebc",
+   "mtime": "2026-09-10 16:32:25",
+   "src": "D:\\gym3d\\_probe_door_symbol_shape.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_door_symbol_shape.py"
+  },
+  {
+   "name": "_probe_doors_swallowed",
+   "size": 2721,
+   "sha256": "5516ed55df638f495b35b64e523dcf09f26ccae72e549a540db0a145cdd445c0",
+   "mtime": "2026-09-10 16:39:54",
+   "src": "D:\\gym3d\\_probe_doors_swallowed.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_doors_swallowed.py"
+  },
+  {
+   "name": "_probe_glb_mass",
+   "size": 2205,
+   "sha256": "6cd45b61719aa5727908a5a4e144db03f7863c5da8c8fccffbf0f1b872598e9c",
+   "mtime": "2026-09-09 00:30:03",
+   "src": "D:\\gym3d\\_probe_glb_mass.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_glb_mass.py"
+  },
+  {
+   "name": "_probe_ins",
+   "size": 1897,
+   "sha256": "63772f138c3f7544bff1dec642e090734f1d60683d8f5c42d5999fb1fc275040",
+   "mtime": "2026-09-09 00:21:19",
+   "src": "D:\\gym3d\\_probe_ins.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_ins.py"
+  },
+  {
+   "name": "_probe_layout",
+   "size": 2051,
+   "sha256": "5f60805fd8abed30e118ffc7221c7a1afcf9fddb4025de976001cefab091343e",
+   "mtime": "2026-09-08 21:57:09",
+   "src": "D:\\gym3d\\_probe_layout.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_layout.py"
+  },
+  {
+   "name": "_probe_long_ents",
+   "size": 2592,
+   "sha256": "9d67db285d18b9a86531bcf156d72cfdde675946a01a96ba2f3d39dc5b43ddb3",
+   "mtime": "2026-09-10 11:56:53",
+   "src": "D:\\gym3d\\_probe_long_ents.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_long_ents.py"
+  },
+  {
+   "name": "_probe_outside_arcs",
+   "size": 3963,
+   "sha256": "c992ab42c00b36ef8e4b926d8150c9435d59a37a678a6bea0824544eea9b721f",
+   "mtime": "2026-09-10 11:18:44",
+   "src": "D:\\gym3d\\_probe_outside_arcs.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_outside_arcs.py"
+  },
+  {
+   "name": "_probe_rows",
+   "size": 2270,
+   "sha256": "57c8d9a17a7297ccf95a83689761b28d880457539f61de0b479186a6b37b4e00",
+   "mtime": "2026-09-09 00:27:00",
+   "src": "D:\\gym3d\\_probe_rows.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_rows.py"
+  },
+  {
+   "name": "_probe_unify_ref_fleet",
+   "size": 4787,
+   "sha256": "50812a9520d93a5650edf2fab97e24d41b86719048a84b9f17d59a98c53298c6",
+   "mtime": "2026-09-10 17:08:46",
+   "src": "D:\\gym3d\\_probe_unify_ref_fleet.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_unify_ref_fleet.py"
+  },
+  {
+   "name": "_probe_unify_ref_verify",
+   "size": 3521,
+   "sha256": "5bf38587fd48696092a81993d7f26975284fbc9c714fc3b622406f23c03f150f",
+   "mtime": "2026-09-10 17:09:25",
+   "src": "D:\\gym3d\\_probe_unify_ref_verify.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_unify_ref_verify.py"
+  },
+  {
+   "name": "_probe_walls_outside_outline",
+   "size": 3915,
+   "sha256": "f657178eb7a7cafac66c23de5591a4c0cc1b89aa3d55113e856ebc875cca31ed",
+   "mtime": "2026-09-10 16:23:45",
+   "src": "D:\\gym3d\\_probe_walls_outside_outline.py",
+   "dst": "D:\\gym3d\\_scratch\\_probe_walls_outside_outline.py"
+  },
+  {
+   "name": "_regen_windows",
+   "size": 2102,
+   "sha256": "dfde3a7689deeb794908103a3a5c656dde98b65a969fe2894f094b4e194fa80c",
+   "mtime": "2026-09-08 20:29:30",
+   "src": "D:\\gym3d\\_regen_windows.py",
+   "dst": "D:\\gym3d\\_scratch\\_regen_windows.py"
+  },
+  {
+   "name": "_rooms_batch_dry",
+   "size": 2299,
+   "sha256": "010d6a2093584566d90cea1e350bf4177da97d6857dd87dc7875fa163de2e35a",
+   "mtime": "2026-09-09 02:30:17",
+   "src": "D:\\gym3d\\_rooms_batch_dry.py",
+   "dst": "D:\\gym3d\\_scratch\\_rooms_batch_dry.py"
+  },
+  {
+   "name": "_rooms_batch_write",
+   "size": 2053,
+   "sha256": "9aaaca29c8930f7d42c66044f760e925409224a64b782bbee12631d8aaf48773",
+   "mtime": "2026-09-09 02:37:50",
+   "src": "D:\\gym3d\\_rooms_batch_write.py",
+   "dst": "D:\\gym3d\\_scratch\\_rooms_batch_write.py"
+  },
+  {
+   "name": "_rooms_census",
+   "size": 1660,
+   "sha256": "ea962f7dea77ebfbbf3acf7dc32afd9482d0a46935be86223f70e7423c1009b5",
+   "mtime": "2026-09-09 02:23:47",
+   "src": "D:\\gym3d\\_rooms_census.py",
+   "dst": "D:\\gym3d\\_scratch\\_rooms_census.py"
+  },
+  {
+   "name": "_run_c006_tmp",
+   "size": 2908,
+   "sha256": "295c246d96600f8efa59640113af3b749abedb28f97a463eb3c6d2673cba158f",
+   "mtime": "2026-09-10 17:10:50",
+   "src": "D:\\gym3d\\_run_c006_tmp.py",
+   "dst": "D:\\gym3d\\_scratch\\_run_c006_tmp.py"
+  },
+  {
+   "name": "_stairs_audit",
+   "size": 5504,
+   "sha256": "9239e2bac021a8aac6d98d4ce018df1711f2e7393af23421dc48b9a32972e4d7",
+   "mtime": "2026-09-09 03:11:37",
+   "src": "D:\\gym3d\\_stairs_audit.py",
+   "dst": "D:\\gym3d\\_scratch\\_stairs_audit.py"
+  },
+  {
+   "name": "_stairs_census",
+   "size": 1956,
+   "sha256": "0981542b8bf814ba9d4dc3764221ec23dc9241503facdb9a123aba4b4baa1e7c",
+   "mtime": "2026-09-09 02:45:39",
+   "src": "D:\\gym3d\\_stairs_census.py",
+   "dst": "D:\\gym3d\\_scratch\\_stairs_census.py"
+  },
+  {
+   "name": "_stairs_fix_giants",
+   "size": 2155,
+   "sha256": "9f88aaa2bc800da05d2b9c7012e2f423315e443034bf44e35bf6ec7a4b16546c",
+   "mtime": "2026-09-09 02:56:00",
+   "src": "D:\\gym3d\\_stairs_fix_giants.py",
+   "dst": "D:\\gym3d\\_scratch\\_stairs_fix_giants.py"
+  },
+  {
+   "name": "_stairs_redetect",
+   "size": 3984,
+   "sha256": "9a0016c65a6d20aa94d5cf0c6494393c31ec10d1e797a377ab7d58d74a1e2806",
+   "mtime": "2026-09-09 02:51:53",
+   "src": "D:\\gym3d\\_stairs_redetect.py",
+   "dst": "D:\\gym3d\\_scratch\\_stairs_redetect.py"
+  },
+  {
+   "name": "_stairs_summary",
+   "size": 919,
+   "sha256": "ceb953666a853dc1c5109c30700c04241341cb5b3ab104951acb6f07027c1f21",
+   "mtime": "2026-09-09 02:48:29",
+   "src": "D:\\gym3d\\_stairs_summary.py",
+   "dst": "D:\\gym3d\\_scratch\\_stairs_summary.py"
+  },
+  {
+   "name": "_trim_c103_f0",
+   "size": 3867,
+   "sha256": "c3136ce41b5e373bda88246bcaa0154dee84d6afacb47dfe204eabb96950f158",
+   "mtime": "2026-09-09 00:42:28",
+   "src": "D:\\gym3d\\_trim_c103_f0.py",
+   "dst": "D:\\gym3d\\_scratch\\_trim_c103_f0.py"
+  },
+  {
+   "name": "_verify_classify_curve",
+   "size": 1969,
+   "sha256": "76ee862649742b28586e6af1408e5413a4695e7452b2c5358f944ab98d333daa",
+   "mtime": "2026-09-10 10:47:21",
+   "src": "D:\\gym3d\\_verify_classify_curve.py",
+   "dst": "D:\\gym3d\\_scratch\\_verify_classify_curve.py"
+  },
+  {
+   "name": "_wall_thin2_c031",
+   "size": 5680,
+   "sha256": "eee6756fe0010da229801256087947211c6a546ef49d593a1bd499b9487b9cbd",
+   "mtime": "2026-09-09 03:34:04",
+   "src": "D:\\gym3d\\_wall_thin2_c031.py",
+   "dst": "D:\\gym3d\\_scratch\\_wall_thin2_c031.py"
+  },
+  {
+   "name": "_wall_thin_c031",
+   "size": 5664,
+   "sha256": "506b124098b6dac8018dd377fb651fa254b02e80cc76d2e3469e277bd961f4ab",
+   "mtime": "2026-09-09 03:32:08",
+   "src": "D:\\gym3d\\_wall_thin_c031.py",
+   "dst": "D:\\gym3d\\_scratch\\_wall_thin_c031.py"
+  },
+  {
+   "name": "_wall_verify",
+   "size": 2735,
+   "sha256": "b353306a3ca358582db4a157d9c14a992cecb363299096c5de696ae6e7634227",
+   "mtime": "2026-09-09 03:42:40",
+   "src": "D:\\gym3d\\_wall_verify.py",
+   "dst": "D:\\gym3d\\_scratch\\_wall_verify.py"
+  },
+  {
+   "name": "_wallmiss_entities",
+   "size": 3706,
+   "sha256": "2aabe579944476c210805f0f5e0de4db46e87c9d297f6e50af0e5e6a76d5411f",
+   "mtime": "2026-09-09 18:42:45",
+   "src": "D:\\gym3d\\_wallmiss_entities.py",
+   "dst": "D:\\gym3d\\_scratch\\_wallmiss_entities.py"
+  },
+  {
+   "name": "_wallmiss_locate",
+   "size": 3603,
+   "sha256": "35583b525aed25eb7bb8aaad0ed6536f2fe730ba4e3e49467e8d69ef931d9d0f",
+   "mtime": "2026-09-09 15:48:12",
+   "src": "D:\\gym3d\\_wallmiss_locate.py",
+   "dst": "D:\\gym3d\\_scratch\\_wallmiss_locate.py"
+  },
+  {
+   "name": "_walls_profile",
+   "size": 1179,
+   "sha256": "155b2caf9f836f371777fb0861c67d3baf1184439c89090a4db7c961091e83ee",
+   "mtime": "2026-09-09 02:51:27",
+   "src": "D:\\gym3d\\_walls_profile.py",
+   "dst": "D:\\gym3d\\_scratch\\_walls_profile.py"
+  },
+  {
+   "name": "add_style",
+   "size": 1556,
+   "sha256": "557c07dde5b054c59212d4caf3630dd03676d15516a9c643a9ad3fc80435b852",
+   "mtime": "2026-09-07 02:06:17",
+   "src": "D:\\gym3d\\add_style.py",
+   "dst": "D:\\gym3d\\_scratch\\add_style.py"
+  },
+  {
+   "name": "batch_profiles",
+   "size": 9521,
+   "sha256": "9f8a44d9d30cdd5b13bdd41a6abdb2d9526c4136d7b5064395e87316fc525513",
+   "mtime": "2026-09-07 19:21:30",
+   "src": "D:\\gym3d\\batch_profiles.py",
+   "dst": "D:\\gym3d\\_scratch\\batch_profiles.py"
+  },
+  {
+   "name": "check_alignment",
+   "size": 2700,
+   "sha256": "edeff33c1a9eea4235d26724e798f945c85d0b2d9ab2119aaf8b961fa74828e0",
+   "mtime": "2026-09-08 21:53:29",
+   "src": "D:\\gym3d\\check_alignment.py",
+   "dst": "D:\\gym3d\\_scratch\\check_alignment.py"
+  },
+  {
+   "name": "check_complex",
+   "size": 1459,
+   "sha256": "91f08b77e0c814b2c39784d0ace990633c7b74d3130fae8a568b4ea25cb0f5bc",
+   "mtime": "2026-09-07 00:50:41",
+   "src": "D:\\gym3d\\check_complex.py",
+   "dst": "D:\\gym3d\\_scratch\\check_complex.py"
+  },
+  {
+   "name": "compare_floors",
+   "size": 9650,
+   "sha256": "77f35082f896c107db27860b01597af2eb9422bf9b7b03ef5e8825ec1c4d3e9f",
+   "mtime": "2026-09-07 08:08:29",
+   "src": "D:\\gym3d\\compare_floors.py",
+   "dst": "D:\\gym3d\\_scratch\\compare_floors.py"
+  },
+  {
+   "name": "detect_all",
+   "size": 5373,
+   "sha256": "c406e4d42c0159b1e1e7a2db7a2aad1c0f7ba693080aa736442be65f52ef645c",
+   "mtime": "2026-09-07 00:49:24",
+   "src": "D:\\gym3d\\detect_all.py",
+   "dst": "D:\\gym3d\\_scratch\\detect_all.py"
+  },
+  {
+   "name": "detect_floors",
+   "size": 2261,
+   "sha256": "eea2d630ee1d39773a9ecc65db02b436c2005d25d8fada860d0b69dcf8b51a2c",
+   "mtime": "2026-09-07 00:41:30",
+   "src": "D:\\gym3d\\detect_floors.py",
+   "dst": "D:\\gym3d\\_scratch\\detect_floors.py"
+  },
+  {
+   "name": "detect_layout",
+   "size": 2475,
+   "sha256": "cca1d15f914ed60de8c1d9ef787cd187747d34edca48f3c2fe384bafa4fdb9db",
+   "mtime": "2026-09-07 00:45:34",
+   "src": "D:\\gym3d\\detect_layout.py",
+   "dst": "D:\\gym3d\\_scratch\\detect_layout.py"
+  },
+  {
+   "name": "diag_apartments",
+   "size": 4263,
+   "sha256": "ee241baa54eac19e4d58eb34f600bdf1f8857ac70cf17dfbdcb0695a5279682f",
+   "mtime": "2026-09-07 19:15:11",
+   "src": "D:\\gym3d\\diag_apartments.py",
+   "dst": "D:\\gym3d\\_scratch\\diag_apartments.py"
+  },
+  {
+   "name": "gather_dwg",
+   "size": 2231,
+   "sha256": "c006ea90e42fef03b526d0c8c4b70573879564912439c4251b44d8cb03e15684",
+   "mtime": "2026-09-06 22:23:02",
+   "src": "D:\\gym3d\\gather_dwg.py",
+   "dst": "D:\\gym3d\\_scratch\\gather_dwg.py"
+  },
+  {
+   "name": "inspect_building",
+   "size": 4176,
+   "sha256": "7423de4662ec07ea16b9e51ac397ce029f545ef7ad6cdf1312498b59ca179853",
+   "mtime": "2026-09-06 22:23:13",
+   "src": "D:\\gym3d\\inspect_building.py",
+   "dst": "D:\\gym3d\\_scratch\\inspect_building.py"
+  },
+  {
+   "name": "pipeline",
+   "size": 3590,
+   "sha256": "f926987e2df2308355d2e03644ce76c513e20b97a2492b138463b4ec370cb5e0",
+   "mtime": "2026-09-06 22:23:22",
+   "src": "D:\\gym3d\\pipeline.py",
+   "dst": "D:\\gym3d\\_scratch\\pipeline.py"
+  },
+  {
+   "name": "recon_apartments",
+   "size": 4301,
+   "sha256": "756da89673e8d3e35d85e941fb942aedc601b5cdffe6d099dec0eaca81595768",
+   "mtime": "2026-09-07 19:00:28",
+   "src": "D:\\gym3d\\recon_apartments.py",
+   "dst": "D:\\gym3d\\_scratch\\recon_apartments.py"
+  },
+  {
+   "name": "recon_teaching",
+   "size": 3977,
+   "sha256": "832a4f7f9f150516712f024df801b196f47bd7cb2f5ef7ad7b95d15f915ce941",
+   "mtime": "2026-09-07 00:34:10",
+   "src": "D:\\gym3d\\recon_teaching.py",
+   "dst": "D:\\gym3d\\_scratch\\recon_teaching.py"
+  },
+  {
+   "name": "render_floor_pngs",
+   "size": 3875,
+   "sha256": "6fa32d52f2705c7698017a85170ed41d23f9c4483e87f8b5582e5a2311e1ca0d",
+   "mtime": "2026-09-08 23:14:45",
+   "src": "D:\\gym3d\\render_floor_pngs.py",
+   "dst": "D:\\gym3d\\_scratch\\render_floor_pngs.py"
+  },
+  {
+   "name": "wall_plan",
+   "size": 1203,
+   "sha256": "2ef9dfcba5cbaf4e5830cc3e5b49f89d12ec618dc7daf1a3517f01e06a729008",
+   "mtime": "2026-09-06 21:36:02",
+   "src": "D:\\gym3d\\wall_plan.py",
+   "dst": "D:\\gym3d\\_scratch\\wall_plan.py"
+  }
+ ]
+}

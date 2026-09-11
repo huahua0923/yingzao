@@ -1,0 +1,42 @@
+{
+ "name": "c041",
+ "title": "第八教学楼（学研楼）",
+ "dxf": "D:\\dxf_output\\C041-第八教学楼（学研楼）.dxf",
+ "wall_layer": "4.2墙体",
+ "column_layer": "4.1结构柱",
+ "x_range": [
+  1259700,
+  1306850
+ ],
+ "offset": 63600,
+ "cx": 1283275.0,
+ "cy": 31150.0,
+ "rooms": "D:\\gym3d\\data\\buildings\\c041\\rooms.json",
+ "out_dir": "D:\\gym3d\\data\\buildings\\c041\\floors",
+ "door_min_points": 10,
+ "stair_points": 5,
+ "wall_min": 0.08,
+ "wall_max": 0.35,
+ "wall_extend": 0.15,
+ "wall_fallback": 0.15,
+ "door_w_single": 1.1,
+ "door_w_double": 2.4,
+ "door_depth": 0.5,
+ "outline_buf": 0.15,
+ "open_r": 0.35,
+ "parapet_margin": 0.5,
+ "layer_height": 4.2,
+ "slab": 0.2,
+ "style": {
+  "facade": "#a4533d",
+  "inner": "#cfc9bd",
+  "roof": "#6b5a4a",
+  "roofType": "flat",
+  "parapet": "#6a4a40",
+  "glass": "#789cb8",
+  "door": "#8a5a38"
+ },
+ "floor_ys": [349150.0, 285550.0, 221950.0, 158350.0, 94750.0, 31150.0],
+ "outline_unify": true,
+  "pair_curved": true
+}

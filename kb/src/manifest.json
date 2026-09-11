@@ -1,0 +1,16 @@
+{
+  "title": "CAD 制图识图知识库",
+  "description": "建筑施工图 + 高校资产图识别规范，服务于数字孪生识别引擎",
+  "version": "1.0.0",
+  "order": [
+    "00-overview.md",
+    "01-line-types.md",
+    "02-section-materials.md",
+    "03-door-window.md",
+    "04-stair.md",
+    "05-dimension-annotation.md",
+    "06-grid-axes.md",
+    "07-asset-survey.md",
+    "08-su-reference.md"
+  ]
+}

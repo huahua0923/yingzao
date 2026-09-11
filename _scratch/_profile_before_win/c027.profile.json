@@ -1,0 +1,49 @@
+{
+ "name": "c027",
+ "title": "第三教学楼",
+ "dxf": "D:\\dxf_output\\C027-第三教学楼.dxf",
+ "wall_layer": "4.2墙体",
+ "column_layer": "4.1结构柱",
+ "x_range": [
+  1349800,
+  1404500
+ ],
+ "offset": 90000,
+ "cx": 1377150.0,
+ "cy": 45100.0,
+ "floor_plans": [
+  [1376617.0, 45025.0, 1349800.0, 1403433.0],
+  [1378200.0, 136500.0, 1366150.0, 1390250.0],
+  [1378200.0, 226500.0, 1366150.0, 1390250.0],
+  [1378200.0, 316500.0, 1366150.0, 1390250.0],
+  [1378200.0, 406500.0, 1366150.0, 1390250.0],
+  [1378200.0, 496499.0, 1366150.0, 1390250.0],
+  [1378200.0, 586499.0, 1366150.0, 1390250.0],
+  [1378200.0, 676500.0, 1366150.0, 1390250.0]
+ ],
+ "rooms": "D:\\gym3d\\data\\buildings\\c027\\rooms.json",
+ "out_dir": "D:\\gym3d\\data\\buildings\\c027\\floors",
+ "door_min_points": 10,
+ "stair_points": 5,
+ "wall_min": 0.08,
+ "wall_max": 0.35,
+ "wall_extend": 0.15,
+ "wall_fallback": 0.15,
+ "door_w_single": 1.1,
+ "door_w_double": 2.4,
+ "door_depth": 0.5,
+ "outline_buf": 0.15,
+ "open_r": 0.35,
+ "parapet_margin": 0.5,
+ "layer_height": 4.2,
+ "slab": 0.2,
+ "style": {
+  "facade": "#a4533d",
+  "inner": "#cfc9bd",
+  "roof": "#6b5a4a",
+  "roofType": "flat",
+  "parapet": "#6a4a40",
+  "glass": "#789cb8",
+  "door": "#8a5a38"
+ }
+}

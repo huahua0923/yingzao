@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>第六教学楼（逸夫楼）</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#0f0f1e}
+#hud{position:fixed;top:8px;left:10px;color:#fff;font:12px/1.5 monospace;white-space:pre;background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;z-index:9}
+#btns{position:fixed;top:8px;right:10px;z-index:9;display:flex;gap:6px}
+button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:6px 10px;cursor:pointer;font-size:12px}
+button:hover{background:#444}
+</style></head><body>
+<div id="btns"><button data-a="-180,110,160">3/4</button><button data-a="0,60,220">正视</button><button data-a="240,60,0">侧视</button><button data-a="0,260,10">俯视</button></div>
+<div id="hud">加载中…</div>
+<script type="importmap">
+{ "imports": {
+  "three": "../node_modules/three/build/three.module.js",
+  "three/addons/": "../node_modules/three/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f0f1e);
+scene.fog = new THREE.Fog(0x0f0f1e, 300, 900);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 3000);
+camera.position.set(-180, 110, 160);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 25, 0);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.52;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.1));
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.4);
+sun.position.set(90, 220, 160); sun.castShadow = true; scene.add(sun);
+const fill = new THREE.DirectionalLight(0xdde8ff, 0.5);
+fill.position.set(-220, 90, -160); scene.add(fill);
+
+const grid = new THREE.GridHelper(400, 40, 0x555555, 0x2a2a3a);
+scene.add(grid);
+
+const hud = document.getElementById("hud");
+const loader = new GLTFLoader();
+loader.load("../data/j6-walls.glb", (gltf) => {
+  const mesh = gltf.scene;
+  mesh.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  const box = new THREE.Box3().setFromObject(mesh);
+  const c = box.getCenter(new THREE.Vector3());
+  mesh.position.sub(c);
+  controls.target.copy(new THREE.Vector3(0, 25, 0));
+  scene.add(mesh);
+  let tris = 0; mesh.traverse(o => { if (o.isMesh) tris += o.geometry.index ? o.geometry.index.count/3 : o.geometry.attributes.position.count/3; });
+  hud.textContent =
+    "第六教学楼（逸夫楼） 12层\n" +
+    "bbox: " + [box.min.x,box.min.y,box.min.z].map(v=>v.toFixed(1)).join(",") + "\n" +
+    "        " + [box.max.x,box.max.y,box.max.z].map(v=>v.toFixed(1)).join(",") + "\n" +
+    "三角 " + Math.round(tris) + "\n" +
+    "左键旋转 · 滚轮缩放 · 右键平移";
+}, undefined, (e) => { hud.textContent = "加载失败: " + e; });
+
+document.querySelectorAll("#btns button").forEach(b => b.onclick = () => {
+  const [x,y,z] = b.dataset.a.split(",").map(Number);
+  camera.position.set(x,y,z);
+});
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); }
+loop();
+</script>
+</body></html>

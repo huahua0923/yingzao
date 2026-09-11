@@ -1,0 +1,1278 @@
+{
+ "ts": "20260910_174854",
+ "moved": [
+  {
+   "name": "lihua-interior.glb",
+   "dest": "legacy/data",
+   "size": 520700,
+   "sha256": "e01459268a1704225edabd78a2e842917bdfb60164225accd3d5f005389da98e",
+   "src": "D:\\gym3d\\data\\lihua-interior.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-interior.glb"
+  },
+  {
+   "name": "lihua-iso.png",
+   "dest": "legacy/data",
+   "size": 1797790,
+   "sha256": "7d9a11c8f424bf84123451fe614e390b75bdc649e37eed95d2c23ebe3e76eb95",
+   "src": "D:\\gym3d\\data\\lihua-iso.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-iso.png"
+  },
+  {
+   "name": "lihua-low.glb",
+   "dest": "legacy/data",
+   "size": 520700,
+   "sha256": "8fc1fafe5ce43bf1dbd3740e3f54961532716588b9119bd29f80cbc69ddf8b0d",
+   "src": "D:\\gym3d\\data\\lihua-low.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-low.glb"
+  },
+  {
+   "name": "lihua-side.png",
+   "dest": "legacy/data",
+   "size": 896727,
+   "sha256": "e18d835f098e6b3984548a1a3fc8464f7bdcc5d0bf91d5162fdb612c93e21b30",
+   "src": "D:\\gym3d\\data\\lihua-side.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-side.png"
+  },
+  {
+   "name": "lihua-simple.glb",
+   "dest": "legacy/data",
+   "size": 6460,
+   "sha256": "4086f4d7d94b55fcb2f05957c17c678ec1142aa6192fb2fbfeab82e3ecae7f3b",
+   "src": "D:\\gym3d\\data\\lihua-simple.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-simple.glb"
+  },
+  {
+   "name": "lihua-top.png",
+   "dest": "legacy/data",
+   "size": 569594,
+   "sha256": "20a411bb383a9fa0d9100873370fbb41b00410b7a7c09f23f5d01baa0a34279c",
+   "src": "D:\\gym3d\\data\\lihua-top.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-top.png"
+  },
+  {
+   "name": "lihua-v2-floor1.glb",
+   "dest": "legacy/data",
+   "size": 1076416,
+   "sha256": "4c82057e673fd514f632bc523c67c58431356a4dda3c18695b45e0eeabeaba04",
+   "src": "D:\\gym3d\\data\\lihua-v2-floor1.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-v2-floor1.glb"
+  },
+  {
+   "name": "lihua-walls.glb",
+   "dest": "legacy/data",
+   "size": 2183716,
+   "sha256": "d485db68ee6797aec4f01ef0cb0f2332e175fb2dda8138ade7d6aae675b918b4",
+   "src": "D:\\gym3d\\data\\lihua-walls.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-walls.glb"
+  },
+  {
+   "name": "lihua.glb",
+   "dest": "legacy/data",
+   "size": 8720,
+   "sha256": "e95a7787c55356f4661abca25c3a92095930c129b41fbc29ba049f9bc197463b",
+   "src": "D:\\gym3d\\data\\lihua.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua.glb"
+  },
+  {
+   "name": "path_0101_0316.json",
+   "dest": "legacy/data",
+   "size": 1288,
+   "sha256": "dbd3475732995420d319daa23c9fbe904772f88e230aaa644a9e02e123012ab4",
+   "src": "D:\\gym3d\\data\\path_0101_0316.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\path_0101_0316.json"
+  },
+  {
+   "name": "path_01_08.json",
+   "dest": "legacy/data",
+   "size": 455,
+   "sha256": "96f0baa15a2db8d362ed93cfb4fabad21e24286085ef68afdfc7b1f9c12446c5",
+   "src": "D:\\gym3d\\data\\path_01_08.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\path_01_08.json"
+  },
+  {
+   "name": "path_01_08.png",
+   "dest": "legacy/data",
+   "size": 2644,
+   "sha256": "6b3d698f09e2ff68aad713de940b06235600a351a1112e6728384272423be75f",
+   "src": "D:\\gym3d\\data\\path_01_08.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\path_01_08.png"
+  },
+  {
+   "name": "path_01_19.json",
+   "dest": "legacy/data",
+   "size": 798,
+   "sha256": "0989f3303d960b7028e8789dd12ae262ce1b338b53b905288e67311d4a25a350",
+   "src": "D:\\gym3d\\data\\path_01_19.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\path_01_19.json"
+  },
+  {
+   "name": "path_01_19.png",
+   "dest": "legacy/data",
+   "size": 2748,
+   "sha256": "cd079f7d3264c3059e5bb692e2c2a00c784aa0784e32db03aa61b56a6c6be83a",
+   "src": "D:\\gym3d\\data\\path_01_19.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\path_01_19.png"
+  },
+  {
+   "name": "PLAN.md",
+   "dest": "legacy/...",
+   "size": 5104,
+   "sha256": "a57f19df7b59183843d2cce25ffe27a95fff9c8d947cb15eb993beb9c3805877",
+   "src": "D:\\gym3d\\PLAN.md",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\PLAN.md",
+   "reconciled": true
+  },
+  {
+   "name": "spec.json",
+   "dest": "legacy/...",
+   "size": 642,
+   "sha256": "6255d68417bd44728b47882f911c844de3e7187a98abdb34e721c2560fbab361",
+   "src": "D:\\gym3d\\spec.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\spec.json",
+   "reconciled": true
+  },
+  {
+   "name": "dxf_vision.json",
+   "dest": "legacy/...",
+   "size": 4079,
+   "sha256": "1b69af19623a8dc4406289f54f029eb2072ca0531d4bb33e3a07b50aabbbf3e3",
+   "src": "D:\\gym3d\\archive\\data\\dxf_vision.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\dxf_vision.json",
+   "reconciled": true
+  },
+  {
+   "name": "inspect_geometry.log",
+   "dest": "legacy/...",
+   "size": 57,
+   "sha256": "686667db88552e4f303cdd73bdbbd16a5fa2787c7ed499dd88b4be969d1e831d",
+   "src": "D:\\gym3d\\archive\\data\\inspect_geometry.log",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\inspect_geometry.log",
+   "reconciled": true
+  },
+  {
+   "name": "serve.log",
+   "dest": "legacy/...",
+   "size": 42,
+   "sha256": "56951bfd9e2a7a878ee19ae1d6701022ce7c1100cd43299b889e5ab90890ac02",
+   "src": "D:\\gym3d\\archive\\data\\serve.log",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\serve.log",
+   "reconciled": true
+  },
+  {
+   "name": "serve_rooms.log",
+   "dest": "legacy/...",
+   "size": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "src": "D:\\gym3d\\archive\\data\\serve_rooms.log",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\serve_rooms.log",
+   "reconciled": true
+  },
+  {
+   "name": "text_c006.txt",
+   "dest": "legacy/...",
+   "size": 67973,
+   "sha256": "b8f959e569e7b6d3ff175ed1716c88e4e68b568080e4a36d0b07e3828d93f95e",
+   "src": "D:\\gym3d\\archive\\data\\text_c006.txt",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\text_c006.txt",
+   "reconciled": true
+  },
+  {
+   "name": "v3_out.json",
+   "dest": "legacy/...",
+   "size": 753,
+   "sha256": "b09734e24a7d10889b026dafd26d783bd5862227077de077240d3ddddd6d4365",
+   "src": "D:\\gym3d\\archive\\data\\v3_out.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\v3_out.json",
+   "reconciled": true
+  },
+  {
+   "name": "vision_out.json",
+   "dest": "legacy/...",
+   "size": 4618,
+   "sha256": "8605e18e764ca48ced3cf72ab8368b7d2b7dd4601ad7736dc18fbbec248c5db2",
+   "src": "D:\\gym3d\\archive\\data\\vision_out.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\vision_out.json",
+   "reconciled": true
+  },
+  {
+   "name": "vision_out2.json",
+   "dest": "legacy/...",
+   "size": 6285,
+   "sha256": "f6c8e5d40732025ea84a83520e2acb1f6e41363fa807d38a98f67a4f1d02ff48",
+   "src": "D:\\gym3d\\archive\\data\\vision_out2.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\data\\vision_out2.json",
+   "reconciled": true
+  },
+  {
+   "name": "plan.html",
+   "dest": "legacy/...",
+   "size": 133067,
+   "sha256": "d1e3eced4ec4f2f67b3484b23080b435d1a4fd4f4b56eb7d35ce4ee11f3189d0",
+   "src": "D:\\gym3d\\archive\\html\\plan.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\plan.html",
+   "reconciled": true
+  },
+  {
+   "name": "render.html",
+   "dest": "legacy/...",
+   "size": 2148,
+   "sha256": "a66dddc3fdcbc630f7dfc4763cc04bd38c55f5f301e1cdfb9712588aa29b3496",
+   "src": "D:\\gym3d\\archive\\html\\render.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_building.html",
+   "dest": "legacy/...",
+   "size": 3539,
+   "sha256": "bae2f5beeb2649d76e8224549f13483a944ca20d76db5fa0e4858ea1aa7247cc",
+   "src": "D:\\gym3d\\archive\\html\\render_building.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_building.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_floor1.html",
+   "dest": "legacy/...",
+   "size": 3084,
+   "sha256": "4f94090a43701493853355fb909860734bd2ecd9b14f933dc750c66fded0364a",
+   "src": "D:\\gym3d\\archive\\html\\render_floor1.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_floor1.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_int.html",
+   "dest": "legacy/...",
+   "size": 3086,
+   "sha256": "483065423671d92d36316bc77f619eb9515b2a20acaf647b9435a4538ef3f876",
+   "src": "D:\\gym3d\\archive\\html\\render_int.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_int.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_plan_v2.html",
+   "dest": "legacy/...",
+   "size": 2678,
+   "sha256": "1e4e0a8f9dd51c6893938604ec04e9e8ff2ff84ed44e88bb90a04421648b3d8c",
+   "src": "D:\\gym3d\\archive\\html\\render_plan_v2.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_plan_v2.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_simple.html",
+   "dest": "legacy/...",
+   "size": 2169,
+   "sha256": "e4914c3ccb8fbd6976799034b2af9a023e79eccff84009e7ec304dce6453d29f",
+   "src": "D:\\gym3d\\archive\\html\\render_simple.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_simple.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_simple_plan.html",
+   "dest": "legacy/...",
+   "size": 2262,
+   "sha256": "18eb97300ffa90f9fa3e1affdc753f64a100ea1743c3a3f913f329a90988ca38",
+   "src": "D:\\gym3d\\archive\\html\\render_simple_plan.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_simple_plan.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_styles.html",
+   "dest": "legacy/...",
+   "size": 4505,
+   "sha256": "36f085fd8270bec22fd249ac0328273c536b9ad7b79476601b91ff1d1532d021",
+   "src": "D:\\gym3d\\archive\\html\\render_styles.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_styles.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_v2.html",
+   "dest": "legacy/...",
+   "size": 3086,
+   "sha256": "483065423671d92d36316bc77f619eb9515b2a20acaf647b9435a4538ef3f876",
+   "src": "D:\\gym3d\\archive\\html\\render_v2.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_v2.html",
+   "reconciled": true
+  },
+  {
+   "name": "render_view.html",
+   "dest": "legacy/...",
+   "size": 2571,
+   "sha256": "7bec51ccaf909c4f12f8ada409804c3712979aaa3969f6ddadc6aef7fd80aa7b",
+   "src": "D:\\gym3d\\archive\\html\\render_view.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\html\\render_view.html",
+   "reconciled": true
+  },
+  {
+   "name": "dxf_wall_f0.png",
+   "dest": "legacy/...",
+   "size": 40107,
+   "sha256": "daf26c2fcb9e1a7b44db351341b17a435f92b34d165cc66c1154a3148d0fc08e",
+   "src": "D:\\gym3d\\archive\\img\\dxf_wall_f0.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\img\\dxf_wall_f0.png",
+   "reconciled": true
+  },
+  {
+   "name": "floor1-full.png",
+   "dest": "legacy/...",
+   "size": 46447,
+   "sha256": "f122061a06f93905faf7fd14a7c778fbb073ef19e422e2560ce18ebeaa5c356e",
+   "src": "D:\\gym3d\\archive\\img\\floor1-full.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\img\\floor1-full.png",
+   "reconciled": true
+  },
+  {
+   "name": "floor1-labeled.png",
+   "dest": "legacy/...",
+   "size": 81184,
+   "sha256": "6f30d4837602b8f858b1b4bd8d8cad6873efa6f911d3c985dd3a37651238ee1a",
+   "src": "D:\\gym3d\\archive\\img\\floor1-labeled.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\img\\floor1-labeled.png",
+   "reconciled": true
+  },
+  {
+   "name": "analyze.js",
+   "dest": "legacy/...",
+   "size": 2190,
+   "sha256": "36d9a034f972d18a1bf907c800bbd89b2f0e0c18cda8493eda0f1b0f27a6abc4",
+   "src": "D:\\gym3d\\archive\\scripts\\analyze.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\analyze.js",
+   "reconciled": true
+  },
+  {
+   "name": "analyze2.js",
+   "dest": "legacy/...",
+   "size": 5099,
+   "sha256": "1c3be5bffe6844a701535cb1d681930e0cb6eb0f5caf008b1aed3b8740f49083",
+   "src": "D:\\gym3d\\archive\\scripts\\analyze2.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\analyze2.js",
+   "reconciled": true
+  },
+  {
+   "name": "analyze_floors.py",
+   "dest": "legacy/...",
+   "size": 2546,
+   "sha256": "1f57db3addbaf6205a6979a82007001936abaaf5b76139d4b3c761d165fc7d2a",
+   "src": "D:\\gym3d\\archive\\scripts\\analyze_floors.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\analyze_floors.py",
+   "reconciled": true
+  },
+  {
+   "name": "ascii-lihua.js",
+   "dest": "legacy/...",
+   "size": 2176,
+   "sha256": "17f5bede039dc609e839453dde09729766e88308cfe8821c9b26117642b0df43",
+   "src": "D:\\gym3d\\archive\\scripts\\ascii-lihua.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\ascii-lihua.js",
+   "reconciled": true
+  },
+  {
+   "name": "ascii-plan.js",
+   "dest": "legacy/...",
+   "size": 2183,
+   "sha256": "1f715dddbe4faf5a827019605841ae32907c9d2cfcfb545fb58f4ce29d42fc4f",
+   "src": "D:\\gym3d\\archive\\scripts\\ascii-plan.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\ascii-plan.js",
+   "reconciled": true
+  },
+  {
+   "name": "audit_model.py",
+   "dest": "legacy/...",
+   "size": 2114,
+   "sha256": "d2f81dd5c1814568f86e03f1b63b3c5b61f38c8b9fadf4b35e51b0adcc67192d",
+   "src": "D:\\gym3d\\archive\\scripts\\audit_model.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\audit_model.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_diag.py",
+   "dest": "legacy/...",
+   "size": 3354,
+   "sha256": "fea3b3ad3019f29350735aeab480d8e8c0829ed55b401b5d50066b75b1e76eb4",
+   "src": "D:\\gym3d\\archive\\scripts\\build_diag.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\build_diag.py",
+   "reconciled": true
+  },
+  {
+   "name": "chain.js",
+   "dest": "legacy/...",
+   "size": 2550,
+   "sha256": "c35d76adceca1eceff3b7a0a5545ac70b8d91b903d4b74864a67ff03de370302",
+   "src": "D:\\gym3d\\archive\\scripts\\chain.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\chain.js",
+   "reconciled": true
+  },
+  {
+   "name": "classify_c108.py",
+   "dest": "legacy/...",
+   "size": 1561,
+   "sha256": "e63b644ee4f9942156cb23fd62e2ee2ab5d499ba43295e901baf17d01e78b3e5",
+   "src": "D:\\gym3d\\archive\\scripts\\classify_c108.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\classify_c108.py",
+   "reconciled": true
+  },
+  {
+   "name": "convex.js",
+   "dest": "legacy/...",
+   "size": 2336,
+   "sha256": "59b0585a32d94b239541c93a87bf9a0baaf3f3c96c4a88786930e4ffbd714afd",
+   "src": "D:\\gym3d\\archive\\scripts\\convex.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\convex.js",
+   "reconciled": true
+  },
+  {
+   "name": "debug-grid.js",
+   "dest": "legacy/...",
+   "size": 2342,
+   "sha256": "a114b3d38619f5d00505fa8e39298405ef27082ec2587f036fa165ec597e2eff",
+   "src": "D:\\gym3d\\archive\\scripts\\debug-grid.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\debug-grid.js",
+   "reconciled": true
+  },
+  {
+   "name": "decode_color.py",
+   "dest": "legacy/...",
+   "size": 1471,
+   "sha256": "c0ee4a927a75a5e63997c6656277a5e5f892ff5e8b21d4dfbd95214923968355",
+   "src": "D:\\gym3d\\archive\\scripts\\decode_color.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\decode_color.py",
+   "reconciled": true
+  },
+  {
+   "name": "derive_outline.py",
+   "dest": "legacy/...",
+   "size": 2046,
+   "sha256": "2486dcc504fc3342b9acf435b005411a0419b72a5d2b1c5583440cc69624bb1a",
+   "src": "D:\\gym3d\\archive\\scripts\\derive_outline.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\derive_outline.py",
+   "reconciled": true
+  },
+  {
+   "name": "diag_faces.py",
+   "dest": "legacy/...",
+   "size": 4768,
+   "sha256": "df8301cd6ce5c45c61ed5ea50a535c0202e429af75af08ce0f2be60b974a2406",
+   "src": "D:\\gym3d\\archive\\scripts\\diag_faces.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\diag_faces.py",
+   "reconciled": true
+  },
+  {
+   "name": "diag_floor0.py",
+   "dest": "legacy/...",
+   "size": 2230,
+   "sha256": "f957d16c6ace6f7e1bcb17f47a2845372bb19ae0545a1704fd33b1028e73efb1",
+   "src": "D:\\gym3d\\archive\\scripts\\diag_floor0.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\diag_floor0.py",
+   "reconciled": true
+  },
+  {
+   "name": "dump_bld.py",
+   "dest": "legacy/...",
+   "size": 2176,
+   "sha256": "f896127b5f5cceba046ef82e3ede7d8e928679635c55a2c465f3f01e9de9e15d",
+   "src": "D:\\gym3d\\archive\\scripts\\dump_bld.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\dump_bld.py",
+   "reconciled": true
+  },
+  {
+   "name": "dump_f1.py",
+   "dest": "legacy/...",
+   "size": 2183,
+   "sha256": "94c27004d6d20fd232a171d482afbd03901dfa33fc0800454d4a899f8837e4ed",
+   "src": "D:\\gym3d\\archive\\scripts\\dump_f1.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\dump_f1.py",
+   "reconciled": true
+  },
+  {
+   "name": "dump_geom.py",
+   "dest": "legacy/...",
+   "size": 2177,
+   "sha256": "a96f62c21073a0c647eabb0c66888744fb9ea93a93de5dbaf43cd068ca4ab060",
+   "src": "D:\\gym3d\\archive\\scripts\\dump_geom.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\dump_geom.py",
+   "reconciled": true
+  },
+  {
+   "name": "dump_wall_y.py",
+   "dest": "legacy/...",
+   "size": 1708,
+   "sha256": "c2574c608f92e4b5a23409fbfac37e34931b1d1451a7ce4eecc78bdf69040667",
+   "src": "D:\\gym3d\\archive\\scripts\\dump_wall_y.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\dump_wall_y.py",
+   "reconciled": true
+  },
+  {
+   "name": "export-lihua.js",
+   "dest": "legacy/...",
+   "size": 7448,
+   "sha256": "ab9e1cdba86ef3b561bf234532128e7d1277f0d1c2212f697d62af5e9dc4c419",
+   "src": "D:\\gym3d\\archive\\scripts\\export-lihua.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\export-lihua.js",
+   "reconciled": true
+  },
+  {
+   "name": "extract-lihua.js",
+   "dest": "legacy/...",
+   "size": 4186,
+   "sha256": "458c0ebc9df6286e2565e9d8f1138c14d9a4f16062181254d22a35b878602639",
+   "src": "D:\\gym3d\\archive\\scripts\\extract-lihua.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\extract-lihua.js",
+   "reconciled": true
+  },
+  {
+   "name": "extract.js",
+   "dest": "legacy/...",
+   "size": 3892,
+   "sha256": "8ada88babc0b38551b52f44666b836df6b1dd8f66473f9b01f53bc520618bd99",
+   "src": "D:\\gym3d\\archive\\scripts\\extract.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\extract.js",
+   "reconciled": true
+  },
+  {
+   "name": "floor_scan.py",
+   "dest": "legacy/...",
+   "size": 771,
+   "sha256": "a10573de92d06f6e06897dec0b5e1c2e54039eee79cc91fad95f86d05e8742ee",
+   "src": "D:\\gym3d\\archive\\scripts\\floor_scan.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\floor_scan.py",
+   "reconciled": true
+  },
+  {
+   "name": "github_arch.py",
+   "dest": "legacy/...",
+   "size": 2832,
+   "sha256": "06e95404cbd96525d6b321142549d52ae30b48f809c595eaa45ed0dc577cd10b",
+   "src": "D:\\gym3d\\archive\\scripts\\github_arch.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\github_arch.py",
+   "reconciled": true
+  },
+  {
+   "name": "github_cad_elements.py",
+   "dest": "legacy/...",
+   "size": 2509,
+   "sha256": "70c5633e9a986036809bc8c934d906a36f286669b876dc661370a491eec73726",
+   "src": "D:\\gym3d\\archive\\scripts\\github_cad_elements.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\github_cad_elements.py",
+   "reconciled": true
+  },
+  {
+   "name": "github_high_star.py",
+   "dest": "legacy/...",
+   "size": 1422,
+   "sha256": "cb010750f0eeb1eb9eaf4fe91d687949ad2fe74e8181797d86b780598e740eee",
+   "src": "D:\\gym3d\\archive\\scripts\\github_high_star.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\github_high_star.py",
+   "reconciled": true
+  },
+  {
+   "name": "github_refs.py",
+   "dest": "legacy/...",
+   "size": 1544,
+   "sha256": "e3766ad64356ccc07457d0aa2a54a003ce5a520165ab9c38daa02b708092fd3d",
+   "src": "D:\\gym3d\\archive\\scripts\\github_refs.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\github_refs.py",
+   "reconciled": true
+  },
+  {
+   "name": "glb-export.js",
+   "dest": "legacy/...",
+   "size": 4222,
+   "sha256": "aa510b2f433f6255a1fa84ee795216416db2b2f4fd436f62028a11b5711ba628",
+   "src": "D:\\gym3d\\archive\\scripts\\glb-export.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\glb-export.js",
+   "reconciled": true
+  },
+  {
+   "name": "inspect_building.py",
+   "dest": "legacy/...",
+   "size": 2989,
+   "sha256": "ce8f15d4aed2fd72a6ba85ad198dc01f471fd1dba5cc8d86339f2977b7067adf",
+   "src": "D:\\gym3d\\archive\\scripts\\inspect_building.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\inspect_building.py",
+   "reconciled": true
+  },
+  {
+   "name": "inspect_dxf.py",
+   "dest": "legacy/...",
+   "size": 1363,
+   "sha256": "e85db676b5399188117026436b9177f1ee4c625238a9a307a9c490d02f68e536",
+   "src": "D:\\gym3d\\archive\\scripts\\inspect_dxf.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\inspect_dxf.py",
+   "reconciled": true
+  },
+  {
+   "name": "inspect_geometry.py",
+   "dest": "legacy/...",
+   "size": 2864,
+   "sha256": "33c5d085f10213981134cd2527f2f7c61f9c5e3f507a9c13d6028ed1ced9bd2f",
+   "src": "D:\\gym3d\\archive\\scripts\\inspect_geometry.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\inspect_geometry.py",
+   "reconciled": true
+  },
+  {
+   "name": "inspect_glb.py",
+   "dest": "legacy/...",
+   "size": 1121,
+   "sha256": "69765239e4c16fb3131c211e965b7a3f71256a47395ab0855c413cc4285eec09",
+   "src": "D:\\gym3d\\archive\\scripts\\inspect_glb.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\inspect_glb.py",
+   "reconciled": true
+  },
+  {
+   "name": "make-outline.js",
+   "dest": "legacy/...",
+   "size": 919,
+   "sha256": "bb0f692a8b008b510024e0390bc5c5401806028e7aa092d517a16d532720e816",
+   "src": "D:\\gym3d\\archive\\scripts\\make-outline.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\make-outline.js",
+   "reconciled": true
+  },
+  {
+   "name": "mplvisit.py",
+   "dest": "legacy/...",
+   "size": 2422,
+   "sha256": "9dbed069a3c3fd8c62e4ee3095e5a593530884385c8375f4ad92c7488e36cee7",
+   "src": "D:\\gym3d\\archive\\scripts\\mplvisit.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\mplvisit.py",
+   "reconciled": true
+  },
+  {
+   "name": "net_test.py",
+   "dest": "legacy/...",
+   "size": 1335,
+   "sha256": "1c43c22f941460a8ea317e95751158c94189ac375d762ec0c12fad2a35a71d31",
+   "src": "D:\\gym3d\\archive\\scripts\\net_test.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\net_test.py",
+   "reconciled": true
+  },
+  {
+   "name": "outline-lihua.js",
+   "dest": "legacy/...",
+   "size": 6028,
+   "sha256": "963117be45807708dcb00f8054b2cc07e2a054cf16c312cbb3a8a959a036b218",
+   "src": "D:\\gym3d\\archive\\scripts\\outline-lihua.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\outline-lihua.js",
+   "reconciled": true
+  },
+  {
+   "name": "outline-trace.js",
+   "dest": "legacy/...",
+   "size": 6077,
+   "sha256": "639c9a94a601fa8b040ea87d3c575159a0cdddd5f9287bc8a775eb69d6805597",
+   "src": "D:\\gym3d\\archive\\scripts\\outline-trace.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\outline-trace.js",
+   "reconciled": true
+  },
+  {
+   "name": "outline.js",
+   "dest": "legacy/...",
+   "size": 2880,
+   "sha256": "648b8324e0c8a189548781a0cd1766e60221e212fd6a02fb6c87898c55bf6d12",
+   "src": "D:\\gym3d\\archive\\scripts\\outline.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\outline.js",
+   "reconciled": true
+  },
+  {
+   "name": "paint_f1.py",
+   "dest": "legacy/...",
+   "size": 2616,
+   "sha256": "8c0d1e6369d08b81a158199950c1c02118ac1b3ce4d0eb9615572e7066b1cb72",
+   "src": "D:\\gym3d\\archive\\scripts\\paint_f1.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\paint_f1.py",
+   "reconciled": true
+  },
+  {
+   "name": "parse_cad.py",
+   "dest": "legacy/...",
+   "size": 7401,
+   "sha256": "6bf662f1df4f1d7a0d4ead80b04f4374fa08d9ad56c13786ee57407938b16488",
+   "src": "D:\\gym3d\\archive\\scripts\\parse_cad.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\parse_cad.py",
+   "reconciled": true
+  },
+  {
+   "name": "plan_first.py",
+   "dest": "legacy/...",
+   "size": 3596,
+   "sha256": "44de78e62423dcd9c9e8fb3337028bcaf00ead3a9cc061c1bb899729386f49fb",
+   "src": "D:\\gym3d\\archive\\scripts\\plan_first.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\plan_first.py",
+   "reconciled": true
+  },
+  {
+   "name": "plan_walls.py",
+   "dest": "legacy/...",
+   "size": 2126,
+   "sha256": "722df6955211e7dcff5088d1e75c8fdc9f3fe91da859708ea88d724b15fed1c0",
+   "src": "D:\\gym3d\\archive\\scripts\\plan_walls.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\plan_walls.py",
+   "reconciled": true
+  },
+  {
+   "name": "render-plan-png.js",
+   "dest": "legacy/...",
+   "size": 4117,
+   "sha256": "bef4e3464d7b7d1b4e3998ad86070e4194029a96d462358e8dd31daafe850184",
+   "src": "D:\\gym3d\\archive\\scripts\\render-plan-png.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render-plan-png.js",
+   "reconciled": true
+  },
+  {
+   "name": "render-plan.js",
+   "dest": "legacy/...",
+   "size": 3050,
+   "sha256": "814a63e305b8206744f814f6ccb109185187716b9e3c614918292ae6b1ccee6c",
+   "src": "D:\\gym3d\\archive\\scripts\\render-plan.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render-plan.js",
+   "reconciled": true
+  },
+  {
+   "name": "render_clean.py",
+   "dest": "legacy/...",
+   "size": 10541,
+   "sha256": "f95a40c1df454867cc72c69765b403c8dbf08f068c82b42c9f42d2401de38de1",
+   "src": "D:\\gym3d\\archive\\scripts\\render_clean.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_clean.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_dxf.py",
+   "dest": "legacy/...",
+   "size": 2147,
+   "sha256": "be8a82d1ef46a5da941afe5775ce8c680aca8816fcfe88aff020289ce9be1e30",
+   "src": "D:\\gym3d\\archive\\scripts\\render_dxf.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_dxf.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_floor1.py",
+   "dest": "legacy/...",
+   "size": 10467,
+   "sha256": "ce194f929e045a2988fd7635a375b9b0a5fbb64fa822e46c8751979a9fd6ce27",
+   "src": "D:\\gym3d\\archive\\scripts\\render_floor1.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_floor1.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_floor1_zbuf.py",
+   "dest": "legacy/...",
+   "size": 11661,
+   "sha256": "74e73939596a54417481fa4d3f5a361f787afa397c1fee1b1e16da9a2c237916",
+   "src": "D:\\gym3d\\archive\\scripts\\render_floor1_zbuf.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_floor1_zbuf.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_from_lines.py",
+   "dest": "legacy/...",
+   "size": 4668,
+   "sha256": "a65d54535224aa3a4379b5a98fc015912949ff0ada5b9fcd18be878bf27e30a6",
+   "src": "D:\\gym3d\\archive\\scripts\\render_from_lines.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_from_lines.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_layer.py",
+   "dest": "legacy/...",
+   "size": 2042,
+   "sha256": "2e160349cbc6d767fb58f01817d970adafaa34a1827d260f772dba2d57dfdb97",
+   "src": "D:\\gym3d\\archive\\scripts\\render_layer.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_layer.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_photo.py",
+   "dest": "legacy/...",
+   "size": 2069,
+   "sha256": "0d8050127d7ccd4f214aa0d24115082ac3f4059f7d209704de2f173eddd6865d",
+   "src": "D:\\gym3d\\archive\\scripts\\render_photo.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_photo.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_plan.py",
+   "dest": "legacy/...",
+   "size": 839,
+   "sha256": "c252e816a1c0aa5f8bea0479ac24d143b748bd229509b3202cadc596722d6cb5",
+   "src": "D:\\gym3d\\archive\\scripts\\render_plan.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_plan.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_styles.py",
+   "dest": "legacy/...",
+   "size": 5321,
+   "sha256": "bd353d0b293b14f361147bdaffd5bdc2d0678723545d8a30f490cfc2078c8903",
+   "src": "D:\\gym3d\\archive\\scripts\\render_styles.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_styles.py",
+   "reconciled": true
+  },
+  {
+   "name": "render_truecolor.py",
+   "dest": "legacy/...",
+   "size": 2249,
+   "sha256": "cc808ebc0f89674560bd07df8b7301e6a30b02bbfc7b2118b0882b96f4ea003d",
+   "src": "D:\\gym3d\\archive\\scripts\\render_truecolor.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\render_truecolor.py",
+   "reconciled": true
+  },
+  {
+   "name": "serve.js",
+   "dest": "legacy/...",
+   "size": 896,
+   "sha256": "477d7cb183c640dfb4972bf9a79ba819f3e4ceebce31d280b84c8bc41d4ce1a0",
+   "src": "D:\\gym3d\\archive\\scripts\\serve.js",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\serve.js",
+   "reconciled": true
+  },
+  {
+   "name": "shot.py",
+   "dest": "legacy/...",
+   "size": 1083,
+   "sha256": "6d9fb98a21c33e7ebaa685519ba2b5ee9b9b2913849abff99d33a2e03f3e91ef",
+   "src": "D:\\gym3d\\archive\\scripts\\shot.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\shot.py",
+   "reconciled": true
+  },
+  {
+   "name": "splat.py",
+   "dest": "legacy/...",
+   "size": 2227,
+   "sha256": "804ebb554c2f37f6bf2a22db359f92f5cd018fc9aeb00ebf8d9ffc8261b89fbb",
+   "src": "D:\\gym3d\\archive\\scripts\\splat.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\splat.py",
+   "reconciled": true
+  },
+  {
+   "name": "splat2.py",
+   "dest": "legacy/...",
+   "size": 1747,
+   "sha256": "c4f1e645da53dfdf171fd770d3c2762ff67f0ffe7f79bd9f9d8ec562f9cd6e69",
+   "src": "D:\\gym3d\\archive\\scripts\\splat2.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\splat2.py",
+   "reconciled": true
+  },
+  {
+   "name": "test_fix.py",
+   "dest": "legacy/...",
+   "size": 3215,
+   "sha256": "f4d97a91ff7cd6b428c4132f66d5508ddc14b8360e440e3fb2675123bfb45a6b",
+   "src": "D:\\gym3d\\archive\\scripts\\test_fix.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\test_fix.py",
+   "reconciled": true
+  },
+  {
+   "name": "test_outline.py",
+   "dest": "legacy/...",
+   "size": 3578,
+   "sha256": "1698f34f2b545b8782048971bb11f85400d4bba3a831995c645d9ded92e4af98",
+   "src": "D:\\gym3d\\archive\\scripts\\test_outline.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\test_outline.py",
+   "reconciled": true
+  },
+  {
+   "name": "test_qwen.py",
+   "dest": "legacy/...",
+   "size": 1769,
+   "sha256": "9160c3c778b4120bb5040fd4958b2978248f948e887e0187ef8b7498f53ea998",
+   "src": "D:\\gym3d\\archive\\scripts\\test_qwen.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\test_qwen.py",
+   "reconciled": true
+  },
+  {
+   "name": "verify_areas.py",
+   "dest": "legacy/...",
+   "size": 854,
+   "sha256": "85312fe5acc1799c8c332b7d0c7ad294b8cb84d1f6146a0506d2d87922536ffc",
+   "src": "D:\\gym3d\\archive\\scripts\\verify_areas.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\verify_areas.py",
+   "reconciled": true
+  },
+  {
+   "name": "verify_outline.py",
+   "dest": "legacy/...",
+   "size": 4908,
+   "sha256": "09a304c66efd01823b385026a97743dc8760d86a4215944e8b36f9e447788b2a",
+   "src": "D:\\gym3d\\archive\\scripts\\verify_outline.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\verify_outline.py",
+   "reconciled": true
+  },
+  {
+   "name": "verify_precision.py",
+   "dest": "legacy/...",
+   "size": 3465,
+   "sha256": "b18b1f96f8e428fc50387ed1d3006b796bda085c8fbb13873fe7ff03bfe10ae7",
+   "src": "D:\\gym3d\\archive\\scripts\\verify_precision.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\verify_precision.py",
+   "reconciled": true
+  },
+  {
+   "name": "zbuf2.py",
+   "dest": "legacy/...",
+   "size": 3504,
+   "sha256": "5ff5a78c97cf1188558e6f6a4254794e1cde69fce2d37ab2c474cc3eb8c205df",
+   "src": "D:\\gym3d\\archive\\scripts\\zbuf2.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\zbuf2.py",
+   "reconciled": true
+  },
+  {
+   "name": "zbuffer.py",
+   "dest": "legacy/...",
+   "size": 3364,
+   "sha256": "3bbf4dff67748da702adea017913b111e662045978eca8d00fb532e9b2595083",
+   "src": "D:\\gym3d\\archive\\scripts\\zbuffer.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\archive\\scripts\\zbuffer.py",
+   "reconciled": true
+  },
+  {
+   "name": "adjacency_v1_backup.json",
+   "dest": "legacy/...",
+   "size": 46571,
+   "sha256": "55582caa918a980afc9d2f9bcfd4f71d769fe956b709c2d9c8916b368b62d17d",
+   "src": "D:\\gym3d\\data\\adjacency_v1_backup.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\adjacency_v1_backup.json",
+   "reconciled": true
+  },
+  {
+   "name": "cad_model.json",
+   "dest": "legacy/...",
+   "size": 201649,
+   "sha256": "36807006c4adfe536a1a8bc816e5fb7e4ced21a9bd980652cbe062ad6ae139ea",
+   "src": "D:\\gym3d\\data\\cad_model.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\cad_model.json",
+   "reconciled": true
+  },
+  {
+   "name": "geometry.json",
+   "dest": "legacy/...",
+   "size": 1601134,
+   "sha256": "55741338b77b8dc8d01c8d972f4a10823eccf2a8a0d26c191dccfb5e44e6755f",
+   "src": "D:\\gym3d\\data\\geometry.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\geometry.json",
+   "reconciled": true
+  },
+  {
+   "name": "gymnasium.glb",
+   "dest": "legacy/...",
+   "size": 2768,
+   "sha256": "9ad3e745d6e61994d970ca8982072f41e97d991a605961ce19a58ef1c1b7983b",
+   "src": "D:\\gym3d\\data\\gymnasium.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\gymnasium.glb",
+   "reconciled": true
+  },
+  {
+   "name": "j6-dbg.glb",
+   "dest": "legacy/...",
+   "size": 247901768,
+   "sha256": "37963280e91f839078fc15643e5a48b8777607ba521a3867d90a21be9eadb973",
+   "src": "D:\\gym3d\\data\\j6-dbg.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\j6-dbg.glb",
+   "reconciled": true
+  },
+  {
+   "name": "j6-deci03.glb",
+   "dest": "legacy/...",
+   "size": 247901768,
+   "sha256": "37963280e91f839078fc15643e5a48b8777607ba521a3867d90a21be9eadb973",
+   "src": "D:\\gym3d\\data\\j6-deci03.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\j6-deci03.glb",
+   "reconciled": true
+  },
+  {
+   "name": "lihua-door-closeup.png",
+   "dest": "legacy/...",
+   "size": 1103886,
+   "sha256": "9121a60aa2c77b13828c772d2a1c238319dbd8ba385eddfea1668a5b8591f48c",
+   "src": "D:\\gym3d\\data\\lihua-door-closeup.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-door-closeup.png",
+   "reconciled": true
+  },
+  {
+   "name": "lihua-floor1.glb",
+   "dest": "legacy/...",
+   "size": 333272,
+   "sha256": "ed31415a9fe95b005035388fd5a349ee64d2c96e15f5f64aa2a6325432955f2b",
+   "src": "D:\\gym3d\\data\\lihua-floor1.glb",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-floor1.glb",
+   "reconciled": true
+  },
+  {
+   "name": "lihua-front.png",
+   "dest": "legacy/...",
+   "size": 1756945,
+   "sha256": "48d574845629badb656eb67f9543504e810ac4e841196035bdfd552c27549de3",
+   "src": "D:\\gym3d\\data\\lihua-front.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-front.png",
+   "reconciled": true
+  },
+  {
+   "name": "lihua-geometry.json",
+   "dest": "legacy/...",
+   "size": 420060,
+   "sha256": "76bde95fb4301fef56c92f7aa9ecc56c3fe57d35ab829ae5de973febe504f6c1",
+   "src": "D:\\gym3d\\data\\lihua-geometry.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\lihua-geometry.json",
+   "reconciled": true
+  },
+  {
+   "name": "nav_grid_f0.png",
+   "dest": "legacy/...",
+   "size": 1685,
+   "sha256": "6af55e1b20bdd4e33a69715c3ce1bec217abd6a7e7f1a74b4bca40d0d20a8280",
+   "src": "D:\\gym3d\\data\\nav_grid_f0.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\nav_grid_f0.png",
+   "reconciled": true
+  },
+  {
+   "name": "outline_v2.json",
+   "dest": "legacy/...",
+   "size": 327,
+   "sha256": "e8f096bb7ec75dc016231db266c999898bf810cfbe66aa9dbcdc4b91ead13b0c",
+   "src": "D:\\gym3d\\data\\outline_v2.json",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\outline_v2.json",
+   "reconciled": true
+  },
+  {
+   "name": "preview.html",
+   "dest": "legacy/...",
+   "size": 3763,
+   "sha256": "01b11d45fbb0cc2e98d8001bd97722e3f74b60dfe999b0f5807665d43d8d9ecd",
+   "src": "D:\\gym3d\\data\\preview.html",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\data\\preview.html",
+   "reconciled": true
+  },
+  {
+   "name": "extract_floors.py",
+   "dest": "legacy/...",
+   "size": 14568,
+   "sha256": "88ae3e96d57b0cbbe4bf41f0e434748e1ed3b3c4580a7d5b9581db52ec3eb075",
+   "src": "D:\\gym3d\\backend\\extract\\extract_floors.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\extract_floors.py",
+   "reconciled": true
+  },
+  {
+   "name": "extract_rooms.py",
+   "dest": "legacy/...",
+   "size": 7856,
+   "sha256": "c8282c6bd88bb61d0b96be99540e66ec979bc45e5093c3191068478cbd0b941b",
+   "src": "D:\\gym3d\\backend\\extract\\extract_rooms.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\extract_rooms.py",
+   "reconciled": true
+  },
+  {
+   "name": "generate_floor1_3d.py",
+   "dest": "legacy/...",
+   "size": 20856,
+   "sha256": "e598e7cefe196d6ec7b1b5a84f907d7440acd9e12df30a31d6c5d0053dc7b44a",
+   "src": "D:\\gym3d\\backend\\extract\\generate_floor1_3d.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\generate_floor1_3d.py",
+   "reconciled": true
+  },
+  {
+   "name": "_probe_c006_labels.py",
+   "dest": "legacy/...",
+   "size": 1439,
+   "sha256": "af7642ff9595af65d9645bda0d2c176fe2d1a6162b967746b2692cb6586a746c",
+   "src": "D:\\gym3d\\backend\\extract\\_probe_c006_labels.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\_probe_c006_labels.py",
+   "reconciled": true
+  },
+  {
+   "name": "_sample_labels.py",
+   "dest": "legacy/...",
+   "size": 727,
+   "sha256": "d0ac76fce253a05952b9f6e60749a693b997aba2e0c716377b33aa64e88b5f29",
+   "src": "D:\\gym3d\\backend\\extract\\_sample_labels.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\_sample_labels.py",
+   "reconciled": true
+  },
+  {
+   "name": "_test_enc2.py",
+   "dest": "legacy/...",
+   "size": 1194,
+   "sha256": "3e43ce03438287b6725a4edc06f619740b57d5d7c314d8d4ef33909502da6278",
+   "src": "D:\\gym3d\\backend\\extract\\_test_enc2.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\_test_enc2.py",
+   "reconciled": true
+  },
+  {
+   "name": "_test_encoding.py",
+   "dest": "legacy/...",
+   "size": 1083,
+   "sha256": "415d5f56ad18167e1a33b90c72b174d2ade87cec61beaf7a912eea54076cffdc",
+   "src": "D:\\gym3d\\backend\\extract\\_test_encoding.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\extract\\_test_encoding.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_c006.py",
+   "dest": "legacy/...",
+   "size": 10403,
+   "sha256": "9d163675544f9976bf14adfb61c6e4cb4b01d8d580c459372fa3d632ff3d3e79",
+   "src": "D:\\gym3d\\backend\\modeling\\build_c006.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_c006.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_lihua_full.py",
+   "dest": "legacy/...",
+   "size": 13706,
+   "sha256": "24015b1cb9db980a5808dd423514cdd197571b2703e1dcd9c8fa24d89c0c8a95",
+   "src": "D:\\gym3d\\backend\\modeling\\build_lihua_full.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_lihua_full.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_lihua_low.py",
+   "dest": "legacy/...",
+   "size": 13831,
+   "sha256": "5cd5c61a1169bddd0eca83a93d96faf1e950d2ed87c7eb50c9ab4286141f0628",
+   "src": "D:\\gym3d\\backend\\modeling\\build_lihua_low.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_lihua_low.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_lihua_v2.py",
+   "dest": "legacy/...",
+   "size": 15027,
+   "sha256": "b6fbc5bd706ad467be16e1847b0b4b60acd2652e1ede678a74171858014df4d5",
+   "src": "D:\\gym3d\\backend\\modeling\\build_lihua_v2.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_lihua_v2.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_lihua_v3.py",
+   "dest": "legacy/...",
+   "size": 13778,
+   "sha256": "1227e3c7739addd6131e8c29ffbb4a0757041214cdfa67d5bc5bb05bb5e4cd9b",
+   "src": "D:\\gym3d\\backend\\modeling\\build_lihua_v3.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_lihua_v3.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_simple.py",
+   "dest": "legacy/...",
+   "size": 3384,
+   "sha256": "09845b16b02b0d5a85e84183cd8f1bffce9e6468f9c5b9d9db01ce53e3d04d6a",
+   "src": "D:\\gym3d\\backend\\modeling\\build_simple.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_simple.py",
+   "reconciled": true
+  },
+  {
+   "name": "build_walls.py",
+   "dest": "legacy/...",
+   "size": 14692,
+   "sha256": "ed5ad5fa03410acd08ea43b4a9b8a140b448cc663188b281361e7d4566482552",
+   "src": "D:\\gym3d\\backend\\modeling\\build_walls.py",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\modeling\\build_walls.py",
+   "reconciled": true
+  },
+  {
+   "name": "c103-front.png",
+   "dest": "legacy/...",
+   "size": 1995985,
+   "sha256": "2162a94a82165cbd438c4fc6f66eedb09cfb0208a162d76f3bc8589839e805a6",
+   "src": "D:\\gym3d\\render_c103\\c103-front.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\render_c103\\c103-front.png",
+   "reconciled": true
+  },
+  {
+   "name": "c103-iso.png",
+   "dest": "legacy/...",
+   "size": 1892891,
+   "sha256": "e219dc2a34e2de6ed6c27d5ec0c961522b92d7660271dd598a8228ff1ceae616",
+   "src": "D:\\gym3d\\render_c103\\c103-iso.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\render_c103\\c103-iso.png",
+   "reconciled": true
+  },
+  {
+   "name": "c103-side.png",
+   "dest": "legacy/...",
+   "size": 2203320,
+   "sha256": "761fa0ef3b95c08ed85884bf12448069becce6a1b02b348c004b4074148c0673",
+   "src": "D:\\gym3d\\render_c103\\c103-side.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\render_c103\\c103-side.png",
+   "reconciled": true
+  },
+  {
+   "name": "c103-top.png",
+   "dest": "legacy/...",
+   "size": 1961857,
+   "sha256": "7af327b4e3fd0c49688217613421e7f7a1129f1a2cef5933b2083cc01c385f8f",
+   "src": "D:\\gym3d\\render_c103\\c103-top.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\render_c103\\c103-top.png",
+   "reconciled": true
+  },
+  {
+   "name": "c006-front.png",
+   "dest": "legacy/...",
+   "size": 1626867,
+   "sha256": "97251c9ef2b4c40375c8e5f65940e80c77a3695f7b2f5fba271461f8f2e1eb14",
+   "src": "D:\\gym3d\\_al_check\\c006-front.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c006-front.png",
+   "reconciled": true
+  },
+  {
+   "name": "c006-side.png",
+   "dest": "legacy/...",
+   "size": 1535542,
+   "sha256": "333f1a5cbff86b03557c8467b6b1a40889e3d0039e05cc4773ca394046931b5c",
+   "src": "D:\\gym3d\\_al_check\\c006-side.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c006-side.png",
+   "reconciled": true
+  },
+  {
+   "name": "c027-front.png",
+   "dest": "legacy/...",
+   "size": 1526456,
+   "sha256": "746fc336a9bc6e5d3c1f74b9132d8fd991391996d12d08997c8ee25748655052",
+   "src": "D:\\gym3d\\_al_check\\c027-front.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c027-front.png",
+   "reconciled": true
+  },
+  {
+   "name": "c027-front2.png",
+   "dest": "legacy/...",
+   "size": 1993896,
+   "sha256": "36224c60fdc3f0043e92ace10a44eb0cba6280aefc0296f68c6da2fdef80a417",
+   "src": "D:\\gym3d\\_al_check\\c027-front2.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c027-front2.png",
+   "reconciled": true
+  },
+  {
+   "name": "c027-side.png",
+   "dest": "legacy/...",
+   "size": 1510054,
+   "sha256": "c0f5e4eeb5699d95adf96507d106f16205eb81215d9c41456ac807cfbea69a10",
+   "src": "D:\\gym3d\\_al_check\\c027-side.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c027-side.png",
+   "reconciled": true
+  },
+  {
+   "name": "c027-side2.png",
+   "dest": "legacy/...",
+   "size": 1429850,
+   "sha256": "d5d740c4d198ce8e5ba8f7b27ed2fbf09885dfca441b3b8e21fdc58fc49b47e6",
+   "src": "D:\\gym3d\\_al_check\\c027-side2.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c027-side2.png",
+   "reconciled": true
+  },
+  {
+   "name": "c103-front.png",
+   "dest": "legacy/...",
+   "size": 1660845,
+   "sha256": "ff2eb606c5544802ff6bd06b81a02b8ceb75bb062b9a2c9db9f3d7db6912914c",
+   "src": "D:\\gym3d\\_al_check\\c103-front.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c103-front.png",
+   "reconciled": true
+  },
+  {
+   "name": "c103-side.png",
+   "dest": "legacy/...",
+   "size": 1644143,
+   "sha256": "0a8d743cb2e4370b0d013d5af20bd75967832af2e333bf74be09e25e1dc4ecff",
+   "src": "D:\\gym3d\\_al_check\\c103-side.png",
+   "dst": "D:\\gym3d\\_scratch\\legacy\\_al_check\\c103-side.png",
+   "reconciled": true
+  }
+ ]
+}

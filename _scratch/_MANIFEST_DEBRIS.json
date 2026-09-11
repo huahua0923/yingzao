@@ -1,0 +1,357 @@
+{
+ "ts": "20260910_173758",
+ "moved": [
+  {
+   "name": "_audit_lengthweighted.log",
+   "sub": "logs",
+   "size": 3868,
+   "sha256": "d7ffa7f11ca3d28ec28ff76d1e2b69b39365923be1b0960438db08e831df38da",
+   "src": "D:\\gym3d\\_audit_lengthweighted.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_audit_lengthweighted.log"
+  },
+  {
+   "name": "_batch_regen.log",
+   "sub": "logs",
+   "size": 53791,
+   "sha256": "44519ae532979d0ea4df2a217f3396141fde2626494d51e6418bc77b8cc3bf96",
+   "src": "D:\\gym3d\\_batch_regen.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_batch_regen.log"
+  },
+  {
+   "name": "_c031_sample.txt",
+   "sub": "probe-out",
+   "size": 886,
+   "sha256": "a97d5ddc3f2c5f1b1ea1a6cafd95e8e479be2e241b71a9ec68a1565b453e860d",
+   "src": "D:\\gym3d\\_c031_sample.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_c031_sample.txt"
+  },
+  {
+   "name": "_control_console.log",
+   "sub": "logs",
+   "size": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "src": "D:\\gym3d\\_control_console.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_control_console.log"
+  },
+  {
+   "name": "_dxf_audit.log",
+   "sub": "logs",
+   "size": 3822,
+   "sha256": "6f04de290148b990c131de576f77a8095f07e9f5992eb8326b02e7512553664f",
+   "src": "D:\\gym3d\\_dxf_audit.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_dxf_audit.log"
+  },
+  {
+   "name": "_dxf_audit.py.orig",
+   "sub": "backups",
+   "size": 10699,
+   "sha256": "debcdbd470d726369631534c1549ace23b297d73a3c3dba14373832b5b33fc62",
+   "src": "D:\\gym3d\\_dxf_audit.py.orig",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_dxf_audit.py.orig"
+  },
+  {
+   "name": "_dxf_audit.py.orig2",
+   "sub": "backups",
+   "size": 11498,
+   "sha256": "b0dd84764ac8bb7fcfadbc7b164e9919442a03769e8e1d275c7d56bdb25cc9d4",
+   "src": "D:\\gym3d\\_dxf_audit.py.orig2",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_dxf_audit.py.orig2"
+  },
+  {
+   "name": "_dxf_cad_run.log",
+   "sub": "logs",
+   "size": 1191,
+   "sha256": "5d71717267b3de7fbbed0569cd971952a5332b8b4e4e8b0228e6d713dd629f58",
+   "src": "D:\\gym3d\\_dxf_cad_run.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_dxf_cad_run.log"
+  },
+  {
+   "name": "_dxf_cad_title.log",
+   "sub": "logs",
+   "size": 1191,
+   "sha256": "5d71717267b3de7fbbed0569cd971952a5332b8b4e4e8b0228e6d713dd629f58",
+   "src": "D:\\gym3d\\_dxf_cad_title.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_dxf_cad_title.log"
+  },
+  {
+   "name": "_dxf_compare.log",
+   "sub": "logs",
+   "size": 1014,
+   "sha256": "fb1587e5d7c5d421934d6a24a90a0841ff3a8da951667d25144333992d447160",
+   "src": "D:\\gym3d\\_dxf_compare.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_dxf_compare.log"
+  },
+  {
+   "name": "_dxf_png_batch.py.bak_20260910_172657_masteridx",
+   "sub": "backups",
+   "size": 9814,
+   "sha256": "4152c08cacab622c24ed8123c52e38df850b6b31d44e65ced7e691edba6fcc8c",
+   "src": "D:\\gym3d\\_dxf_png_batch.py.bak_20260910_172657_masteridx",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_dxf_png_batch.py.bak_20260910_172657_masteridx"
+  },
+  {
+   "name": "_dxf_png_run.log",
+   "sub": "logs",
+   "size": 1196,
+   "sha256": "3d503aa305a3bcabdc6a55ee153f95a05b16a30e07d36a7d9ae773ce2101c9e7",
+   "src": "D:\\gym3d\\_dxf_png_run.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_dxf_png_run.log"
+  },
+  {
+   "name": "_ov_c022_F0_full.png",
+   "sub": "probe-out",
+   "size": 32860,
+   "sha256": "e90641aa8e0d5022823770f451935a0508b6db7731191044163ae802391f1809",
+   "src": "D:\\gym3d\\_ov_c022_F0_full.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_ov_c022_F0_full.png"
+  },
+  {
+   "name": "_ov_c022_F3_east.png",
+   "sub": "probe-out",
+   "size": 53966,
+   "sha256": "b2677ca35cb24e1ecb137bd57f3241f21796886dae4f2fcaf07f5596c8221303",
+   "src": "D:\\gym3d\\_ov_c022_F3_east.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_ov_c022_F3_east.png"
+  },
+  {
+   "name": "_ov_c022_F3_full.png",
+   "sub": "probe-out",
+   "size": 44262,
+   "sha256": "69c9bf433fdae72c9945d7b96e4cf35ed35b1485521a9bafe9de0a9ae0607adc",
+   "src": "D:\\gym3d\\_ov_c022_F3_full.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_ov_c022_F3_full.png"
+  },
+  {
+   "name": "_ov_c034_F1_south.png",
+   "sub": "probe-out",
+   "size": 23566,
+   "sha256": "9910248157464aca9b40058543b6abf6d1284ebd4227caef7a9ceef2f789c886",
+   "src": "D:\\gym3d\\_ov_c034_F1_south.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_ov_c034_F1_south.png"
+  },
+  {
+   "name": "_plan_c017_f1.txt",
+   "sub": "probe-out",
+   "size": 6834,
+   "sha256": "a24099de5645cc581d8b20616b956f89d26cd953505b3f3756acec66baa66d6b",
+   "src": "D:\\gym3d\\_plan_c017_f1.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_plan_c017_f1.txt"
+  },
+  {
+   "name": "_plan_c031_f0.txt",
+   "sub": "probe-out",
+   "size": 5015,
+   "sha256": "32300570ccff84f1e09a0ea4740c267bf591a9a03fec9f437641a69212a43f0f",
+   "src": "D:\\gym3d\\_plan_c031_f0.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_plan_c031_f0.txt"
+  },
+  {
+   "name": "_probe_c022.txt",
+   "sub": "probe-out",
+   "size": 568,
+   "sha256": "4182b1bbba056a4ade76c4b8a31af2c92bfbc3e5a6db01e61d4913bc2a9299f4",
+   "src": "D:\\gym3d\\_probe_c022.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_probe_c022.txt"
+  },
+  {
+   "name": "_probe_labels.txt",
+   "sub": "probe-out",
+   "size": 2254,
+   "sha256": "ff006b740cb5b12bbfdc7469e6293ce96f63019a450fad83cf739392c196f165",
+   "src": "D:\\gym3d\\_probe_labels.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_probe_labels.txt"
+  },
+  {
+   "name": "_probe_rem2.txt",
+   "sub": "probe-out",
+   "size": 2751,
+   "sha256": "66a3f421c20091f97f435aaa0726a2eb51a06c3c88ce72f77a5b6dbd0a834b65",
+   "src": "D:\\gym3d\\_probe_rem2.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_probe_rem2.txt"
+  },
+  {
+   "name": "_probe_remaining.txt",
+   "sub": "probe-out",
+   "size": 2677,
+   "sha256": "d197e976a2ee3a7d6bc4544141945e24e5ea5f2070d014a706231b34d04604da",
+   "src": "D:\\gym3d\\_probe_remaining.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_probe_remaining.txt"
+  },
+  {
+   "name": "_qa_structural.py.bak",
+   "sub": "backups",
+   "size": 13125,
+   "sha256": "f76f41c6a884a86aafd21eab61e06abb56c84c2f4c61599757415fa6ab33d8a7",
+   "src": "D:\\gym3d\\_qa_structural.py.bak",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_qa_structural.py.bak"
+  },
+  {
+   "name": "_r1.log",
+   "sub": "logs",
+   "size": 1191,
+   "sha256": "5d71717267b3de7fbbed0569cd971952a5332b8b4e4e8b0228e6d713dd629f58",
+   "src": "D:\\gym3d\\_r1.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_r1.log"
+  },
+  {
+   "name": "_r2.log",
+   "sub": "logs",
+   "size": 1221,
+   "sha256": "7c22a01a8be93574ba4d74b7a27f444d98b16d159a29988de90c4169ab0d1d4b",
+   "src": "D:\\gym3d\\_r2.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_r2.log"
+  },
+  {
+   "name": "_r3.log",
+   "sub": "logs",
+   "size": 3879,
+   "sha256": "b576606fbf9af4edb509451ee9f570abea719cb217492cfa5703623939b28f6a",
+   "src": "D:\\gym3d\\_r3.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_r3.log"
+  },
+  {
+   "name": "_ra.log",
+   "sub": "logs",
+   "size": 10983,
+   "sha256": "afb3f15670116d20de9798db603e35ca392e83bfd4a9de475ce3564e0efa96e7",
+   "src": "D:\\gym3d\\_ra.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_ra.log"
+  },
+  {
+   "name": "_regen_4.log",
+   "sub": "logs",
+   "size": 276,
+   "sha256": "cae86649bd84ee33429653ac34c6c5f1061baf3d35b199896cf3db1eb93caab4",
+   "src": "D:\\gym3d\\_regen_4.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_regen_4.log"
+  },
+  {
+   "name": "_regen_fixed.log",
+   "sub": "logs",
+   "size": 1208,
+   "sha256": "395c2e4c7f0589d68a4ca2c9a076fb8adcee5545c7ca383d87ba566fadbc4687",
+   "src": "D:\\gym3d\\_regen_fixed.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_regen_fixed.log"
+  },
+  {
+   "name": "_regen_windows.log",
+   "sub": "logs",
+   "size": 3185,
+   "sha256": "708176dc2f4274598978615277e892c702298a7dffc1c9a34e93a1838d1b38ce",
+   "src": "D:\\gym3d\\_regen_windows.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_regen_windows.log"
+  },
+  {
+   "name": "_render_all.log",
+   "sub": "logs",
+   "size": 501,
+   "sha256": "97eaf793a15ffea9f2113c78983c8a87d90d43ac686aff35e42fb2a36137ba1e",
+   "src": "D:\\gym3d\\_render_all.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_render_all.log"
+  },
+  {
+   "name": "_render_r12.log",
+   "sub": "logs",
+   "size": 718,
+   "sha256": "fdba39410d667dc41257134ecc7501715ef1cd69ee60634be16b9e7724ae5a24",
+   "src": "D:\\gym3d\\_render_r12.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_render_r12.log"
+  },
+  {
+   "name": "_rooms_batch_write.txt",
+   "sub": "probe-out",
+   "size": 2497,
+   "sha256": "d4c9400b07322b06090785db2460859b345d02a2cf1f8346e8c7b244b69acbef",
+   "src": "D:\\gym3d\\_rooms_batch_write.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_rooms_batch_write.txt"
+  },
+  {
+   "name": "_serve_rooms.log",
+   "sub": "logs",
+   "size": 9864,
+   "sha256": "ea70bd661c48b102afa9c65e2282296bfaa90a367318d6a29f68455430953020",
+   "src": "D:\\gym3d\\_serve_rooms.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_serve_rooms.log"
+  },
+  {
+   "name": "_wall_thin_batch.log",
+   "sub": "logs",
+   "size": 2589,
+   "sha256": "f6b506d85ef3f734844e8ba80a19d8ae22a153043bd2ddf71d0421539e3d9de8",
+   "src": "D:\\gym3d\\_wall_thin_batch.log",
+   "dst": "D:\\gym3d\\_scratch\\logs\\_wall_thin_batch.log"
+  },
+  {
+   "name": "_wall_thin_batch.py.bak_20260910_165038",
+   "sub": "backups",
+   "size": 10424,
+   "sha256": "8ca5df4ae363aabf8ee025f1f9cce9c3fe95d4558ae0bff44603c19157e4f85e",
+   "src": "D:\\gym3d\\_wall_thin_batch.py.bak_20260910_165038",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_wall_thin_batch.py.bak_20260910_165038"
+  },
+  {
+   "name": "_wall_thin_batch.py.bak_20260910_172059_doorpunch",
+   "sub": "backups",
+   "size": 11068,
+   "sha256": "8f5967f665e3c7ed633795eb20281da37664e3a5495950bb14f21468c3c5629a",
+   "src": "D:\\gym3d\\_wall_thin_batch.py.bak_20260910_172059_doorpunch",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_wall_thin_batch.py.bak_20260910_172059_doorpunch"
+  },
+  {
+   "name": "_wall_thin_force.py.bak_20260910_165038",
+   "sub": "backups",
+   "size": 3481,
+   "sha256": "6bff418f3d99fafaafaec9dd7433518743219ed5572bb8b1ceaf14a5faa1a30d",
+   "src": "D:\\gym3d\\_wall_thin_force.py.bak_20260910_165038",
+   "dst": "D:\\gym3d\\_scratch\\backups\\_wall_thin_force.py.bak_20260910_165038"
+  },
+  {
+   "name": "_walls_c031_f0.txt",
+   "sub": "probe-out",
+   "size": 4647,
+   "sha256": "9cc6f391c648a3b7683539734ac641285509460a9f373d5011519ef7e6d1f5ae",
+   "src": "D:\\gym3d\\_walls_c031_f0.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_walls_c031_f0.txt"
+  },
+  {
+   "name": "_walls_c054_f1.txt",
+   "sub": "probe-out",
+   "size": 5256,
+   "sha256": "118fcc3ebeba143ea8acd87118c2ce366604cb2992bdb995d98321059a103f58",
+   "src": "D:\\gym3d\\_walls_c054_f1.txt",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\_walls_c054_f1.txt"
+  },
+  {
+   "name": "c041_overlay.png",
+   "sub": "probe-out",
+   "size": 137970,
+   "sha256": "d2a7176fd524c1b77a038edefd1f7d27da8a65e48c80060906a6a9a60eeea56c",
+   "src": "D:\\gym3d\\c041_overlay.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\c041_overlay.png"
+  },
+  {
+   "name": "c041_overlay_zoom.png",
+   "sub": "probe-out",
+   "size": 66412,
+   "sha256": "7f6dfd3c82c2c95bfccb66be28d84e1ac4b37b14aa065fb147e31692f9ecbf26",
+   "src": "D:\\gym3d\\c041_overlay_zoom.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\c041_overlay_zoom.png"
+  },
+  {
+   "name": "debug_c006_f0.jpg",
+   "sub": "probe-out",
+   "size": 80586,
+   "sha256": "1fdba12a76d972e7ce2b2cd4888c2f71fe0f178217030eb620a45452a68d701e",
+   "src": "D:\\gym3d\\debug_c006_f0.jpg",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\debug_c006_f0.jpg"
+  },
+  {
+   "name": "debug_c006_f0.png",
+   "sub": "probe-out",
+   "size": 23621,
+   "sha256": "05e684766464a5db98f4fc7ae99c56d1d8bbd90d5f23537f73d4fbcf3bcbf56e",
+   "src": "D:\\gym3d\\debug_c006_f0.png",
+   "dst": "D:\\gym3d\\_scratch\\probe-out\\debug_c006_f0.png"
+  }
+ ]
+}

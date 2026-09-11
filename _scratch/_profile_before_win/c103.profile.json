@@ -1,0 +1,48 @@
+{
+ "name": "c103",
+ "title": "第十一教学楼（东1教）",
+ "dxf": "D:\\dxf_output\\C103-第十一教学楼（东1教）.dxf",
+ "wall_layer": "4.2墙体",
+ "column_layer": "4.1结构柱",
+ "x_range": [
+  1233221,
+  1402009
+ ],
+ "offset": 203520,
+ "cx": 1317615.0,
+ "cy": 36592,
+ "rooms": "D:\\gym3d\\data\\buildings\\c103\\rooms.json",
+ "out_dir": "D:\\gym3d\\data\\buildings\\c103\\floors",
+ "door_min_points": 10,
+ "stair_points": 5,
+ "wall_min": 0.08,
+ "wall_max": 0.35,
+ "wall_extend": 0.15,
+ "wall_fallback": 0.15,
+ "outline_close_r": 1.0,
+ "door_w_single": 1.1,
+ "door_w_double": 2.4,
+ "door_depth": 0.5,
+ "outline_buf": 0.15,
+ "open_r": 0.35,
+ "parapet_margin": 0.5,
+ "layer_height": 4.2,
+ "slab": 0.2,
+ "floor_ys": [
+  10894.4,
+  219276.5,
+  422796.5,
+  626316.5,
+  829836.5,
+  1045206.4
+ ],
+ "style": {
+  "facade": "#d3ccc2",
+  "inner": "#cfc9bd",
+  "roof": "#6b7078",
+  "roofType": "flat",
+  "parapet": "#8a8f96",
+  "glass": "#3d6b8f",
+  "door": "#6b7078"
+ }
+}

@@ -1,0 +1,20 @@
+# 换行统一为 LF。
+#
+# 为什么必须显式声明：开发在 Windows、部署到 Linux。若让 git 按平台自动转换，
+# shell 脚本带上 CRLF 传到 Linux 会直接 `bad interpreter: /bin/bash^M` 起不来，
+# Python 脚本里的 `\r` 也会污染字符串比较（本仓库已经踩过 CRLF/LF 混杂导致
+# profile.json 解析失败的坑）。
+# 想用 CRLF 就在本地配 core.autocrlf，但那会污染 diff —— 本项目不用那套。
+* text=auto eol=lf
+
+# 二进制：不要碰，不要试图做行尾转换或 diff
+*.glb   binary
+*.png   binary
+*.jpg   binary
+*.webp  binary
+*.dxf   binary
+*.dwg   binary
+*.zip   binary
+
+# 渲染/对比类文件在 diff 里没意义
+*.html  linguist-documentation

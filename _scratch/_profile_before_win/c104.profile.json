@@ -1,0 +1,46 @@
+{
+ "name": "c104",
+ "title": "第十二教学楼（东2教）",
+ "dxf": "D:\\dxf_output\\C104-第十二教学楼（东2教）.dxf",
+ "wall_layer": "4.2墙体",
+ "column_layer": "",
+ "x_range": [
+  2307947,
+  2431905
+ ],
+ "offset": 135000,
+ "cx": 2369926.0,
+ "cy": 201038,
+ "rooms": "D:\\gym3d\\data\\buildings\\c104\\rooms.json",
+ "out_dir": "D:\\gym3d\\data\\buildings\\c104\\floors",
+ "door_min_points": 10,
+ "stair_points": 5,
+ "wall_min": 0.08,
+ "wall_max": 0.35,
+ "wall_extend": 0.15,
+ "wall_fallback": 0.15,
+ "door_w_single": 1.1,
+ "door_w_double": 2.4,
+ "door_depth": 0.5,
+ "outline_buf": 0.15,
+ "open_r": 0.35,
+ "parapet_margin": 0.5,
+ "layer_height": 4.2,
+ "slab": 0.2,
+ "floor_ys": [
+  186056.4,
+  321056.4,
+  456056.4,
+  591056.4,
+  726056.4
+ ],
+ "style": {
+  "facade": "#d3ccc2",
+  "inner": "#cfc9bd",
+  "roof": "#6b7078",
+  "roofType": "flat",
+  "parapet": "#8a8f96",
+  "glass": "#3d6b8f",
+  "door": "#6b7078"
+ }
+}

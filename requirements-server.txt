@@ -1,0 +1,32 @@
+# 服务器侧依赖 —— **只发产物，不做建模**。
+#
+# 这份清单就是「只服务」模式的第一道、也是最硬的一道防线：
+# 服务器 venv 里物理上没有 ezdxf / shapely / trimesh / mapbox-earcut，
+# 于是任何试图触发建模的代码路径不是「被权限拦住」，而是根本 import 不进来。
+# 验收方式见计划 Phase 6：
+#     python -c "import ezdxf"   →  必须 ImportError
+#
+# 装法（Linux 服务器，Python 3.12）：
+#     python3.12 -m venv /opt/gym3d/venv
+#     /opt/gym3d/venv/bin/pip install -r requirements-server.txt
+#
+# 版本用 ~= 而非 ==：这套栈还没在服务器上装过一次，现在写死精确版本等于凭空猜。
+# **首次部署成功后立刻改成 == 并提交**，让线上版本可复现。
+
+# ── Web 框架 ────────────────────────────────────────────────────
+fastapi~=0.115
+uvicorn[standard]~=0.32      # [standard] 带 uvloop/httptools；不带则纯 asyncio
+pydantic~=2.9
+pydantic-settings~=2.6       # 读 .env、按字段做类型校验；prod 缺口令直接拒绝启动
+python-dotenv~=1.0           # pydantic-settings 解析 .env 的后端
+
+# ── 数据库（只读账号连 lihua_twin）──────────────────────────────
+psycopg[binary]~=3.2
+
+# ── /api/path 的服务端 A* ───────────────────────────────────────
+# 只做「读 1-bit 掩膜 + 纯 numpy 寻路」，不做任何栅格化 ——
+# 栅格化（要 shapely）放在本机构建期完成，结果落 nav/floorN.mask.bin。
+numpy~=2.1
+
+# 刻意**不在**这里出现的（它们的缺席本身就是防线）：
+#   ezdxf  shapely  trimesh  mapbox-earcut  matplotlib  Pillow  playwright
