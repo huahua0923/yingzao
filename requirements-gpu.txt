@@ -1,0 +1,43 @@
+# GPU 加速依赖 —— **可选**，装上就快，不装必须照样能跑。
+#
+# 定性：这是 requirements-compute.txt 的**加速层**，不是新增能力层。
+# 建模代码里的每个 GPU 运算都必须有一条 numpy 等价路径，且在 import 失败时
+# 自动回退 —— 也就是说，一个没装本文件的环境，必须能和装了的一模一样地
+# 产出 GLB（只是慢）。做不到这一点，就不许合进主链路。
+#
+# ⛔ 绝不能进 requirements-server.txt。
+#    服务器是「只服务」形态（GYM3D_COMPUTE=0），连 ezdxf/shapely/trimesh 都不装，
+#    更不该拖进 700 MB 的 CUDA 运行时。服务器上出现 cupy 只可能是装错了。
+#
+# 为什么不放进 requirements-compute.txt：
+#   因为那意味着「想建模就必须有 NVIDIA GPU」。本机有 RTX 3060，但换台机器、
+#   或者在没有独显的笔记本上只是想重出某一栋楼的 GLB，不该被 CUDA 拦住。
+#
+# 装法（本机，可选）：
+#     venv/Scripts/pip install -r requirements-gpu.txt
+# 卸载（回到纯 CPU，代码无须改动）：
+#     venv/Scripts/pip uninstall cupy-cuda12x nvidia-cuda-nvrtc-cu12 ^
+#         nvidia-cuda-runtime-cu12 nvidia-cuda-nvcc-cu12 nvidia-cublas-cu12
+#
+# ── 版本坑（踩过，记下来）────────────────────────────────────────
+#  * 本机装的是 CUDA Toolkit 11.8（C:\Program Files\NVIDIA GPU Computing Toolkit\
+#    CUDA\v11.8\bin），但 cupy 在 Windows 上**只认 pip 装的 CUDA 12 运行时 wheel**，
+#    不会去用系统那个 11.8。所以下面这五个 nvidia-*-cu12 是必需的，不是可选加速：
+#    缺 nvrtc 报 DynamicLibNotFoundError，缺 cublasLt 报 "known cublasLt DLL"。
+#  * 版本用 == 锁定，与已实测通过的那一套一致。cupy 小版本升级可能换 CUDA 运行时
+#    依赖，升级前请重跑 GPU/CPU 对拍（数值一致性 + 逐字节 GLB 比对）。
+
+# ── GPU 数组库 ──────────────────────────────────────────────────
+cupy-cuda12x==14.2.0
+
+# ── CUDA 12 运行时（pip wheel，随 cupy 一起用，与系统 CUDA 11.8 无关）──
+nvidia-cuda-nvrtc-cu12==12.9.86      # JIT 编译内核；缺它 cupy 直接起不来
+nvidia-cuda-runtime-cu12==12.9.79
+nvidia-cuda-nvcc-cu12==12.9.86
+nvidia-cublas-cu12==12.9.2.10        # cublasLt：矩阵乘
+
+# 说明：
+#  * 只在本机（Windows / RTX 3060）验证过。Linux 服务器不装，也不需要。
+#  * 装了 GPU 之后产出的 GLB 仍须与 CPU 基线**逐字节一致**
+#    （_scratch/_glb_baseline.py --check），不一致就是浮点归约顺序变了，
+#    属于缺陷，不是「等效优化」。

@@ -34,6 +34,11 @@ _scratch/_before_regionfix/
 _scratch/win_probe/
 _scratch/tmp/
 _scratch/probe-out/
+# 逐字节基线的**产物**目录（249 MB：5 个 GLB + det_b/）。清单 JSON 留，GLB 不留 ——
+# GLB 可由代码重现，进来只会把仓库撑爆。
+_scratch/_glb_baseline/
+_scratch/_glb_out/
+_scratch/_glb_tmp/
 
 # ── 依赖与构建产物 ────────────────────────────────────────────────
 node_modules/
