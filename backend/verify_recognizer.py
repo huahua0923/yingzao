@@ -9,12 +9,15 @@ from dataclasses import replace
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA as _DATA  # noqa: E402
 
 import recognizer.profiles            # noqa: F401  注册 profile
 from recognizer import recognize, get_profile
 
-BASE = r"D:\gym3d\data\floors"
-TMP = r"D:\gym3d\data\_verify_floors"
+BASE = str(_DATA / "floors")
+TMP = str(_DATA / "_verify_floors")
 
 p = get_profile("lihua")
 if os.path.exists(TMP):

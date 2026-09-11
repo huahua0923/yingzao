@@ -848,7 +848,13 @@ function isEffectivelyVisible(obj) {
   return true;
 }
 
-const API_BASE = 'http://localhost:8123';
+// 后端地址：**代码里不留死端口**。
+//   生产：nginx 把 /api 与前端放在同一个源上 → 留空即同源，什么都不用配。
+//   本地：静态站(8000)与后端不同源，二选一 ——
+//         ① 地址栏加 ?api=http://127.0.0.1:<后端端口>
+//         ② 页面里先写 window.GYM3D_API_BASE = 'http://127.0.0.1:<后端端口>'
+const API_BASE = new URLSearchParams(location.search).get('api')
+  ?? window.GYM3D_API_BASE ?? '';
 const roomMap = {};
 fetch(API_BASE + '/api/rooms')
   .then(res => res.json())

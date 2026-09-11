@@ -26,8 +26,14 @@ from shapely.ops import unary_union
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data"))
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA as _DATA  # noqa: E402
+
+DATA = str(_DATA)
 RES = 0.1      # 栅格分辨率（米）
+# ⚠️ 层高写死是已知缺陷：各楼 spec.json 的 floor_h 并不都是 4.2。
+# 解析路径时的 z 坐标因此只是近似。Phase 5 把 /api/path 挪到服务器时会一并改成读 spec。
 FLOOR_H = 4.2  # 层高（米）
 
 

@@ -19,7 +19,11 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from shapely.geometry import Polygon, Point
 
-DATA = r"D:\gym3d\data\buildings"
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))  # 仓库根
+from paths import BUILDINGS  # noqa: E402
+
+DATA = str(BUILDINGS)
 
 
 def backfill_floors(name, floors_dir=None, verify=False):

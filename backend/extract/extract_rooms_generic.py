@@ -21,8 +21,11 @@ import os
 import re
 import sys
 
-sys.path.insert(0, r"D:\gym3d\backend")
-sys.path.insert(0, r"D:\gym3d")
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import ensure_sys_path  # noqa: E402
+
+ensure_sys_path()                    # 仓库根：run_building.py 等入口在这
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import ezdxf

@@ -15,8 +15,12 @@
   GET  /api/meta                       → 参数与流程元数据（单一事实源，见 console_meta）
   GET  /api/buildings/<name>/status    → 逐阶段产物现状（完成/过期）
 
-仅监听 127.0.0.1（本地工具，不对外）。运行:
-  python control.py     → 浏览器打开 http://127.0.0.1:8130/
+仅监听 .env 里的 GYM3D_HOST（本地工具，不对外；端口见 GYM3D_LEGACY_CONSOLE_PORT）。
+本服务是过渡期的**老实现**，Phase 6 新 API 上线验收后被删除 —— 在那之前它同时
+承担两个角色：线上参考实现，以及回退路径。不要提前删。
+
+运行:
+  python backend/web/control.py
 """
 import dataclasses
 import glob
@@ -31,22 +35,37 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, r"D:\gym3d")
-sys.path.insert(0, r"D:\gym3d\backend")
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 路径引导：从本文件位置推导仓库根，绝不写盘符（开发机在 D 盘、服务器在 /opt）。
+# backend/web/control.py → 上一级是 backend/，再上一级是仓库根。见 backend/paths.py。
+_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.normpath(os.path.join(_DIR, "..")))          # backend/
+from paths import DATA as _DATA, FRONTEND as _FRONTEND  # noqa: E402
+from paths import NODE_MODULES as _NODE_MODULES, ROOT as _ROOT, ensure_sys_path  # noqa: E402
+
+# 控制台要起子进程跑各阶段脚本，这些兄弟目录都得能被 import 到
+ensure_sys_path("modeling", "nav")
+sys.path.insert(0, _DIR)                                               # backend/web：console_meta 在这
 
 import console_meta  # noqa: E402  参数/流程元数据（单一事实源）
+from backend.api.settings import get_settings  # noqa: E402  端口等配置的唯一来源
 
-DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.normpath(os.path.join(DIR, "..", ".."))
-FRONTEND = os.path.join(ROOT, "frontend")
-DATA = os.path.join(ROOT, "data")
+DIR = _DIR
+ROOT = str(_ROOT)
+FRONTEND = str(_FRONTEND)
+DATA = str(_DATA)
 BUILDINGS = os.path.join(DATA, "buildings")
-NODE_MODULES = os.path.join(ROOT, "node_modules")
+NODE_MODULES = str(_NODE_MODULES)
 RUN_STEP = os.path.join(DIR, "run_step.py")
 
 HOST = os.environ.get("CONTROL_HOST", "127.0.0.1")
-PORT = int(os.environ.get("CONTROL_PORT", "8130"))
+# 端口只从配置读，代码里不留数字字面量（见 .env / .env.example）
+PORT = get_settings().legacy_console_port
+if PORT is None:
+    raise SystemExit(
+        "未设置 GYM3D_LEGACY_CONSOLE_PORT，老控制台拒绝启动。"
+        "该端口只存在于 .env（见 .env.example），Phase 6 下线本服务后即可删除。"
+    )
 
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 

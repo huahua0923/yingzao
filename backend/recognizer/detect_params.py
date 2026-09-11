@@ -20,6 +20,9 @@ from collections import Counter
 import ezdxf
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import BUILDINGS  # noqa: E402
 
 # 与 profiles/lihua.py 一致的算法默认值（门/台阶/墙厚/窗等）
 ALGO_DEFAULTS = {
@@ -229,8 +232,8 @@ def main():
         profile.pop(k, None)
     if x_range is not None:
         profile["x_range"] = [round(x_range[0]), round(x_range[1])]
-    profile["rooms"] = r"D:\gym3d\data\buildings\%s\rooms.json" % name
-    profile["out_dir"] = r"D:\gym3d\data\buildings\%s\floors" % name
+    profile["rooms"] = str(BUILDINGS / name / "rooms.json")
+    profile["out_dir"] = str(BUILDINGS / name / "floors")
     profile.update(ALGO_DEFAULTS)
 
     if out_path:

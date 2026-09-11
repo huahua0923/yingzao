@@ -11,7 +11,15 @@
 # floors/*.json、*.glb、plans/、dxf_plan/、rooms.json、profile.json、spec.json
 # 全在这里。注意：data/buildings/*/.orig/ 是人工修复成果的唯一来源，
 # 排除出 git 之后**必须靠机外备份（服务器副本 + 移动硬盘）保命**，见 README。
-data/
+#
+# 写 data/* 而不是 data/：星号版可以往下开例外（data/ 版会把整个目录封死，
+# 里面的文件再也 ! 不回来）。目前唯一的例外是 data/_meta/。
+data/*
+# 例外：冻结的接口契约（freeze_meta.py 产物，21 KB）。
+# 它虽在 data/ 下，但**不是可重跑产物**，而是开发机与服务器之间的约定：
+# 服务器没有建模依赖，读不到它 /api/meta 就 500。进 git 才能让契约变更
+# 在 diff 里可见、并能随代码一起部署。
+!data/_meta/
 
 # ── GLB 备份与临时产物 ────────────────────────────────────────────
 _backup_glb_20260910/

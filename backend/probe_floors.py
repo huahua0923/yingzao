@@ -10,8 +10,11 @@ import json
 import os
 import sys
 
-sys.path.insert(0, r"D:\gym3d\backend")
-sys.path.insert(0, r"D:\gym3d")
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import ensure_sys_path  # noqa: E402
+
+ensure_sys_path()          # 仓库根也挂上（run_building 在根目录）
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import ezdxf

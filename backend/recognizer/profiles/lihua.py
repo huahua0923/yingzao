@@ -6,15 +6,25 @@
     （门 ≥10 点、台阶 ==5 点、其余为墙）
   - 结构柱在「4.1结构柱」图层（0.5×0.5m，仅首层）
   - 墙 = 双线墙皮配对；门 = 16/23 点多段线；台阶 = 5 点 ⊓
+
+⚠️ dxf 是本机专属的外部资源（不在仓库里），服务器上不参与任何计算；
+   rooms / out_dir 走 backend/paths.py，换机器不用改。
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))    # backend/
+from paths import DATA  # noqa: E402
+
 from ..profile import BuildingProfile, register
 
 LIHUA = register(BuildingProfile(
     name="lihua",
     title="理化楼（C005）",
     dxf=r"D:\校庆\校庆材料\C005-理化楼2.dxf",
-    rooms=r"D:\gym3d\data\rooms.json",
-    out_dir=r"D:\gym3d\data\floors",
+    rooms=str(DATA / "rooms.json"),
+    out_dir=str(DATA / "floors"),
 
     # offset = 图纸上相邻两层平面的真实 Y 间距（98900mm，非 99000）。各层墙点中点实测
     # 逐层 -100mm 漂移（99000 时 floor0 -15 → floor4 -415mm），改成 98900 后各层统一 -15mm，

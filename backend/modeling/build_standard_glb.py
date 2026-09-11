@@ -16,17 +16,20 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
 from shapely.geometry import Polygon, Point, box
 from shapely.ops import unary_union
+
+from glb_common import MeshBuilder, g2, C_WALL, C_SLAB, C_ROOF, C_STAIR, C_DOOR, C_COLUMN, C_FRAME
+from paths import DATA as _DATA
 
 # 窗心到墙多边形的最大距离（米），超过就不算「这个窗长在这面墙上」。
 # 取 0.15：校区墙厚 0.12~0.35，窗心到墙面的距离 ≤ 半墙厚 ≈0.175，
 # 而邻墙至少在半个开间之外 —— 这个阈值能容浮点误差、又排除邻墙。
 NOTCH_TOL = 0.15
 
-from glb_common import MeshBuilder, g2, C_WALL, C_SLAB, C_ROOF, C_STAIR, C_DOOR, C_COLUMN, C_FRAME
-
-DATA = r"D:\gym3d\data"                       # 兜底默认，调用方覆盖（run_step.py:104-109）
+DATA = str(_DATA)                             # 兜底默认，调用方覆盖（run_step.py:104-109）
 OUT = os.path.join(DATA, "lihua-building.glb")  # 同上；名称为理化楼时期遗留，非用途说明
 ROOM_PAD = 0.05   # 房间色块贴在楼板顶上方，避免与楼板 z-fighting
 

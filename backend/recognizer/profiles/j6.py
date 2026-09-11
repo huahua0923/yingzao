@@ -12,14 +12,21 @@
 
 下方数值均为占位，路径/坐标/图层待六教图纸确认后再填。
 """
+import os
+import sys
+
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))    # backend/
+from paths import DATA  # noqa: E402
+
 from ..profile import BuildingProfile, register
 
 J6 = register(BuildingProfile(
     name="j6",
     title="第六教学楼（逸夫楼 C006）",
-    dxf=r"D:\校庆\校庆材料\C006-六教.dxf",   # 待确认实际路径
-    rooms=r"D:\gym3d\data\rooms_j6.json",      # 待生成
-    out_dir=r"D:\gym3d\data\floors_j6",        # 待生成
+    dxf=r"D:\校庆\校庆材料\C006-六教.dxf",   # 待确认实际路径（本机专属外部资源）
+    rooms=str(DATA / "rooms_j6.json"),         # 待生成
+    out_dir=str(DATA / "floors_j6"),           # 待生成
 
     offset=99000.0,          # 占位，待确认六教实际偏移
     cx=0.0,

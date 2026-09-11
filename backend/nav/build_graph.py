@@ -15,9 +15,13 @@ from shapely.geometry import Point, Polygon
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-ROOMS = r"D:\gym3d\data\rooms.json"
-FLOORS_DIR = r"D:\gym3d\data\floors"
-OUT = r"D:\gym3d\data\adjacency.json"
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA  # noqa: E402
+
+ROOMS = str(DATA / "rooms.json")
+FLOORS_DIR = str(DATA / "floors")
+OUT = str(DATA / "adjacency.json")
 
 SAMPLE_OFF = (0.6, 0.9, 1.3)   # 门中心向两侧偏移采样距离(m)：越过门洞凹口(~0.25m)进入房间
 

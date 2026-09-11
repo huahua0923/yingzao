@@ -8,7 +8,7 @@
 静态文件：building.html 会 fetch ../data/spec.json 与 ../data/floors/floor*.json，
 因此 /data/ 路径下文件由本服务托管（JSON 已加 CORS 头）。
 
-运行：python serve_rooms.py   然后浏览器打开 http://localhost:8123/
+运行：python serve_rooms.py   端口取 .env 的 GYM3D_LEGACY_ROOMS_PORT（见 .env.example）
 """
 import json
 import os
@@ -19,17 +19,30 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import psycopg
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND = os.path.normpath(os.path.join(DIR, "..", "..", "frontend"))
-DATA = os.path.normpath(os.path.join(DIR, "..", "..", "data"))
-# 几何路径求解器（A* 占用网格 + 跨层楼梯井）：backend/nav/build_path.py，供 /api/path 使用
-sys.path.insert(0, os.path.normpath(os.path.join(DIR, "..", "nav")))
-from build_path import compute_path  # noqa: E402
+sys.path.insert(0, os.path.normpath(os.path.join(DIR, "..")))          # backend/（paths.py 在这）
+sys.path.insert(0, os.path.normpath(os.path.join(DIR, "..", "..")))    # 仓库根（backend.api.settings 靠它）
+from backend.api.settings import get_settings  # noqa: E402
+from paths import DATA as _DATA, FRONTEND as _FRONTEND, ensure_sys_path  # noqa: E402
 
+ensure_sys_path("nav")                 # 几何路径求解器 build_path.py 在 backend/nav
 sys.path.insert(0, DIR)
 from db_config import db_params  # noqa: E402
-# 默认仅监听本机；需要局域网访问时显式设 LIHUA_HOST=0.0.0.0（并确保已设强口令）。
-HOST = os.environ.get("LIHUA_HOST", "127.0.0.1")
-PORT = 8123
+
+FRONTEND = str(_FRONTEND)
+DATA = str(_DATA)
+# 几何路径求解器（A* 占用网格 + 跨层楼梯井）：backend/nav/build_path.py，供 /api/path 使用
+from build_path import compute_path  # noqa: E402
+
+_SETTINGS = get_settings()
+# 默认仅监听本机；需要局域网访问时显式设 GYM3D_HOST=0.0.0.0（并确保已设强口令）。
+HOST = _SETTINGS.host
+# 端口只从配置读：代码里不留数字字面量，.env 是唯一出处（见 .env.example）
+PORT = _SETTINGS.legacy_rooms_port
+if PORT is None:
+    raise SystemExit(
+        "未设置 GYM3D_LEGACY_ROOMS_PORT，房间服务拒绝启动。该端口只存在于 .env，"
+        "Phase 6 下线本服务后即可删除。"
+    )
 
 HTML_FILE = "building.html"
 

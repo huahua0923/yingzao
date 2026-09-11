@@ -13,8 +13,11 @@ import sys
 from collections import Counter
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA as _DATA  # noqa: E402
 
-DATA = r"D:\gym3d\data"
+DATA = str(_DATA)
 
 # 标准墙厚（来自 recognizer/standard.py 的单点定义）
 STD_OUTER = 0.30

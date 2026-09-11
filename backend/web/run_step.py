@@ -18,12 +18,16 @@ import os
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, r"D:\gym3d")
-sys.path.insert(0, r"D:\gym3d\backend")
-sys.path.insert(0, r"D:\gym3d\backend\modeling")
 
-ROOT = r"D:\gym3d"
-DATA = os.path.join(ROOT, "data")
+# 路径引导：从本文件位置推导（backend/web/run_step.py → 上两级 = 仓库根），不写盘符。
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA as _DATA, ROOT as _ROOT, ensure_sys_path  # noqa: E402
+
+ensure_sys_path("modeling", "nav")     # 各阶段脚本（build_standard_glb 等）在这些目录
+
+ROOT = str(_ROOT)
+DATA = str(_DATA)
 BUILDINGS = os.path.join(DATA, "buildings")
 
 

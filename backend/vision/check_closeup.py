@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 """临时：近景门渲染图 → 视觉模型检查门洞/过梁/门扇。"""
+import os
 import sys
-sys.path.insert(0, r"D:\gym3d\backend\vision")
+
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))          # backend/vision
 from client import chat_vision
 
-img = open(r"D:\gym3d\data\lihua-door-closeup.png", "rb").read()
+img = open(DATA / "lihua-door-closeup.png", "rb").read()
 
 prompt = (
     "这是教学楼南立面一扇门（门洞+门上方墙体）的近景渲染图。请精确回答：\n"

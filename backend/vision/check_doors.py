@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """临时：把渲染图发给视觉模型，检查门的建模对不对（门洞/过梁/门扇）。"""
+import os
 import sys
-sys.path.insert(0, r"D:\gym3d\backend\vision")
+
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))          # backend/vision
 from client import chat_vision_multi
 
-front = open(r"D:\gym3d\data\lihua-front.png", "rb").read()
-iso = open(r"D:\gym3d\data\lihua-iso.png", "rb").read()
+front = open(DATA / "lihua-front.png", "rb").read()
+iso = open(DATA / "lihua-iso.png", "rb").read()
 
 prompt = (
     "这是同一栋砖红色教学楼（理化楼）的正立面和轴测渲染图。"

@@ -178,8 +178,10 @@ const pickables = [];
 scene.traverse((o) => { if (o.isMesh) pickables.push(o); });
 
 // 从后端数据库拉房间信息（编号/名称/面积/用途/单位），按 id 索引
-// 本地开发后端在 8123；若静态站与后端同源，改成 '' 即可
-const API_BASE = 'http://localhost:8123';
+// 后端地址：同源部署（nginx 反代 /api）留空即可；本地开发用 ?api= 或
+// window.GYM3D_API_BASE 指定 —— 代码里不留死端口。与 building.html 同口径。
+const API_BASE = new URLSearchParams(location.search).get('api')
+  ?? window.GYM3D_API_BASE ?? '';
 const roomMap = {};
 fetch(API_BASE + '/api/rooms?floor=0')
   .then(res => res.json())

@@ -12,14 +12,20 @@ import sys
 
 import psycopg
 
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))   # 仓库根
+from backend.api.settings import get_settings  # noqa: E402
+from paths import BUILDINGS, DATA  # noqa: E402
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db_config import db_params  # noqa: E402
 
-DB_NAME = os.environ.get("LIHUA_DB_NAME", "lihua_twin")
+_SETTINGS = get_settings()
+DB_NAME = _SETTINGS.db_name
 
 # 数据源：(rooms.json 路径, building 名)。基线理化楼在 data/ 根，教学楼在 data/buildings/<name>/
-SOURCES = [(r"D:\gym3d\data\rooms.json", "lihua")]
-for path in sorted(glob.glob(r"D:\gym3d\data\buildings\*\rooms.json")):
+SOURCES = [(str(DATA / "rooms.json"), "lihua")]
+for path in sorted(glob.glob(str(BUILDINGS / "*" / "rooms.json"))):
     name = os.path.basename(os.path.dirname(path))
     SOURCES.append((path, name))
 

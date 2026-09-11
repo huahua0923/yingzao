@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """临时：视觉模型检查当前 GLB 的墙/门（front 立面 + top 平面）。"""
+import os
 import sys
-sys.path.insert(0, r"D:\gym3d\backend\vision")
+
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
+from paths import DATA  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))          # backend/vision
 from client import chat_vision_multi
 
-front = open(r"D:\gym3d\data\_now_front.png", "rb").read()
-top = open(r"D:\gym3d\data\_now_top.png", "rb").read()
+front = open(DATA / "_now_front.png", "rb").read()
+top = open(DATA / "_now_top.png", "rb").read()
 
 prompt = (
     "两张图是同一栋教学楼（理化楼）的 3D 建模渲染：第一张是南立面正视图，第二张是顶视平面图。\n"
