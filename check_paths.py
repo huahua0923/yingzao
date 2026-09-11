@@ -22,6 +22,7 @@ http://127.0.0.1:8130」就写在 docstring 里，那是真实命中，该修。
 ----
     python check_paths.py          # 退出码 0 = 通过，1 = 有未记录命中
 """
+import glob
 import io
 import os
 import re
@@ -31,8 +32,22 @@ import tokenize
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-#: 被检查的目录/文件（相对仓库根）。只查**会跟着部署走**的代码。
-TARGETS = ["backend", "frontend", "freeze_meta.py", "check_paths.py"]
+#: 被检查的目录（相对仓库根）。
+TARGETS = ["backend", "frontend"]
+
+#: 仓库根下的 .py 也一并查（build_index / run_building / qa_structural 等）。
+#: 它们不在服务器上跑，但同样是「换台机器就得改一行」的重灾区 ——
+#: 不跑建模时看不出来，真拿到 Linux 上跑一次才发现。
+ROOT_GLOB = "*.py"
+
+#: 检查范围之外的两类，是**有意排除**，不是漏掉：
+#:   `_` 前缀的根脚本（_dxf_audit、_wall_thin_batch…）与 `_scratch/`
+#:   = 一次性探针 / 历史验证工具。跑过一次、留档、不再执行；
+#:   输入往往已经不存在，改了也没法验证，改了只是增加没有回报的改动面。
+#:   它们要跑起来，第一件该做的事是把自己接进 paths.py，而不是被门禁逼着改。
+#: 真正会反复执行的工具链（run_building / run_batch / build_index /
+#: convert_dwg_to_dxf / qa_structural）都在检查范围内。
+SKIP_PREFIX = "_"
 
 #: 跳过：缓存、依赖、以及历史备份（备份是留档，不是运行代码）
 SKIP_DIRS = {"__pycache__", "node_modules", "dist", ".git", "venv", ".venv"}
@@ -62,6 +77,13 @@ EXCEPTIONS = [
      "留到 Phase 5 与 profile.json 迁移一并做。"),
     ("backend/recognizer/profiles/j6.py", "绝对路径",
      "同上（六教图纸）。"),
+    ("qa_structural.py", "绝对路径",
+     "既定规则：qa_structural.py 只读，不得修改（它的判据是 6 轮校准出来的，"
+     "任何改动都要重跑全套体检）。位置在仓库根、脚本也从根目录跑，不受影响；"
+     "要彻底解耦得由使用者明确授权后再动。"),
+    ("convert_dwg_to_dxf.py", "绝对路径",
+     "DEFAULT_INPUT/OUTPUT 是「本机素材目录」的默认值（DWG 源、DXF 输出），"
+     "两者都在仓库之外，且命令行 --input/--output 可覆盖。服务器不跑这个脚本。"),
 ]
 
 
@@ -116,6 +138,11 @@ def iter_files():
                 if SKIP_SUFFIX.search(name) or SKIP_BACKUP.search(name):
                     continue
                 yield os.path.join(dirpath, name)
+    for path in glob.glob(os.path.join(ROOT, ROOT_GLOB)):
+        name = os.path.basename(path)
+        if SKIP_BACKUP.search(name) or name.startswith(SKIP_PREFIX):
+            continue
+        yield path
 
 
 def _excused(rel: str, rule: str):

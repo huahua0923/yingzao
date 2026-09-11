@@ -16,13 +16,17 @@ import os
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, r"D:\gym3d\backend")
+
+# 路径从本文件位置推导，代码里不出现盘符（开发机在 D 盘、服务器在 /opt）。
+_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_ROOT, "backend"))       # paths.py / recognizer
+from paths import BUILDINGS  # noqa: E402
 
 from shapely.geometry import Polygon
 
 
 def load_profile(name):
-    path = os.path.join(r"D:\gym3d\data\buildings", name, "profile.json")
+    path = os.path.join(str(BUILDINGS), name, "profile.json")
     with open(path, encoding="utf-8") as f:
         cfg = json.load(f)
     from recognizer.profile import BuildingProfile
@@ -70,7 +74,7 @@ def validate(name, floors):
     if len(floors) < 2:
         problems.append(f"楼层数 {len(floors)} < 2，offset 可能错了")
     for F in floors:
-        fp = os.path.join(r"D:\gym3d\data\buildings", name, "floors", f"floor{F}.json")
+        fp = os.path.join(str(BUILDINGS), name, "floors", f"floor{F}.json")
         if not os.path.exists(fp):
             problems.append(f"floor{F}.json 缺失")
             continue
@@ -112,7 +116,7 @@ def main():
     print("=" * 60)
 
     if do_glb and not problems:
-        sys.path.insert(0, r"D:\gym3d\backend\modeling")
+        sys.path.insert(0, os.path.join(_ROOT, "backend", "modeling"))
         import build_standard_glb as bsg
         # 让 GLB 生成器消费本楼 floors/spec
         bsg.DATA = os.path.dirname(p.out_dir)

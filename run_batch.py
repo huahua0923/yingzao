@@ -11,9 +11,13 @@ import os
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, r"D:\gym3d\backend")
 
-BASE = r"D:\gym3d\data\buildings"
+# 路径从本文件位置推导，代码里不出现盘符（开发机在 D 盘、服务器在 /opt）。
+_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_ROOT, "backend"))       # paths.py / recognizer
+from paths import BUILDINGS  # noqa: E402
+
+BASE = str(BUILDINGS)
 
 
 def main():
@@ -47,7 +51,7 @@ def main():
                 print(f"{name:5s} 楼层数={len(floors)} PASS")
 
             if do_glb and not problems:
-                sys.path.insert(0, r"D:\gym3d\backend\modeling")
+                sys.path.insert(0, os.path.join(_ROOT, "backend", "modeling"))
                 import build_standard_glb as bsg
                 bsg.DATA = os.path.dirname(p.out_dir)
                 bsg.OUT = os.path.join(bsg.DATA, f"{name}-building.glb")

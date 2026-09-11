@@ -12,7 +12,11 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-DATA = r"D:\gym3d\data"
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "backend"))
+from paths import DATA as _DATA_DIR  # noqa: E402
+
+DATA = str(_DATA_DIR)
 BUILD = os.path.join(DATA, "buildings")
 
 
