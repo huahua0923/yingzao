@@ -46,6 +46,32 @@
   #panel #pathClear { background: #3a2b2b; color: #ff9d9d; border-color: #7a3a3a; }
   #panel #pathClear:hover { background: #4a3636; }
   #panel #pathInfo { margin-top: 8px; color: #9aa0b5; font-size: 12px; line-height: 1.6; white-space: pre-line; }
+  /* ---------- 用途图层：中文标注层 + 图例 ----------
+     ★ #labelLayer 必须 pointer-events:none：它盖满整个视口，会挡住 canvas 的拾取
+       （回归脚本用 elementFromPoint(中心) 断言命中的是 CANVAS，这条不能破）。
+     z-index 4 低于工具条(5)/标签(10)/图例(10)/面板(20) —— 浮签永远压不住控件。 */
+  #labelLayer { position: fixed; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+  #labelLayer .rl { position: absolute; left: 0; top: 0; padding: 0 5px; white-space: nowrap;
+                    border-radius: 3px; font: 12px/1.55 "Microsoft YaHei", sans-serif; color: #10131a;
+                    background: rgba(255,255,255,.82); border: 1px solid rgba(0,0,0,.28);
+                    box-shadow: 0 1px 3px rgba(0,0,0,.5);
+                    /* 位移一律走 transform（不动 left/top：每帧改那两只属性会触发布局） */
+                    will-change: transform; transform: translate3d(-9999px,-9999px,0); }
+  #labelLayer .rl .n { font-weight: 700; }
+  #legend { display: none; position: fixed; right: 252px; bottom: 14px; z-index: 10; width: 190px;
+            max-height: 60vh; overflow: auto; padding: 8px 10px; background: rgba(20,23,32,.92);
+            border: 1px solid #3a4154; border-radius: 8px; color: #c8cddb;
+            font: 12px/1.7 "Microsoft YaHei", sans-serif; }
+  #legend .h { color: #dfe3f0; font-weight: 600; margin-bottom: 4px; }
+  #legend .sub { color: #6f7690; font-size: 11px; margin-bottom: 4px; }
+  #legend .row { display: flex; align-items: center; gap: 6px; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
+  #legend .row:hover { background: #2a3040; }
+  #legend .row.dim { opacity: .38; }
+  #legend .sw { flex: 0 0 auto; width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,.45); }
+  #legend .nm { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #legend .ct { flex: 0 0 auto; color: #8f96a8; }
+  #legend .na, #legend .tail { color: #6f7690; }   /* na=无数据提示；tail=长尾折叠行。两件事，别共用一个类名 */
+  #legend .sub.note { color: #d8b96a; line-height: 1.35; }   /* 自动切层的说明（一次性，动一下楼层就没有） */
 </style>
 </head>
 <body>
@@ -65,7 +91,12 @@
   <button id="wallToggle" class="active">墙体 ✓</button>
   <button id="wallTransparentToggle">墙体透明 ✗</button>
   <button id="winToggle">窗户 ✗</button>
+  <button id="purposeToggle" class="active">用途配色 ✓</button>
+  <button id="labelToggle">标注 ✗</button>
+  <button id="legendToggle" class="active">图例 ✓</button>
 </div>
+<div id="labelLayer"></div>
+<div id="legend"></div>
 <div id="tag"></div>
 <div id="info"></div>
 <div id="panel">
@@ -87,6 +118,18 @@
       <button id="pathGo">规划路径</button>
       <button id="pathClear">清除路径</button>
       <div id="pathInfo"></div>
+    </div>
+  </details>
+  <details>
+    <summary>标注与图例</summary>
+    <div class="body">
+      <label><span>标注最小面积 (m²)</span><input id="p_label_min" type="number" step="1" min="0" value="12"></label>
+      <label><span>单层最多标注</span><input id="p_label_max" type="number" step="5" min="5" value="60"></label>
+      <button id="p_label_apply">应用</button>
+      <div style="color:#6f7690;font-size:11px;line-height:1.5;margin-top:6px">
+        标注默认关，点工具条「标注」才显示。<br>
+        开着标注时会自动落到某一层（整栋视距下会叠成一团墨）。图例的间数随当前楼层变 —— 数字就是你眼前看到的这些东西。
+      </div>
     </div>
   </details>
 </div>
@@ -119,6 +162,28 @@ let S = DEFAULT_SPEC;
 
 let FLOOR_COUNT = 5;          // 由当前建筑的楼层数覆盖
 let LAYER_HEIGHT = 4.2;       // 层高(m)，由 spec.floor_h 覆盖
+
+// ---------- 降级开关（出问题能立刻回到旧观感，不用改代码） ----------
+//   ?purpose=0   逐位复现改动前的三分支配色 ★ 这就是回归的 A/B 杠杆（不是调试残留，别删）
+//   ?labels=1    打开标注（默认关：用户定的"点一下才显示"）
+//   ?legend=0    关图例；?label_min=25 改标注最小面积；?building=c054 按名直开某一栋
+// 放在这里而不是靠近使用点：下面 L1181 附近的 ?building= 初始化也要读 QS。
+const QS = new URLSearchParams(location.search);
+const qsFlag = (k, dflt) => {
+  const v = QS.get(k);
+  return v == null ? dflt : !(v === '0' || v === 'false' || v === 'no');
+};
+let purposeColorOn = qsFlag('purpose', true);
+let labelsOn = qsFlag('labels', false);
+let legendOn = qsFlag('legend', true);
+let labelMinArea = parseFloat(QS.get('label_min'));
+if (!(labelMinArea >= 0)) labelMinArea = 12;
+let labelMax = 60;
+// ★ geometryBuilding = **几何真的换成了哪一栋**（在 rebuild 里才置），不是"选了哪一栋"。
+//   不能用 currentBuilding 当判据：它在 loadBuilding 开头就被改写，切楼过渡期/加载失败态会误杀。
+let geometryBuilding = null;
+let buildToken = 0;           // 每发起一次切楼 +1
+let builtToken = -1;          // 每次 rebuild 落地后 = 当时的 buildToken（两者相等 ⇒ 眼前这栋就是选中的那栋）
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x171a23);
@@ -170,6 +235,22 @@ const stairMat = new THREE.MeshStandardMaterial({ color: 0xd0c198, roughness: 0.
 const columnMat = new THREE.MeshStandardMaterial({ color: 0x9aa2b0, roughness: 0.7, metalness: 0.05 });
 const shaftMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.8, metalness: 0.1 });
 
+// ---------- 房间材质：按颜色缓存 ----------
+// 现状是**每间房 new 一个材质**（c054 一层 480 间 → 480 个），改后同色共用一个（≤ 该层颜色数）。
+// ★ 缓存**不 dispose**：颜色是纯函数，同一个用途在任何楼里同色，切楼/重建后继续复用。
+// ★ 压暗用颜色 lerp 而不是 material.opacity：省掉透明通道、透明排序与随之而来的 draw call 抖动。
+const roomMatCache = new Map();
+const DIM_TARGET = new THREE.Color(0x2a2e38);   // 图例点某类 → 其余压暗到这个目标色
+function roomMaterial(hex) {
+  let m = roomMatCache.get(hex);
+  if (!m) {
+    m = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.95 });
+    m.userData.base = new THREE.Color(hex);   // 压暗时 lerp 回来用（不是 hex 字符串：避免每帧重复解析）
+    roomMatCache.set(hex, m);
+  }
+  return m;
+}
+
 // 墙体透明：半透明看穿内部（区别于「墙体 ✓」的完全隐藏）
 let wallsTransparent = false;
 const WALL_TRANSPARENT_OPACITY = 0.25;
@@ -192,11 +273,136 @@ function applyStyle() {
   glassMat.color.copy(hexColor(st.glass, 0x789cb8));
   doorMat.color.copy(hexColor(st.door, 0x8a5a38));
 }
-const roomColor = (p) => {
+// 改动前的三分支配色 —— **原样保留**：它是 `?purpose=0` 的回退路径（回归的 A/B 杠杆），不是死代码。
+// 实测它把理化楼 118 间里的 113 间画成 0xa8c8e8，与楼板 baseMat 同值 ⇒ 那个图层等于隐形。
+const legacyRoomColor = (p) => {
   if (p === '实验准备室') return 0xb9c8d4;   // 蓝灰
   if (p === '值班室') return 0xd8c6a8;       // 暖橙
   return 0xa8c8e8;                            // 实验室 浅蓝
 };
+
+// ===== 用途配色 =====
+// ★ 唯一事实来源：backend/modeling/su_spec_floors.py 的 PURPOSE_COLOR / PURPOSE_FAMILY。
+//   与 Python 侧同源，改一处必须改另一处（比照 FACE_PROBE 那两行的既有写法）；
+//   _scratch/_purpose_color_guard.py 逐值守门（G1 逐色值 / G2 逐族名 / G3 全库归族 / G5 抖动不越界）。
+const PURPOSE_COLOR_EXACT = {
+  "实验室": "#1f7a99", "实验辅助用房": "#38a0b8", "实验准备室": "#155f78", "实验专用库房": "#6cc3d4",
+  "教师工作室": "#c8871f", "办公室": "#e0a63c", "其他办公用房": "#a06a12", "学生工作室": "#f0c766",
+  "研讨室": "#9a4a84", "会议室": "#b56a9e", "报告厅": "#74305f",
+  "值班室": "#6b7d74", "资料室": "#97a99f",
+};
+// 与上面一一对应，逐字照抄 Python 的 PURPOSE_FAMILY（守卫 G2 比对）
+const PY_FAMILY = {
+  "实验室": "实验", "实验辅助用房": "实验", "实验准备室": "实验", "实验专用库房": "实验",
+  "教师工作室": "办公", "办公室": "办公", "其他办公用房": "办公", "学生工作室": "办公",
+  "研讨室": "会议", "会议室": "会议", "报告厅": "会议",
+  "值班室": "辅助", "资料室": "辅助",
+};
+// 族锚色：前 4 个就是上面 4 个族首色（理化楼 13 类与 SU 地垫同值）★ 这 4 个是**合同色不能动**；
+// 其余为族派生色的基准 —— 长尾族（宿舍/仓储…）单栋动辄上千间，锚色刻意走低饱和，不刺眼。
+// Lab ΔE 下限由守卫 G4 断言（实测：族间最小 14.3；族 vs 建筑色最小 11.1）。
+// 11.1 这个数不是拍的：全部 spec.json 的真实建筑色里，c103/c104 的 `#3d6b8f` 与**合同色**
+// 实验 `#1f7a99` 只差 11.1 —— 合同色动不了，所以 11.1 就是这套配色的地板，派生锚色不许更差。
+// （设备原先 `#55606b` 与 c103/c104 的 roof/door `#6b7078` 只差 7.5，已按此改成 `#4f5560`。）
+const FAMILY_ANCHOR = {
+  "实验": "#1f7a99", "办公": "#c8871f", "会议": "#9a4a84", "辅助": "#6b7d74",
+  "教学": "#5560a8", "设备": "#4f5560", "宿舍": "#7d6f92", "服务": "#8f9b4a",
+  "活动": "#b8628a", "仓储": "#9a8a63", "交通": "#2b6b5f",
+  "未标注": "#33323a", "未知": "#8c2f4a",
+};
+// 非语义串人工兜底（全库 112 种用途里只剩这几条走不到关键词）
+const PURPOSE_OVERRIDE = {
+  "环工": "实验", "沉积": "实验",            // 专业简称：环境工程 / 沉积学 用房
+  "旅规": "办公",                            // 旅游规划 教研用房
+  "机电": "设备",                            // 裸「机电」= 机电设备间（「机电…实验室」由关键词走实验）
+  "学生会": "办公", "研究生会": "办公", "校友会": "办公",   // 学生/校友组织办公用房
+  "114-05-01": "未知",                       // 房号误填进 purpose 字段的脏数据（实测 1 间）
+};
+// 关键词归族，**顺序即优先级**，首个命中即止。三处顺序是刻意的，改前先看注释：
+//   · 实验 在 设备 之前 —— 否则「机电控制类实验准备室」被「机电」抢走；
+//   · 服务 在 宿舍 之前 —— 「洗衣房公寓」与「洗衣房」同族（实测 1 间）；
+//   · 教学 在 办公 之前 —— 「多媒体教室」是教学，「多媒体管理室」才是办公。
+const FAMILY_RULES = [
+  [/实验|化验|科创/, "实验"],
+  [/洗衣|开水|便利|接待|援助|服务|经营|心理咨询/, "服务"],
+  [/公寓|宿舍/, "宿舍"],
+  [/教室|教学|实训|自习|语音|考试|模拟法庭|图书|阅览/, "教学"],
+  [/仓库|库房|物资|杂物|标本/, "仓储"],
+  [/会议室|报告厅|研讨|会堂/, "会议"],
+  [/机房|设备|配电|监控|联通|网络|基础设施/, "设备"],
+  [/管理室|办公室|办公|工作室|教研室|休息室|教员|学生科|教务科|宣传部|中心|院办|办$|书记|院长|主任/, "办公"],
+  [/活动|职工之家|陈列室|展厅/, "活动"],
+  [/值班|门卫|档案|资料|辅助|后勤/, "辅助"],
+  [/楼梯|电梯|走道|走廊|门厅|封闭门|交通/, "交通"],
+];
+const UNKNOWN_LABEL = "未标注";       // 空 purpose（全库实测 1584 间）—— 有意涂灰，不跳过，否则点不出信息
+
+const purposeFamilyOf = (p) => {
+  const s = (p || "").trim();
+  if (!s) return UNKNOWN_LABEL;
+  if (PY_FAMILY[s]) return PY_FAMILY[s];
+  if (PURPOSE_OVERRIDE[s]) return PURPOSE_OVERRIDE[s];
+  for (let i = 0; i < FAMILY_RULES.length; i++) {
+    if (FAMILY_RULES[i][0].test(s)) return FAMILY_RULES[i][1];
+  }
+  return "未知";
+};
+
+// FNV-1a 32 位 —— 同一用途在任何楼里同色；★ 一律用 `>>>`（`>>` 是算术右移，>2^31 时给负数，抖动会跑偏）
+const hash32 = (s) => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h >>> 0;
+};
+const hexToRgb = (h) => {
+  const v = parseInt(h.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+};
+const rgbToHsl = (r, g, b) => {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) {
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  const l = (mx + mn) / 2;
+  return [h, d ? d / (1 - Math.abs(2 * l - 1)) : 0, l];
+};
+const hslToHex = (h, s, l) => {
+  h = ((h % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+  const f = (v) => Math.max(0, Math.min(255, Math.round((v + m) * 255)));
+  return "#" + [f(r), f(g), f(b)].map((v) => v.toString(16).padStart(2, "0")).join("");
+};
+// ★ 对外一律给**字符串** `#rrggbb`：userData.color、图例、自动化核对都按字符串比对。
+//   别改成 `parseInt(...)` 那种 number 形态（旧的 L636 `c.toString(16).padStart(6,'0')` 需要 number，
+//   材质改成直接吃字符串之后没这个需求了；转成 number 再拼回来反而容易拼出 `#00object` 那种静默全黑）。
+const purposeColorHex = (p) => {
+  const s = (p || "").trim();
+  if (!s) return FAMILY_ANCHOR[UNKNOWN_LABEL];
+  if (PURPOSE_COLOR_EXACT[s]) return PURPOSE_COLOR_EXACT[s];   // 命中表 → 与 SU 地垫**同一个值**
+  const fam = purposeFamilyOf(s);
+  const anchor = FAMILY_ANCHOR[fam] || FAMILY_ANCHOR["未知"];
+  const h = hash32(s);
+  const [H, S, L] = rgbToHsl(...hexToRgb(anchor));
+  const jh = (((h % 2001) / 1000) - 1) * 12;                  // 色相 ±12°
+  const js = ((((h >>> 8) % 2001) / 1000) - 1) * 0.06;        // 饱和度 ±6%
+  const jl = ((((h >>> 16) % 2001) / 1000) - 1) * 0.07;       // 明度 ±7%
+  return hslToHex(H + jh, Math.max(0.08, Math.min(1, S + js)), Math.max(0.12, Math.min(0.88, L + jl)));
+};
+// 分发：?purpose=0 → 改动前的旧观感；否则查表/归族。返回字符串（见上）。
+const roomColor = (p) => (purposeColorOn ? purposeColorHex(p)
+  : '#' + legacyRoomColor(p).toString(16).padStart(6, '0'));
 
 function makeShape(pts, holes) {
   const s = new THREE.Shape();
@@ -269,6 +475,109 @@ function pointInPoly(px, py, poly) {
   }
   return inside;
 }
+
+// ---------- 房间标注锚点（平面坐标）----------
+// 三级降级，全部复用上面既有的 pointInPoly / polyBoundaryDist：
+//   ① 面积质心（鞋带公式）—— L 形/凹形房间的质心会落在房间外；
+//   ② 7×7 网格里找「落在多边形内、且离边界最远」的点（49 次采样）；
+//   ③ 都不行就退回质心（标签会压墙，但不至于没有）。
+// 离线全库实测（8965 间）：8945 间走①、20 间需②、0 间落到③。
+function roomAnchor(poly) {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const [x0, y0] = poly[i], [x1, y1] = poly[(i + 1) % poly.length];
+    const cr = x0 * y1 - x1 * y0;
+    a += cr; cx += (x0 + x1) * cr; cy += (y0 + y1) * cr;
+  }
+  let area = Math.abs(a) / 2;
+  let mx, my;
+  if (area < 1e-9) {                       // 退化多边形（共线/零面积）：退回顶点平均
+    mx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
+    my = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+    return { ax: mx, ay: my, area: 0 };
+  }
+  a *= 0.5;
+  mx = cx / (6 * a); my = cy / (6 * a);
+  if (pointInPoly(mx, my, poly)) return { ax: mx, ay: my, area };
+  const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  let best = null, bd = -1;
+  for (let i = 0; i < 7; i++) {
+    for (let j = 0; j < 7; j++) {
+      const px = x0 + (x1 - x0) * i / 6, py = y0 + (y1 - y0) * j / 6;
+      if (!pointInPoly(px, py, poly)) continue;
+      const d = polyBoundaryDist(px, py, poly);
+      if (d > bd) { best = [px, py]; bd = d; }
+    }
+  }
+  if (best) return { ax: best[0], ay: best[1], area };
+  return { ax: mx, ay: my, area };
+}
+// 缓存回写：`rebuild()` 会反复跑（切窗户、改窗参都触发），锚点不该跟着重算。
+function roomMeta(r) {
+  if (!r._meta) r._meta = roomAnchor(r.poly);
+  return r._meta;
+}
+
+// ---------- 按面配色（对齐 Python build_standard_glb.wall_side_color）----------
+// SU 的规矩：材质是贴在**面的一侧**上的。同一张墙，朝外那面刷外墙涂料、朝内那面刷
+// 室内漆——「墙」本身没有外墙/内墙之分，只有「这张面朝哪」。所以这里不按 w.type 把
+// 整条墙刷一个色，而是把墙几何的三角形按朝向拆成两组，分别挂外墙/室内材质。
+// 这两个常量与 Python 侧同源，改一处必须改另一处。
+const FACE_PROBE = 0.06;      // 侧面中点沿外法向探多远判内外（m）
+const FACE_EDGE_GAP = 0.12;   // 离轮廓边界多近就算外皮（m，≈半个最大墙厚）
+
+// gap 的由来：轮廓是**照图读的**、墙是**配对出来的**，在梳齿凹口处两者对不齐
+// （ny27 北侧 6 个凹口实测差 0.03~0.09m）。只用「探针落在轮廓外」这一条，那几面真
+// 外皮会整片判成室内色，北立面变成斑驳的米白。「一张面离轮廓边界不到一个墙厚」= 它
+// 就是外皮；实测两极是 0.034（外皮）与 0.214（室内面），中间留了一倍余量。
+function faceIsOuter(mx, my, nx, ny, outline) {
+  if (!outline || outline.length < 3) return true;
+  const px = mx + nx * FACE_PROBE, py = my + ny * FACE_PROBE;
+  if (!pointInPoly(px, py, outline)) return true;
+  return polyBoundaryDist(px, py, outline) <= FACE_EDGE_GAP;
+}
+
+// 给一张墙几何分组：0=原材质（上下盖，与 Python「盖色按墙类」一致）、1=外墙、2=室内。
+// 几何一个顶点都不动，只加 group——线框、拾取、枚举照旧。材质数组里 index 0 就是调用方
+// 传进来的那个材质对象，applyStyle() 改的也是同一批对象，所以配色仍随参数实时变。
+// 采样走 matrixWorld：调用方怎么旋转/平移这个 mesh 都不影响判定（世界坐标即平面坐标，
+// x=平面x、z=-平面y，与 GLB 一致）。
+const _swV = new THREE.Vector3(), _swN = new THREE.Vector3(), _swM = new THREE.Matrix3();
+function splitWallFaces(mesh, outline) {
+  if (!outline || outline.length < 3) return;
+  const geo = mesh.geometry, pos = geo.attributes.position;
+  const nor = geo.attributes.normal, idx = geo.index;
+  if (!pos || !nor) return;
+  const nTri = Math.floor((idx ? idx.count : pos.count) / 3);
+  if (!nTri) return;
+  mesh.updateMatrixWorld(true);
+  _swM.getNormalMatrix(mesh.matrixWorld);
+  const kind = new Uint8Array(nTri);
+  for (let t = 0; t < nTri; t++) {
+    const ia = idx ? idx.getX(t * 3) : t * 3;
+    const ib = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+    const ic = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+    _swN.set(nor.getX(ia) + nor.getX(ib) + nor.getX(ic),
+             nor.getY(ia) + nor.getY(ib) + nor.getY(ic),
+             nor.getZ(ia) + nor.getZ(ib) + nor.getZ(ic)).applyMatrix3(_swM);
+    const nl = Math.hypot(_swN.x, _swN.z);
+    if (nl < 1e-6) continue;                       // 上下盖：留原材质
+    let mx = 0, mz = 0;
+    for (const i of [ia, ib, ic]) {
+      _swV.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(mesh.matrixWorld);
+      mx += _swV.x; mz += _swV.z;
+    }
+    kind[t] = faceIsOuter(mx / 3, -mz / 3, _swN.x / nl, -_swN.z / nl, outline) ? 1 : 2;
+  }
+  const base = mesh.material;
+  mesh.material = [base, wallOuterMat, wallInnerMat];
+  geo.clearGroups();
+  let t0 = 0, cur = kind[0];
+  for (let t = 1; t <= nTri; t++) {
+    if (t === nTri || kind[t] !== cur) { geo.addGroup(t0 * 3, (t - t0) * 3, cur); t0 = t; cur = kind[t]; }
+  }
+}
 function facadeWindows(floor, spec) {
   // 沿外墙实心段长边等距布窗（合成数据，DXF 无窗），与 Python facade_windows 等价
   const windows = [];
@@ -315,6 +624,7 @@ const shellFloorGroups = [];
 const floorGroups = [];
 const wallMeshes = [];
 const roofMeshes = [];   // 屋面板/女儿墙：浏览单层时隐藏，看进楼内
+const roomMeshes = [];   // 房间地垫：标注取锚点、图例统计、切配色都从这里找（几何本身不合并，见下）
 
 async function loadSpec(dir) {
   try {
@@ -442,6 +752,7 @@ function renderWindowBandSegments(w, wins, outline, yBottom, depth, F, parent, l
       const m = new THREE.Mesh(geo, wallOuterMat);
       m.rotation.y = Math.atan2(e.nx, -e.ny);   // 厚度轴(Z)对齐内法线（凹墙内法线被翻转，不能固定 atan2(dy,dx)）
       m.position.set(cxm + e.nx * wallT / 2, yBottom + depth / 2, -(cym + e.ny * wallT / 2));
+      splitWallFaces(m, outline);               // 摆位之后再判，按面配色读的是世界坐标
       m.castShadow = false; m.receiveShadow = false;
       m.userData = { type: '外墙', label: `${F + 1}层${label}`, color: '#8b8e98', floor: F };
       wallMeshes.push(m);
@@ -462,6 +773,7 @@ function renderWindowedWall(w, wins, z, F, parent, outline) {
     [wallTop - winTop, winTop, '外墙上段'],
   ]) {
     const m = addExtrude(base, [], depth, wallOuterMat, bY);
+    splitWallFaces(m, outline);                 // 按面配色：朝外那张面才是外墙色
     m.castShadow = false; m.receiveShadow = false;
     m.userData = { type: '外墙', label: `${F + 1}层${label}`, color: '#8b8e98', floor: F };
     wallMeshes.push(m);
@@ -490,6 +802,7 @@ function renderParapetRing(outline, y0, F, parent, label = '中央女儿墙') {
     const m = new THREE.Mesh(geo, parapetMat);
     m.rotation.y = Math.atan2(dy, dx);
     m.position.set(mx + nx * t / 2, y0 + h / 2, -(my + ny * t / 2));
+    splitWallFaces(m, outline);                 // 女儿墙朝外那张面 = 立面延续（与 GLB add_parapet 同口径）
     m.castShadow = true; m.receiveShadow = true;
     m.userData = { type: '女儿墙', label: `${F + 1}层${label}`, color: '#' + parapetMat.color.getHexString(), floor: F };
     roofMeshes.push(m);
@@ -563,14 +876,23 @@ function renderFloor(g, F) {
   slab.userData = { type: '楼板', label: `${F + 1}层楼板`, color: '#2a2f3a', floor: F };
   shell.add(slab);
 
-  // 房间色块
-  g.rooms.forEach((r) => {
-    const c = roomColor(r.purpose);
-    const m = addExtrude(makeShape(r.poly), null, ROOM_PAD,
-      new THREE.MeshStandardMaterial({ color: c, roughness: 0.95 }), z + S.slab_t);
+  // 房间色块：0.05m 地垫，按用途分色（与 SU 地垫同色）。
+  // ★ 逐间一个 mesh、**不合并**：合并能省 3.7% draw call，却要重写拾取链路（buildInfo 靠 userData.id
+  //   反查 DB），不值。R 计数不变量（calls/meshes/tri 与改动前逐位相同）也是靠这条成立的。
+  // ★ `ROOM_PAD` 与 `z + S.slab_t` 是既定的防 z-fighting 方案，不许动。
+  // ★ castShadow 保持 addExtrude 的默认 true **不动**：关掉地垫投影确实更省，但
+  //   `renderer.info.render.calls` 含 shadow pass，一关就和基线逐位对不上了 —— 逐位不变量优先。
+  (g.rooms || []).forEach((r) => {
+    const hex = roomColor(r.purpose);
+    const meta = roomMeta(r);
+    const m = addExtrude(makeShape(r.poly), null, ROOM_PAD, roomMaterial(hex), z + S.slab_t);
     m.userData = { type: '房间', id: r.id, number: r.number, floor: F,
+                   purpose: r.purpose || '',
+                   area: meta.area,
+                   ax: meta.ax, ay: meta.ay,          // 标注锚点（平面坐标，世界坐标 = (ax, ·, -ay)）
                    label: `${r.number} ${r.purpose || ''}`.trim(),
-                   color: '#' + c.toString(16).padStart(6, '0') };
+                   color: hex };
+    roomMeshes.push(m);
     interior.add(m);
   });
 
@@ -590,6 +912,8 @@ function renderFloor(g, F) {
       type = w.type === 'outer' ? '外墙' : '内墙';
     }
     const m = addExtrude(makeShape(w.poly, w.holes), null, h, mat, y0);
+    // 女儿墙的朝外面也是立面的延续，所以不分墙类，一视同仁按面配色（cap 仍走原材质）
+    splitWallFaces(m, g.outline);
     if (w.type !== 'parapet') { m.castShadow = false; m.receiveShadow = false; }
     m.userData = { type, label: `${F + 1}层${type} #${i + 1}`, color: '#a6adb9', thickness: w.thickness, height: w.height, floor: F };
     (w.type === 'parapet' ? roofMeshes : wallMeshes).push(m);
@@ -780,12 +1104,16 @@ function buildFloorButtons(count) {
   floorBtns = btns;
 }
 function setFloor(f) {
+  autoSwitchNote = false;      // 任何一次切层（手动点按钮 / 自动跳层都会经过这里）都让那条提示过期
   currentFloor = f;
   floorBtns.forEach(b => b.classList.toggle('active', String(b.dataset.f) === String(f)));
   floorGroups.forEach((g, i) => { g.visible = (f === 'all' || i === f); });
   shellFloorGroups.forEach((g, i) => { g.visible = (f === 'all' || i === f); });
   // 浏览单层时隐藏屋顶/女儿墙，看清该层内部
   roofMeshes.forEach((m) => { m.visible = (f === 'all'); });
+  // 标注与图例都跟着楼层走：图例的间数就是"你眼前看到的这些东西"（读 floorGroups/F.visible，不另立 flag）
+  refreshLabels();
+  renderLegend();
 }
 allBtn.addEventListener('click', () => setFloor('all'));
 
@@ -826,6 +1154,204 @@ function setWindows(v) {
   rebuild();
 }
 winBtn.addEventListener('click', () => setWindows(!windowsVisible));
+
+// ---------- 用途图例 ----------
+let legendPurposes = 0;      // 图例**真正代表多少种用途**（长尾折叠后行数会少 —— 断言认这个数，不认行数）
+let dimPurpose = null;       // 点中的用途（其余压暗）；null = 不压暗
+let autoSwitchNote = false;  // 「刚才是自动帮你切到 1 层的」——一次性提示，任何一次手动切层就清掉
+const legendBox = document.getElementById('legend');
+
+// 「眼前看到的房间」= 当前可见层的地垫。可见性直接读所属层组的 visible，不另立 flag（避免两处状态打架）。
+function visibleRooms() {
+  return roomMeshes.filter((m) => m.parent && m.parent.visible);
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function applyDim() {
+  // keep 用 roomColor(dimPurpose) 而不是 purposeColorHex：?purpose=0 时缓存键是旧色值，得走同一个分发。
+  const keep = dimPurpose === null ? null : roomColor(dimPurpose);
+  roomMatCache.forEach((mat, hex) => {
+    const base = mat.userData.base;
+    if (keep === null || hex === keep) mat.color.copy(base);
+    else mat.color.copy(base).lerp(DIM_TARGET, 0.82);
+  });
+}
+function renderLegend() {
+  legendPurposes = 0;
+  if (!legendOn || !legendBox) { if (legendBox) legendBox.style.display = 'none'; return; }
+  const rooms = visibleRooms();
+  const byPurpose = new Map();
+  for (const m of rooms) {
+    const p = m.userData.purpose || '';
+    byPurpose.set(p, (byPurpose.get(p) || 0) + 1);
+  }
+  legendPurposes = byPurpose.size;      // ← 不管折不折叠，这个数必须是"可见房间里有多少种用途"
+  const head = '<div class="h">房间用途</div>';
+  if (!rooms.length) {
+    legendBox.innerHTML = head + '<div class="na">本楼无房间用途数据</div>';
+    legendBox.style.display = 'block';
+    return;
+  }
+  const scope = currentFloor === 'all' ? `整栋 ${FLOOR_COUNT} 层` : `${currentFloor + 1} 层`;
+  const rows = [...byPurpose.entries()].sort((a, b) => (b[1] - a[1]) || String(a[0]).localeCompare(String(b[0]), 'zh'));
+  // 长尾折叠：前 12 名之外、且只有 1 间的收进「其他」——c026 实测 35 种用途，不折叠会撑满一屏。
+  const keep = rows.filter((r, i) => i < 12 || r[1] > 1);
+  const tail = rows.slice(keep.length);
+  let html = head + `<div class="sub">${scope} · ${rooms.length} 间 · ${legendPurposes} 种用途</div>`;
+  if (autoSwitchNote) {
+    html += '<div class="sub note">已自动切到 1 层：整栋视距下标注会叠成一团，逐层看更清楚。'
+          + '想看整栋，把「标注」关掉即可。</div>';
+  }
+  const dimmed = dimPurpose !== null;
+  for (const [p, n] of keep) {
+    const nm = p || UNKNOWN_LABEL;
+    const on = !dimmed || dimPurpose === p;
+    html += `<div class="row${on ? '' : ' dim'}" data-p="${escapeHtml(p)}" title="点击只看这一类">`
+          + `<span class="sw" style="background:${roomColor(p)}"></span>`
+          + `<span class="nm">${escapeHtml(nm)}</span><span class="ct">${n}</span></div>`;
+  }
+  if (tail.length) {
+    const tn = tail.reduce((s, r) => s + r[1], 0);
+    html += `<div class="row tail">其他 ${tail.length} 种 · ${tn} 间</div>`;
+  }
+  legendBox.innerHTML = html;
+  legendBox.style.display = 'block';
+  legendBox.querySelectorAll('.row[data-p]').forEach((el) => {
+    el.addEventListener('click', () => {
+      dimPurpose = (dimPurpose === el.dataset.p) ? null : el.dataset.p;
+      applyDim(); renderLegend();
+    });
+  });
+}
+
+// ---------- 房间中文标注（DOM 投影，不引 CSS2DRenderer）----------
+// 为什么不引 CSS2DRenderer：importmap 里只有 three/OrbitControls/RoomEnvironment，加第四个就是多一个
+// unpkg 外部依赖（内网/断网直接白屏）；而投影只用现成的 camera 与渲染循环，零新增依赖。
+const labelLayer = document.getElementById('labelLayer');
+let labelItems = [];        // [{el, x, y, z}] 世界坐标；世界 = (ax, F*层高+板厚+垫厚, -ay)
+let labelShown = 0;
+let lastCamKey = '';
+const LABEL_H = 16;
+
+function clearLabels() {
+  labelItems = [];
+  labelShown = 0;
+  lastCamKey = '';
+  if (labelLayer) labelLayer.textContent = '';
+}
+function textWidth(s) {
+  let w = 12;
+  for (const ch of s) w += /[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 12 : 6.5;   // 用转义写：中日韩与全角标点算全宽
+  return w;
+}
+function refreshLabels() {
+  clearLabels();
+  if (!labelsOn || !labelLayer) return;
+  // 只标单层：整栋视距下 118~480 条必叠成一团墨（SU 封面图已踩过）。开了标注就自动落到 1 层。
+  // ★ 跳层必须**说出来**：不然用户点「标注 ✓」之后看到的是"楼层按钮自己跳了一下、我还停在某一层"，
+  //   会误以为是 bug。提示走图例的 .sub 行（#hint 是常驻帮助文本，覆盖它会把操作说明弄丢）。
+  if (currentFloor === 'all' && FLOOR_COUNT > 1) {
+    setFloor(0);              // setFloor 会清 autoSwitchNote，所以先落层、再立标志
+    autoSwitchNote = true;
+    renderLegend();           // 重渲染一次，把提示挂上
+    return;
+  }
+  const cand = visibleRooms()
+    .filter((m) => (m.userData.area || 0) >= labelMinArea)
+    .sort((a, b) => (b.userData.area || 0) - (a.userData.area || 0));
+  for (const m of cand.slice(0, labelMax)) {
+    const u = m.userData;
+    const el = document.createElement('div');
+    el.className = 'rl';
+    el.innerHTML = `<span class="n">${escapeHtml(u.number || '')}</span> `
+                 + escapeHtml(u.purpose || UNKNOWN_LABEL);
+    labelLayer.appendChild(el);
+    labelItems.push({ el, x: u.ax, y: u.floor * LAYER_HEIGHT + S.slab_t + ROOM_PAD + 0.02, z: -u.ay, text: el.textContent });
+  }
+  updateLabels(true);
+}
+function updateLabels(force) {
+  if (!labelsOn || !labelItems.length) { labelShown = 0; return; }
+  // ★ 相机静止就跳过：不改 DOM、不投影（不然每帧 60 次 layout 读取，浏览器会被拖住）
+  const key = `${labelItems.length}|${innerWidth}x${innerHeight}|`
+            + camera.matrixWorld.elements.map((v) => v.toFixed(4)).join(',');
+  if (!force && key === lastCamKey) return;
+  lastCamKey = key;
+  const v = new THREE.Vector3();
+  const taken = [];
+  let shown = 0;
+  for (const it of labelItems) {
+    v.set(it.x, it.y, it.z).project(camera);
+    let hit = v.z >= -1 && v.z <= 1;
+    let l = 0, t = 0, w = 0;
+    if (hit) {
+      const sx = (v.x * 0.5 + 0.5) * innerWidth, sy = (-v.y * 0.5 + 0.5) * innerHeight;
+      w = textWidth(it.text); l = sx - w / 2; t = sy - LABEL_H / 2;
+      hit = l >= 0 && t >= 0 && l + w <= innerWidth && t + LABEL_H <= innerHeight;
+      if (hit) {
+        for (const [a, b, c, d] of taken) {          // 屏内贪心去重叠（按面积降序，大的先占）
+          if (l < a + c && a < l + w && t < b + d && b < t + LABEL_H) { hit = false; break; }
+        }
+      }
+    }
+    if (hit) {
+      taken.push([l, t, w, LABEL_H]);
+      shown++;
+      it.el.style.transform = `translate3d(${Math.round(l)}px,${Math.round(t)}px,0)`;
+    } else {
+      it.el.style.transform = 'translate3d(-9999px,-9999px,0)';   // 被压掉的移出屏（不是删 DOM，下帧还能回来）
+    }
+  }
+  labelShown = shown;
+}
+
+// ---------- 三个开关（都只改材质/重建 DOM，**不 rebuild()** —— 省一次 13s 级重建） ----------
+const purposeBtn = document.getElementById('purposeToggle');
+const labelBtn = document.getElementById('labelToggle');
+const legendBtn = document.getElementById('legendToggle');
+function syncLayerButtons() {
+  purposeBtn.classList.toggle('active', purposeColorOn);
+  purposeBtn.textContent = purposeColorOn ? '用途配色 ✓' : '用途配色 ✗';
+  labelBtn.classList.toggle('active', labelsOn);
+  labelBtn.textContent = labelsOn ? '标注 ✓' : '标注 ✗';
+  legendBtn.classList.toggle('active', legendOn);
+  legendBtn.textContent = legendOn ? '图例 ✓' : '图例 ✗';
+}
+function setPurposeColor(v) {
+  purposeColorOn = v;
+  clearSelect();                 // 选中的房间材质是被 clone 过的，换色前先还原（顺带回收那些 clone）
+  for (const m of roomMeshes) {
+    const hex = roomColor(m.userData.purpose);
+    m.userData.color = hex;
+    m.material = roomMaterial(hex);
+  }
+  applyDim();
+  syncLayerButtons();
+  renderLegend();
+}
+function setLabels(v) { labelsOn = v; syncLayerButtons(); refreshLabels(); }
+function setLegend(v) { legendOn = v; syncLayerButtons(); renderLegend(); }
+purposeBtn.addEventListener('click', () => setPurposeColor(!purposeColorOn));
+labelBtn.addEventListener('click', () => setLabels(!labelsOn));
+legendBtn.addEventListener('click', () => setLegend(!legendOn));
+
+// 面板：标注最小面积 / 单层最多标注
+const pLabelMin = document.getElementById('p_label_min');
+const pLabelMax = document.getElementById('p_label_max');
+pLabelMin.value = labelMinArea;
+pLabelMax.value = labelMax;
+document.getElementById('p_label_apply').addEventListener('click', () => {
+  const a = parseFloat(pLabelMin.value);
+  const b = parseInt(pLabelMax.value, 10);
+  if (a >= 0) labelMinArea = a;
+  if (b >= 1) labelMax = b;
+  pLabelMin.value = labelMinArea;
+  pLabelMax.value = labelMax;
+  refreshLabels();
+});
+syncLayerButtons();
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, (FLOOR_COUNT * LAYER_HEIGHT) / 2, 0);
@@ -897,10 +1423,16 @@ function select(mesh, instanceId) {
     return;
   }
   selected = mesh; origMat = mesh.material;
-  const m2 = origMat.clone();
-  m2.emissive = new THREE.Color(0x33ff99);
-  m2.emissiveIntensity = 0.55;
-  mesh.material = m2;
+  // 墙是**材质数组**（按面配色用了 group：0=盖/1=外墙/2=室内），数组没有 .clone()，
+  // 所以统一按数组处理，单材质只是长度 1 的特例。
+  const src = Array.isArray(origMat) ? origMat : [origMat];
+  const hi = src.map((mm) => {
+    const c = mm.clone();
+    c.emissive = new THREE.Color(0x33ff99);
+    c.emissiveIntensity = 0.55;
+    return c;
+  });
+  mesh.material = Array.isArray(origMat) ? hi : hi[0];
 }
 function clearSelect() {
   if (!selected) return;
@@ -909,7 +1441,8 @@ function clearSelect() {
     selected.instanceColor.needsUpdate = true;
     selectedInstance = null;
   } else {
-    selected.material.dispose();
+    const cur = selected.material;
+    (Array.isArray(cur) ? cur : [cur]).forEach((mm) => mm.dispose());
     selected.material = origMat;
   }
   selected = null; origMat = null;
@@ -932,26 +1465,57 @@ renderer.domElement.addEventListener('pointermove', (ev) => {
   }
 });
 
+/** 内部编号 → 「名称（编号）」。
+ *  光写 c009 没人知道是哪栋（那是第九教学楼）；光写「第九教学楼」又和
+ *  数据库/文件名对不上，所以两个都给。 */
+function buildingLabel(code) {
+  if (!code) return '—';
+  const b = buildings.find((x) => x.name === code);
+  return (b && b.title) ? `${b.title}（${b.name}）` : code;
+}
+
 function buildInfo(u, n, p) {
+  // ★ 进 innerHTML 的动态串一律过 escapeHtml（房号/名称/用途/单位/面积标注都来自 /api/rooms 的 DB 行，
+  //   buildingLabel 的楼名来自 index.json —— 都不是本页能担保的内容）。标注层早就在转义了，
+  //   这里原先没有；同一个页面两套规矩，迟早出事。
+  const esc = escapeHtml;
   const F = u.floor != null ? (u.floor + 1) + '层' : '—';
   const face = `<div><b>面</b> ${describeFace(n)}</div>`;
   const pos = `<div><b>位置</b> x=${p.x.toFixed(2)} y=${p.y.toFixed(2)} z=${p.z.toFixed(2)}</div>`;
   if (u.type === '房间') {
     const room = (u.id != null) ? roomMap[u.id] : null;
-    if (room) {
-      return `<div class="t">房间 ${room.number || ''}</div>` +
+    // ★ 守卫：/api/rooms 覆盖全库 48 栋、id 实测**全局唯一（0 撞号）**；但实测 137 间
+    //   （c006 34 / c027 19 / c041 33 / c104 51）的 DB 行与几何房间**不是同一个房间**
+    //   （房号对不上，DB 里还混着整层的汇总行）。不守卫就会把别的房间的编号/面积/用途显示出来。
+    //   （曾有一版注释写"另有 96 处跨楼 id 重复"—— 实测不成立：重复的是**房号**，如 '卫' 跨 c046/c080
+    //    共 171 行，那是另一回事，房号本就不该唯一。）
+    //   判据必须是 geometryBuilding（几何真换了才算数），**不能**用 currentBuilding —— 它在
+    //   loadBuilding 开头就被改写，切楼过渡期/加载失败态会把正确的行误杀。
+    const mine = room && room.building === geometryBuilding
+      && (u.number == null || room.number == null || String(room.number) === String(u.number));
+    if (mine) {
+      return `<div class="t">房间 ${esc(room.number || '')}</div>` +
+        `<div><b>建筑</b> ${esc(buildingLabel(room.building))}</div>` +
         `<div><b>楼层</b> ${room.floor != null ? (room.floor + 1) + '层' : '—'}</div>` +
-        `<div><b>名称</b> ${room.name || '—'}</div>` +
-        `<div><b>面积</b> ${room.area_m2 != null ? room.area_m2.toFixed(2) + ' m²' : (room.area_label || '—')}</div>` +
-        (room.area_label ? `<div><b>标注面积</b> ${room.area_label}</div>` : '') +
-        `<div><b>用途</b> ${room.purpose || '—'}</div>` +
-        `<div><b>使用单位</b> ${room.dept || '—'}</div>` +
+        `<div><b>名称</b> ${esc(room.name) || '—'}</div>` +
+        `<div><b>面积</b> ${room.area_m2 != null ? room.area_m2.toFixed(2) + ' m²' : esc(room.area_label) || '—'}</div>` +
+        (room.area_label ? `<div><b>标注面积</b> ${esc(room.area_label)}</div>` : '') +
+        `<div><b>用途</b> ${esc(room.purpose) || '—'}</div>` +
+        `<div><b>使用单位</b> ${esc(room.dept) || '—'}</div>` +
         face + pos + `<div class="tip">数据来自数据库 lihua_twin.rooms</div>`;
     }
-    return `<div class="t">房间 ${u.label || ''}</div>` + face + pos +
-      `<div class="tip">该房间暂无数据库记录</div>`;
+    // 降级分支：DB 里没有 / 记录对不上这间房 —— 至少把**几何自带**的房号/用途/面积给出来
+    // （面积按多边形鞋带公式算，数字孪生要的就是面积与用途这两条）
+    return `<div class="t">房间 ${esc(u.number || u.label || '')}</div>` +
+      `<div><b>建筑</b> ${esc(buildingLabel(geometryBuilding))}</div>` +
+      `<div><b>楼层</b> ${u.floor != null ? (u.floor + 1) + '层' : '—'}</div>` +
+      (u.purpose ? `<div><b>用途</b> ${esc(u.purpose)}</div>` : '') +
+      (u.area ? `<div><b>面积</b> ${u.area.toFixed(2)} m²（按边界多边形计）</div>` : '') +
+      face + pos +
+      `<div class="tip">${room ? '数据库里这条记录与几何不是同一间房（房号对不上），上面是几何自带的数据'
+                               : '该房间暂无数据库记录'}</div>`;
   }
-  const head = `<div class="t">${u.type}${u.label ? ' · ' + u.label : ''}</div>`;
+  const head = `<div class="t">${esc(u.type)}${u.label ? ' · ' + esc(u.label) : ''}</div>`;
   let body = `<div><b>楼层</b> ${F}</div>`;
   if (u.type === '门' || u.type === '电梯门') {
     body += `<div><b>门宽</b> ${u.w != null ? u.w.toFixed(2) + ' m' : '—'}</div>`;
@@ -1007,15 +1571,32 @@ function clearBuilding() {
   shellFloorGroups.length = 0;
   wallMeshes.length = 0;
   roofMeshes.length = 0;
+  roomMeshes.length = 0;      // ★ roomMatCache **不**清：颜色是纯函数，跨楼复用（见 roomMaterial）
+  clearLabels();
   pickables.length = 0;
   clearPath();
 }
 function rebuild() {
   clearBuilding();
+  // ★ 图例的「压暗筛选」是**跨楼状态**，必须在这里复位：dimPurpose 只以"改材质颜色"的形式活在
+  //   共享的 roomMatCache 上（clearBuilding 有意不清缓存）。不复位的话，在理化楼点了「会议」
+  //   再切到 c006（没有会议），整栋 205 间会全以压暗色出现，图例每行都带 .dim 却没有"正在筛选"
+  //   的提示 —— 唯一出路是挨个试点图例行。切楼即复位，别让上一栋的筛选跟着走。
+  dimPurpose = null;
+  applyDim();
   loadedFloors.forEach(renderFloor);
   scene.traverse((o) => { if (o.isMesh) pickables.push(o); });
   setFloor(currentFloor);
   setWalls(wallsVisible);
+  // ★ 走到这里几何才**真的**换了 —— 这两个赋值是「标题/选择器」与「场景内容」的对齐点：
+  //   builtToken === buildToken ⇒ 眼前这栋就是选中的那栋。切楼中途/失败时它们不相等（见 loadBuilding）。
+  geometryBuilding = currentBuilding;
+  builtToken = buildToken;
+  // 标题里的「载入中…」也是在**这一刻**结束的。它原先只在 loadBuilding 开头设过、没有任何地方清，
+  // 于是成功载入后标题会永远停在「载入中…」（实测：?building=zzz 与正常楼都停住了）。
+  // 清在这里而不是别处：与 builtToken 一起收尾，两处状态就不会打架。
+  setBname(buildings.find((x) => x.name === currentBuilding) || LEGACY_LIHUA, 'ok');
+  renderLegend();
 }
 function applyParams() {
   S.win_w = parseFloat(pWinW.value) || S.win_w;
@@ -1058,31 +1639,64 @@ function resetView() {
   currentFloor = 'all';
   frameCamera();
 }
-function setBname(b) {
+function setBname(b, state, err) {
   const label = b.title ? `${b.title}（${b.name}）` : b.name;
   const el = document.getElementById('bname');
-  if (el) el.textContent = label;
+  // ★ 诚实显示：标题**秒变**、几何要 13~17 秒才到 —— 不标状态的话，这十几秒里画面是上一栋、
+  //   标题是新楼。失败（c009 声明 6 层、floor5 是 404）时必须说"载入失败"，不能顶着新楼的名字
+  //   继续显示上一栋的几何。
+  if (el) {
+    el.textContent = state === 'loading' ? `${label} · 载入中…`
+      : state === 'failed' ? `${label} · 载入失败${err ? '：' + String(err.message || err).slice(0, 70) : ''}`
+      : label;
+  }
   document.title = `${b.title ? b.title + ' · ' : ''}整栋立体模型`;
 }
 async function loadBuilding(b) {
-  setBname(b);
-  if (currentBuilding === b.name) return;
+  // 已经是这一栋、且上一次已经落地 → 什么都不用做（少了 builtToken 这一半，"已选中"和"已画出来"会混为一谈）
+  if (currentBuilding === b.name && builtToken === buildToken) return;
+  const my = ++buildToken;
+  setBname(b, 'loading');
   currentBuilding = b.name;
-  S = Object.assign({}, DEFAULT_SPEC);
-  await loadSpec(b.dir);
-  applyStyle();
-  LAYER_HEIGHT = S.floor_h || 4.2;
-  FLOOR_COUNT = b.floors;
-  loadedFloors = await loadFloors(b.dir, b.floors);
-  syncPanel();
-  buildFloorButtons(FLOOR_COUNT);
-  resetView();
-  rebuild();
+  try {
+    S = Object.assign({}, DEFAULT_SPEC);
+    await loadSpec(b.dir);
+    if (my !== buildToken) return;          // 期间又切了别的楼 → 这次的结果作废（谁最后请求谁赢）
+    applyStyle();
+    LAYER_HEIGHT = S.floor_h || 4.2;
+    FLOOR_COUNT = b.floors;
+    const floors = await loadFloors(b.dir, b.floors);
+    if (my !== buildToken) return;
+    loadedFloors = floors;
+    syncPanel();
+    buildFloorButtons(FLOOR_COUNT);
+    resetView();
+    rebuild();                              // geometryBuilding / builtToken 在 rebuild 末尾置位
+  } catch (err) {
+    // ★ 载入失败 ⇒ 页面上**不能**留着上一栋的几何顶着这一栋的名字。原先这里只改标题就 rethrow，
+    //   外层 .catch 顺手把 `data/` 里的理化楼画了出来、并给它盖了握手章（geometryBuilding/builtToken
+    //   都置位）—— 失败的楼"看起来载入成功了"，自动化也认。现在失败态 = 空场景 + 不盖章：
+    //   就绪握手因此永远等不到（回归里表现为 ready=timeout，命中 KNOWN_DOWN 的"按预期失败"分支）。
+    if (my === buildToken) {
+      setBname(b, 'failed', err);
+      loadedFloors = [];            // 上一栋的楼层数据也一并丢掉：留着它，任何一次 rebuild 都会把旧楼画回来
+      clearBuilding();
+      clearSelect();
+      info.style.display = 'none';
+      geometryBuilding = null;      // ★ 两个握手量都留在"未就绪"：几何真换了才算数（见 rebuild 末尾）
+      renderLegend();               // 图例立刻转成"本楼无房间用途数据"，不留上一栋的统计
+    }
+    throw err;
+  }
 }
 buildingSel.addEventListener('change', () => {
   const b = buildings.find((x) => x.name === buildingSel.value);
   if (b) loadBuilding(b).catch((err) => console.error('切换建筑失败：', err));
 });
+
+// 清单里没有的单栋（或清单整个拿不到）时用的基线：理化楼的老布局（data/ 根下直接是 floor*.json）。
+// 提成常量是为了让 rebuild() 末尾也能拿它给标题收尾 —— 那里只知道楼名，不一定找得到清单对象。
+const LEGACY_LIHUA = { name: 'lihua', title: '理化楼（基线）', floors: FLOOR_COUNT, dir: 'data' };
 
 fetch('data/buildings/index.json')
   .then((res) => { if (!res.ok) throw new Error(`index.json ${res.status}`); return res.json(); })
@@ -1091,22 +1705,46 @@ fetch('data/buildings/index.json')
       buildings.push(b);
       const opt = document.createElement('option');
       opt.value = b.name;
-      opt.textContent = `${b.title}（${b.floors}层）`;
+      // 编号在前：下拉按编号排序浏览时更好找（c006 比「第六教学楼」好定位）
+      opt.textContent = `${b.name} ${b.title}（${b.floors}层）`;
       buildingSel.appendChild(opt);
     }
-    const def = buildings[0] || { name: 'lihua', title: '理化楼', floors: FLOOR_COUNT, layer_height: 4.2, dir: 'data' };
+    // ?building=c054 —— 按名直开某一栋（自动化必须能一栋一页地开，而不是在同一页上连切）
+    const want = QS.get('building');
+    if (want && !buildings.some((x) => x.name === want)) {
+      // ★ 点名了清单里没有的楼 ⇒ **不回退到第一栋**。回退会把不存在的名字变成一次"载入成功"
+      //   （实测 ?building=zzz-no-such-building：场景里是理化楼 118 间，geometryBuilding='lihua'，
+      //   builtToken 已置位 —— 自动化认它成功）。查无此楼就直说，不画任何几何。
+      const el = document.getElementById('bname');
+      if (el) el.textContent = `${want} · 清单里没有这栋楼`;
+      console.warn('?building=%s 不在清单里（清单 %d 栋）', want, buildings.length);
+      return;
+    }
+    const def = (want && buildings.find((x) => x.name === want)) || buildings[0];
+    if (!def) throw new Error('建筑清单为空');
     buildingSel.value = def.name;
-    return loadBuilding(def);
+    // 单栋载入失败**就地**收口（loadBuilding 里已清场景、已改标题），不让它升到下面那个 catch：
+    // 那个 catch 的职责是"清单本身拿不到 → 回退基线 data/"，把单栋失败也交给他，就等于
+    // 「某栋挂了就改画理化楼」—— 这正是上面那条注释在防的事。
+    return loadBuilding(def).catch((err) => console.error('载入失败（场景已清空，不盖就绪章）：', err));
   })
   .catch((err) => {
+    // 只兜「清单本身拿不到」（网络断了 / index.json 404）。此时下拉是空的、楼名无从谈起，
+    // 回退到 data/ 根下的理化楼基线是唯一能显示东西的选择。点名了 ?building= 就不回退：
+    // 用户要的是那一栋，给他另一栋比给空白更糟。
+    if (QS.get('building')) {
+      console.error('建筑清单加载失败，且点名了 ?building= —— 不做静默回退：', err);
+      return;
+    }
     console.error('加载建筑清单失败，回退基线 data/', err);
     loadSpec('data')
       .then(() => { applyStyle(); LAYER_HEIGHT = S.floor_h || 4.2; return loadFloors('data', FLOOR_COUNT); })
       .then((floors) => {
         loadedFloors = floors;
+        currentBuilding = LEGACY_LIHUA.name;
         syncPanel();
         buildFloorButtons(FLOOR_COUNT);
-        rebuild();
+        rebuild();                  // 标题收尾会走到 LEGACY_LIHUA（清单为空 ⇒ buildings.find 找不到 lihua）
       })
       .catch((e2) => console.error('加载楼层几何失败：', e2));
   });
@@ -1209,10 +1847,24 @@ fetch(API_BASE + '/api/rooms')
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
+  if (labelsOn) updateLabels(false);      // 相机静止时函数内部会直接返回（不碰 DOM）
 })();
 
-// 调试钩子：供无头浏览器/自动化「自己看」检查场景状态，不影响正常交互
-window.__gym3d = { scene, camera, renderer, controls, wallMeshes, THREE, get info() { return renderer.info; } };
+// 调试钩子：供无头浏览器/自动化「自己看」检查场景状态，不影响正常交互。
+// ★ purposeColorOf / purposeFamilyOf 是**问答口**：归族与配色的规则只有本页这一处实现，
+//   Python 侧（_scratch/_purpose_color_guard.py、_purpose_layer_regression.py）只负责"问它、再验它"，
+//   不存在"两边各抄一版、然后一起错"。
+window.__gym3d = { scene, camera, renderer, controls, wallMeshes, THREE, get info() { return renderer.info; },
+  purposeColorOf: (p) => roomColor(p),                 // 字符串 '#rrggbb'（与 userData.color 同形，大小写一致）
+  purposeFamilyOf: (p) => purposeFamilyOf(p),
+  familyAnchors: () => Object.assign({}, FAMILY_ANCHOR),
+  legacyColorOf: (p) => '#' + legacyRoomColor(p).toString(16).padStart(6, '0'),
+  labelCount: () => (labelsOn ? labelShown : 0),
+  legendPurposes: () => legendPurposes,                // 图例代表多少种用途（不是行数：长尾会折叠）
+  visibleRoomCount: () => visibleRooms().length,       // 当前可见楼层里有多少间（图例口径的唯一依据）
+  get buildToken() { return buildToken; },
+  get builtToken() { return builtToken; },
+  get geometryBuilding() { return geometryBuilding; } };
 </script>
 </body>
 </html>
