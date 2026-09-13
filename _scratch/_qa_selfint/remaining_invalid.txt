@@ -1,0 +1,29 @@
+c006   floor0.json    #7   6-A-01-09     695.3199 m²  Ring Self-intersection[-42.43 38.28]
+c006   floor0.json    #16  6-B-01-04     111.3830 m²  Ring Self-intersection[50.67 -7.32]
+c006   floor0.json    #28  6-C-01-03      37.4861 m²  Ring Self-intersection[3.87 4.68]
+c006   floor0.json    #30  6-C-01-05     479.6645 m²  Ring Self-intersection[9.41 28.46]
+c006   floor1.json    #5   6-A-02-05      90.8228 m²  Ring Self-intersection[-31.67 -10.58]
+c006   floor1.json    #31  6-C-02-05     696.5893 m²  Ring Self-intersection[29.95 4.68]
+c006   floor10.json   #1   6-C-11-01     343.2534 m²  Ring Self-intersection[19.47 -2.28]
+c006   floor4.json    #3   6-A-05-05     164.5143 m²  Self-intersection[-31.67 -7.32]
+c006   floor6.json    #2   6-C-07-02     146.2999 m²  Ring Self-intersection[-19.23 -7.32]
+c006   floor7.json    #1   6-C-08-01     343.2534 m²  Ring Self-intersection[19.47 -2.28]
+c006   floor8.json    #1   6-C-09-01     343.2534 m²  Ring Self-intersection[19.47 -2.28]
+c006   floor8.json    #2   6-C-09-02B    143.0227 m²  Self-intersection[-11.13 -2.52]
+c006   floor9.json    #1   6-C-10-01     343.2533 m²  Ring Self-intersection[19.47 -2.28]
+c009   floor0.json    #18  09-C-01-01    132.4914 m²  Self-intersection[50.85 -21.79]
+c041   floor5.json    #7   41-06-04      300.1429 m²  Ring Self-intersection[-22.12 -2.79]
+c103   floor1.json    #13  103-A-02-04   218.3050 m²  Ring Self-intersection[-0 -20.03]
+c103   floor1.json    #14  103-A-02-05   218.3050 m²  Ring Self-intersection[-0 -9.13]
+c103   floor2.json    #11  103-A-03-02  3455.3254 m²  Self-intersection[-79.9963875759622 9.69787305
+c103   floor2.json    #13  103-A-03-04   218.3050 m²  Ring Self-intersection[-0 -20.03]
+c103   floor2.json    #14  103-A-03-05   218.3050 m²  Ring Self-intersection[-0 -9.13]
+c103   floor3.json    #11  103-A-04-02  3455.3307 m²  Self-intersection[-79.9963875759622 9.69787305
+c103   floor3.json    #13  103-A-04-04   218.3050 m²  Ring Self-intersection[-0 -20.03]
+c103   floor3.json    #14  103-A-04-05   218.3050 m²  Ring Self-intersection[-0 -9.13]
+c103   floor4.json    #11  103-A-05-02  3455.3307 m²  Self-intersection[-79.9963875759622 9.69787305
+c103   floor4.json    #13  103-A-05-04   218.3050 m²  Ring Self-intersection[-0 -20.03]
+c103   floor4.json    #14  103-A-05-05   218.3050 m²  Ring Self-intersection[-0 -9.13]
+
+合计 26 间；分布 {'c006': 13, 'c009': 1, 'c041': 1, 'c103': 11}
+（558 原有 − 532 已修 = 26）

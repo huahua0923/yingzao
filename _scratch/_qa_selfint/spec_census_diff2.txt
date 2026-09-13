@@ -1,0 +1,3 @@
+=== spec 普查 diff（改前 D:\gym3d\_scratch\_qa_selfint\spec_pre / 改后 D:\gym3d\_scratch\su_jobs）===
+
+合计：逐字节相同 49 / **不同 0** / 改后缺失 0（共 49 份）

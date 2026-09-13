@@ -1,0 +1,33 @@
+=== spec 普查 diff（改前 D:\gym3d\_scratch\_qa_selfint\spec_pre / 改后 D:\gym3d\_scratch\su_jobs）===
+
+★ _c006_floors_spec.json             1300bc0f4808
+   1dc3a5e3e521
+     .meta.catCounts.地垫：246 → 241
+     .meta.groups.F1：2864 → 2861
+     .meta.groups.F6：763 → 761
+     .meta.kinds.wall：9841 → 9836
+     .meta.nf：160129 → 159732
+     .meta.parts：20634 → 20629
+     .meta.rooms_label[62].area：696.589 → 1036.117
+     .meta.rooms_label[176].area：146.3 → 145.125
+     .meta.subCounts.地垫-多媒体教室：90 → 87
+     .meta.subCounts.地垫-实验室：69 → 67
+     .meta.vol：23823.0547 → 23839.9724
+     .parts：长度 20634 → 20629
+
+★ _c009_floors_spec.json             b77414e4606a
+   e72108ac7f13
+     .meta.catCounts.地垫：148 → 146
+     .meta.groups.F0：2803 → 2801
+     .meta.kinds.wall：8883 → 8881
+     .meta.nf：319557 → 319503
+     .meta.parts：12264 → 12262
+     .meta.rooms_label[18].area：132.491 → 132.472
+     .meta.subCounts.地垫-配电房：4 → 2
+     .meta.vol：21233.9774 → 21233.9764
+     .parts：长度 12264 → 12262
+     .parts[19].ext：长度 25 → 64
+     .parts[19].ext[0][0]：42.75 → 42.93
+     .parts[19].ext[0][1]：-22.05 → -21.93
+
+合计：逐字节相同 47 / **不同 2** / 改后缺失 0（共 49 份）

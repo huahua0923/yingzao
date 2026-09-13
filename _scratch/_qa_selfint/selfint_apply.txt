@@ -1,0 +1,23 @@
+[排除] c103
+
+=== c006 ===
+  ✎ floor0.json 自交 6 间（本层另 4 间保住不改）
+      #1   6-A-01-02       184.5017 →  184.5017 （+0.000 m²）
+      #3   6-A-01-04       109.6338 →  109.6338 （-0.000 m²）
+      #10  6-A-01-12        11.7101 →   11.7101 （+0.000 m²）
+      #15  6-B-01-03        53.4937 →   53.4936 （-0.000 m²）
+      #20  6-B-01-09       185.0899 →  185.0899 （+0.000 m²）
+      #24  6-B-01-13        13.2081 →   13.2081 （-0.000 m²）
+Traceback (most recent call last):
+  File "D:\gym3d\_scratch\_fix_self_intersections.py", line 177, in <module>
+    main()
+  File "D:\gym3d\_scratch\_fix_self_intersections.py", line 156, in main
+    out = json.dumps(doc, ensure_ascii=False, indent=read_indent(raw))
+                                                     ^^^^^^^^^^^^^^^^
+  File "D:\gym3d\_scratch\_fix_self_intersections.py", line 54, in read_indent
+    m = re.search(r'\n(\s+)"', raw)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python312\Lib\re\__init__.py", line 177, in search
+    return _compile(pattern, flags).search(string)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: cannot use a string pattern on a bytes-like object
