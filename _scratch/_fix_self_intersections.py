@@ -46,7 +46,9 @@ r"""修 `floors/floor*.json` 里**自交**的房间多边形（唯一所有者�
   ⑤ 房间**条数**必须不变（本脚本只换 `poly`，不增不删）。
   ⑥ **逐间跳过，不整层跳过**：这一间不动，同一层其余自交房间照样修。
      （整层跳过会让 c006 另外 19 间能安全修的也一起被丢下，且"全库修完"这句话会盖住它。）
-  ⑦ 行尾与缩进照原文探测，不统一改写。
+  ⑦ **行尾与缩进照原文探测，不统一改写** —— 包括"原文本来是紧凑单行"这种：
+     `read_indent` 返回 `None` 时按紧凑写回。（旧版在单行文件上探测失败后**静默**取
+     `indent=1`，把 62 个交付层文件整成缩进版 +18 MB，见 `read_indent` 的注释。）
 
 "保住不改"里另有一类**自相吞并**型（`Ring Self-intersection`，4 层同型）：
   buffer(0) 取最大块等于把房间砍掉 27%~49%（`6-C-08-01` 343.25→174.93）。
@@ -86,9 +88,20 @@ REGION_CHANGE_OK = {
 
 
 def read_indent(raw):
-    """`raw` 是 **bytes**（`open(fp,"rb").read()`）—— 模式必须也是 bytes，
-    否则 `TypeError: cannot use a string pattern on a bytes-like object`。"""
-    m = re.search(rb'\n(\s+)"', raw)
+    """照原文探测缩进；**紧凑单行**返回 `None`（`json.dumps` 的默认分隔符就是原文那种）。
+
+    `raw` 是 **bytes**（`open(fp,"rb").read()`）—— 模式必须也是 bytes，
+    否则 `TypeError: cannot use a string pattern on a bytes-like object`。
+
+    ★ 2026-09-13 判例（本文件自己的错）：旧版是 `rb'\\n(\\s+)"'`，在**单行文件**上匹配不到，
+    于是 `return 1` —— **静默把紧凑 JSON 整成缩进版**：62 个交付层文件 19.4 MB → 35.9 MB
+    （×1.85），语义没变但格式全变、行数 0 → 7 万行。**"匹配不到" ≠ "缩进是 1"，
+    也可能是根本没有缩进**；格式探测失败时的正确动作是**别动格式**，不是挑一个默认值。
+    另一处同型：`( *)` 而不是 `(\\s+)` —— 否则 indent=0 的多行文件会被悄悄"补"上缩进。
+    """
+    if b"\n" not in raw:
+        return None
+    m = re.search(rb'\n( *)"', raw)
     return len(m.group(1)) if m else 1
 
 

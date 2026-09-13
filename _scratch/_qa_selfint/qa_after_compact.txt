@@ -1,0 +1,56 @@
+
+==========================================================================
+结构体检汇总 (ERROR=必改 WARN=人工核 UA=欠识别待重建不计FAIL)
+楼        层数   ERROR    WARN  状态
+c006     11       0      43  CAUTION
+c009      5       0      36  CAUTION
+c017      7       0       0  PASS
+c018      6       0       6  CAUTION
+c019      7       0       9  CAUTION
+c022      7       0       3  CAUTION
+c025      3       0       3  CAUTION
+c026      6       0      11  CAUTION
+c027      8       0      11  CAUTION
+c028      3       0       3  CAUTION
+c029      6       0       6  CAUTION
+c030      7       0       7  CAUTION
+c031      6       0       6  CAUTION
+c032      6       0       6  CAUTION
+c033      6       0       6  CAUTION
+c034      6       0       8  CAUTION
+c041      6       0       6  CAUTION
+c043      7       0       0  PASS
+c044      7       0       9  CAUTION
+c045      7       0      10  CAUTION
+c046      6       0      12  CAUTION
+c054      6       0       0  PASS
+c055      6       0       0  PASS
+c056      6       0       0  PASS
+c057      6       0       0  PASS
+c059      6       0       0  PASS
+c060      6       0       0  PASS
+c061      6       0       0  PASS
+c062      6       0       0  PASS
+c063      6       0       0  PASS
+c064      6       0       0  PASS
+c065      6       0       0  PASS
+c072      6       0       0  PASS
+c073      6       0       0  PASS
+c079      6       0      11  CAUTION
+c080      6       0      13  CAUTION
+c083      6       0      11  CAUTION
+c084      6       0      11  CAUTION
+c085      6       0      11  CAUTION
+c086      6       0      11  CAUTION
+c103      6       0      13  CAUTION
+c104      5       3       5  FAIL
+c108      4       0       0  PASS
+c109      5       0       0  PASS
+c114      6       0       0  PASS
+c116      4       0      14  CAUTION
+ny27      6       0       6  CAUTION
+ny28      6       0       0  PASS
+ny29      6       0       0  PASS
+--------------------------------------------------------------------------
+合计 ERROR=3 WARN=307  FAIL 楼=1/49
+逐栋报告在 _qa/<楼>_qa.txt
