@@ -1,0 +1,112 @@
+# -*- coding: utf-8 -*-
+# 出图验收：每层都拍 —— ① 全层斜俯视（验「只显本层 + 色垫分色」）
+#                       ② 对准几间房的小图（验中文注释**有没有变方框**）
+#                       ③ 该层「平面」页（正射俯视、关掉墙/窗）
+#             末尾再加 ④ 总览（全可见 + 整栋斜俯视，当呈现的封面图）
+#
+# 两个坑照 shots.rb 抄：`write_image` 必须用视口自己的宽高比（写死别的比例会裁掉两端）；
+# 剖切填充色是 SU 2023 默认开的 `SectionCutFilled`（本脚本不加剖切面，用不上）。
+# 为什么近景要写**小尺寸**：SU 的屏幕文字是**固定像素高**，放大相机并不会把字放大，
+# 写一张 1920 的图反而让字占比更小 —— 想看清字形要小画布。
+require 'json'
+
+OUT = 'D:/gym3d/_scratch/su_jobs/'
+m = Sketchup.active_model
+v = m.active_view
+# 拍哪几层：**每层都拍**（呈现要成套）。band 5 是「屋顶」组 —— 组名不是 yingzao-F5，
+# 所以这里显式写 [band, 组名后缀]，别用 bname 去派生（哨兵/边界值最容易在这出事）。
+BANDS = [[0, 'F0'], [1, 'F1'], [2, 'F2'], [3, 'F3'], [4, 'F4'], [5, '屋顶']]
+SMALL = [820, 520]                 # 近景画布（看字形用）
+
+def shoot(v, path, w = nil, h = nil)
+  w ||= v.vpwidth
+  h ||= v.vpheight
+  v.write_image(path, w, h, true, 0.9)
+  File.exist?(path) ? File.size(path) : -1
+end
+
+def find_page(m, name)
+  m.pages.find { |pg| pg.name.to_s == name }
+end
+
+R = { 'vp' => [v.vpwidth, v.vpheight], 'shots' => [], 'pages_before' => m.pages.map(&:name) }
+BANDS.each do |b, lab|
+  gname = "yingzao-#{lab}"
+  g = m.entities.grep(Sketchup::Group).find { |x| x.name.to_s == gname }
+  unless g
+    R['shots'] << ["#{gname}_miss", 'no group']
+    next
+  end
+
+  pg = find_page(m, "#{lab} 本层")
+  if pg
+    m.pages.selected_page = pg      # 切页 = 应用该页的图层可见性，这才叫「只显本层」
+    R['shots'] << ["#{gname}_page", pg.name]
+  else
+    R['shots'] << ["#{gname}_page", 'no page']
+  end
+  bb = g.bounds
+  c = bb.center
+  r = [bb.width, bb.height, bb.depth].max
+  texts = g.entities.grep(Sketchup::Text)
+
+  # ① 全层斜俯视
+  v.camera.perspective = true
+  v.camera.set(Geom::Point3d.new(c.x - r * 0.35, c.y - r * 0.75, c.z + r * 0.95),
+               Geom::Point3d.new(c.x, c.y, c.z + 0.5), Geom::Vector3d.new(0, 0, 1))
+  R['shots'] << ["#{gname}_floor", shoot(v, "#{OUT}_su_#{gname}_floor.png")]
+
+  # ② 近景：前几间房的注释锚点撑成的框
+  if texts.length >= 3
+    pick = texts[0, 6]
+    pts = pick.map(&:point)
+    cx = pts.sum(&:x) / pts.length
+    cy = pts.sum(&:y) / pts.length
+    cz = pts.sum(&:z) / pts.length
+    span = [pts.map(&:x).max - pts.map(&:x).min, pts.map(&:y).max - pts.map(&:y).min].max
+    span = 8.0 if span < 3.0
+    v.camera.set(Geom::Point3d.new(cx - span * 0.15, cy - span * 0.85, cz + span * 0.75),
+                 Geom::Point3d.new(cx, cy, cz), Geom::Vector3d.new(0, 0, 1))
+    R['shots'] << ["#{gname}_labels", shoot(v, "#{OUT}_su_#{gname}_labels.png", SMALL[0], SMALL[1])]
+    R['shots'] << ["#{gname}_label_texts", pick.map(&:text)]
+  else
+    R['shots'] << ["#{gname}_labels", "注释只有 #{texts.length} 条"]
+  end
+end
+
+# ③ 每层的「平面」页（关掉「墙」「窗」两类构件）：**不动相机** —— 页面自带正射俯视相机，
+#    不动它才能顺带验「页面的相机真的存下来了」。同时把该页关掉的层名单一起写出来。
+m.pages.select { |pg| pg.name.to_s.end_with?(' 平面') }.each do |pg|
+  m.pages.selected_page = pg
+  hid = (pg.layers.map { |x| x.respond_to?(:name) ? x.name : x.to_s } rescue [])
+  tag = pg.name.to_s.split(' ').first
+  R['shots'] << ["plan_#{tag}", hid, shoot(v, "#{OUT}_su_plan_#{tag}.png", 1100, 700)]
+end
+
+# ④ 总览：全可见 + 整栋斜俯视（呈现的封面图）。先切「总览」页再动相机。
+#    ★ 封面必须**关掉 118 条用途标注**再拍：全开着在整栋视距下叠成一团墨，看不出楼。
+#      拍完**立刻还原**并记进台账（改了不还原 = 存盘后各页标注全没了，属静默改文档）。
+ov = find_page(m, '总览')
+if ov
+  m.pages.selected_page = ov
+  ltag = m.layers.find { |x| x.name.to_s == 'yingzao-用途标注' }
+  lbl_before = ltag ? ltag.visible? : nil
+  ltag.visible = false if ltag
+  gs = m.entities.grep(Sketchup::Group)
+  bb = gs.map(&:bounds).reduce { |a, x| a.add(x) } if gs.length > 0
+  if bb
+    c = bb.center
+    r = [bb.width, bb.height, bb.depth].max
+    v.camera.perspective = true
+    v.camera.set(Geom::Point3d.new(c.x - r * 0.55, c.y - r * 0.85, c.z + r * 1.05),
+                 Geom::Point3d.new(c.x, c.y, c.z * 0.35), Geom::Vector3d.new(0, 0, 1))
+    R['shots'] << ['overview', shoot(v, "#{OUT}_su_overview.png", 1280, 800)]
+    R['overview_bbox'] = [bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z].map { |x| x.to_m.round(3) }
+  end
+  # 还原标注可见性（封面拍完就该恢复原状），并把「拍前 → 拍后」写进台账自证没改坏文档
+  ltag.visible = lbl_before if ltag && !lbl_before.nil?
+  R['overview_label_tag'] = ['yingzao-用途标注', lbl_before, ltag ? ltag.visible? : nil]
+end
+R['pages_after'] = m.pages.map(&:name)
+R['done'] = true
+R
