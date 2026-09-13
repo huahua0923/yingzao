@@ -274,8 +274,8 @@ git 接管的是**代码**；`data/`（2.75 GB）不在版本库里，靠机外�
 |---|---|---|
 | 代码 | git（`pre-refactor` 及 `phase-N` 标签） | 每阶段一个锚点，`git revert` 单提交即可回退 |
 | `data/` | 服务器副本 + 移动硬盘冷备 | rsync 用 `--checksum --partial --append-verify` |
-| 人工修复 | `data/buildings/*/.orig/` | **唯一来源**，45 栋有；永不删、永不同步删除 |
-| 产物完整性 | `manifest.json`（每栋 sha256 + buildId） | 同步末步用 `verify-sync.py` 核验，非零退出即失败 |
+| 人工修复 | `data/buildings/*/.orig/` | **唯一来源**，实测 **47/49 栋有**（2026-09-13 核）；永不删、永不同步删除 |
+| 产物完整性 | ~~`manifest.json` + `verify-sync.py`~~ | ⚠️ **还没做**：`manifest.json` / `make-manifest.py` / `verify-sync.py` **三个文件在仓库里都不存在**（2026-09-13 实测），本行原先是把 `重构方案·后端前端.md` 里的**计划**写成了现状。同步**目前没有完整性门禁**，靠人工比对；要落地见那份方案的"数据同步"一节 |
 
 > ⚠️ 一个产物目录只能有一个所有者脚本（铁律 1）。批量脚本必须拒绝单栋调试覆写总目录
 > —— 2026-09-10 的图纸回归事故就是这么来的。
@@ -313,6 +313,10 @@ PostgreSQL `lihua_twin`：`host=localhost port=5432 user=postgres`
   普查内 —— 它在 `data/floors`，另有逐字节复现门 sha256 `c67ba3e8a19a…` ✓ 不变）。
   c103 卡点是 `floors/` 里 11 个房间多边形**自交**（F1×2、F2–F4 各 3），GEOS 判地垫归属时抛
   `TopologyException`；处置见**铁律 18**（8 间零影响 + 3 间走具名例外表各丢 0.3455 m²）。
+  ⚠️ **c103 的下游这次真的过期了**（与此前"49/49 spec 逐字节相同 ⇒ 什么都不用做"**不同**）：
+  它的 `floors` 有 3 间房几何变小 ⇒ **c103 的 GLB 需重出**，`rooms` 那份 DB 也需重新同步。
+  同时 `rooms.json` 侧**没改**（那 3 间在 `rooms.json` 里仍是自交的原环）⇒ 两份交付件
+  在这些房间上**此刻不一致**，见下面那条。
 - **全库房间多边形自交已修 543 间（20 栋 / 68 层）**（`_scratch/_fix_self_intersections.py`，
   备份 `.orig/floors.before_selfint/`）：532 间是**区域逐点不变**的清洗 ——
   与改前逐间比对，对称差 ≤1e-6 m²、房间**条数**不变（`_scratch/_probe_fix_scope.py`）；
