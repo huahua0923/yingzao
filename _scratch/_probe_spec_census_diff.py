@@ -80,9 +80,19 @@ def main():
     files = sorted(f for f in os.listdir(PRE) if f.endswith(".json"))
     if want:
         files = [f for f in files if any(w in f for w in want)]
+    # ★ 改前**没有**、改后**有**的（新增）——不列出来就会得出"49/49 逐字节相同"这种
+    #   看着干净、实际漏掉主角的结论。2026-09-13 判例：c103 改前没过闸门 ⇒ 没写盘 ⇒
+    #   `spec_pre/` 里没有它；不列新增，c103 这次的 spec 变化就被静默跳过了。
+    new = [] if want else sorted(f for f in os.listdir(NOW)
+                                 if f.endswith(".json") and not os.path.isfile(os.path.join(PRE, f)))
     same = diff = miss = 0
     print("=== spec 普查 diff（改前 %s / 改后 %s）===" % (PRE, NOW))
     print()
+    for f in new:
+        print("＋ %-34s 改前**不存在**、改后新出（%d 字节）"
+              % (f, os.path.getsize(os.path.join(NOW, f))))
+    if new:
+        print()
     for f in files:
         fa = os.path.join(PRE, f)
         fb = os.path.join(NOW, f)
@@ -108,8 +118,8 @@ def main():
         for p in out[:MAX_PATHS]:
             print("     %s" % (p or "(根)"))
         print()
-    print("合计：逐字节相同 %d / **不同 %d** / 改后缺失 %d（共 %d 份）"
-          % (same, diff, miss, len(files)))
+    print("合计：逐字节相同 %d / **不同 %d** / 改后缺失 %d / **新增 %d**（改前 %d 份）"
+          % (same, diff, miss, len(new), len(files)))
     return 0
 
 

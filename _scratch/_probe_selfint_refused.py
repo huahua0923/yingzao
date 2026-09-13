@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 r"""全库"自交房间"逐间明细（**只读**，不跳过任何一间）—— 复核 `_fix_self_intersections.py` 的伴侣。
 
-`_fix_self_intersections.py` 的判据是「该层有一间超限就整层不改」，所以它的报告里**看不到**
-被跳过那层其余房间的情况。本脚本把 558 间**全部**列出来，每间标 `可修 / 超限 / 空面`，
-让"22 栋全修"这句话到底能修多少间有确切数字。
+`_fix_self_intersections.py` 逐间判、逐间跳，所以"到底还剩几间、各是什么病"要看汇总。
+本脚本把**当前盘上**所有自交的房间列出来，每间标 `可修 / 改区域 / 带孔 / 空面`。
 
-判据与主脚本完全一致（MAX_REL=1%），只是不 break：
-  · 可修 = buffer(0) 非空、且最大块面积相对变化 ≤ 1%
-  · 超限 = 相对变化 > 1%（**要人看**：这不是细刺自交，是自相吞并，取最大块等于丢一半）
-  · 空面 = buffer(0) 为空（已经不是面了）
+★ 判据**直接引主脚本的常量**（`REGION_TOL` / `LOSS_TOL` / `REGION_CHANGE_OK`），本文件
+  不再自带一份。2026-09-13 判例：本文件原先自己写着 `MAX_REL = 0.01`（面积差 ≤1% 就算"可修"），
+  而主脚本早已换成「区域逐点不变（对称差 ≤1e-6 m²）」—— 于是它把 3 间"改区域"的房间
+  报成"可修"，docstring 里"判据与主脚本完全一致"变成假话。**判据只能有一处实现。**
+  （顺带：面积差也量错了对象 —— 该量**要落盘的那条环**，见主脚本 docstring ③。）
+
+四类：
+  · 可修   = `buffer(0)` 非空、无孔、且区域逐点不变 ⇒ 主脚本会改
+  · 改区域 = 区域真变了（过 `REGION_TOL`）；在例外表里且损失对得上 ⇒ 主脚本`--allow-region-change` 下会改，否则"保住不改"
+  · 带孔   = 修后带孔，交付 `poly` 表达不了 ⇒ 一律不改
+  · 空面   = `buffer(0)` 为空（已经不是面了）
 用法：python _scratch/_probe_selfint_refused.py [栋名…]
 """
 import io
@@ -19,25 +25,27 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 ROOT = r"D:\gym3d"
 BUILDINGS = os.path.join(ROOT, "data", "buildings")
+sys.path.insert(0, os.path.join(ROOT, "_scratch"))
 from shapely.geometry import Polygon                 # noqa: E402
 from shapely.validation import explain_validity      # noqa: E402
+import _fix_self_intersections as FX                 # noqa: E402  ★ 判据唯一来源
 
-MAX_REL = 0.01
+KINDS = ("可修", "改区域", "带孔", "空面")
 
 
 def main():
     names = sys.argv[1:] or sorted(
         n for n in os.listdir(BUILDINGS)
         if os.path.isdir(os.path.join(BUILDINGS, n, "floors")))
-    tot = {"可修": 0, "超限": 0, "空面": 0}
-    tot_area = {"可修": 0.0, "超限": 0.0}
+    tot = dict.fromkeys(KINDS, 0)
+    tot_area = dict.fromkeys(KINDS, 0.0)
     per_bld = {}
-    bad_layers = []
+    need_human = []
     for name in names:
         fd = os.path.join(BUILDINGS, name, "floors")
         if not os.path.isdir(fd):
             continue
-        blk = {"可修": 0, "超限": 0, "空面": 0}
+        blk = dict.fromkeys(KINDS, 0)
         det = []
         for fn in sorted(f for f in os.listdir(fd)
                          if f.startswith("floor") and f.endswith(".json")):
@@ -47,40 +55,55 @@ def main():
                 if g.is_valid:
                     continue
                 why = explain_validity(g)[:44]
+                num = str(r.get("number"))
                 b = g.buffer(0)
                 if b.is_empty:
-                    blk["空面"] += 1
-                    det.append((fn, i, r.get("number"), g.area, None, "空面", why))
-                    continue
-                parts = list(b.geoms) if b.geom_type == "MultiPolygon" else [b]
-                mainp = max(parts, key=lambda q: q.area)
-                rel = (mainp.area - g.area) / g.area if g.area else 0.0
-                lost = sum(q.area for q in parts) - mainp.area
-                kind = "可修" if abs(rel) <= MAX_REL else "超限"
+                    kind, note, sd = "空面", "", None
+                    need_human.append("%s/%s #%d %s（空面）" % (name, fn, i, num))
+                else:
+                    parts = list(b.geoms) if b.geom_type == "MultiPolygon" else [b]
+                    mainp = max(parts, key=lambda q: q.area)
+                    # ★ 量与写同一件东西：交付 `poly` 只有单个外环（见主脚本 ③）
+                    written = Polygon([[round(x, 9), round(y, 9)]
+                                       for x, y in mainp.exterior.coords])
+                    lost = sum(q.area for q in parts) - mainp.area
+                    sd = written.symmetric_difference(b).area
+                    note = "块%d/丢%.3f" % (len(parts), lost) if len(parts) > 1 else ""
+                    if mainp.interiors:
+                        kind = "带孔"
+                        need_human.append("%s/%s #%d %s（带孔 %d 个，填孔会盖住别间）"
+                                          % (name, fn, i, num, len(mainp.interiors)))
+                    elif sd <= FX.REGION_TOL:
+                        kind = "可修"
+                    else:
+                        kind = "改区域"
+                        rec = FX.REGION_CHANGE_OK.get((name, fn, num))
+                        if rec is not None and abs(sd - rec) <= FX.LOSS_TOL:
+                            note += "  ★在例外表内(已批准 %.6f)" % rec
+                        else:
+                            need_human.append("%s/%s #%d %s" % (name, fn, i, num))
                 blk[kind] += 1
                 tot_area[kind] += g.area
-                det.append((fn, i, r.get("number"), g.area, rel, kind,
-                            "块%d/丢%.3f" % (len(parts), lost) if len(parts) > 1 else "",
-                            why))
-                if kind == "超限":
-                    bad_layers.append("%s/%s #%d %s" % (name, fn, i, r.get("number")))
+                det.append((fn, i, num, g.area, sd, kind, note, why))
         if any(blk.values()):
             per_bld[name] = blk
-            print("=== %s ===  可修 %d / 超限 %d / 空面 %d" % (name, blk["可修"], blk["超限"], blk["空面"]))
-            for fn, i, num, a, rel, kind, extra, why in det:
+            print("=== %s ===  %s" % (name, " / ".join("%s %d" % (k, blk[k]) for k in KINDS)))
+            for fn, i, num, a, sd, kind, extra, why in det:
                 print("   %s %-6s #%-3d %-14s %9.4f %s%s %s"
-                      % ({"可修": "·", "超限": "✗", "空面": "✗"}[kind], fn.replace("floor", "F").replace(".json", ""),
+                      % ({"可修": "·"}.get(kind, "✗"),
+                         fn.replace("floor", "F").replace(".json", ""),
                          i, num, a, kind,
-                         "" if rel is None else "  %+.2f%%" % (100 * rel),
+                         "" if sd is None else "  对称差 %.6f" % sd,
                          extra + "  " + why if kind != "可修" else ""))
             for k in tot:
                 tot[k] += blk[k]
-    print("\n全库合计：可修 %d / 超限 %d / 空面 %d（共 %d 间自交，%d 栋）"
-          % (tot["可修"], tot["超限"], tot["空面"], sum(tot.values()), len(per_bld)))
-    print("      可修那批面积合计 %.4f m²；超限那批 %.4f m²（**需人看**）"
-          % (tot_area["可修"], tot_area["超限"]))
-    print("\n需人看的 %d 间：" % len(bad_layers))
-    for x in bad_layers:
+    print("\n全库合计：%s（共 %d 间自交，%d 栋）"
+          % (" / ".join("%s %d" % (k, tot[k]) for k in KINDS),
+             sum(tot.values()), len(per_bld)))
+    print("      可修那批面积合计 %.4f m²；改区域那批 %.4f m²"
+          % (tot_area["可修"], tot_area["改区域"]))
+    print("\n**需人看的 %d 间**（改区域且不在例外表内 / 带孔 / 空面）：" % len(need_human))
+    for x in need_human:
         print("   %s" % x)
 
 

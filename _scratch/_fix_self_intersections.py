@@ -22,6 +22,17 @@ r"""修 `floors/floor*.json` 里**自交**的房间多边形（唯一所有者�
      其中 `written` 是**真正要落盘的那条环**（见 ③）。过不了就保留原样、进"保住不改"清单。
      ⇒ 本脚本对已通过建筑的几何是**可证零影响**的：改完的房间区域与改前逐点相同，
        只是从"非法环"变成"合法环"（自触点被拆开）。
+  ②′ **人工批准的例外**（`REGION_CHANGE_OK` + `--allow-region-change`）：②拦下的房间里，
+     若**有人明确拍板**接受这点几何损失，可逐间列入下表放行。三条硬约定，缺一不放行：
+       · 例外表按 **(栋, 层文件, 房号)** 逐条列 —— 不放宽判据，只开一个具名口子；
+       · 表里记着**实测损失量**，跑的时候要**对上**（`LOSS_TOL`）—— 数据一变就中止，
+         免得"当初批的是 0.3 m²、后来变成 3 m²"没人发现；
+       · 必须显式加 `--allow-region-change`，默认一律按 ② 走。
+     ★ 2026-09-13 批准（用户拍板"修满 11 间"）：c103 是全库唯一没过 SU 规格闸门的栋，
+       实测卡点就是 F2/F3/F4 的 A 翼 `103-A-0N-02`（各 3455.33 m²）自交 ——
+       只修其余 8 间（区域不变那批）c103 **仍然红**，修满 11 间才绿。
+       代价：每层丢一块 0.3455 m² 的小叶（A 翼末端 (-80.5, 10.3)，与主体仅隔 0.03 m，
+       不落在任何别的房间里，修完该处成为地板空洞；占该房 0.01%）。
   ③ **交付格式 `poly` 只有单个外环，表达不了孔** ⇒ `interiors` 非空的**一律不改**。
      并且**只量要落盘的那条环**，不再量 `main_p` —— 杜绝"量一个、写另一个"。
      ★ 2026-09-13 判例（这就是 ② 不能用"面积差 < 1%"的原因）：
@@ -63,6 +74,15 @@ from shapely.validation import explain_validity  # noqa: E402
 
 REGION_TOL = 1e-6       # 修后区域与 buffer(0) 的**对称差上限**（m²）
 #                        只允许"区域逐点不变"的清洗；任何真改几何的一律交人工（见 ②）
+LOSS_TOL = 5e-4         # 例外房间的**实测损失量**与下表记录值的允许偏差（m²）
+
+# ★ 人工批准的例外（见 docstring ②′）。**不放宽判据，只开具名口子**：
+#   key = (栋, 层文件名, 房号)，value = 实测对称差（m²，跑的时候要对上）。
+REGION_CHANGE_OK = {
+    ("c103", "floor2.json", "103-A-03-02"): 0.345510,
+    ("c103", "floor3.json", "103-A-04-02"): 0.345510,
+    ("c103", "floor4.json", "103-A-05-02"): 0.345510,
+}
 
 
 def read_indent(raw):
@@ -89,6 +109,8 @@ def main():
     ap.add_argument("--exclude", nargs="*", default=[],
                     help="排除的栋（按名）—— 例如 c103 的房间嵌套处置未定，先不动")
     ap.add_argument("--apply", action="store_true", help="真写盘（默认只报）")
+    ap.add_argument("--allow-region-change", action="store_true",
+                    help="放行 REGION_CHANGE_OK 里逐条列明的人工例外（默认一律按②走）")
     a = ap.parse_args()
 
     names = a.names
@@ -102,6 +124,7 @@ def main():
     n_bld = n_flr = n_room = 0
     a_before = a_after = 0.0
     kept_back = []          # 逐间**保住不改**（超限 / 空面），必须报出来
+    approved = []           # 走例外表放行的（**改了区域**，必须单独报，不许混进"零影响"那批）
     for name in names:
         base, fd = pick(name)
         if not os.path.isdir(fd):
@@ -143,9 +166,27 @@ def main():
                     continue
                 sd = written.symmetric_difference(b).area
                 if sd > REGION_TOL:
+                    ok = (a.allow_region_change
+                          and (name, fn, str(r.get("number"))) in REGION_CHANGE_OK)
+                    if ok:
+                        rec = REGION_CHANGE_OK[(name, fn, str(r.get("number")))]
+                        if abs(sd - rec) > LOSS_TOL:
+                            kept.append((i, r.get("number"), g.area, written.area,
+                                         "例外表放行的损失量对不上：表里记 %.6f、"
+                                         "实测 %.6f（>%.0e）—— 数据变了，**中止不写**，"
+                                         "重新量过再拍板" % (rec, sd, LOSS_TOL)))
+                            continue
+                        todo.append((i, r.get("number"), g.area, written.area,
+                                     len(parts), lost, why, written))
+                        approved.append((fn, i, r.get("number"), sd, g.area, written.area))
+                        continue
                     kept.append((i, r.get("number"), g.area, written.area,
                                  "修后区域变了 %.6f m²（>%.0e）—— 不只是拆自触点，"
-                                 "是真改几何（丢块 %.4f m²），交人工" % (sd, REGION_TOL, lost)))
+                                 "是真改几何（丢块 %.4f m²），交人工"
+                                 "%s" % (sd, REGION_TOL, lost,
+                                         "（在例外表里，但没加 --allow-region-change）"
+                                         if (name, fn, str(r.get("number"))) in REGION_CHANGE_OK
+                                         else "")))
                     continue
                 todo.append((i, r.get("number"), g.area, written.area,
                              len(parts), lost, why, written))
@@ -190,11 +231,20 @@ def main():
             os.replace(tmp, os.path.join(fd, fn))
         n_bld += 1
 
-    print("\n合计：%d 栋 / %d 层 / %d 间房修自交（全部是**区域逐点不变**的清洗）" %
-          (n_bld, n_flr, n_room))
-    print("      这些房间面积合计 %.4f → %.4f m²（%+.4f，%+.4f%%）" %
-          (a_before, a_after, a_after - a_before,
-           100 * (a_after - a_before) / a_before if a_before else 0))
+    ok_b = sum(t[4] for t in approved)          # 例外那几间**改前**面积
+    ok_a = sum(t[5] for t in approved)          # 例外那几间**改后**面积
+    print("\n合计：%d 栋 / %d 层 / %d 间房修自交" % (n_bld, n_flr, n_room))
+    print("      · 零影响（区域逐点不变）%d 间，面积 %.4f → %.4f m²（%+.4f，%+.4f%%）"
+          % (n_room - len(approved), a_before - ok_b, a_after - ok_a,
+             (a_after - ok_a) - (a_before - ok_b),
+             100 * ((a_after - ok_a) - (a_before - ok_b)) / (a_before - ok_b)
+             if a_before - ok_b else 0))
+    if approved:
+        print("      · 例外放行（区域真变）  %d 间，面积 %.4f → %.4f m²（%+.4f m²）"
+              % (len(approved), ok_b, ok_a, ok_a - ok_b))
+        print("\n⚠ 走例外表放行的 %d 间（**区域真变了**，人工拍板过的，别当零影响）：" % len(approved))
+        for fn, i, num, sd, ob, oa in approved:
+            print("   %s #%d %s：对称差 %.6f m²（%.4f → %.4f）" % (fn, i, num, sd, ob, oa))
     if kept_back:
         print("\n✗ 保住不改的 %d 间（宁可不改也不改错，**需人看**）：" % len(kept_back))
         for r in kept_back:

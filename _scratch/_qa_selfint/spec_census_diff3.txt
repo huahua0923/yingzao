@@ -1,0 +1,15 @@
+=== spec 普查 diff（改前 D:\gym3d\_scratch\_qa_selfint\spec_pre / 改后 D:\gym3d\_scratch\su_jobs）===
+
+＋ _c079_su.json                      改前**不存在**、改后新出（6422082 字节）
+＋ _c103_fixprobe_spec.json           改前**不存在**、改后新出（12766073 字节）
+＋ _c103_floors_spec.json             改前**不存在**、改后新出（12766064 字节）
+＋ _faces.json                        改前**不存在**、改后新出（121010 字节）
+＋ _faces_su.json                     改前**不存在**、改后新出（252370 字节）
+＋ _floors_verify.json                改前**不存在**、改后新出（20992 字节）
+＋ _floors_verify.red.json            改前**不存在**、改后新出（10237 字节）
+＋ _floors_verify.selftest.json       改前**不存在**、改后新出（4455 字节）
+＋ _floors_verify_ny27.json           改前**不存在**、改后新出（15727 字节）
+＋ _ny27_f2_spec.json                 改前**不存在**、改后新出（27109 字节）
+＋ _ny27_su.json                      改前**不存在**、改后新出（1121689 字节）
+
+合计：逐字节相同 49 / **不同 0** / 改后缺失 0 / **新增 11**（改前 49 份）
