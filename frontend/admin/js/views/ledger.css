@@ -1,0 +1,148 @@
+/* 「台账」视图样式 —— 只补 app.css 没给的那几件事，能复用的一律复用。
+   基调跟着 app.css 走：暗室图纸台、数字等宽、色只用来标状态。
+   这里新加的类全部带 ldg- 前缀，避免和别的视图（chk- 等）撞名。 */
+
+/* ── 口径条 ───────────────────────────────────────────────────
+   面积口径是本屏最容易出事的地方，所以给它一条**常驻**的说明带，
+   而不是塞进脚注 —— 脚注会被跳过，而口径是"数字能不能用"的前提。 */
+.ldg-caliber {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-4);
+  background: var(--panel); border: 1px solid var(--rule);
+  border-left: 2px solid var(--cyan);
+  border-radius: var(--r-2);
+  padding: var(--sp-2) var(--sp-4);
+  margin: var(--sp-3) 0;
+  font-size: 12px; color: var(--text-dim);
+}
+.ldg-caliber b { color: var(--cyan); font-weight: 600; }
+/* 口径说明天生是长句。放任它一行拉满屏宽（实测 1544px）很难读，
+   给每一段限宽让它自己折行 —— 这段字是要被人真的读完的，不是装饰。 */
+.ldg-caliber > span { max-width: 64ch; }
+.ldg-caliber .warn { color: var(--amber); }
+/* 口径不明时必须长得像"有问题"，不许跟前一条一样。 */
+.ldg-caliber.unknown { border-left-color: var(--amber); }
+.ldg-caliber.unknown b { color: var(--amber); }
+
+/* ── 来源条 ───────────────────────────────────────────────────
+   "这份台账是哪来的" —— 产物文件 + 大小 + 时间。时间是**后端没给**的，
+   所以取不到时那一格要能明说取不到（见 .ldg-src .miss）。 */
+.ldg-src {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-3);
+  font: 11px var(--mono); color: var(--text-faint);
+  padding: var(--sp-2) 0; margin: 0 0 var(--sp-3);
+  border-bottom: 1px solid var(--rule-soft);
+}
+.ldg-src b { color: var(--text-dim); font-weight: 600; }
+.ldg-src code {
+  font: 11px var(--mono); color: var(--text-dim);
+  background: var(--panel-2); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1); padding: 0 5px;
+}
+
+/* ── 字段填充率 ───────────────────────────────────────────────
+   ★ rooms.json 里有四个可选字段（用途/名称/单位/标注面积），**每个都可能整列为空**，
+     而且"整列为空"和"这栋没有房间"是两件事。所以把有值行数摆出来，
+     分母一起写 —— 空列不许静静地看起来像"没有这一栏"。 */
+.ldg-fill { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.ldg-fill .f {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-radius: 999px; padding: 2px 10px;
+  font-size: 11px; color: var(--text-dim);
+}
+.ldg-fill .f i { font: 600 11px var(--mono); font-style: normal; color: var(--text); }
+.ldg-fill .f.zero { border-color: var(--rule); color: var(--text-faint); }
+.ldg-fill .f.zero i { color: var(--text-faint); }
+.ldg-fill .f.zero::after { content: "（整列为空）"; color: var(--amber); }
+
+/* ── 工具栏 ───────────────────────────────────────────────────
+   搜索框 / 层下拉 / 计数。布局用 .toolbar（app.css 已有），这里只补细节。 */
+.ldg-toolbar { margin: var(--sp-3) 0 var(--sp-2); }
+.ldg-toolbar label { font-size: 12px; color: var(--text-faint); }
+.ldg-toolbar select, .ldg-toolbar input[type=search] { min-width: 130px; }
+.ldg-toolbar input[type=search] { min-width: 240px; }
+.ldg-count { font: 12px var(--mono); color: var(--text-dim); margin-left: auto; }
+.ldg-count b { color: var(--cyan); }
+
+/* ── 表 ───────────────────────────────────────────────────────
+   app.css 已给了 table/thead/tbody/td.num/td.mono，这里只加台账特有的：
+   · 房号列等宽（要逐位比对）
+   · 空值一律显示「—」并由 .nil 弱化，**不留白** —— 留白在密集表里读不出来
+   · 长文本列限宽，否则一条 60 字的用途会把整张表撑出屏幕 */
+.ldg-table td.room { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+.ldg-table td.nil { color: var(--text-faint); }
+.ldg-table td.wrap { max-width: 15em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ldg-table td.cen { font-family: var(--mono); color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+.ldg-table td.cen i { font-style: normal; color: var(--text-faint); }
+/* 表头点一下就排序（app.css 有 thead th[data-dir] 的箭头）。不可排的列别给手型。 */
+.ldg-table thead th.nosort { cursor: default; }
+.ldg-table thead th.nosort:hover { color: var(--text-faint); }
+/* 净面积是唯一参与求和的列，给它一点存在感（但它不是状态色） */
+.ldg-table td.net { font-family: var(--mono); font-weight: 600; }
+
+/* ── 楼层分布（概览页 + 栋内页共用） ─────────────────────────── */
+.ldg-floors { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.ldg-floors .fc {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: var(--panel); border: 1px solid var(--rule);
+  border-radius: var(--r-1); padding: 3px 9px;
+  font-size: 12px; color: var(--text-dim);
+}
+.ldg-floors .fc b { font: 600 12px var(--mono); color: var(--text); }
+.ldg-floors .fc i { font: 11px var(--mono); font-style: normal; color: var(--text-faint); }
+
+/* ── 「取不到」/「真的没有」两个面板 ──────────────────────────
+   ★ 这两块**必须长得不一样**：
+     · .down   —— 连不上后端 / 没有这栋楼 / 路由 404：红边、标题「取不到」
+     · .empty  —— 后端明确回了 0 房间：青边、标题「没有房间」，不是故障
+   本仓反复栽过"把取不到画成 0"，所以连边框颜色都不许共用。 */
+.ldg-panic {
+  background: var(--panel); border: 1px solid var(--rule);
+  border-left: 3px solid var(--red); border-radius: var(--r-2);
+  padding: var(--sp-4) var(--sp-4); margin: var(--sp-3) 0;
+}
+.ldg-panic.empty { border-left-color: var(--cyan); }
+.ldg-panic h2 { margin: 0 0 var(--sp-2); font-size: 16px; }
+.ldg-panic.down h2 { color: var(--red); }
+.ldg-panic.empty h2 { color: var(--cyan); }
+.ldg-panic .msg { margin: 0 0 var(--sp-2); color: var(--text); font-size: 13px; }
+.ldg-panic p { margin: var(--sp-2) 0; font-size: 13px; color: var(--text-dim); }
+.ldg-panic code {
+  font: 12px var(--mono); color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--rule); border-radius: var(--r-1);
+  padding: 1px 5px;
+}
+.ldg-panic ul { margin: var(--sp-2) 0; padding-left: 1.3em; }
+.ldg-panic li { font-size: 12px; color: var(--text-dim); margin-bottom: 3px; }
+.ldg-panic details { margin-top: var(--sp-3); }
+.ldg-panic summary { cursor: pointer; font: 11px var(--mono); color: var(--text-faint); }
+.ldg-panic pre {
+  margin: var(--sp-2) 0 0; padding: var(--sp-3);
+  background: var(--ink); border: 1px solid var(--rule-soft); border-radius: var(--r-1);
+  font: 11px var(--mono); color: var(--text-dim);
+  overflow-x: auto; max-height: 260px;
+}
+
+/* 忙碌态：复用 app.css 的 .loading 风格，但带个转圈 */
+.ldg-busy { color: var(--text-faint); font: 13px var(--mono); padding: var(--sp-5) 0; }
+.ldg-busy .spin {
+  display: inline-block; width: 10px; height: 10px; margin-right: var(--sp-2);
+  border: 2px solid var(--rule); border-top-color: var(--cyan); border-radius: 50%;
+  animation: ldg-spin .8s linear infinite;
+}
+@keyframes ldg-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ldg-busy .spin { animation: none; } }
+
+/* 按钮 / 链接：app.css 的 .chk-btn 属于检查视图，别跨视图借用 */
+.ldg-btn {
+  display: inline-block; cursor: pointer; text-decoration: none;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--rule); border-radius: var(--r-1);
+  padding: 5px 11px; font: 13px var(--sans);
+}
+.ldg-btn:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+
+/* 概览页：有台账 / 没台账两种行，缩略行整行可点 */
+.ldg-table tbody tr.pick { cursor: pointer; }
+.ldg-table tbody tr.pick:focus-visible { outline: 1px solid var(--cyan); outline-offset: -1px; }
+.ldg-table tbody tr.no-rooms td.room { color: var(--text-faint); font-weight: 400; }

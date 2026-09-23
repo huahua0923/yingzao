@@ -1,0 +1,149 @@
+/* 「总览」视图的样式 —— 只放这一屏需要的东西。
+ *
+ * 色板与间距一律沿用 app.css 的 token（--cyan/--amber/--red/--panel/--rule…），
+ * KPI 条直接复用 app.css 的 .kpis/.kpi，这里只做增量，别另起一套。
+ *
+ * ★★ 这一屏样式上只有一条硬要求：
+ *   **「0」和「没量到」要长得不一样**。
+ *     · 0 是个数 —— 有值、看得见、红字加粗（.ovw-zero）；
+ *     · 缺失是「—」—— 灰、斜体、弱化（.ovw-missing）。
+ *   把这两个画成同一个样子，就等于把"没量到"报成了"量到 0"
+ *   （memory: gauge-coverage-invisible-in-summary）。
+ *
+ * 后台基调：密、可扫、数字等宽。不做动效。 */
+
+/* ── 抬头 ───────────────────────────────────────────────────── */
+.ovw h1 .sub { color: var(--text-faint); font-size: 13px; font-weight: 400; letter-spacing: .02em; }
+.ovw .lede em { color: var(--text); font-style: normal; border-bottom: 1px dotted var(--cyan); }
+
+.ovw-kpis { margin: var(--sp-4) 0 var(--sp-4); }
+/* app.css 的 .kpi 里 .k/.v/.n 是 span（那边靠换行排版），这一屏要"标签 / 数 / 小字"
+   三行竖着码，一列一列扫过去才快。 */
+.ovw-kpis .kpi .k,
+.ovw-kpis .kpi .v,
+.ovw-kpis .kpi .n { display: block; }
+/* 值一行放不下时（面积那格是七位数）压字号，别让它撑破格子 */
+.ovw-kpis .kpi .v { font-size: 26px; }
+.ovw-kpis .kpi .n { line-height: 1.4; margin-top: var(--sp-1); }
+
+/* ── rooms=0 的信号块（借用 app.css 的 .note 骨架，加重一点）── */
+.ovw-signal { font-size: 13px; }
+.ovw-signal strong { font-size: 14px; }
+.ovw-signal .dim { color: var(--text-dim); }
+.ovw-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); flex-wrap: wrap; }
+
+/* ── 按钮（本屏自己的，不借 checks 的类名）──────────────────── */
+.ovw-btn {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--rule); border-radius: var(--r-1);
+  padding: 5px 12px; font: 12px var(--sans); cursor: pointer;
+}
+.ovw-btn:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+.ovw-btn.primary { background: var(--cyan); border-color: var(--cyan); color: var(--ink); font-weight: 600; }
+.ovw-btn.primary:hover { color: var(--ink); }
+
+/* ── 工具条 ─────────────────────────────────────────────────── */
+.ovw-toolbar { margin: var(--sp-3) 0 var(--sp-2); }
+.ovw-toolbar .spacer { flex: 1; }
+.ovw-check {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font-size: 12px; color: var(--text-dim); cursor: pointer; user-select: none;
+  padding: 5px 10px; border: 1px solid var(--rule); border-radius: var(--r-1);
+  background: var(--panel);
+}
+.ovw-check:hover { border-color: var(--cyan-dim); color: var(--text); }
+.ovw-check input { accent-color: var(--cyan); margin: 0; }
+.ovw-count { font: 11px var(--mono); }
+
+/* ── 表 ─────────────────────────────────────────────────────── */
+/* 95 行 × 9 列在窄屏上必然横向溢出 —— 让它滚，别让列被压扁到读不出。 */
+.ovw-tablewrap { overflow-x: auto; border: 1px solid var(--rule-soft); border-radius: var(--r-2); }
+.ovw-table { min-width: 1080px; }
+.ovw-table thead th { background: var(--panel); top: 0; }   /* 这一屏没有二级吸顶，贴顶就行 */
+.ovw-table td { vertical-align: top; }
+
+/* app.css 把 thead th 的 cursor 定成 pointer（它的表都可排）。
+   这一屏有不可排的列 —— 必须把那股"能点"的暗示按回去，
+   不然点上去什么都不发生，看着像坏了。 */
+.ovw-table thead th.ovw-nosort { cursor: default; }
+.ovw-table thead th.ovw-nosort:hover { color: var(--text-faint); }
+
+/* 行点击 = 去台账。hover 给整行上底色，让"可点"看得出来。 */
+.ovw-row { cursor: pointer; }
+.ovw-row:hover { background: var(--panel); }
+.ovw-row td:first-child { border-left: 2px solid transparent; }
+.ovw-row:hover td:first-child { border-left-color: var(--cyan-dim); }
+
+/* 列宽：把宽的那几列放开，窄的收紧，别让"备注"把表撑得没法读。 */
+.ovw-c-name { min-width: 190px; }
+.ovw-c-code { width: 82px; color: var(--text-dim); }
+.ovw-c-sm { width: 62px; }
+.ovw-c-area { width: 118px; }
+.ovw-c-flag { width: 64px; text-align: center; }
+.ovw-c-cls { width: 150px; color: var(--text-dim); font-size: 12px; }
+.ovw-c-notes { min-width: 210px; }
+
+/* 「默认 lwpolyline」不是一个识别结果，是"配置没写"。这一格必须说清楚。 */
+.ovw-sub {
+  display: block; font: 10px var(--mono); color: var(--amber);
+  letter-spacing: .04em; margin-top: 2px;
+}
+.ovw-missing { color: var(--text-faint); font-style: italic; }
+/* 0 是个数，不是缺失。用琥珀（这个色板里琥珀 = 可疑/需拍板）而**不用红**：
+   红是"确定缺陷"，而 rooms=0 到底是不是毛病，不归这一屏判（有些楼本来就 0 间房）。 */
+.ovw-zero { color: var(--amber); font-weight: 600; }
+
+/* ── 备注标签 ───────────────────────────────────────────────── */
+.ovw-tag {
+  display: inline-block; margin: 0 4px 3px 0;
+  font: 600 10px/1.7 var(--mono); letter-spacing: .04em;
+  padding: 0 7px; border-radius: 999px;
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--rule); cursor: pointer;
+}
+.ovw-tag:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+.ovw-tag.open { color: var(--ink); background: var(--cyan); border-color: var(--cyan); }
+
+/* ── 备注原文（整宽展开行）───────────────────────────────────── */
+.ovw-detailrow > td { padding: 0; background: var(--panel-2); border-bottom: 1px solid var(--rule); }
+.ovw-detail { padding: var(--sp-3) var(--sp-4); }
+.ovw-detail-h { font-size: 12px; margin-bottom: var(--sp-2); }
+.ovw-noteblock { margin-bottom: var(--sp-3); }
+.ovw-noteblock:last-child { margin-bottom: 0; }
+.ovw-notekey { color: var(--amber); background: transparent; border-color: var(--rule); }
+/* 原文是长散文 —— 限宽 76ch，行宽超了就看不住行。 */
+.ovw-notetext {
+  margin: var(--sp-2) 0 0; max-width: 76ch;
+  font-size: 12px; line-height: 1.7; color: var(--text-dim);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── 空表 / 不可用 ──────────────────────────────────────────── */
+.ovw-empty { padding: var(--sp-5); text-align: center; color: var(--text-dim); font-size: 13px; }
+.ovw-empty b { color: var(--text); display: block; margin-bottom: var(--sp-2); }
+
+/* 接口不可用：整屏就这一个块，一个数都不画。 */
+.ovw-panic {
+  background: var(--panel); border: 1px solid var(--rule);
+  border-left: 3px solid var(--red); border-radius: var(--r-2);
+  padding: var(--sp-4) var(--sp-5); margin: var(--sp-5) 0;
+}
+.ovw-panic-h { margin: 0 0 var(--sp-2); font-size: 20px; color: var(--red); letter-spacing: 0; }
+.ovw-panic-msg { margin: 0 0 var(--sp-3); font: 13px var(--mono); color: var(--text); word-break: break-word; }
+.ovw-panic-body { font-size: 13px; color: var(--text-dim); }
+.ovw-panic-body p { margin: var(--sp-2) 0; max-width: 78ch; }
+.ovw-panic-body b { color: var(--text); }
+.ovw-details { margin-top: var(--sp-3); }
+.ovw-details summary { cursor: pointer; color: var(--cyan); font-size: 12px; }
+.ovw-ev {
+  max-height: 320px; overflow: auto; margin: var(--sp-2) 0 0;
+  background: var(--ink); border: 1px solid var(--rule-soft); border-radius: var(--r-1);
+  padding: var(--sp-3); font: 11px/1.55 var(--mono); color: var(--text-dim);
+}
+
+.ovw-foot { margin-top: var(--sp-4); font-size: 12px; line-height: 1.7; max-width: 96ch; }
+.ovw-foot b { color: var(--text-dim); font-weight: 600; }
+
+@media (max-width: 860px) {
+  .ovw-kpis .kpi .v { font-size: 22px; }
+}

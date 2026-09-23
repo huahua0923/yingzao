@@ -1,0 +1,180 @@
+/* 构件视图 — 复用 app.css 的 .card / .cards / .sig / .pit / .consts / .const，
+   这里只补这一屏特有的三样：结论条、探针明细、"没有"的写法。
+
+   基调照 app.css：工程制图 / 蓝图，密、可扫、数字等宽。状态不只靠颜色 ——
+   结论条上的**字**（通过 / 不通过 / 部分未量成 / 未给结论）才是判据，颜色只是辅助
+   （色盲也要能读，且截图打印成灰度后仍然分得开）。 */
+
+.cmp-sub { color: var(--text-faint); font: 12px var(--mono); letter-spacing: 0; }
+
+.cmp-sec { margin-top: var(--sp-5); }
+.cmp-box { min-height: 40px; }
+
+/* ── 等待 ───────────────────────────────────────────────────── */
+.cmp-busy {
+  display: flex; align-items: center; gap: var(--sp-3);
+  color: var(--text-dim); font: 13px var(--mono); padding: var(--sp-4) 0;
+}
+.cmp-busy .spin {
+  width: 12px; height: 12px; border: 2px solid var(--rule); border-top-color: var(--cyan);
+  border-radius: 50%; animation: cmp-spin .8s linear infinite;
+}
+@keyframes cmp-spin { to { transform: rotate(360deg); } }
+
+/* ── 结论条（这一屏最该被一眼看到的东西）───────────────────── */
+.cmp-verdict {
+  border: 1px solid var(--rule); border-left: 3px solid var(--text-faint);
+  border-radius: var(--r-2); background: var(--panel);
+  padding: var(--sp-4) var(--sp-5); margin: var(--sp-2) 0;
+  display: grid; grid-template-columns: auto 1fr; gap: var(--sp-2) var(--sp-4);
+  align-items: baseline;
+}
+/* 形状也带上语义：通过=实心边、不通过=双线、未量成/未给结论=虚线。
+   灰度打印后仍分得开（memory: 本仓"不只靠颜色"的既定做法）。 */
+.cmp-verdict.pass     { border-left-color: var(--green); }
+.cmp-verdict.partial  { border-left-color: var(--amber);
+  background-image: repeating-linear-gradient(45deg,
+    rgba(232,163,61,.06) 0 6px, transparent 6px 14px); }
+.cmp-verdict.fail     { border-left-color: var(--red); border-left-width: 6px;
+  background-image: repeating-linear-gradient(45deg,
+    rgba(229,72,77,.08) 0 6px, transparent 6px 14px); }
+.cmp-verdict.unknown  { border-left-style: dashed; }
+
+.cmp-verdict-w {
+  grid-row: 1 / span 2; align-self: center;
+  font: 700 26px var(--mono); letter-spacing: .06em; white-space: nowrap;
+}
+.cmp-verdict.pass .cmp-verdict-w     { color: var(--green); }
+.cmp-verdict.partial .cmp-verdict-w  { color: var(--amber); }
+.cmp-verdict.fail .cmp-verdict-w     { color: var(--red); }
+.cmp-verdict.unknown .cmp-verdict-w  { color: var(--text-faint); }
+.cmp-verdict-t { font: 12px var(--mono); color: var(--text-faint); }
+.cmp-verdict-n { margin: 0; font-size: 13px; color: var(--text-dim); }
+.cmp-verdict-n b { color: var(--text); }
+
+.cmp-stats {
+  grid-column: 1 / -1; margin: var(--sp-2) 0 0;
+  font: 12px var(--mono); color: var(--text);
+  border-top: 1px solid var(--rule-soft); padding-top: var(--sp-2);
+}
+.cmp-cov {
+  grid-column: 1 / -1; margin: var(--sp-2) 0 0; font-size: 12px;
+  color: var(--text-dim); line-height: 1.6; max-width: 96ch;
+}
+.cmp-cov b { color: var(--amber); }
+.cmp-hint { grid-column: 1 / -1; margin: var(--sp-1) 0 0; font: 11px var(--mono); color: var(--text-faint); }
+
+.cmp-allok {
+  margin: var(--sp-3) 0 0; padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid var(--green); background: var(--panel);
+  font-size: 12px; color: var(--text-dim);
+}
+
+/* ── 探针明细 ───────────────────────────────────────────────── */
+.cmp-h3 {
+  margin: var(--sp-5) 0 var(--sp-2); font: 600 12px var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint);
+}
+.cmp-probe {
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--text-faint); border-radius: var(--r-2);
+  padding: var(--sp-2) var(--sp-3); margin-bottom: 4px;
+}
+.cmp-probe.fail { border-left-color: var(--red); }
+.cmp-probe.unavail { border-left-color: var(--text-faint); border-left-style: dashed; }
+.cmp-probe-h { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.cmp-probe-fn { font: 600 12px var(--mono); color: var(--text); }
+.cmp-probe-exp { font: 11px var(--mono); color: var(--text-faint); }
+.cmp-probe-note { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-top: 3px; }
+
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: var(--sp-2); }
+.cmp-table th { position: static; cursor: default; }
+.cmp-table td { vertical-align: top; }
+.cmp-table tr.st-fail { background: rgba(229,72,77,.07); }
+.cmp-table tr.st-fail td:first-child { border-left: 2px solid var(--red); }
+.cmp-table tr.st-unavailable td:first-child { border-left: 2px dashed var(--text-faint); }
+.cmp-note-cell { color: var(--text-dim); max-width: 70ch; line-height: 1.55; }
+
+/* ── "没有"的写法 ───────────────────────────────────────────── */
+/* ★ 虚线框 + "未登记"字样：与绿色/对勾在形状上就不同，
+   不会被读成"这项没问题"（本仓最贵的一类错）。 */
+.cmp-absent {
+  margin: 2px 0 0; padding: 3px var(--sp-2);
+  border: 1px dashed var(--rule); border-radius: var(--r-1);
+  color: var(--text-faint); font-size: 12px; display: inline-block;
+}
+.cmp-none {
+  background: var(--panel); border: 1px dashed var(--rule);
+  border-radius: var(--r-2); padding: var(--sp-3) var(--sp-4);
+  font-size: 13px; color: var(--text-dim);
+}
+.cmp-none b { color: var(--amber); }
+
+.cmp-axis { font-size: 12px; color: var(--text-faint); margin: 0 0 var(--sp-3); max-width: 96ch; }
+.cmp-axis b { color: var(--text-dim); }
+
+/* 参数小表：构件卡片里那张 key → value */
+.cmp-kv { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cmp-kv th {
+  text-align: left; font: 11px var(--mono); color: var(--text-faint);
+  padding: 2px var(--sp-3) 2px 0; vertical-align: top; white-space: nowrap;
+  border: 0; position: static;
+}
+.cmp-kv td { padding: 2px 0; color: var(--text); border: 0; line-height: 1.6; font-size: 12px; }
+
+/* 长文本（量具的"在哪/用法/为什么/坑"）：保留换行，等宽便于复制命令 */
+.cmp-pre {
+  font: 12px/1.65 var(--mono); color: var(--text-dim);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* ── 接口不可用 / 后端自己挂了 ─────────────────────────────── */
+.cmp-panic {
+  border: 1px solid var(--rule); border-left: 3px solid var(--amber);
+  border-radius: var(--r-2); background: var(--panel);
+  padding: var(--sp-4) var(--sp-5); margin: var(--sp-3) 0;
+  background-image: repeating-linear-gradient(45deg,
+    rgba(232,163,61,.06) 0 6px, transparent 6px 14px);
+}
+.cmp-panic.down {
+  border-left-color: var(--red);
+  background-image: repeating-linear-gradient(45deg,
+    rgba(229,72,77,.08) 0 6px, transparent 6px 14px);
+}
+.cmp-panic-h {
+  margin: 0 0 var(--sp-2); font: 600 18px var(--mono);
+  letter-spacing: .06em; color: var(--amber);
+}
+.cmp-panic.down .cmp-panic-h { color: var(--red); }
+.cmp-panic-msg { margin: 0 0 var(--sp-3); font: 13px var(--mono); color: var(--text); }
+.cmp-panic-body { font-size: 13px; color: var(--text-dim); }
+.cmp-panic-body p { margin: 0 0 var(--sp-2); line-height: 1.6; }
+.cmp-panic-body b { color: var(--text); }
+.cmp-panic-body code { margin-left: 4px; }
+
+.cmp-warnline { margin: var(--sp-2) 0 0; font: 12px var(--mono); color: var(--amber); }
+
+.cmp-details { margin-top: var(--sp-2); }
+.cmp-details summary { cursor: pointer; color: var(--cyan); font-size: 12px; }
+.cmp-details summary:hover { color: var(--text); }
+.cmp-ev {
+  font: 11px/1.5 var(--mono); color: var(--text-dim);
+  background: var(--panel-2); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1); padding: var(--sp-2); overflow-x: auto;
+}
+
+.cmp-toolbar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: var(--sp-3) 0; }
+.cmp-btn {
+  background: var(--panel); color: var(--text); border: 1px solid var(--rule);
+  border-radius: var(--r-1); padding: 5px 12px; font: 13px var(--sans); cursor: pointer;
+}
+.cmp-btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+.cmp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.cmp-btn.primary { border-color: var(--cyan-dim); color: var(--cyan); }
+
+.cmp-src { font-size: 11px; margin: var(--sp-3) 0 0; }
+
+@media (max-width: 860px) {
+  .cmp-verdict { grid-template-columns: 1fr; }
+  .cmp-verdict-w { grid-row: auto; }
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>建模后台 · gym3d</title>
+<!--
+  刻意**无构建**：原生 ES module，浏览器直接跑。
+  理由：后端已经定死在 /api 契约上（见 backend/api/），前端换 React/Vite 只动这个目录，
+  不动后端。现在先用零构建版本把"看得见"这件事做出来，不引入 npm/打包这一层新的失败面。
+  三维预览用 three.js 的 CDN 版（锁 0.160.0，见重构方案·后端前端.md）。
+-->
+<link rel="stylesheet" href="app.css">
+<!-- 视图自己的样式表：一个视图一份，在 js/app.js 的 VIEWS 里登记时一起加一行 -->
+<link rel="stylesheet" href="js/views/overview.css">
+<link rel="stylesheet" href="js/views/drawings.css">
+<link rel="stylesheet" href="js/views/ledger.css">
+<link rel="stylesheet" href="js/views/components.css">
+<link rel="stylesheet" href="js/views/area.css">
+<link rel="stylesheet" href="js/views/checks.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到内容</a>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="name">建模后台</span>
+    <span class="sub">gym3d · 校园建筑识别与交付</span>
+  </div>
+  <nav id="nav" aria-label="主导航"></nav>
+  <div class="runstate" id="runstate" title="后端能力"></div>
+</header>
+
+<main id="main" tabindex="-1">
+  <div class="loading" id="boot">正在读后端…</div>
+</main>
+
+<footer class="footer">
+  <span id="foot-src"></span>
+  <span class="spacer"></span>
+  <span id="foot-api"></span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

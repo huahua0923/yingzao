@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>营造 · 校园建筑数字档案</title>
+<!--
+  前台 = 呈现面。这里的每个字都是**只读**的：翻图纸、看模型、读数字。
+  改参数、跑识别、核对账在后台（frontend/admin/）。
+
+  刻意**无构建**：原生 ES module，浏览器直接跑；三维用仓内自带的 three
+  （vendor/three/，不走 CDN —— 呈现页恰恰是最不能白屏的地方）。
+-->
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#catalog">跳到内容</a>
+
+<header class="topbar">
+  <a class="mark" href="index.html">
+    <span class="mark-glyph" aria-hidden="true">营</span>
+    <span class="mark-text">
+      <b>营造</b>
+      <i>校园建筑数字档案</i>
+    </span>
+  </a>
+  <nav class="topnav" aria-label="主导航">
+    <a href="index.html" aria-current="page">楼栋</a>
+    <a href="/admin/" rel="nofollow" title="管理面：改参数、跑识别、核检查">后台</a>
+  </nav>
+</header>
+
+<main id="catalog">
+  <p class="loading">正在读楼栋清单…</p>
+</main>
+
+<footer class="foot">
+  <span>成都理工大学 · 营造</span>
+  <span class="grow"></span>
+  <span class="dim">数据来自建模后台 <code>/api</code> · 只读呈现</span>
+</footer>
+
+<script type="module" src="js/catalog.js"></script>
+</body>
+</html>

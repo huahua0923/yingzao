@@ -1,0 +1,248 @@
+/* 面积视图 — 版式的唯一目标：**让两个口径并排、且谁都别想被当成另一个**。
+   所以这一屏的颜色只用来标"哪一侧"（图纸 / 模型 / 差），不用来表示"好/坏" ——
+   好坏的语义只在判定那一栏（对得上/可疑/缺口），靠 tag 和文字说清。
+   复用 app.css 的 tag / table / kpis 思路，但口径标记用本屏自己的类。 */
+
+.ar-sub { color: var(--text-faint); font: 12px var(--mono); letter-spacing: 0; }
+
+/* ── 口径标记（本屏的语法核心）───────────────────────────────── */
+/* 图纸 = 青、模型 = 琥珀、差 = 灰虚线。三个在灰度打印后仍靠形状/字分得开：
+   差那一块**永远是虚线边**，因为它是差、不是面积 —— 不让它长得像面积。 */
+.ar-cal {
+  display: inline-block; font: 600 10px/1.6 var(--mono); letter-spacing: .06em;
+  padding: 0 6px; border: 1px solid currentColor; border-radius: 999px;
+  vertical-align: 1px; white-space: nowrap;
+}
+.ar-cal-draw { color: var(--cyan); }
+.ar-cal-model { color: var(--amber); }
+.ar-cal-delta { color: var(--text-dim); border-style: dashed; }
+.ar-cal-basis, .ar-cal-count, .ar-cal-verdict, .ar-cal-name { color: var(--text-faint); }
+
+.ar-unknown {
+  display: inline-block; margin-left: 4px; font: 600 10px/1.6 var(--mono);
+  color: var(--red); border: 1px dashed var(--red); border-radius: 999px;
+  padding: 0 6px; letter-spacing: .05em; cursor: help;
+}
+
+/* 差值正负号：颜色只是辅助，符号本身就在字里（+ / −）。 */
+.ar-num .pos { color: var(--amber); }
+.ar-num .neg { color: var(--cyan); }
+
+/* ── 快照条 ─────────────────────────────────────────────────── */
+.ar-snap {
+  background: var(--panel); border: 1px solid var(--rule);
+  border-left: 2px solid var(--cyan-dim); border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0 var(--sp-4);
+}
+.ar-snap-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); font-size: 13px; }
+.ar-snap-k {
+  font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-faint); margin-left: var(--sp-3);
+}
+.ar-snap-k:first-child { margin-left: 0; }
+.ar-snap-note { margin: var(--sp-2) 0 0; font-size: 12px; color: var(--text-dim); line-height: 1.6; max-width: 100ch; }
+.ar-snap-warn {
+  margin: var(--sp-2) 0 0; font-size: 12px; color: var(--amber);
+  border-left: 2px solid var(--amber); padding-left: var(--sp-3); line-height: 1.6;
+}
+.ar-snap-ok { margin: var(--sp-2) 0 0; font-size: 12px; color: var(--text-dim); }
+.ar-snap-ok code { color: var(--green); }
+
+/* ── 口径图例 ───────────────────────────────────────────────── */
+.ar-legend {
+  border: 1px solid var(--rule); border-radius: var(--r-2);
+  background: var(--panel); padding: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0;
+}
+.ar-legend-t { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ar-legend-t th {
+  position: static; cursor: default; text-align: left;
+  padding: 2px var(--sp-3) 2px 0; border-bottom: 1px solid var(--rule-soft);
+}
+.ar-legend-t td { padding: 5px var(--sp-3) 5px 0; vertical-align: top; line-height: 1.55; border: 0; }
+.ar-legend-name { color: var(--text); font-weight: 600; white-space: nowrap; }
+.ar-legend-note {
+  margin: var(--sp-3) 0 0; font-size: 12px; color: var(--text-dim);
+  border-top: 1px solid var(--rule-soft); padding-top: var(--sp-2); line-height: 1.6; max-width: 110ch;
+}
+
+/* ── KPI ────────────────────────────────────────────────────── */
+.ar-kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px; background: var(--rule-soft); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-2); overflow: hidden; margin: var(--sp-2) 0 var(--sp-3);
+}
+.ar-kpi { background: var(--panel); padding: var(--sp-3) var(--sp-4); }
+.ar-kpi .k { display: block; font-size: 11px; letter-spacing: .09em; color: var(--text-faint); text-transform: uppercase; }
+.ar-kpi .v { display: block; font: 600 24px/1.2 var(--mono); font-variant-numeric: tabular-nums; margin-top: 3px; }
+.ar-kpi .n { display: block; font-size: 11px; color: var(--text-faint); margin-top: 2px; line-height: 1.5; }
+.ar-kpi.ok .v { color: var(--green); }
+.ar-kpi.warn .v { color: var(--amber); }
+.ar-kpi.bad .v { color: var(--red); }
+/* 无法对账：最弱的灰 + 虚线底，绝不继承绿色 */
+.ar-kpi.dim2 { border-top: 2px dashed var(--text-faint); }
+.ar-kpi.dim2 .v { color: var(--text-dim); }
+
+.ar-denom { font-size: 12px; color: var(--text-dim); margin: 0 0 var(--sp-3); line-height: 1.7; max-width: 110ch; }
+.ar-denom b { color: var(--text); font-family: var(--mono); }
+
+/* ── 表 ─────────────────────────────────────────────────────── */
+.ar-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ar-table th { position: static; }
+.ar-table td { vertical-align: top; }
+.ar-row td:first-child { border-left: 2px solid transparent; }
+.ar-row.v-gap td:first-child { border-left-color: var(--red); }
+.ar-row.v-watch td:first-child { border-left-color: var(--amber); }
+.ar-row.v-reconciled td:first-child { border-left-color: var(--green); }
+.ar-count { font: 12px var(--mono); color: var(--text-faint); margin: var(--sp-2) 0; }
+.ar-basis {
+  font: 10px var(--mono); color: var(--text-faint); margin-left: 5px;
+  border: 1px dashed var(--rule); border-radius: var(--r-1); padding: 0 4px;
+  white-space: nowrap;
+}
+
+.ar-h3 {
+  margin: var(--sp-5) 0 var(--sp-2); font: 600 12px var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint);
+}
+
+/* ── 单栋：两个口径并排 ─────────────────────────────────────── */
+.ar-pairs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+  border-radius: var(--r-2); overflow: hidden; margin: var(--sp-2) 0 var(--sp-4);
+}
+.ar-pair-side { background: var(--panel); padding: var(--sp-4); border-top: 3px solid var(--rule); }
+.ar-pair-side.t-draw { border-top-color: var(--cyan); }
+.ar-pair-side.t-model { border-top-color: var(--amber); }
+/* 差那一侧：虚线顶边 —— 形状上就不是"一个面积"，是两张面积相减的结果。 */
+.ar-pair-side.t-delta { border-top: 3px dashed var(--text-faint); background: var(--panel-2); }
+.ar-pair-side.t-unknown { border-top: 3px dashed var(--red); }
+
+.ar-pair-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.ar-pair-name { font-size: 13px; color: var(--text); font-weight: 600; }
+.ar-pair-v {
+  font: 600 30px/1.2 var(--mono); font-variant-numeric: tabular-nums;
+  margin: var(--sp-2) 0 2px;
+}
+.t-draw .ar-pair-v { color: var(--cyan); }
+.t-model .ar-pair-v { color: var(--amber); }
+.t-delta .ar-pair-v { color: var(--text-dim); }
+.ar-pair-v::after { content: " ㎡"; font-size: 12px; color: var(--text-faint); font-weight: 400; }
+/* 差那一侧的数值后不写 ㎡ —— 它是差，不是面积。 */
+.t-delta .ar-pair-v::after { content: ""; }
+.ar-pair-src { font-size: 11px; line-height: 1.55; }
+.ar-pair-cav { font-size: 11px; line-height: 1.55; margin-top: 4px; border-top: 1px dotted var(--rule-soft); padding-top: 4px; }
+
+.ar-more {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-4);
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-2); padding: var(--sp-3) var(--sp-4); margin: 0 0 var(--sp-4);
+  font-size: 13px;
+}
+.ar-more-k {
+  font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ── 无法对账 / 没有 ────────────────────────────────────────── */
+.ar-unaud {
+  background: var(--panel); border: 1px solid var(--rule);
+  border-left: 2px dashed var(--text-faint); border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4); margin: var(--sp-3) 0;
+}
+.ar-unaud-h { margin: 0 0 var(--sp-2); font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+.ar-unaud-h b { color: var(--text-faint); }
+.ar-ul { margin: 0; padding-left: 1.2em; font-size: 12px; color: var(--text-dim); }
+.ar-ul b { color: var(--text); }
+
+.ar-absent {
+  margin: var(--sp-2) 0; padding: var(--sp-3) var(--sp-4);
+  border: 1px dashed var(--rule); border-radius: var(--r-2);
+  color: var(--text-faint); font-size: 12px; line-height: 1.65; max-width: 110ch;
+}
+.ar-none {
+  margin: var(--sp-3) 0; padding: var(--sp-4) var(--sp-5);
+  border: 1px dashed var(--amber); border-radius: var(--r-2);
+  background: var(--panel); font-size: 13px; color: var(--text-dim); line-height: 1.7;
+}
+.ar-none b { color: var(--amber); }
+.ar-okline {
+  margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid var(--green); background: var(--panel);
+  font-size: 12px; color: var(--text-dim);
+}
+
+/* ── 重算（写操作）──────────────────────────────────────────── */
+.ar-refresh {
+  background: var(--panel); border: 1px solid var(--rule);
+  border-left: 2px solid var(--amber); border-radius: var(--r-2);
+  padding: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0;
+}
+.ar-write { margin: 0 0 var(--sp-2); font-size: 12px; color: var(--text-dim); line-height: 1.7; max-width: 110ch; }
+.ar-write .ok-t { color: var(--green); }
+.ar-refresh-res { margin-top: var(--sp-3); border-top: 1px solid var(--rule-soft); padding-top: var(--sp-3); }
+.ar-refresh-fail {
+  margin-top: var(--sp-3); padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--rule); border-left: 3px solid var(--red);
+  border-radius: var(--r-2); background: var(--panel-2);
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: baseline;
+  font-size: 13px;
+}
+.ar-refresh-fail b { color: var(--red); }
+.ar-warnline { margin: var(--sp-2) 0; font: 12px var(--mono); color: var(--amber); line-height: 1.6; }
+
+/* ── 工具条 ─────────────────────────────────────────────────── */
+.ar-toolbar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: var(--sp-3) 0; }
+.ar-check { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: 13px; color: var(--text-dim); }
+.ar-btn {
+  background: var(--panel); color: var(--text); border: 1px solid var(--rule);
+  border-radius: var(--r-1); padding: 5px 12px; font: 13px var(--sans); cursor: pointer;
+}
+.ar-btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+.ar-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ar-btn.primary { border-color: var(--cyan-dim); color: var(--cyan); }
+
+.ar-busy {
+  display: flex; align-items: center; gap: var(--sp-3);
+  color: var(--text-dim); font: 13px var(--mono); padding: var(--sp-4) 0;
+}
+.ar-busy .spin {
+  width: 12px; height: 12px; border: 2px solid var(--rule); border-top-color: var(--cyan);
+  border-radius: 50%; animation: ar-spin .8s linear infinite;
+}
+@keyframes ar-spin { to { transform: rotate(360deg); } }
+
+/* ── 接口不可用 ─────────────────────────────────────────────── */
+.ar-panic {
+  border: 1px solid var(--rule); border-left: 3px solid var(--amber);
+  border-radius: var(--r-2); background: var(--panel);
+  padding: var(--sp-4) var(--sp-5); margin: var(--sp-3) 0;
+  background-image: repeating-linear-gradient(45deg,
+    rgba(232,163,61,.06) 0 6px, transparent 6px 14px);
+}
+.ar-panic.down {
+  border-left-color: var(--red);
+  background-image: repeating-linear-gradient(45deg,
+    rgba(229,72,77,.08) 0 6px, transparent 6px 14px);
+}
+.ar-panic-h { margin: 0 0 var(--sp-2); font: 600 18px var(--mono); letter-spacing: .06em; color: var(--amber); }
+.ar-panic.down .ar-panic-h { color: var(--red); }
+.ar-panic-msg { margin: 0 0 var(--sp-3); font: 13px var(--mono); color: var(--text); }
+.ar-panic-body { font-size: 13px; color: var(--text-dim); }
+.ar-panic-body p { margin: 0 0 var(--sp-2); line-height: 1.6; }
+.ar-panic-body b { color: var(--text); }
+.ar-panic-body code { margin-left: 4px; }
+
+.ar-details { margin-top: var(--sp-2); }
+.ar-details summary { cursor: pointer; color: var(--cyan); font-size: 12px; }
+.ar-details summary:hover { color: var(--text); }
+.ar-ev {
+  font: 11px/1.5 var(--mono); color: var(--text-dim);
+  background: var(--panel-2); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1); padding: var(--sp-2); overflow-x: auto; white-space: pre-wrap;
+}
+
+@media (max-width: 860px) {
+  .ar-pairs { grid-template-columns: 1fr; }
+  .ar-snap-k { margin-left: 0; }
+}

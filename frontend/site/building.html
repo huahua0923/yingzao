@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>楼栋 · 营造</title>
+<!--
+  ★ importmap 必须在**任何** module 脚本之前：浏览器在解析第一个 module 前
+    就把这张表定下来，之后再声明就不生效了。
+  ★ three 走仓内 vendor/（不是 CDN）。本仓记过「查看器硬依赖 CDN」这笔账，
+    而呈现页恰恰是最不能白屏的地方。版本 0.185.1，与 node_modules 同一份。
+  ★ 用 .min 那一对：three.module.min.js 内部 `from"./three.core.min.js"` ——
+    两个文件必须成对搬，少一个就是"模块能解析、一 import 就 404"。
+    （非压缩版是 1.4MB，压缩版 751KB；前台是给人看的页面，字节算成本。）
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.min.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="page-building">
+<a class="skip" href="#building">跳到内容</a>
+
+<header class="topbar">
+  <a class="mark" href="index.html">
+    <span class="mark-glyph" aria-hidden="true">营</span>
+    <span class="mark-text">
+      <b>营造</b>
+      <i>校园建筑数字档案</i>
+    </span>
+  </a>
+  <nav class="topnav" aria-label="主导航">
+    <a href="index.html">楼栋</a>
+    <a href="/admin/" rel="nofollow" title="管理面：改参数、跑识别、核检查">后台</a>
+  </nav>
+</header>
+
+<main id="building">
+  <p class="loading">正在读这栋楼…</p>
+</main>
+
+<footer class="foot">
+  <span>成都理工大学 · 营造</span>
+  <span class="grow"></span>
+  <span class="dim">三维为交付件 GLB 原样呈现 · 图纸为识别产物</span>
+</footer>
+
+<script type="module" src="js/building-page.js"></script>
+</body>
+</html>

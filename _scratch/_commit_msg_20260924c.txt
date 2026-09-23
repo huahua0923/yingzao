@@ -1,0 +1,28 @@
+feat: 前台(site)与后台(admin)整套入库 —— 上一条只提交了半个前台
+
+## 为什么必须补这一条
+上一条（9649a65）把 `frontend/site/js/building-page.js` 和 `site.css` 提了，
+**但没提 `building.html` / `index.html` / `dom.js` / `api.js` / `catalog.js` / `viewer.js`**。
+后果比"少提几个文件"严重：别人 clone 下来，仓库里**看起来**有前台
+（目录在、有 js 有 css），可这些 js 被一个不存在的 html 引用、又 import 不存在的
+成员 —— 是"缺件却看着齐全"，跟 `backend/recognizer/` 那 4 个模块同一个病
+（98880dd 修的就是那个）。**同一个病在同一个仓里复发了一次。**
+
+## 入库范围
+  frontend/site/**  31 个文件 —— 前台：目录页 + 单栋呈现页 + 三维查看器
+  frontend/admin/** 24 个文件 —— 后台：总览/台账/检查/图纸/构件 几个视图
+合计 2.5 MB，其中 three.js 走**仓内 vendor**（`vendor/three/build` 两个 .min 成对，
+module.min 内部 `from "./three.core.min.js"`，少一个就是"能解析、一 import 就 404"）。
+不引 CDN 是既有决定：本仓记过「查看器硬依赖 CDN」这笔账，呈现页最不能白屏。
+
+## 入库前核过的（不是"看着像齐"）
+把 6 个 js 的 import 全列出来对了一遍，五个来源各有落点：
+  · './api.js'  './dom.js'                      → 同目录，在
+  · 'three'                                     → importmap → vendor/three/build/three.module.min.js，在
+  · 'three/addons/controls/OrbitControls.js'    → vendor/three/examples/jsm/controls/，在
+  · 'three/addons/loaders/GLTFLoader.js'        → vendor/three/examples/jsm/loaders/，在
+    （GLTFLoader 自己还 import BufferGeometryUtils，也在）
+  · importmap 在 HTML 里、且在**任何** module 脚本之前（晚声明不生效）
+
+## 没提的
+`frontend/building.html` 仍是已跟踪且有改动 —— 那是另一套老页面，跟这次无关，不混进来。
