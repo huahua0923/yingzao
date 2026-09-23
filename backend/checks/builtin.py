@@ -546,18 +546,30 @@ def check_a8(rep: Report, data_dir, name: str, **_kw) -> None:
                 % (meta["bad_escapes_n"], "、".join(esc[:3]))) if esc else ""
 
     if fleet_only or console_only:
+        # 两边**后果相反**，不许一句话说完 —— 缺的是哪条通道，决定它要不要紧：
+        #   缺【批量】通道 ⇒ 建出交付件的就是它 ⇒ 该机制在交付里**从没生效过**。
+        #   缺【控制台】通道 ⇒ 本栋**不丢**：A8 能走到这里，就说明
+        #     <data>/buildings/<楼>/profile.json 是读得动的，而那正是控制台
+        #     load_profile 走「委托给批量加载器」那一支的条件（run_step.py:87）。
+        #     控制台既然委托，批量那边读到就够了。这一档只影响
+        #     「注册表楼走覆盖档案 data/<楼>-profile.json」那条**当前没有楼在走**的路。
         bits = []
-        if fleet_only:
-            bits.append("只有批量通道读：%s" % "、".join(sorted(fleet_only)))
         if console_only:
-            bits.append("**只有控制台通道读**：%s" % "、".join(sorted(console_only)))
+            bits.append("**批量通道读不到**：%s（建出交付件的是批量通道 ⇒ "
+                        "这套机制在交付里从没生效过）" % "、".join(sorted(console_only)))
+        if fleet_only:
+            bits.append("控制台通道读不到：%s（**本栋不丢** —— 见下）"
+                        % "、".join(sorted(fleet_only)))
         rep.add(Finding("A8", "配置项是否真的被读取", Status.WATCH,
-                        "；".join(bits) + "。同一份 profile、两个加载器 —— "
-                        "只喂给一边的键，在另一条通道上**静默不生效**"
-                        "（floor_y_bands 就是这么躺了 36 栋）" + esc_note,
+                        "；".join(bits) + "。同一份 profile、两个加载器读的键不是同一套；"
+                        "**要紧的只有「缺批量通道」那一档**，另一档本栋不丢（本栋有批量"
+                        "档案 ⇒ 控制台委托给批量加载器）。"
+                        "★ 别在这里写「躺了 N 栋」这类数：那是测量，会过期 —— "
+                        "要数就数本条 WATCH 逐栋的楼号（历史笔记里的 36 是当时的测量）"
+                        + esc_note,
                         measure="键名出现处",
-                        evidence={"fleet_only": sorted(fleet_only),
-                                  "console_only": sorted(console_only),
+                        evidence={"missing_in_batch": sorted(console_only),
+                                  "missing_in_console": sorted(fleet_only),
                                   "loaders": [r for r, _f, _l in _LOADERS]}))
     if dead:
         rep.add(Finding("A8", "配置项是否真的被读取", Status.WATCH,
