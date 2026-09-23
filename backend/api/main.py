@@ -19,7 +19,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .responses import ERR_INTERNAL, ApiError, envelope, error_json
@@ -103,10 +103,32 @@ def create_app() -> FastAPI:
     #    因为 `/` 已经指着 admin，临时改根会把正在验后台的页面全打断。）
     site = cfg.root / "frontend" / "site"
     if site.is_dir():
+        # ★ 裸 `/site`（不带尾斜杠）**进不了**下面这个挂载点，会一路落到最后那个
+        #   `/`（admin）挂载上，被它当成相对路径去找名为 `site` 的文件 ⇒
+        #   `{"detail":"Not Found"}`（FastAPI 的 404 形状）。而 `/site` 正是文档与
+        #   README 里写的**前台地址** —— 手敲进来、或从别处点过来，第一眼就是这个 404。
+        #   （挂载自己的 `html=True` 确实会补尾斜杠，但**前提是请求先到它手上**；
+        #    这里的问题恰恰是请求没到它手上。）
+        #   ⇒ 登记一条**只做跳转**的路由，注册次序排在 `/` 挂载之前，先命中本尊。
+        #   2026-09-24 实测：改前 `GET /site` = 404，改后 307 → `/site/` = 200。
+        @app.get("/site", include_in_schema=False)
+        def _site_slash() -> RedirectResponse:
+            return RedirectResponse(url="/site/", status_code=307)
+
         app.mount("/site", FreshStatic(directory=str(site), html=True), name="site")
 
     front = cfg.root / "frontend" / "admin"
     if front.is_dir():
+        # ★ 前台顶部那个「后台」链接指向 `/admin/`，而管理面**挂在 `/`**，
+        #   `/admin/` 没人认 ⇒ 404 —— 两个半边之间**唯一的那条链接是死的**。
+        #   ⇒ 跳回 `/`。**不能**把 admin 也挂到 `/admin`：那页的样式与脚本全是
+        #   相对路径（`app.css`、`js/app.js`），换到 `/admin/` 下会连带全 404；
+        #   而 307 之后浏览器地址栏是 `/`，相对路径仍旧落在根上，一个都不用改。
+        @app.get("/admin", include_in_schema=False)
+        @app.get("/admin/", include_in_schema=False)
+        def _admin_slash() -> RedirectResponse:
+            return RedirectResponse(url="/", status_code=307)
+
         app.mount("/", FreshStatic(directory=str(front), html=True), name="admin")
     else:
         @app.get("/")
