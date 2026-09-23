@@ -4,7 +4,10 @@
 图例：灰细线=源 DXF 原始线稿（≈CAD 视图，门开启弧/梯踏步都在里面）
       灰实心=识别墙(out外/inner内/parapet)   红=识别门(外门深红/内门橙)
       绿块+浅条=识别楼梯井及跑向              蓝=识别柱
+      紫虚线=交付房间边界(floors 的 rooms[].poly)，房号 ≤ROOM_LABEL_MAX 间时标在质心
 标题带 门/楼梯井/柱/房间/面积 计数 —— 直接判断「门和楼梯识别到没有」，不用开 CAD。
+★ 房间边界来自交付楼层文件，改了 rooms.json **必须补跑 backfill_floor_rooms.py**
+  再重跑本脚本，否则这里画的还是旧快照（详见 [[floor-json-rooms-are-snapshot]]）。
 图片源=该楼 floor JSON(识别主结果) + 源 DXF(wall_pts_for_floor 取该层原始墙线)。
 
 输出: data/buildings/<name>/dxf_plan_recog/floor{F}.png + 该目录 index.html
@@ -13,14 +16,17 @@
 """
 import os, sys, json, glob
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
-sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend\vision",
-                r"D:\gym3d\backend", r"D:\gym3d"]
+sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend", r"D:\gym3d"]
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import _render_common as RC
+plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DengXian"]
+plt.rcParams["axes.unicode_minus"] = False
 from matplotlib.path import Path
 import matplotlib.patches as mpatches
 from matplotlib.collections import LineCollection
+from shapely.geometry import Polygon
 
 BASE = r"D:\gym3d\data\buildings"
 
@@ -30,6 +36,8 @@ C_DOOR_OUTER, C_DOOR_INNER = "#d81e06", "#f08c00"
 C_STAIR, C_STAIR_EDGE = "#2e8b57", "#155c2e"
 C_COL = "#3a6ea5"
 C_OUTLINE = "#b00"
+C_ROOM = "#7b1fa2"          # 房间边界（紫虚线）—— 与墙/门/梯/柱/轮廓的配色都不撞
+ROOM_LABEL_MAX = 30         # 房间数 ≤ 此值才标房号；密楼层（如 c060 每层 44 间）只画边界免得糊成一片
 
 
 def _ring_path(ring):
@@ -81,6 +89,25 @@ def render_floor_png(name, F, fl, out_path, raw=None):
         t = w.get("type", "inner")
         fc = C_OUTER if t == "outer" else (C_PARAPET if t == "parapet" else C_INNER)
         _patch_poly(ax, w["poly"], w.get("holes") or [], fc, zorder=3)
+    rooms = fl.get("rooms") or []
+    for r in rooms:                                # 2.5: 房间边界（紫虚线）
+        poly = r.get("poly") or []
+        if len(poly) < 3:
+            continue
+        xs, ys = _ring_path(poly)
+        ax.plot(xs, ys, color=C_ROOM, lw=0.7, alpha=0.9, ls="--", zorder=4)
+    if 0 < len(rooms) <= ROOM_LABEL_MAX:           # 房号（质心用 representative_point，
+        for r in rooms:                            # 凹多边形不会落到外面）
+            poly = r.get("poly") or []
+            num = (r.get("number") or "").strip()
+            if not num or len(poly) < 3:
+                continue
+            try:
+                c = Polygon(poly).buffer(0).representative_point()
+                ax.text(c.x, c.y, num, fontsize=4.5, color=C_ROOM,
+                        ha="center", va="center", zorder=7)
+            except Exception:                                      # noqa: BLE001
+                pass
     ns = 0
     for s in fl.get("stairwells", []):             # 3: 楼梯井
         ns += 1
@@ -121,16 +148,35 @@ def render_floor_png(name, F, fl, out_path, raw=None):
     ax.set_xlim(x0 - 0.6, x1 + 0.6); ax.set_ylim(y0 - 0.6, y1 + 0.6)
     ax.set_aspect("equal", adjustable="box")
     ax.axis("off")
+    # 面积一律印**轮廓真实面积**：旧写法 `area~{(x1-x0)*(y1-y0)}` 是包围盒，
+    # c006 首层印 10805 而真实 5698.7（虚高 90%）。见铁律 17「量什么就写什么」。
+    area_m2 = RC.outline_area_m2(fl)
     ax.set_title(f"{name}  {F+1}层  |  door={nd}  stairwell={ns}  col={nc}  "
-                 f"rooms={len(fl.get('rooms', []))}  area~{int((x1-x0)*(y1-y0))}m2",
+                 f"rooms={len(fl.get('rooms', []))}  "
+                 f"轮廓面积={area_m2 if area_m2 is not None else '?'}m2",
                  fontsize=9, color="#222", pad=6)
     fig.savefig(out_path, bbox_inches="tight", pad_inches=0.15, facecolor="white")
     plt.close(fig)
 
 
 def _gallery_html(name, floors):
-    rows = [f'<figure><img loading="lazy" src="floor{F}.png" alt="{name} F{F}">'
-            f'<figcaption>{name} · F{F}</figcaption></figure>' for F in floors]
+    """每层一图。★ 楼层号显示一律 F+1（铁律 5：内部 0 基、显示 1 基）——
+    旧写法 `F{F}` 让本页成为全仓唯一把首层写成「F0」的地方，与 A 页/对照页两套口径。"""
+    fd = os.path.join(BASE, name, "floors")
+    rows = []
+    for F in floors:
+        fj = os.path.join(fd, f"floor{F}.json")
+        extra = ""
+        try:
+            fl = json.load(open(fj, encoding="utf-8"))
+            extra = RC.caption_counts_html(RC.floor_counts(fl), F, RC.mtime_str(fj))
+        except Exception:  # noqa: BLE001
+            extra = ""
+        rows.append(
+            f'<figure data-floor="{F}"><img loading="lazy" src="floor{F}.png" '
+            f'alt="{name} {F + 1}层">'
+            f'<figcaption>{name} · {F + 1}层{extra}</figcaption></figure>')
+    rows = "".join(rows)
     return ("<!DOCTYPE html><html lang=zh><head><meta charset=utf-8>"
             f"<title>{name} 每层平面图</title><style>"
             "body{font-family:sans-serif;background:#eef0f3;margin:0;padding:16px}"
@@ -141,26 +187,15 @@ def _gallery_html(name, floors):
             "border:1px solid #d4d8dd;border-radius:6px;padding:8px;margin:0 12px 14px 0}"
             "img{width:640px;height:auto;border:1px solid #e0e3e7}"
             "figcaption{font-size:12px;color:#333;margin-top:5px;text-align:center}"
+            + RC.CSS_EXTRA +
             "</style></head><body>"
             f"<h1>{name} · 每层一图（每层一个文件）</h1>"
             f"<p class=leg>灰细线=源DXF原图 · 灰实心=识别墙 · 红=识别门 · 绿块=识别楼梯井 · "
-            f"蓝=识别柱。标题有 door/楼梯井计数，可直接判断识别结果，无需开CAD。</p>"
-            f"<p><a href=\"../_dxf_index.html\">← 总目录</a></p>" + "".join(rows)
-            + "</body></html>")
-
-
-def _master_html(items):
-    lis = "".join(f'<li><a href="{n}/dxf_plan/index.html">{n}</a>'
-                  f' <small>{cnt}层</small></li>' for n, cnt in items)
-    return ("<!DOCTYPE html><html lang=zh><head><meta charset=utf-8>"
-            "<title>全部建筑平面图总目录</title><style>"
-            "body{font-family:sans-serif;background:#eef0f3;padding:18px}"
-            "h1{font-size:19px;color:#222}p{font-size:12px;color:#555}"
-            "a{color:#0366d6;text-decoration:none}li{margin:5px 0}"
-            "small{color:#999}</style></head><body>"
-            "<h1>平面图总目录（每栋一页 · 每层一图）</h1>"
-            "<p>灰细线=源DXF · 红=门 · 绿=楼梯井 · 蓝=柱 · 灰实心=识别墙。单栋页可直连对照识别情况。</p><ul>"
-            + lis + "</ul></body></html>")
+            f"蓝=识别柱 · <span style=\"color:#7b1fa2\">紫虚线=交付房间边界</span>。"
+            f"标题有 door/楼梯井/房间计数，可直接判断识别结果，无需开CAD。</p>"
+            f"<p><a href=\"../_dxf_index.html\">← 总目录</a></p>" + rows
+            # 页面在 <楼>/dxf_plan_recog/ 下 → floors 在上一级
+            + RC.freshness_script("../floors/", floors) + "</body></html>")
 
 
 def main():
