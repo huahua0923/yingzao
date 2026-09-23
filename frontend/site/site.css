@@ -1,0 +1,489 @@
+/* 前台的观感基线 —— 一份样式表，别拆。
+ *
+ * 定调：**建筑图册 / 档案纸**。不是仪表盘，不是卡片墙。
+ * 依据：内容是"一笔一栋楼的档案"，介质就该像纸 —— 暖白底、发丝细线、
+ * 衬线标题、数字等宽对齐。强调色取砖红 #9a3b2a，不是随手挑的：
+ * 楼栋数据里 style.facade 实际值就是 #a4533d 这一族，界面颜色跟被测对象同源。
+ *
+ * 尺寸全用变量收口，避免同一个间距在十个地方各写一遍。
+ */
+
+:root {
+  /* 纸与墨 */
+  --paper:      #f6f3ee;
+  --paper-up:   #fffdfa;      /* 抬起一层：预览面板、输入框 */
+  --paper-sink: #ece7de;      /* 沉下去：图纸底板 */
+  --ink:        #1c1a17;
+  --ink-2:      #55504a;
+  --ink-3:      #8b857c;
+  --rule:       #ddd6cb;
+  --rule-2:     #c9c0b2;
+
+  /* 语义色（不只为好看：红=注意/缺失，绿=可用，都在下面各有用处）*/
+  --accent:     #9a3b2a;      /* 砖红：强调、当前项 */
+  --accent-sink:#7d2e20;
+  --ok:         #2f5d50;      /* 深绿：有三维模型 */
+  --miss:       #8a6a3a;      /* 土黄：缺图 / 缺数（不是红——缺数不是错误）*/
+
+  --serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", SimSun,
+           "Times New Roman", Georgia, serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", "Microsoft YaHei",
+           "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --mono:  "JetBrains Mono", Consolas, "SF Mono", "DejaVu Sans Mono", monospace;
+
+  --gap-1: 4px;  --gap-2: 8px;  --gap-3: 14px;
+  --gap-4: 22px; --gap-5: 36px; --gap-6: 60px;
+
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --t-fast: 120ms;
+  --t-med:  220ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 var(--gap-5) var(--gap-6);
+  max-width: 1280px;
+  margin-inline: auto;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.6 var(--sans);
+  font-feature-settings: "tnum" 1;      /* 数字等宽：一列数字要对得上 */
+}
+
+/* 纸的纹理。feTurbulence 噪声铺一层，透明度压到 3.5% ——
+   肉眼只觉"有纸感"，不会看见噪点。纯装饰，故 aria-hidden 由伪元素天然承担。*/
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  opacity: .035;
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>\
+<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter>\
+<rect width='140' height='140' filter='url(%23n)'/></svg>");
+}
+
+.topbar, main, .foot { position: relative; z-index: 1; }
+
+a { color: inherit; text-decoration: none; }
+
+.skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--ink); color: var(--paper); padding: var(--gap-2) var(--gap-3);
+}
+.skip:focus { left: var(--gap-3); top: var(--gap-3); z-index: 99; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.dim { color: var(--ink-3); }
+
+/* ── 顶栏 ───────────────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; gap: var(--gap-5);
+  padding: var(--gap-4) 0 var(--gap-3);
+  border-bottom: 1px solid var(--ink);
+}
+.mark { display: flex; align-items: center; gap: var(--gap-3); }
+
+/* 方形印。字面就是"营"，用衬线 —— 这一处是整个页面唯一带底色的字。*/
+.mark-glyph {
+  display: grid; place-items: center;
+  width: 38px; height: 38px;
+  background: var(--accent); color: var(--paper-up);
+  font: 700 22px/1 var(--serif);
+}
+.mark-text { display: flex; flex-direction: column; line-height: 1.25; }
+.mark-text b { font: 600 18px/1.2 var(--serif); letter-spacing: .14em; }
+.mark-text i { font-style: normal; font-size: 11px; color: var(--ink-3); letter-spacing: .08em; }
+
+.topnav { margin-left: auto; display: flex; gap: var(--gap-4); font-size: 13px; }
+.topnav a {
+  padding: 2px 0; color: var(--ink-2);
+  border-bottom: 1px solid transparent;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.topnav a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.topnav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ── 页首 ───────────────────────────────────────────────────── */
+.eyebrow {
+  margin: var(--gap-6) 0 var(--gap-2);
+  font-size: 11px; letter-spacing: .28em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* 字号刻意跳级：wordmark 是正文的 5 倍以上，层级靠尺度差而不是靠加粗。*/
+.wordmark {
+  margin: 0 0 var(--gap-3);
+  font: 600 clamp(48px, 9vw, 96px)/0.95 var(--serif);
+  letter-spacing: .1em;
+  color: var(--ink);
+  text-indent: .1em;              /* 补掉末字右边距，让左边缘对齐 */
+}
+
+.lede {
+  margin: 0 0 var(--gap-5);
+  max-width: 46ch;                 /* 一行别超过 46 个汉字 —— 再长眼睛回行会丢行 */
+  font-size: 15px; line-height: 1.85;
+  color: var(--ink-2);
+  text-align: justify;
+}
+
+.tally {
+  display: flex; flex-wrap: wrap; gap: var(--gap-2) var(--gap-6);
+  padding: var(--gap-3) 0 var(--gap-4);
+  border-top: 1px solid var(--rule-2);
+  border-bottom: 1px solid var(--rule-2);
+}
+.tally-cell { display: flex; align-items: baseline; gap: var(--gap-2); }
+.tally-v { font-size: 26px; font-weight: 500; }
+.tally-k { font-size: 12px; color: var(--ink-3); }
+.tally-d { font-size: 11px; color: var(--miss); }
+
+/* ── 索引区：左清单 + 右常驻预览 ───────────────────────────── */
+.index { margin-top: var(--gap-5); }
+
+.index-head {
+  display: flex; align-items: center; gap: var(--gap-4);
+  padding-bottom: var(--gap-3);
+}
+.search { display: flex; align-items: center; gap: var(--gap-2); flex: 1; max-width: 420px; }
+.search-k { font-size: 11px; letter-spacing: .2em; color: var(--ink-3); }
+.search input {
+  flex: 1; padding: 7px 10px;
+  border: 1px solid var(--rule-2); background: var(--paper-up);
+  font: inherit; font-size: 14px; color: var(--ink);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.search input::placeholder { color: var(--ink-3); }
+.search input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(154 59 42 / .1);
+}
+.index-count { margin: 0 0 0 auto; font-size: 12px; color: var(--ink-3); }
+
+.index-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--gap-5);
+  align-items: start;
+}
+
+/* 清单 */
+.list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+.list .empty { padding: var(--gap-5) 0; color: var(--ink-3); font-size: 14px; }
+
+.row {
+  position: relative;
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: baseline; gap: var(--gap-3);
+  padding: var(--gap-3) var(--gap-3) var(--gap-3) var(--gap-4);
+  border-bottom: 1px solid var(--rule);
+  transition: background var(--t-fast), padding-left var(--t-med) var(--ease);
+}
+/* 悬停/当前：左边长出一道砖红竖条，同时整行轻微右移 —— 动的是 transform
+   与背景，不是 layout 属性（见 web/performance）。*/
+.row::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--accent);
+  transform: scaleY(0); transform-origin: top;
+  transition: transform var(--t-med) var(--ease);
+}
+.row:hover, .row:focus-visible { background: var(--paper-up); }
+.row:hover::before, .row:focus-visible::before, .row[aria-current]::before { transform: scaleY(1); }
+.row[aria-current] { background: var(--paper-up); }
+
+.row-i { font-size: 12px; color: var(--ink-3); }
+.row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.row-name {
+  font: 500 17px/1.3 var(--serif); letter-spacing: .02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row[aria-current] .row-name { color: var(--accent); }
+
+.row-meta { display: flex; align-items: center; gap: var(--gap-2); font-size: 11px; color: var(--ink-3); }
+.row-code { font-family: var(--mono); letter-spacing: .04em; }
+
+/* 角标：颜色 + 文字双通道（只有颜色的话色盲读不出来）*/
+.dot {
+  padding: 1px 5px; border: 1px solid currentColor; border-radius: 2px;
+  font-size: 10px; line-height: 1.5;
+}
+.dot-3d { color: var(--ok); }
+.dot-no { color: var(--miss); }
+
+.row-nums {
+  display: flex; gap: var(--gap-4); font-size: 12px; color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* 常驻预览 */
+.preview {
+  position: sticky; top: var(--gap-4);
+  padding: var(--gap-4);
+  background: var(--paper-up);
+  border: 1px solid var(--rule-2);
+  /* 抬起一层：右下投影很浅，够区分"面板"和"纸"就行 */
+  box-shadow: 0 1px 0 var(--rule), 6px 6px 0 rgb(0 0 0 / .03);
+}
+.pv-hint { margin: 0; font-size: 13px; color: var(--ink-3); }
+.pv-eyebrow {
+  margin: 0 0 var(--gap-1); font-family: var(--mono); font-size: 11px;
+  letter-spacing: .12em; color: var(--accent);
+}
+.pv-title { margin: 0 0 var(--gap-3); font: 600 24px/1.25 var(--serif); letter-spacing: .03em; }
+
+/* 图纸底板：像一张裱起来的图 —— 底色比纸略沉，四周留白 */
+.pv-thumb {
+  display: grid; place-items: center;
+  min-height: 190px; margin-bottom: var(--gap-3);
+  padding: var(--gap-3);
+  background: var(--paper-sink);
+  border: 1px solid var(--rule);
+}
+.pv-thumb img { max-width: 100%; max-height: 260px; display: block; mix-blend-mode: multiply; }
+/* "没有图"要和"图没取到"分开说，所以是两行：一句结论 + 一句为什么 */
+.pv-noimg {
+  display: flex; flex-direction: column; gap: var(--gap-1);
+  margin: 0; padding: var(--gap-3) 0;
+  font-size: 12px; line-height: 1.6; color: var(--ink-3); text-align: center;
+}
+.pv-noimg b { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+
+.pv-facts { margin: 0 0 var(--gap-3); display: grid; gap: 0; }
+.pv-fact {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--gap-3); padding: 5px 0; border-bottom: 1px dotted var(--rule-2);
+}
+.pv-fact:last-child { border-bottom: 0; }
+.pv-fact dt { font-size: 12px; color: var(--ink-3); }
+.pv-fact dd { margin: 0; font-size: 13px; }
+
+/* 配色块：色块一行 + 一句实话。★ 那句话不是装饰 ——
+   style 是**建模通用配色**（全库 94/95 栋同值），把它印成"这栋楼的外墙色"是骗人的，
+   所以色块底下必须写明它是模型用的色、不是本楼实测外观。 */
+.pv-style { margin-bottom: var(--gap-3); }
+.pv-sw-row { display: flex; flex-wrap: wrap; gap: var(--gap-3); }
+.sw { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-2); }
+.sw i { width: 13px; height: 13px; border: 1px solid rgb(0 0 0 / .18); }
+.pv-style-note { margin: 5px 0 0; font-size: 11px; line-height: 1.5; color: var(--ink-3); max-width: 46ch; }
+
+.pv-notes { margin-bottom: var(--gap-3); }
+.pv-notes h3 { margin: 0 0 var(--gap-1); font-size: 11px; letter-spacing: .18em; color: var(--ink-3); }
+.pv-notes ul { margin: 0; padding-left: 1.1em; font-size: 12px; color: var(--ink-2); }
+
+.pv-actions { display: flex; gap: var(--gap-2); }
+.btn {
+  display: inline-block; padding: 7px 14px; font-size: 13px;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.btn-1 { background: var(--accent); color: var(--paper-up); }
+.btn-1:hover { background: var(--accent-sink); }
+.btn-off {
+  border-color: var(--rule-2); color: var(--ink-3); cursor: not-allowed;
+}
+
+/* ── 连接/数据异常 ─────────────────────────────────────────── */
+.loading, .panic { padding: var(--gap-6) 0; }
+.loading { color: var(--ink-3); }
+.panic { max-width: 60ch; }
+.panic h2 {
+  margin: 0 0 var(--gap-3); font: 600 28px/1.3 var(--serif);
+  color: var(--accent);
+}
+.panic p { margin: 0 0 var(--gap-3); font-size: 14px; line-height: 1.8; color: var(--ink-2); }
+.panic-hint { padding: var(--gap-3); background: var(--paper-up); border-left: 3px solid var(--miss); }
+
+/* ── 页脚 ───────────────────────────────────────────────────── */
+.foot {
+  display: flex; align-items: center; gap: var(--gap-3);
+  margin-top: var(--gap-6); padding-top: var(--gap-3);
+  border-top: 1px solid var(--rule-2);
+  font-size: 12px; color: var(--ink-2);
+}
+.grow { flex: 1; }
+.foot code { font-family: var(--mono); font-size: 11px; }
+
+/* ── 单栋页 ─────────────────────────────────────────────────── */
+
+/* 小标题：全站统一这一个写法（左边一道砖红短线，像图册的栏目标记）*/
+.sec-h {
+  display: flex; align-items: center; gap: var(--gap-2);
+  margin: 0; font: 600 13px/1.4 var(--sans);
+  letter-spacing: .2em; color: var(--ink-2);
+}
+.sec-h::before { content: ""; width: 16px; height: 2px; background: var(--accent); }
+
+.b-head { padding: var(--gap-5) 0 var(--gap-4); border-bottom: 1px solid var(--ink); }
+.b-title {
+  margin: 0 0 var(--gap-2);
+  font: 600 clamp(32px, 5vw, 54px)/1.15 var(--serif); letter-spacing: .04em;
+}
+.b-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap-2); margin: 0; font-size: 13px; color: var(--ink-2); }
+.b-sep { color: var(--rule-2); }
+
+.b-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--gap-4); align-items: start;
+  margin-top: var(--gap-5);
+}
+
+/* 三维舞台 */
+.stage {
+  position: relative;
+  min-height: min(62vh, 620px);
+  background: var(--paper-sink);
+  border: 1px solid var(--rule-2);
+  overflow: hidden;
+}
+.stage canvas { display: block; width: 100%; height: 100%; min-height: min(62vh, 620px); }
+.hud {
+  position: absolute; left: var(--gap-3); top: var(--gap-3);
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 10px;
+  background: color-mix(in srgb, var(--paper-up) 88%, transparent);
+  border: 1px solid var(--rule);
+  font-size: 12px; color: var(--ink-2);
+  pointer-events: none;
+}
+.hud b { color: var(--accent); font-weight: 600; }
+/* ★ 定位归容器，排版归条目。
+   这条规则原来直接写在 `.stage-note` 上（absolute + right/top 固定值），
+   页面上只有一条提示时看不出问题；加到**两条**时，两条各按同一组 right/top
+   落进同一格 —— 两行汉字**互相压掉**（2026-09-24 实测屏幕上是一团糊字，
+   看着像字体或渲染坏了）。凡是"给单个数写死坐标"的规则，条目一多就会自己叠自己。 */
+.stage-notes {
+  position: absolute; right: var(--gap-3); top: var(--gap-3);
+  max-width: 26ch; display: grid; gap: 3px; justify-items: end;
+  pointer-events: none;
+}
+.stage-note {
+  margin: 0;
+  font-size: 11px; line-height: 1.6; text-align: right; color: var(--ink-3);
+  pointer-events: none;
+}
+.stage-tools { position: absolute; left: var(--gap-3); bottom: var(--gap-3); }
+.btn-ghost {
+  background: color-mix(in srgb, var(--paper-up) 88%, transparent);
+  border-color: var(--rule-2); color: var(--ink-2);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.stage-miss {
+  display: grid; place-items: center; height: 100%; min-height: inherit;
+  margin: 0; padding: var(--gap-5); text-align: center;
+  font-size: 14px; line-height: 1.8; color: var(--ink-2);
+}
+
+/* 楼层表 */
+.b-side { display: flex; flex-direction: column; gap: var(--gap-3); }
+.flr-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--ink); }
+.flr {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 0 var(--gap-2);
+  width: 100%; padding: var(--gap-2) var(--gap-2) var(--gap-2) var(--gap-3);
+  border: 0; border-bottom: 1px solid var(--rule);
+  background: transparent; font: inherit; text-align: left; cursor: pointer;
+  position: relative;
+  transition: background var(--t-fast);
+}
+.flr::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent); transform: scaleY(0); transform-origin: top;
+  transition: transform var(--t-med) var(--ease);
+}
+.flr:hover { background: var(--paper-up); }
+.flr[aria-pressed="true"] { background: var(--paper-up); }
+.flr[aria-pressed="true"]::before { transform: scaleY(1); }
+.flr-tag { font-size: 13px; font-weight: 600; color: var(--ink); }
+.flr[aria-pressed="true"] .flr-tag { color: var(--accent); }
+.flr-mid { display: flex; align-items: baseline; gap: var(--gap-2); font-size: 13px; }
+.flr-cnt { grid-column: 2; font-size: 11px; }
+
+/* 图纸带 */
+.b-draw { margin-top: var(--gap-6); }
+.draw-head {
+  display: flex; align-items: center; gap: var(--gap-4);
+  padding-bottom: var(--gap-3); border-bottom: 1px solid var(--ink);
+}
+.tabs { display: flex; gap: var(--gap-4); margin-left: auto; }
+.tab {
+  padding: 3px 0; border: 0; border-bottom: 2px solid transparent;
+  background: none; font: inherit; font-size: 13px; color: var(--ink-3); cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.tab:hover:not(:disabled) { color: var(--accent); }
+.tab[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab:disabled { color: var(--rule-2); cursor: not-allowed; }
+.draw-body { padding-top: var(--gap-4); }
+/* 图纸底板用纯白：结果图本来是白底黑线，压在暖纸上会整片偏黄 */
+.draw-fig {
+  margin: 0; padding: var(--gap-4);
+  background: #fff; border: 1px solid var(--rule-2);
+}
+.draw-img { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+.draw-fig figcaption {
+  display: flex; flex-wrap: wrap; gap: var(--gap-3);
+  margin-top: var(--gap-3); padding-top: var(--gap-2);
+  border-top: 1px dotted var(--rule);
+  font-size: 12px; color: var(--ink-2);
+}
+.draw-miss {
+  margin: 0; padding: var(--gap-6) var(--gap-4); text-align: center;
+  font-size: 14px; color: var(--ink-3);
+  border: 1px dashed var(--rule-2);
+}
+
+/* 构件合计 */
+.b-totals { margin-top: var(--gap-6); }
+.tot-row {
+  display: flex; flex-wrap: wrap; gap: var(--gap-2) var(--gap-5);
+  margin-top: var(--gap-4); padding: var(--gap-3) 0;
+  border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2);
+}
+.tot { display: flex; align-items: baseline; gap: var(--gap-2); }
+.tot-v { font-size: 22px; }
+.tot-k { font-size: 12px; color: var(--ink-3); }
+.b-note { margin: var(--gap-3) 0 0; font-size: 12px; line-height: 1.7; }
+
+/* 实景 */
+.b-photos { margin-top: var(--gap-6); }
+.b-photos:empty { display: none; }
+.ph-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--gap-4); margin-top: var(--gap-4);
+}
+.ph { margin: 0; }
+.ph img {
+  display: block; width: 100%; height: 200px; object-fit: cover;
+  background: var(--paper-sink); border: 1px solid var(--rule-2);
+  transition: border-color var(--t-fast);
+}
+.ph:hover img { border-color: var(--accent); }
+.ph figcaption { display: flex; flex-direction: column; gap: 2px; margin-top: var(--gap-2); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .b-grid { grid-template-columns: 1fr; }
+  .stage, .stage canvas { min-height: 46vh; }
+  .stage-notes { position: static; max-width: none; margin-top: var(--gap-2); justify-items: start; }
+  .stage-note { text-align: left; }
+}
+
+/* ── 窄屏 ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  body { padding-inline: var(--gap-4); }
+  /* 预览提到清单**上面**（order:-1），不再 sticky —— 手机上常驻侧栏没有位置，
+     但"点到哪栋看哪栋"这个动作不能丢，所以留在同一列里跟着滚动。*/
+  .index-body { grid-template-columns: 1fr; gap: var(--gap-4); }
+  .preview { position: static; order: -1; }
+  .row { grid-template-columns: 34px minmax(0, 1fr); }
+  .row-nums { grid-column: 2; }
+  .tally { gap: var(--gap-2) var(--gap-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .row::before { transform: scaleY(1); }   /* 动效没了，当前项还得看得出来 */
+}
