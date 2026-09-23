@@ -85,7 +85,11 @@ _ID_BASE_SRC = Path("backend") / "extract" / "extract_rooms_generic.py"
 def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
     """有 profile 却没有一间房。
 
-    ★ 这条是 2026-09-23 全库量出来的：95 栋里 **45 栋** rooms.json 是 `[]`。
+    ★ 这条是 2026-09-23 全库量出来的：当时 95 栋里 **45 栋** rooms.json 是 `[]`。
+    ★ 现况（2026-09-24 凌晨复量）：**22 栋**，其中 **18 栋**不在 `ID_BASE` 名单里
+      （A6 同数）。差的 23 栋是 09-23 夜补名单补进去的 —— 所以**别把 45 当现况读**：
+      本文件里这个数是**历史测量**，要现况就跑 A1/A6，引擎自己会数。
+      （留这条痕是因为"45→22"正好证明了根因判断是对的：缺的是名单不是识别能力。）
     根因不是识别失败，是**名单**：`extract_rooms_generic.ID_BASE` 里没有它们，
     于是 run() 一次都没为它们跑过。此前一直被当成"识别不行"，
     其实是"压根没进过流程"。
@@ -118,9 +122,11 @@ def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
     n = len(rooms) if isinstance(rooms, list) else 0
     if n == 0:
         # ★ 别把"根因是什么"留给读的人自己猜：A6 的白名单是**能自己查的**，
-        #   查了再说话 —— 全库 45 栋里绝大多数就是这一条（2026-09-23 实测：
-        #   A1 亮 45 栋、A6 亮 45 栋，**是同一批楼**）。写成"先查…"等于把
-        #   一件已经量得出来的事推给人（memory: one-judgement-many-implementations）。
+        #   查了再说话 —— 绝大多数就是这一条（2026-09-23 实测：A1 亮 45 栋、
+        #   A6 亮 45 栋，**是同一批楼**；2026-09-24 复量为 22 栋 / 18 栋，
+        #   差值来自当夜补名单。**两个数都是历史测量，现况请看本条的输出**）。
+        #   写成"先查…"等于把一件已经量得出来的事推给人
+        #   （memory: one-judgement-many-implementations）。
         why = "先查该楼号是否在 extract_rooms_generic.ID_BASE 里（见 A6）"
         ev = {"rooms": 0, "rooms_json_bytes": rp.stat().st_size}
         try:
