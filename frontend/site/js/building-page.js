@@ -185,6 +185,8 @@ function paintTotals() {
   const sum = {};
   for (const f of state.floors) for (const k of keys) sum[k] = (sum[k] ?? 0) + (f.counts?.[k] ?? 0);
   const has = state.floors.some((f) => f.counts);
+  const nRooms = state.floors.reduce((a, f) => a + (f.rooms ?? 0), 0);
+  const roomArea = state.floors.reduce((a, f) => a + (f.rooms_area_m2 ?? 0), 0);
   return el('section', { class: 'b-totals' },
     el('h2', { class: 'sec-h', text: '构件合计' }),
     has
@@ -193,8 +195,15 @@ function paintTotals() {
           el('span', { class: 'tot-k', text: label[k] }))))
       : el('p', { class: 'draw-miss', text: '逐层数据里没有构件计数，不知道是没识别还是没落盘。' }),
     el('p', { class: 'b-note dim',
-      text: `以上为 ${state.floors.length} 层逐层计数之和（不是全库统计）。` +
-            '房间面积合计为 0 表示这栋楼的房间没有量到面积，不是"面积为零"。' }));
+      text: `以上为 ${state.floors.length} 层逐层计数之和（不是全库统计）。` }),
+    // ★ 房间面积单说一句。这个数是**足迹**口径（不扣洞），跟楼板面积同口径 ——
+    //   不写清楚，看的人会拿它当"建筑面积"去对图纸，那就对不上。
+    //   而 0 只在"有房间却没算出面积"时才出现（后端按 poly 现算）：那是没量到，
+    //   不是"面积为零"，所以那种话只在真的为 0 时才说。
+    nRooms > 0 ? el('p', { class: 'b-note dim', text: roomArea > 0
+      ? `房间合计 ${nRooms} 间 · ${fmt(roomArea, ' ㎡')}（足迹口径，不扣洞；逐层见右侧楼层表）。`
+      : `房间合计 ${nRooms} 间，但没有一间量到面积 —— 是没量到，不是"面积为零"。` })
+      : null);
 }
 
 /* ── 错误 ───────────────────────────────────────────────────── */

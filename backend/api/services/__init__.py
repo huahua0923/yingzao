@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""服务器安全区服务层。
+"""api 服务层：把「磁盘上的建模产物」翻译成前端要的形状。
 
-本包的模块**必须在只装 requirements-server.txt 的 venv 里可导入** ——
-不得在模块级 import ezdxf / shapely / trimesh / numpy / mapbox_earcut / matplotlib。
-需要重依赖的能力要么走 {@see Settings.compute} 门禁，要么读构建期冻结的产物。
+分层的唯一理由：路由只管 HTTP 形状（参数、状态码），这里只管**数据在哪、
+叫什么、怎么读**。想换存储（PostgreSQL 台账 / 对象存储）只动这一层。
 """

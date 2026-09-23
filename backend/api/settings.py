@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     # 不设 = 老服务拒绝启动 —— 逼部署方显式确认，而不是「碰巧跑在某个端口上」。
     legacy_console_port: int | None = None   # backend/web/control.py
     legacy_rooms_port: int | None = None     # backend/db/serve_rooms.py
+    # 房间台账后台（backend/db/serve_rooms_admin.py）：**会写库**的管理页，只在本机跑。
+    # 同样刻意不给默认值 —— 端口只存在于 .env。
+    rooms_admin_port: int | None = None      # backend/db/serve_rooms_admin.py
+    # 台账后台**单独**的监听地址：刻意不复用 GYM3D_HOST。
+    # 查看器是要给局域网看的（HOST=0.0.0.0），而管理页能改数据库，不该跟着一起对外。
+    # 想从别的机器管，就显式设 GYM3D_ROOMS_ADMIN_HOST=0.0.0.0 **并且**设 GYM3D_ADMIN_TOKEN，
+    # 否则服务拒绝启动（见 serve_rooms_admin.py）。
+    rooms_admin_host: str = "127.0.0.1"
 
     # ── 数据库（PostgreSQL / lihua_twin）────────────────────────────
     # 别名不带 GYM3D_ 前缀：沿用既有部署环境里的 LIHUA_DB_* 变量名，
