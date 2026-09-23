@@ -556,7 +556,14 @@ def check_a8(rep: Report, data_dir, name: str, **_kw) -> None:
         bits = []
         if console_only:
             bits.append("**批量通道读不到**：%s（建出交付件的是批量通道 ⇒ "
-                        "这套机制在交付里从没生效过）" % "、".join(sorted(console_only)))
+                        "这套机制在交付里从没生效过。★ 但**别以为补上加载器就行**："
+                        "实测（2026-09-24）把 floor_y_bands 接上后，有东西落在窗口外的"
+                        "**6/6 栋全部直接崩**在 recognize.py 的 `sorted({…None…})` —— "
+                        "`floor_of` 在窗口外是**故意**返回 None（「不属于任何层」），"
+                        "而下游第一处消费就吃不掉它。要接它，先让 None 有归宿，"
+                        "而且得逐处找还有没有别处把 None 当层号用；"
+                        "**加载器不传这个键，正是流水线今天能跑的原因**）"
+                        % "、".join(sorted(console_only)))
         if fleet_only:
             bits.append("控制台通道读不到：%s（**本栋不丢** —— 见下）"
                         % "、".join(sorted(fleet_only)))
