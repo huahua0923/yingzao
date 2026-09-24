@@ -20,6 +20,10 @@ const VIEWS = [
   { id: 'components', label: '构件',  load: () => import('./views/components.js') },
   { id: 'area',       label: '面积',  load: () => import('./views/area.js') },
   { id: 'checks',     label: '检查',  load: () => import('./views/checks.js') },
+  // 图谱：引擎在 `kb/`（`ask.py` 是唯一查询入口），本视图只读两条 GET。
+  // ★ 它进的是**后台**（管理面）而不是前台：这一屏回答的是「遇到这个症状该查什么」，
+  //   是排查工具，不是给访客看这栋楼长什么样的东西。
+  { id: 'kg',         label: '图谱',  load: () => import('./views/kg.js') },
 ];
 
 // ★ 暂时仍落在「检查」：总览视图还在写，等它落盘再切默认，免得后台一开就是"视图加载失败"。

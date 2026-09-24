@@ -23,7 +23,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .responses import ERR_INTERNAL, ApiError, envelope, error_json
-from .routers import analysis, buildings, checks, components, health
+from .routers import analysis, buildings, checks, components, health, kg
 from .settings import get_settings
 
 log = logging.getLogger("gym3d.api")
@@ -89,6 +89,9 @@ def create_app() -> FastAPI:
     app.include_router(components.router, prefix=cfg.api_prefix)
     app.include_router(analysis.router, prefix=cfg.api_prefix)
     app.include_router(checks.router, prefix=cfg.api_prefix)
+    # 图谱域：两条 GET、只读（清单 ＋ 扩散激活查询）。写操作（--run/--pending）刻意
+    # **不开口子**，理由写在 routers/kg.py 的文件头。
+    app.include_router(kg.router, prefix=cfg.api_prefix)
 
     # ── 产物静态目录（GLB 走这里；生产交给 nginx）──────────────
     bdir = _buildings_dir(cfg)

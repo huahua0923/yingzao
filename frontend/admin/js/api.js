@@ -77,6 +77,16 @@ export const API = {
   // 全库级结论（引擎对整个库跑一次的那份）。★ 分母是全库，与单栋那条不同。
   checksFleet:    ()     => getEnv('/api/checks/fleet'),
   checks:         (n)    => getEnv(`/api/checks/${n}`),
+  // 图谱（引擎在 kb/，HTTP 只有这两条只读 GET）
+  // ★ 走 getEnv：这两条的 meta 是有内容的（子进程退出码/耗时/夹过的 top/复现用的 argv），
+  //   而 data 是 `kb/ask.py --json` **原样透传**的那一份 —— 逐字段相同由
+  //   `python -m backend.checks.kg_view_accept --parity` 守着。
+  // ★ 写操作（`--run` 跑判据、`--pending` 登记）刻意**没有** HTTP 口子，
+  //   所以这里也只有两条读。别顺手补一个 POST。
+  kg:             ()     => getEnv('/api/kg'),
+  kgAsk:          (q, building = '', top = 3) =>
+    getEnv(`/api/kg/ask?q=${encodeURIComponent(q)}`
+      + `&building=${encodeURIComponent(building)}&top=${encodeURIComponent(top)}`),
   // heavy 是**查询参数**（FastAPI 的 bool query），不是请求体 —— 别塞进 body。
   checksRun:      (n, heavy = false) =>
     post(`/api/checks/${n}/run${heavy ? '?heavy=true' : ''}`),

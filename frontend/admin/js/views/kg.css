@@ -1,0 +1,225 @@
+/* 「图谱」视图的样式 —— 色板与间距一律沿用 app.css 的 token。
+ *
+ * ★★ 这一屏的样式**有语义**，不是装饰：
+ *   · hit / unverified / miss 三态各给一个**形状不同**的横幅（实心边 / 虚线边 /
+ *     带斜纹的边），不许只靠颜色区分 —— 色盲、投影仪、截图转灰都会让纯色失效，
+ *     而这三档分不开的后果是「图里没有」被读成「没问题」。
+ *   · 「有锚点」与「只有人记着」同理：一个是实线实心、一个是虚线点纹。
+ *   · 一条命令**会写盘**时，块上要有一条左侧的琥珀竖条 + 明确的字，不能只标个颜色。
+ *
+ * 布局是**三栏**（左：图里有什么｜中：链｜右：命中的楼栋·层），刻意不画力导向大图：
+ * 上千个实例节点糊成一团，回答不了「这个症状的根因是什么」。
+ * 窄屏塌成一栏 —— 顺序即优先级：横幅与链在最前。
+ */
+
+.kg-wrap {
+  display: grid;
+  grid-template-columns: minmax(232px, 300px) minmax(0, 1fr) minmax(268px, 360px);
+  gap: var(--sp-4);
+  align-items: start;
+}
+@media (max-width: 1180px) {
+  .kg-wrap { grid-template-columns: minmax(0, 1fr) minmax(268px, 340px); }
+  .kg-rail { grid-column: 1 / -1; }
+}
+@media (max-width: 820px) {
+  .kg-wrap { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── 通用小件 ───────────────────────────────────────────────── */
+.kg-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: 600 10px/1.6 var(--mono); letter-spacing: .06em;
+  padding: 0 6px; border-radius: 999px;
+  border: 1px solid currentColor; color: var(--text-faint);
+  white-space: nowrap;
+}
+.kg-pill.ok { color: var(--cyan); }
+.kg-pill.warn { color: var(--amber); border-style: dashed; }
+.kg-pill.miss { color: var(--red); border-style: dotted; }
+.kg-pill.unknown { color: var(--amber); border-style: dotted; }
+
+.kg-card {
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-2); padding: var(--sp-3) var(--sp-4);
+  margin: 0 0 var(--sp-3);
+}
+.kg-card-h {
+  margin: 0 0 var(--sp-2); font: 600 12px/1.5 var(--mono);
+  letter-spacing: .07em; color: var(--text-dim); text-transform: none;
+}
+.kg-note { color: var(--text-dim); font-size: 12.5px; line-height: 1.65; margin: 0 0 var(--sp-2); }
+.kg-warnline {
+  color: var(--amber); font-size: 12.5px; line-height: 1.65;
+  border-left: 2px solid var(--amber); padding-left: var(--sp-2); margin: var(--sp-2) 0;
+}
+/* 「你点的是 A，引擎打开的是 B」—— 这不是数据的毛病，是**链接的**毛病，
+   所以给它比普通告警线更重的一层：实心双线边框 + 底纹，与"内容警告"分得开。 */
+.kg-intent {
+  border-left: 3px solid var(--amber);
+  background: rgba(232, 163, 61, .07);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r-1);
+}
+.kg-intent b { color: var(--amber); }
+
+.kg-kv { font-size: 12.5px; color: var(--text-dim); line-height: 1.7; }
+.kg-kv b { color: var(--text); font-weight: 600; }
+.kg-ev { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.kg-ev code, .kg-kv code, .kg-note code, .kg-cmd code, .kg-ruler code {
+  font: 11.5px/1.6 var(--mono); color: var(--cyan);
+  background: rgba(53, 198, 212, .07); border-radius: var(--r-1); padding: 0 4px;
+  overflow-wrap: anywhere;
+}
+.kg-go { color: var(--cyan); text-decoration: none; border-bottom: 1px dotted var(--cyan-dim); }
+.kg-go:hover { border-bottom-style: solid; }
+.kg-btn {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--rule);
+  border-radius: var(--r-1); padding: 3px 12px; font: 12px var(--sans); cursor: pointer;
+}
+.kg-btn:hover { border-color: var(--cyan-dim); }
+.kg-btn.ghost { color: var(--text-dim); }
+.kg-copy {
+  background: none; border: 1px solid var(--rule); color: var(--text-faint);
+  border-radius: var(--r-1); font: 10.5px var(--mono); padding: 1px 6px; cursor: pointer;
+}
+.kg-copy:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+
+/* ── 左栏 ───────────────────────────────────────────────────── */
+.kg-rail { position: sticky; top: var(--sp-3); }
+.kg-rail-sum {
+  font-size: 12.5px; color: var(--text-dim); line-height: 1.7;
+  background: var(--panel-2); border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--cyan-dim);
+  border-radius: var(--r-2); padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3);
+}
+.kg-rail-sum b { color: var(--text); }
+.kg-rail-h {
+  margin: var(--sp-4) 0 var(--sp-2); font: 600 11px/1.5 var(--mono);
+  letter-spacing: .1em; color: var(--text-faint);
+}
+.kg-rail-list { list-style: none; margin: 0; padding: 0; }
+.kg-rail-list li {
+  border-top: 1px solid var(--rule-soft); padding: var(--sp-2) 0;
+}
+.kg-rail-list li:last-child { border-bottom: 1px solid var(--rule-soft); }
+.kg-rail-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: baseline; justify-content: space-between; }
+.kg-rail-a { color: var(--text); text-decoration: none; font-size: 12.5px; line-height: 1.5; }
+.kg-rail-a:hover { color: var(--cyan); }
+/* 没有别名 ⇒ 点不亮。**画成灰的并写明原因**，不做成"点了没反应"的假链接。 */
+.kg-rail-a.off { color: var(--text-faint); cursor: help; border-bottom: 1px dotted var(--text-faint); }
+.kg-badges { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.kg-aka { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.kg-aka.dim { display: block; }
+.kg-aka-a {
+  font: 10.5px var(--mono); color: var(--text-dim); text-decoration: none;
+  border: 1px solid var(--rule-soft); border-radius: 999px; padding: 0 6px;
+}
+.kg-aka-a:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+
+/* ── 中栏 ───────────────────────────────────────────────────── */
+.kg-search { display: flex; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.kg-input {
+  flex: 1 1 auto; min-width: 0;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--rule); border-radius: var(--r-1);
+  padding: 7px 10px; font: 13px var(--sans);
+}
+.kg-input:focus { outline: none; border-color: var(--cyan-dim); }
+
+/* 三态横幅：形状不同，不只颜色不同 */
+.kg-banner {
+  border: 1px solid var(--rule); border-left-width: 4px;
+  border-radius: var(--r-2); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-3);
+  background: var(--panel);
+}
+.kg-banner-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.kg-banner-why { margin: var(--sp-2) 0 0; font-size: 12.5px; line-height: 1.7; color: var(--text-dim); }
+.kg-banner.ok      { border-left-color: var(--cyan); }
+.kg-banner.warn    { border-left-color: var(--amber); border-left-style: dashed;
+                     background-image: repeating-linear-gradient(45deg,
+                       rgba(232,163,61,.06) 0 3px, transparent 3px 9px); }
+.kg-banner.miss    { border-left-color: var(--red); }
+.kg-banner.unknown { border-left-color: var(--amber); border-left-style: dotted; }
+.kg-q { font-size: 12px; color: var(--text-dim); }
+
+.kg-title { margin: var(--sp-3) 0 var(--sp-2); font-size: 19px; line-height: 1.45; color: var(--text); }
+.kg-title .sub { font: 400 11.5px var(--mono); color: var(--text-faint); }
+
+.kg-items { list-style: none; margin: 0; padding: 0; }
+.kg-items li { padding: var(--sp-2) 0; border-top: 1px solid var(--rule-soft); }
+.kg-items li:first-child { border-top: none; }
+.kg-what { font-size: 13px; line-height: 1.7; color: var(--text); }
+.kg-rest { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: 3px; }
+.kg-masq { font-size: 12.5px; line-height: 1.65; color: var(--text-dim); }
+.kg-masq b { color: var(--amber); }
+/* 散文型字段（`mechanism` 等）—— 与 kg-masq 同一档字号，但用正文色：
+   机制是**要说清的内容**，不是边注。 */
+.kg-prose { font-size: 12.5px; line-height: 1.75; color: var(--text); }
+.kg-prose code { color: var(--cyan); }
+/* 整篇 md 原样呈现（知识条目那一支）：不渲染，所以按等宽排版、限高可滚。
+   限高是为了不让一篇文章把中栏拉成一万像素 —— 内容一个字不少，只是要滚。 */
+.kg-md {
+  margin: 0; max-height: 60vh; overflow: auto; white-space: pre-wrap;
+  font-size: 12px; line-height: 1.7; color: var(--text-dim);
+  background: var(--ink-2, rgba(255, 255, 255, .02)); padding: var(--sp-3);
+  border-radius: 3px;
+}
+
+.kg-card.kg-run { border-left: 2px solid var(--rule); }
+.kg-cmd {
+  border-top: 1px solid var(--rule-soft); padding-top: var(--sp-2); margin-top: var(--sp-2);
+}
+.kg-cmd:first-of-type { border-top: none; }
+.kg-cmd-line { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.kg-cmd-line code { font-size: 12px; }
+/* 会写盘的命令：一条琥珀竖条 ＋ 字。只给颜色是不够的。 */
+.kg-cmd.writes { border-left: 3px solid var(--amber); padding-left: var(--sp-3); }
+
+.kg-traps { list-style: none; margin: 0; padding: 0; }
+.kg-traps li { padding: var(--sp-2) 0; border-top: 1px solid var(--rule-soft); }
+.kg-traps li.anchored    { border-left: 2px solid var(--cyan-dim); padding-left: var(--sp-2); }
+.kg-traps li.human-only  { border-left: 2px dashed var(--amber); padding-left: var(--sp-2);
+                           background: repeating-linear-gradient(45deg,
+                             rgba(232,163,61,.05) 0 3px, transparent 3px 9px); }
+.kg-trap-head { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: baseline; }
+.kg-trap-title { font-size: 12.5px; color: var(--text); line-height: 1.6; }
+
+.kg-card.kg-miss { border-left: 2px solid var(--red); }
+.kg-card.kg-warn { border-left: 2px dashed var(--amber); }
+.kg-next {
+  font-size: 12.5px; line-height: 1.7; color: var(--text); margin-top: var(--sp-3);
+  border-top: 1px solid var(--rule-soft); padding-top: var(--sp-2);
+}
+.kg-next b { color: var(--cyan); }
+.kg-ruler { font-size: 11.5px; color: var(--text-dim); line-height: 1.9; margin-top: var(--sp-3); }
+.kg-ruler b { color: var(--text-faint); font-weight: 600; }
+.kg-leftover { margin-top: var(--sp-3); }
+.kg-leftover summary { font-size: 11.5px; color: var(--text-faint); cursor: pointer; }
+.kg-json {
+  font: 11px/1.6 var(--mono); color: var(--text-dim); background: var(--ink);
+  border: 1px solid var(--rule-soft); border-radius: var(--r-1);
+  padding: var(--sp-2); margin: var(--sp-2) 0 0; max-height: 320px; overflow: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.kg-transport { font-size: 11px; line-height: 1.9; margin-top: var(--sp-3); }
+
+.kg-empty { background: var(--panel); border: 1px solid var(--rule-soft);
+            border-radius: var(--r-2); padding: var(--sp-4); }
+.kg-empty h2 { margin: 0 0 var(--sp-2); font-size: 16px; }
+.kg-panic { background: var(--panel); border: 1px solid var(--rule);
+            border-left: 3px solid var(--red); border-radius: var(--r-2); padding: var(--sp-4); }
+
+/* ── 右栏 ───────────────────────────────────────────────────── */
+.kg-inst-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.kg-inst-table th {
+  text-align: left; font: 600 10.5px var(--mono); color: var(--text-faint);
+  border-bottom: 1px solid var(--rule); padding: 2px 4px;
+}
+.kg-inst-table td { border-bottom: 1px solid var(--rule-soft); padding: 3px 4px;
+                    color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+.kg-inst-table td:first-child { font-family: var(--sans); font-size: 12.5px; color: var(--text); }
+/* 两把尺子都命中的楼：结论比单侧命中硬，给它一层底 */
+.kg-inst-table tr.kg-both td { background: rgba(53,198,212,.05); }
+.kg-card.kg-inst.missing { border-left: 3px dashed var(--amber); }
+.kg-card.kg-inst.unknown { border-left: 3px dotted var(--amber); }
+.kg-card.kg-empty { border-style: dashed; }

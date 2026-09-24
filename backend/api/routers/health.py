@@ -47,6 +47,10 @@ def capabilities(cfg: SettingsDep) -> dict:
         # 检查引擎的产物目录在不在 —— 前端据此决定"检查"那一屏有没有东西可看。
         "checks_artifact_dir_present": (cfg.resolved_data_dir / "_meta" / "checks").is_dir(),
         "endpoints": {
+            # ⚠ 这两张表是**手抄的**，抄漏了不会报错，只会让这屏少说几条 ——
+            #   实测 2026-09-24 抄漏 `/api/checks/manifest` 与 `/api/checks/fleet` 两条
+            #   （路由在、这屏没有），补上了。**权威清单是 `/api/openapi.json`**，
+            #   这两张表只是给人扫一眼用的；判「有哪些路由」请解析 openapi，别读这里。
             "read": ["/api/health", "/api/capabilities", "/api/buildings",
                      "/api/buildings/{name}", "/api/buildings/{name}/artifacts",
                      "/api/buildings/{name}/floors",
@@ -59,7 +63,10 @@ def capabilities(cfg: SettingsDep) -> dict:
                      "/api/buildings/{name}/model.glb",
                      "/api/buildings/{name}/source.dxf",
                      "/api/components", "/api/analysis/area",
-                     "/api/checks/registry", "/api/checks/{building}"],
+                     "/api/checks/registry", "/api/checks/manifest",
+                     "/api/checks/fleet", "/api/checks/{building}",
+                     # 图谱域：清单 ＋ 扩散激活查询，两条都是 GET 只读。
+                     "/api/kg", "/api/kg/ask"],
             "write": ["/api/analysis/area/refresh/{name}",
                       "/api/checks/{building}/run"],
         },
