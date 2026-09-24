@@ -33,7 +33,8 @@ from __future__ import annotations
 from .findings import Finding, Report, Status, Verdict, unavailable
 
 __all__ = ["Finding", "Report", "Status", "Verdict", "unavailable",
-           "run_building_checks", "run_fleet_checks", "CHECK_REGISTRY"]
+           "run_building_checks", "run_fleet_checks", "run_system_checks",
+           "CHECK_REGISTRY"]
 
 
 # 注册表：编号 → (标题, 层, 是否逐栋, 是否要外部进程)
@@ -81,6 +82,27 @@ CHECK_REGISTRY = {
            "全库量下来 17 栋图纸层多于模型层，且**成类** —— 层号不是纯数字时"
            "（D1/J11/H）会被静默丢掉（`ROOM_RE` 的层号字段写死 `\\d{1,2}`）。"
            "本条的读数是图纸自带的面积表（外部真值），与 A2 同源但问的是层数。"),
+    # ── C 层：**系统级**，不逐栋（per_building=False）─────────
+    # 与 A/B 的分界只有一条：**A/B 逐栋问，C 整库问**。
+    # 有些毛病逐栋检查**结构上就看不见** —— 每一栋单独看都对、合起来对不上；
+    # 或同一个事实有两个来源各自自洽。这就是 C 层存在的理由。
+    "C0": ("系统完整性（账本/整体=各栋之和/四件套/无孤儿）", "C", False,
+           "★ 用户那句「不像一个系统那么完整」的可执行版（2026-09-24）。"
+           "只问四件逐栋问不到的事，不重复 A 层已经问过的。"),
+    "C1": ("口径自洽（同一事实的多个来源必须相等）", "C", False,
+           "★ 本仓实测「全库几层」有**六个**答案（456/12/1946/2414/468/642），"
+           "**六个全是对的**，缺的是没写下来的口径。这条把分歧变成红。"),
+    "C2": ("产物龄期（派生产物不得比上游旧）", "C", False,
+           "判据是**关系**不是阈值：不设容忍天数，只问「下游 mtime < 上游最新 mtime?」。"),
+    "C3": ("判据名册（哪些判据存在、谁登记过）", "C", False,
+           "没有一条判据能检查「还有哪些判据没人知道」。"
+           "同时算出 `_scratch/` 里哪些文件其实是系统件、必须收编 —— 不靠人眼看。"),
+    "C4": ("图谱引用可核（`kb/` 的边还指着原处吗、实例层是不是对着当前源）", "C", False,
+           "★ 补的是最后一条缝：图纸全对、台账全对、名册全对，**图谱仍然可能全错**。"
+           "`kb/` 里 99 条边逐条指着「文件:行 / 文件:符号」，源一改那条边就可能指空 ——"
+           "而 A/B 层逐栋看几何、C0–C3 看账本，**没有一条看得见这件事**。"
+           "它不自己判，只去跑图谱自己的门禁（`kb/gate.py` ＋ `kb/derive.py`）"
+           "再把结论翻译成 Finding —— 一把尺子一个实现。"),
 }
 
 
@@ -94,12 +116,20 @@ def run_building_checks(data_dir, name: str, which: tuple[str, ...] | None = Non
     """
     from . import builtin, heavy as heavy_mod
     rep = Report(scope="building:%s" % name)
-    ids = which or tuple(CHECK_REGISTRY)
+    # 不指名时只跑**逐栋**的判据；C 层是系统级的，在这里跑没有意义。
+    ids = which or tuple(c for c, m in CHECK_REGISTRY.items() if m[2])
     for cid in ids:
         if cid not in CHECK_REGISTRY:
             rep.add(unavailable(cid, "未知检查", "注册表里没有这条检查：%s" % cid))
             continue
-        _title, tier, _per, _why = CHECK_REGISTRY[cid]
+        _title, tier, per_building, _why = CHECK_REGISTRY[cid]
+        if not per_building:
+            # ★ 显式登记为 NOT_APPLICABLE，而不是让它掉进"实现缺失"那条分支 ——
+            #   「本来就不该在逐栋报告里出现」和「实现没写」是两件完全不同的事，
+            #   屏幕上却长得一样（本仓反复栽的那一族）。C 层只在全库航拍里跑。
+            rep.add(Finding(check=cid, title=_title, status=Status.NOT_APPLICABLE,
+                            detail="系统级判据：逐栋报告里不跑，见 runner.py 全库航拍"))
+            continue
         mod = builtin if tier == "A" else heavy_mod
         if tier == "B" and not heavy:
             # 明确登记为"这一轮没跑"，而不是静默缺席。
@@ -253,6 +283,20 @@ def run_fleet_checks(data_dir, names: list[str], heavy: bool = False,
             f.detail += "　⟵ 与 %s 亮的是**同一批 %d 栋**（状态也相同）：先查是不是一个根因，别当两件事修" % (others, len(s))
             f.evidence["same_cause_suspect"] = sorted(c for c in cids if c != cid)
     return rep
+
+
+def run_system_checks(data_dir, state: dict | None = None) -> Report:
+    """C 层：**系统级**判据（整库问，不逐栋）。
+
+    与逐栋检查的分界只有一条：**A/B 逐栋问，C 整库问。**
+    有些毛病逐栋结构上看不见 —— 每一栋单独看都对、合起来对不上；
+    或同一个事实有两个来源，各自自洽却互相不等。这条缝隙只有 C 层能堵。
+
+    `state` 不传就现算一份 `census.compute()`（唯一口径计算者）。
+    四个检查共用这一份，**不在这里重数**（C 层只做比较，不做计数）。
+    """
+    from . import system as system_mod
+    return system_mod.run_all(data_dir, state=state)
 
 
 def _check_sort_key(cid: str) -> tuple:

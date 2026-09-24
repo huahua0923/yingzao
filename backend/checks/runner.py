@@ -27,8 +27,9 @@ from pathlib import Path
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[2])]   # 供 backend.checks 导入
 
-from backend.checks import CHECK_REGISTRY, run_building_checks, run_fleet_checks  # noqa: E402
-from backend.checks.findings import Verdict  # noqa: E402
+from backend.checks import (CHECK_REGISTRY, run_building_checks,  # noqa: E402
+                            run_fleet_checks, run_system_checks)
+from backend.checks.findings import Report, Verdict  # noqa: E402
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 OUT_REL = os.path.join("data", "_meta", "checks")
@@ -103,18 +104,34 @@ def main() -> int:
         return 0
 
     heavy = "--heavy" in flags
+    if "--all" in flags and names:
+        # ★ `--all` 此前是个**被接受却什么都不做**的开关（不给楼名本来就走全库），
+        #   与 memory 那族"形式检查通过、语义没发生"完全同形。现在它真的做事：
+        #   语义 = 「全库 + 系统级」，给了楼名也以全库为准（总表就该是全库的）。
+        names = []
     names = names or _all_names()
     if not names:
         print("没有可检查的楼（%s 下没有 profile.json）" % (DATA_DIR / "buildings"))
         return 2
 
-    if len(names) == 1:
+    if len(names) == 1 and "--all" not in flags:
         rep = run_building_checks(DATA_DIR, names[0], heavy=heavy)
         scope = "building-%s" % names[0]
         payload = rep.as_dict()
     else:
         rep = run_fleet_checks(DATA_DIR, names, heavy=heavy)
         scope = "fleet"
+        # ── 全库航拍上再叠一层**系统级**判据（C 层）—— 这才是「总表」──────
+        # ★ 为什么必须叠在这里而不是逐栋里：C 层问的是**整库**（整体=各栋之和、
+        #   同一事实的多个来源、产物龄期、判据名册）。逐栋跑它没有意义，
+        #   逐栋跑也**结构上看不见**它要抓的那类毛病。
+        sys_rep = run_system_checks(DATA_DIR)
+        for f in sys_rep.findings:
+            rep.add(f)
+        rep.meta["layer"] = ("A+B(逐栋) + C(系统级)" if heavy
+                             else "A(逐栋) + C(系统级)")
+        rep.meta["system"] = sys_rep.meta
+        rep.meta["system_verdict"] = sys_rep.rollup()
         payload = rep.as_dict()
     payload["generated_unix"] = time.time()
     payload["generated_iso"] = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -139,6 +156,24 @@ def _print_report(rep, names: list[str]) -> None:
     print("-" * 74)
     # 全库模式：一栋一行；单栋模式：逐条（含逐层）
     if d["scope"] == "fleet":
+        # ── C 层（系统级）单列在最上面 ─────────────────────────────
+        # ★ 下面那两段只认 `fleet.` 前缀，C 层的 check 是 `C0.xxx` 这种形状
+        #   ⇒ 不单列出来，**C 层就会「进了 JSON 却不进屏幕」**，屏幕上看着像没有。
+        #   这正是本仓反复栽的那一族：没显示出来的东西，和不存在的东西长得一样。
+        sysrows = [f for f in d["findings"]
+                   if len(f["check"]) > 1 and f["check"][0] == "C"
+                   and f["check"][1].isdigit()]
+        if sysrows:
+            sv = d.get("meta", {}).get("system_verdict", "?")
+            print("系统级判据（C 层 · 整库问，不逐栋）  结论 %s" % str(sv).upper())
+            for f in sysrows:
+                print("  [%-11s] %-30s %s"
+                      % (f["status"], f["check"], f["title"]))
+                if f["detail"]:
+                    print("              %s" % f["detail"][:200])
+                if f["measure"]:
+                    print("              口径：%s" % f["measure"])
+            print("-" * 74)
         wall = [f for f in d["findings"] if f["check"].startswith("fleet.check.")]
         rows = [f for f in d["findings"]
                 if f["check"].startswith("fleet.") and not f["check"].startswith("fleet.check.")]
@@ -590,6 +625,66 @@ def _selftest() -> int:
               "「谁也没接住它」整支闭嘴（其余照发）；")
         print("          号段口径与 A9 同源、图幅外带本栋号段的号会报而邻幅 `Y11xx` 不报、"
               "滤掉的号连层带 x 留下、PASS 句子里写了分母与薄层")
+
+        # ⑧ C3「判据名册」—— **这条判据自己**会不会红。
+        # ★ 为什么非试不可：C3 第一版只数「disposition 为空的条数」。而空处置这件事
+        #   在名册那边被修掉（根目录散件也给了明确处置）之后，C3 就**恒绿**了 ——
+        #   屏幕上永远一行 PASS，而它已经答不了它被派去回答的问题
+        #   （memory: saturated-criterion-has-no-resolution、
+        #    vacuous-test-assertions：判据全绿先问"它是不是取极值"）。
+        #   ⇒ 现在的两个量（①名册是哪把尺子量的 ②名册指的路径还在不在）都必须能红。
+        # ★ 临时世界**照真产物的形状**摆：名册条目里的路径在临时世界里**真的存在**
+        #   （第一版没摆，于是"路径都在"那个用例当场假红 —— 刑具自己也得不走样，
+        #    memory: fixture-shape-must-copy-real-artifact）。
+        # ★ 这里**自造**名册、不读仓里那份：要验的是这两条判据，与真名册有多少条无关；
+        #   自造才不受「今天恰好在哪个状态」影响。
+        from backend.checks import system as _S
+        from backend.state import roster as _R          # 指纹规则取自生产者
+
+        def _c3_world(tag, *, stale_gauge=False, drop_path=False,
+                      no_fp=False, no_roster=False):
+            t = tmp / ("c3_" + tag)
+            (t / "backend" / "state").mkdir(parents=True, exist_ok=True)
+            (t / "data" / "_meta").mkdir(parents=True, exist_ok=True)
+            gauge = b"# gauge v1\n"                      # 生成名册时那把尺子
+            (t / _S.ROSTER_SRC_REL).write_bytes(
+                gauge + (b"# changed after build\n" if stale_gauge else b""))
+            (t / "zz_c3").mkdir(exist_ok=True)
+            (t / "zz_c3" / "a.py").write_bytes(b"")
+            if no_roster:
+                return t / "data"
+            payload = {"built_at": "2026-01-01T00:00:00",
+                       "entries": [{"path": "zz_c3/a.py",
+                                    "disposition": "一次性探针"}]}
+            if not no_fp:
+                payload["source_sha256_12"] = _R.sha12(gauge)
+            if drop_path:                    # 摆完之后才加，它是唯一缺席的那条
+                payload["entries"].append({"path": "zz_c3/gone.py",
+                                           "disposition": "待拍板"})
+            (t / _S.ROSTER_REL).write_text(json.dumps(payload), encoding="utf-8")
+            return t / "data"
+
+        def _c3_status(tag, **kw):
+            rep = Report(scope="C3-selftest")
+            _S.check_c3(rep, _c3_world(tag, **kw), {})
+            return rep.findings[0].status.value if rep.findings else "无结论"
+
+        _c3_want = [("ok", {}, "pass", "指纹自洽、路径都在"),
+                    ("stale", {"stale_gauge": True}, "gap", "量具改过而名册没重跑"),
+                    ("missing", {"drop_path": True}, "gap", "名册指了不存在的路径"),
+                    ("nofp", {"no_fp": True}, "unavailable", "名册没记指纹（量不到≠绿）"),
+                    ("none", {"no_roster": True}, "unavailable", "名册不在场")]
+        _c3_got = {}
+        for _tag, _kw, _want, _what in _c3_want:
+            _c3_got[_tag] = _c3_status(_tag, **_kw)
+            if _c3_got[_tag] != _want:
+                print("自检失败：C3 在「%s」时应报 %s，实际 %s" % (_what, _want, _c3_got[_tag]))
+                return 1
+        if len(set(_c3_got.values())) < 2:
+            print("自检失败：C3 的五个用例结论全同（%s）—— 它分辨不了任何东西" % _c3_got)
+            return 1
+        print("自检 ⑧ C3 名册对账：%s（五个用例，"%"/".join(_c3_got[t] for t, *_ in _c3_want)
+              + "两档能红、量不到不报绿）")
 
         print("自检通过：这引擎会红（①⑥）、也不会乱红（②③④⑤⑦）、"
               "分得清「不可比」与「说不通」（⑤）、"

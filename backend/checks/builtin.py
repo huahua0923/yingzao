@@ -725,7 +725,7 @@ def check_a2(rep: Report, data_dir, name: str, **_kw) -> None:
     """逐层房间数 vs 图纸自带面积表的「房间数」列。
 
     ★ 这是本仓库最值钱的一把**外部**量具：数字不是我们算的，是画图人写的
-    （DXF 里的 ACAD_TABLE，见 `_scratch/_area_audit.py::dxf_area_table`）。
+    （DXF 里的 ACAD_TABLE，见 `backend/checks/_area_audit.py::dxf_area_table`）。
 
     图纸数从 `sources`（引擎自己产出的逐层明细）来 —— A 层不许 import ezdxf，
     所以图纸里的数必须先被取出来落成产物。产物没有 ⇒ UNAVAILABLE，

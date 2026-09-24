@@ -85,7 +85,7 @@ import re
 from pathlib import Path
 
 # 图册模板里的示例行：建筑面积刚好 100.00㎡。
-# ★ 这是 `_scratch/_area_audit.py` 里既有的口径（它自己做 99.5~100.5 的过滤），
+# ★ 这是 `backend/checks/_area_audit.py` 里既有的口径（它自己做 99.5~100.5 的过滤），
 #   本模块与它保持一致；但**不过滤掉就静默**，剔了几行要报出来。
 TEMPLATE_AREA = (99.5, 100.5)
 

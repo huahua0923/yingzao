@@ -12,10 +12,15 @@ A 层（builtin）不许 import ezdxf，所以它读不到图纸；但"逐层房
 
 ## 现成的一把手（不重造）
 
-`_scratch/_area_audit.py` 已经能干这件事，且**它是"调试好的代码"，不许改**
+`backend/checks/_area_audit.py` 已经能干这件事，且**它是"调试好的代码"，不许改**
 （CLAUDE.md 铁律：调试好的代码禁止再修改）。所以这里只做两件事：
   ① 调它（带楼名列表 = 它会多打一段逐层明细）；
   ② 把它的文本输出解析成 JSON —— 解析失败就报"量不到"，绝不编。
+
+★ 2026-09-24 路径变更：这个脚本原在 `_scratch/`，随「中间产物移出仓库」收编进
+  `backend/checks/`。**内容一字未动**（搬前搬后 sha256 相同），只换了位置 ——
+  所以"不许改"这条仍然成立。凡引用它的地方都要跟着换：那是**路径字符串**，
+  不是 import，写错了不会报错，只会在跑的时候说"找不到脚本"。
 """
 from __future__ import annotations
 
@@ -28,7 +33,7 @@ import tempfile
 from pathlib import Path
 
 DETAIL_REL = os.path.join("data", "_meta", "area_audit_detail.json")
-SCRIPT_REL = os.path.join("_scratch", "_area_audit.py")
+SCRIPT_REL = os.path.join("backend", "checks", "_area_audit.py")
 
 # `   1层 图纸  6751.30  模型  3892.70  差  -2858.6   房间数 21`
 _FLOOR_RE = re.compile(

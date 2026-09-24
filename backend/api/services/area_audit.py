@@ -28,10 +28,18 @@ from pathlib import Path
 
 from ..responses import ApiError
 
-# 对账脚本：不在 data/ 里，是仓库根的 _scratch/ 工具脚本。
-# 刻意**不搬进 backend/**：它是"调试好的"量具（CLAUDE.md 铁律：调试好的代码禁止再修改），
-# 搬动会顺手改坏判据。这里只当它是外部命令来调。
-SCRIPT_REL = os.path.join("_scratch", "_area_audit.py")
+# 对账脚本：**已收编进 `backend/checks/`**（2026-09-24）。
+# ★ 这里曾经写着「刻意不搬进 backend/，因为它是"调试好的"量具」—— 那条理由现在不成立，
+#   因为搬动**没有改内容**（搬前搬后 sha256 相同），而"不许改内容"这条仍然有效。
+#   原来的顾虑是"搬动会顺手改坏判据"，防的是**改**，不是**位置** —— 两件事别混。
+#   仍当它是**外部命令**来调（子进程，不是 import）：它有自己的 sys.path 魔法。
+SCRIPT_REL = os.path.join("backend", "checks", "_area_audit.py")
+
+#: 全库对账日志的落点。**这是产物，不是代码** —— 和 `area_audit_detail.json`
+#: 一样放在 `data/_meta/`（那已是本仓"量出来的快照"的既定位置）。
+#: ★ 原先它在 `_scratch/` 下；`_scratch/` 整个移出仓库后，读它就会永远读不到，
+#:   而屏幕上只显示"还没有对账日志"—— 和"从没跑过"长得一模一样（假空）。
+LOG_GLOB = os.path.join("data", "_meta", "area_audit_fleet_*.log")
 
 # 楼栋行：`c047        1   21371.4㎡   21371.4㎡   F0(图纸5350.9/模型26722.3)`
 _ROW_RE = re.compile(
@@ -48,8 +56,7 @@ _TITLE_RE = re.compile(r"^---\s+(?P<name>[A-Za-z0-9_-]+)\s+逐层")
 def find_log(root: Path) -> Path | None:
     """最新的一份全库对账日志。带日期后缀，取 mtime 最新的那份 ——
     并把这个事实（哪份、什么时候）回给前端。"""
-    cands = [Path(p) for p in
-             glob.glob(str(root / "_scratch" / "_area_audit_fleet_*.log"))]
+    cands = [Path(p) for p in glob.glob(str(root / LOG_GLOB))]
     cands = [p for p in cands if p.is_file()]
     if not cands:
         return None
@@ -117,7 +124,7 @@ def fleet(repo_root: Path) -> dict:
     log = find_log(repo_root)
     if log is None:
         return {"source": None, "rows": [], "unauditable": [], "per_floor": {},
-                "hint": "还没有对账日志。跑 `python -u _scratch/_area_audit.py` "
+                "hint": "还没有对账日志。跑 `python -u backend/checks/_area_audit.py` "
                         "（不带参数 = 全库）后刷新本页。"}
     st = log.stat()
     parsed = parse_fleet(log.read_text(encoding="utf-8", errors="replace"))

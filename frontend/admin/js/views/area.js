@@ -30,8 +30,8 @@ export function dispose() {
 // ── 口径字典（本屏的核心）───────────────────────────────────────
 //
 // 每一条都必须能说出来源。来源就是这三处，都是外部量具/引擎自己的话：
-//   · _scratch/_area_audit.py 的模块 docstring（口径说明）
-//   · _scratch/_area_audit.py:55  `d.get("建筑面积", "")`（读的是哪一栏）
+//   · backend/checks/_area_audit.py 的模块 docstring（口径说明）
+//   · backend/checks/_area_audit.py:55  `d.get("建筑面积", "")`（读的是哪一栏）
 //   · backend/api/services/artifacts.py:177（模型侧是「各层 outline 面积之和」）
 //
 // ★ 注意图纸那张表里还有「使用面积」，本对账没有用它 —— 所以本页出现的
@@ -339,7 +339,7 @@ function perFloorBlock(perFloor, nameFilter) {
     return absent('这份快照里没有逐层明细（per_floor 为空）—— '
       + '全库脚本只出排名，不确定单栋的逐层对照。'
       + '要看逐层，对某一栋跑一次「重算」（下面单栋页有按钮），或在命令行跑 '
-      + '`python -u _scratch/_area_audit.py <楼号>`。');
+      + '`python -u backend/checks/_area_audit.py <楼号>`。');
   }
   const pend = keys.filter((k) => !nameFilter || k === nameFilter);
   if (!pend.length) return absent(`快照里有逐层明细，但没有 ${nameFilter} 的。`);
@@ -509,7 +509,7 @@ function refreshPanel(name, caps) {
       enabled ? null : el('br'),
       enabled ? null : el('span', { class: 'dim',
         text: '（写权限问的是 GET /api/capabilities 的 write_enabled；问不到时按「不可用」处理，不猜。）' })),
-    el('p', { class: 'dim', text: '本页只提供单栋重算，没有全库批量入口 —— 要更新全库表，自己在命令行跑 `python -u _scratch/_area_audit.py`（不带参数=全库）。' }));
+    el('p', { class: 'dim', text: '本页只提供单栋重算，没有全库批量入口 —— 要更新全库表，自己在命令行跑 `python -u backend/checks/_area_audit.py`（不带参数=全库）。' }));
   return box;
 }
 
