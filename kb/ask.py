@@ -76,6 +76,9 @@ try:
     #: ★「这条命令能不能跑」的**唯一裁决处**（`kb/gate.py:readonly_verdict`，
     #:   登记侧与执行侧共用）—— 执行侧也调它，见 `_run_guard`。
     from gate import readonly_verdict as READONLY_VERDICT
+    #: ★「什么前缀是什么节点」这张表**只有 gate 那一份**（见 `_branch_of`）。
+    #:   本文件不重写一份 —— 两处写法迟早会漂，而漂的时候屏幕上什么都不会说。
+    from gate import node_kind as NODE_KIND
 except ImportError as _ex:                      # pragma: no cover - 只在文件被搬走时发生
     raise SystemExit("kb/ask.py 依赖同目录的 gate.py 取只读白名单，导入失败：%s" % _ex)
 
@@ -85,21 +88,28 @@ BUILDING_RE = re.compile(r"^[a-z]\d{3}[a-z]?\d*$")
 SPLIT_RE = re.compile(r"[\s,，;；:：/、()（）\[\]【】]+")
 RUN_TIMEOUT = 600
 
-# 三个分支的优先次序 —— **只在权重相同时才用到**（次序保持原样：家族 → 陷阱 → 条目）。
-BRANCH_RANK = {"family": 2, "trap": 1, "entry": 0}
+# 四个分支的优先次序 —— **只在权重相同时才用到**（次序保持原样：家族 → 陷阱 → 条目 →
+# 卫星）。★ 卫星排在最后一位、且**不参与主命中**：`run:<脚本>` 与 `ev:<证据串>`
+# 是由扩散点亮的**附属节点**，它们没有正文可答。
+# 2026-09-24 加：在那之前 `_branch_of` 把一切无前缀的都算「条目」⇒ 这两类节点
+# 落进 entry 支去争主命中，赢了会答出一个**空壳**（`title`/`content` 都是空串，
+# 而屏幕上它长得跟真命中一样 —— `template-string-prints-undefined` 同族）。
+BRANCH_RANK = {"family": 2, "trap": 1, "entry": 0, "satellite": -1}
+
+#: `gate.node_kind` 的类别 → 本文件的分支。
+_BRANCH_BY_KIND = {"family": "family", "trap": "trap", "entry": "entry",
+                   "run": "satellite", "evidence": "satellite"}
 
 
 def _branch_of(node):
     """节点 id → 它属于哪一支。**全文件只有这一处**做这个判断。
 
-    索引里实测只有三种节点 id：`pb:<家族>` / `trap:<slug>` / 无前缀（条目 id）。
-    判断写成一处，是为了让「按权重挑主命中」与「activated 怎么排」不可能各说各话。
+    ★ 「什么前缀是什么」这张表**只有一份**：`gate.py:_NODE_KINDS`（经 `node_kind`）。
+      这里不重写一份 —— 重写的后果是 gate 那边将来加了 `rule:` 节点，
+      本文件照样把它当「条目」去答（而规则节点没有 content ⇒ 答出空壳）。
+      **认不出的类别一律当卫星**：不给它抢主命中的资格，也不假装它可答。
     """
-    if node.startswith("pb:"):
-        return "family"
-    if node.startswith("trap:"):
-        return "trap"
-    return "entry"
+    return _BRANCH_BY_KIND.get(NODE_KIND(node), "satellite")
 
 
 
@@ -302,10 +312,82 @@ def seeds_of(alias, query):
     return out
 
 
-def spread(kb, seeds):
-    """在别名命中之上再走一跳。★双向：家族 → 它的陷阱；陷阱 → 引用它的家族。"""
-    alias = (kb.get("index") or {}).get("alias") or {}
-    traps = kb.get("traps") or {}
+#: 扩散激活的参数 —— **全部只在这一处**。
+#: 衰减由**边的权**给（`gate.GRAPH_KINDS`），不另乘一个每跳常数：两处都管衰减
+#: 就再也分不清「这条边弱」还是「走了太远」。这就是「权重只在一个地方出现」的落地。
+MAX_HOPS = 2        # 最多走几跳：2 = 家族→陷阱→共用一个陷阱的别的家族
+MIN_W = 0.05        # 低于这个权重不再往下传 —— 别让一条弱边把半张图点亮
+MAX_ACTIVATED = 60  # 激活节点上限。超了**截断并报出被截掉多少**，不许静默
+
+
+def spread(kb, seeds, cap=MAX_ACTIVATED):
+    """在别名命中之上**扩散**：沿 `kb["graph"]["out"]` 逐跳传，返回 `(激活表, 怎么扩散的)`。
+
+    ★ 这是「神经网络」那一层 —— 准确说不是训练出来的网络，是**扩散激活**
+      （spreading activation）：给一个词点亮一片，靠的是图，不是权重矩阵。
+      所以它可追溯：每个亮了的节点都记着**从谁、经哪条边、几跳**来的。
+
+    ★ 多跳不是装饰。原先只走一跳（家族↔陷阱），而 2026-09-24 建图时实测出这一跳
+      有个洞：**两个家族共用一条陷阱**时，谁也到不了谁（它们之间没有直接边，
+      而「同族」那条边是两跳）。于是一族踩过的坑，另一族查不到 —— 正是本仓
+      最想消掉的那件事（「同一个症状把当时的推理重跑一遍」）。
+      实测：`trap-saturated-criterion` 挂在 4 个家族名下，一跳只能到 1 个家族的那批陷阱。
+
+    ★ 图不在（旧产物 / kb.json 是手搓的 / 还没跑 build_kb）⇒ 回落成**旧的一跳邻接**，
+      并把 `mode="legacy"` 明说出来。**不许静默回落**：静默的后果是
+      「图没建好」和「图就是长这样」在屏幕上一样（本仓栽过：outline 的静默回退）。
+
+    `cap` 是**可注入的上限**（默认就是 `MAX_ACTIVATED`）：只为让自检能拿一个很小的值
+    把「截断」这条分支真的走一遍。走不到的分支不许算验过（本仓铁律 26）。
+    """
+    graph = kb.get("graph") or {}
+    out_adj = graph.get("out") or {}
+    act = {n: dict(v, hops=0, via=None, kind=None) for n, v in seeds.items()}
+    if not out_adj:
+        return _spread_legacy(kb, seeds), {"mode": "legacy", "hops": 1,
+                                           "reason": "kb.json 里没有 graph 一节"
+                                                     "（图还没建 / 产物是旧的）"}
+    frontier = list(seeds)
+    hops = 0
+    while frontier and hops < MAX_HOPS:
+        hops += 1
+        nxt: list[str] = []
+        for node in frontier:
+            base = act[node]["weight"]
+            if base < MIN_W:
+                continue
+            for e in out_adj.get(node) or []:
+                tgt = e["to"]
+                w = base * e["w"]
+                if w < MIN_W:
+                    continue
+                # 同一节点可由多条路到达 ⇒ 只留**最强的那条**（弱路径不覆盖强路径，
+                # 但也不吞掉它）。相等时不覆盖：先到的那条更短，保留它。
+                if w > act.get(tgt, {}).get("weight", 0):
+                    act[tgt] = {"weight": w, "hops": hops, "via": node,
+                                "kind": e["kind"], "src": e.get("src") or "",
+                                "why": "由 %s 经「%s」激活" % (node, e["kind"])}
+                    nxt.append(tgt)
+        frontier = nxt
+    # ★ 截断要**说出来**：只报「激活 60 个」而实际亮了 83 个，等于把截断当成了全部
+    #   （铁律 16：量不到的和干净的必须不是同一行字）。
+    cut = {"n": 0, "min_shown": None, "min_cut": None}
+    if len(act) > cap:
+        ranked = sorted(act.items(), key=lambda kv: (-kv[1]["weight"], kv[0]))
+        shown = dict(ranked[:cap])
+        cut = {"n": len(act) - cap,
+               "min_shown": round(ranked[cap - 1][1]["weight"], 3),
+               "min_cut": round(ranked[cap][1]["weight"], 3)}
+        act = shown
+    return act, {"mode": "graph", "hops": hops, "max_hops": MAX_HOPS, "cut": cut}
+
+
+def _spread_legacy(kb, seeds):
+    """图还没有时的**回落**：只走「家族 ↔ 它登记的陷阱」这一跳（2026-09-24 之前的写法）。
+
+    保留它不是为了兼容好看，是为了**旧产物仍能回答**——但必须由 `spread` 报出
+    `mode="legacy"`，让读的人知道这次点亮的那一片是**一跳**的。
+    """
     families = kb.get("playbook") or {}
     out = dict(seeds)
     for node, info in list(seeds.items()):
@@ -316,7 +398,8 @@ def spread(kb, seeds):
                 t = "trap:" + slug if not slug.startswith("trap:") else slug
                 if w * 0.5 > out.get(t, {}).get("weight", 0):
                     out[t] = {"weight": w * 0.5,
-                              "why": "家族 %s 登记的并列陷阱" % node[3:]}
+                              "why": "家族 %s 登记的并列陷阱" % node[3:],
+                              "hops": 1, "via": node, "kind": "并列陷阱"}
         elif node.startswith("trap:"):
             slug = node[5:]
             for fslug, fam in families.items():
@@ -324,7 +407,8 @@ def spread(kb, seeds):
                     f = "pb:" + fslug
                     if w * 0.5 > out.get(f, {}).get("weight", 0):
                         out[f] = {"weight": w * 0.5,
-                                  "why": "陷阱被家族 %s 登记（反向邻接）" % fslug}
+                                  "why": "陷阱被家族 %s 登记（反向邻接）" % fslug,
+                                  "hops": 1, "via": node, "kind": "并列陷阱"}
     return out
 
 
@@ -357,7 +441,7 @@ def answer(kb, query, building=None, inst=None):
     alias = (kb.get("index") or {}).get("alias") or {}
     traps = kb.get("traps") or {}
     families = kb.get("playbook") or {}
-    act = spread(kb, seeds_of(alias, query))
+    act, spread_how = spread(kb, seeds_of(alias, query))
 
     # ★★ 主命中 = **三支里证据最强的那一支**，不是「家族先看」（2026-09-24 改）。
     #
@@ -376,22 +460,67 @@ def answer(kb, query, building=None, inst=None):
     #   「凭什么答它」与「答的是哪一支」由**同一个比较**产生，不会各说各话。
     order = sorted(act.items(),
                    key=lambda kv: (-kv[1]["weight"], -BRANCH_RANK[_branch_of(kv[0])], kv[0]))
-    fam_hits = [(v["weight"], k[3:], v["why"]) for k, v in order if k.startswith("pb:")]
-    trap_hits = [(v["weight"], k[5:], v["why"]) for k, v in order if k.startswith("trap:")]
-    entry_hits = [(v["weight"], k, v["why"]) for k, v in order
-                  if not k.startswith(("pb:", "trap:"))]
-    top_kind = _branch_of(order[0][0]) if order else None
+    ents = kb.get("entries") or {}
+
+    def branch_of(k):
+        """这个词点亮的节点，**在这份产物里**属于哪一支。
+
+        ★ 一个判断一处实现（铁律 29）：下面分栏和「主命中是哪一支」都问这一个函数。
+          分成两个判断就会出现「主命中是 entry，而条目栏是空的」——
+          于是 `entry_hits[0]` 直接 IndexError，崩在一个跟原因无关的地方。
+        ★ `entry` 那一支要**回查产物**：前缀像条目不等于这份产物里有这一条。
+          一条 `ev:` 被当成答案，答出来的是 title/content 全空的壳，而 state 是 "hit"。
+        """
+        b = _branch_of(k)
+        if b == "entry" and k not in ents:
+            return "satellite"
+        return b
+
+    fam_hits: list = []
+    trap_hits: list = []
+    entry_hits: list = []
+    sat_hits: list = []
+    for k, v in order:
+        b = branch_of(k)
+        if b == "family":
+            fam_hits.append((v["weight"], k[3:], v["why"]))
+        elif b == "trap":
+            trap_hits.append((v["weight"], k[5:], v["why"]))
+        elif b == "entry":
+            entry_hits.append((v["weight"], k, v["why"]))
+        else:
+            # ★ 卫星：`run:<脚本>` / `ev:<证据串>` / **认不出的前缀**。它们**不参与主命中** ——
+            #   原先它们落进 entry 支，一条被点亮的证据串能挤掉真条目，
+            #   而答出来的是个空壳（title/content 都是空串，屏幕上跟真命中一样）。
+            sat_hits.append((v["weight"], k, v["why"]))
+    # 主命中 = **非卫星**里最强的那个（与 `order` 同源，不另算一遍）
+    main = next((kv for kv in order if branch_of(kv[0]) != "satellite"), None)
+    top_kind = branch_of(main[0]) if main else None
 
     res = {"query": query, "building": building,
-           "activated": [{"node": k, "weight": round(v["weight"], 3), "why": v["why"]}
+           # ★ 怎么扩散的必须报出来：`legacy` = 图还没建、这次只走了一跳；
+           #   `cut` = 亮着的节点被截断过（截断与「就这么多」屏幕上不许一样）。
+           "spread": spread_how,
+           "activated": [{"node": k, "weight": round(v["weight"], 3), "why": v["why"],
+                          "hops": v.get("hops", 0), "via": v.get("via")}
                          for k, v in order],
-           "families": [f for _, f, _ in fam_hits],
+           # ★ 卫星**单列**：它们是「还点亮了什么」，不是候选答案。混进 entries 栏
+           #   就等于把「可答的」和「附带的」印成同一行字。
+           "satellites": [{"node": k, "kind": NODE_KIND(k), "weight": round(w, 3),
+                           "why": why} for w, k, why in sat_hits],
+           "families": [{"slug": f, "weight": round(w, 3), "hops": act.get("pb:" + f, {}).get("hops", 1)}
+                        for w, f, _ in fam_hits],
+           # ★ 每条都带 `hops`：一跳 = 这个词**直接**指到它；两跳 = 被别的节点带进来的
+           #   （典型：另一族与我这族共用一条陷阱）。**两者不许印成一行字** ——
+           #   读的人必须能一眼分出「它说的是这个词」和「它跟这个词沾边」。
            "traps": [{"slug": t, "title": (traps.get(t) or {}).get("title") or "",
                       "masquerades_as": (traps.get(t) or {}).get("masquerades_as") or "",
+                      "hops": act.get("trap:" + t, {}).get("hops", 1),
                       "anchored": bool((traps.get(t) or {}).get("cases"))}
                      for _, t, _ in trap_hits],
            "entries": [{"slug": s, "title": ((kb.get("entries") or {}).get(s) or {}).get("title") or "",
-                        "domain": ((kb.get("entries") or {}).get(s) or {}).get("domain") or ""}
+                        "domain": ((kb.get("entries") or {}).get(s) or {}).get("domain") or "",
+                        "hops": act.get(s, {}).get("hops", 1)}
                        for _, s, _ in entry_hits],
            "ruler": ruler(kb)}
 
@@ -509,6 +638,26 @@ def render(ans):
                                      t["masquerades_as"]))
     for e in ans.get("entries") or []:
         L.append("  📖 %s（%s）" % (e["title"], e["domain"]))
+    # ★ 卫星（`run:<脚本>` / `ev:<证据串>`）单列：它们是「还点亮了什么」，
+    #   不是候选答案。混进上面的条目栏就是两件事印成一行字。
+    sat = ans.get("satellites") or []
+    if sat:
+        L.append("  ◦ 还点亮（附属节点，不是答案）：%d 个" % len(sat))
+        for s in sat[:6]:
+            L.append("      %s  %s" % (s["node"], s["why"]))
+        if len(sat) > 6:
+            L.append("      …另有 %d 个更弱的（全表见 --json 的 satellites）" % (len(sat) - 6))
+    sh = ans.get("spread") or {}
+    if sh.get("mode") == "legacy":
+        # ★ 回落必须**说出来**：不说的话，「图没建好，只走了一跳」与
+        #   「图就长这样」在屏幕上是同一行字（铁律 16 的同族）。
+        L.append("  ▨ 扩散：**回落成了一跳**（%s）—— 上面点亮的那一片可能不全，"
+                 "跑 python -u kb/build_kb.py 重建产物" % (sh.get("reason") or ""))
+    cut = (sh.get("cut") or {}).get("n") or 0
+    if cut:
+        L.append("  ▨ 扩散：亮着的节点**被截断**，另有 %d 个更弱的没列出来"
+                 "（最弱的一个显示到 %s、被截掉的最强 %s）"
+                 % (cut, sh.get("cut", {}).get("min_shown"), sh.get("cut", {}).get("min_cut")))
     L.append("→ 下一步：%s" % ans.get("next_action"))
     return "\n".join(L)
 
@@ -804,8 +953,24 @@ def selftest():
     if neg.get("family") == "floor-misalign":
         fails.append("T5 阴性对照：说「漏墙」却点亮了楼层错位家族（扩散过头）")
     other = answer(kb, "楼层错位")
-    if "missing-wall-blob" in (other.get("families") or []):
-        fails.append("T5 阴性对照：说「楼层错位」却点亮了漏墙家族")
+    # ★ T5 的**作用域**：这条阴性对照量的是「**一跳**扩散过头」——
+    #   即「楼层错位」这个词自己（或它的别名）把漏墙家族点亮。多跳不许算进来：
+    #   两跳点亮的是「另一族与我这族共用一条陷阱」，那是**故意**的（不然一族踩过的坑
+    #   另一族永远查不到），但它必须带着 `hops=2` 出来，不许混进「它说的就是这个词」那一档。
+    #   跳数三档：**0 = 这个词直接指到它**（种子）、1 = 由它派生、2 = 转一手。
+    near = [f["slug"] for f in (other.get("families") or []) if f.get("hops") in (0, 1)]
+    if "missing-wall-blob" in near:
+        fails.append("T5 阴性对照：说「楼层错位」却**直接/一跳**点亮了漏墙家族")
+    # 阳性对照（同一件事的另一面）：多跳确实发生了，且**标着 hops=2**。
+    # 只测「近处没有」而不测「两跳处有」的话，把 MAX_HOPS 改成 1 也能绿。
+    two = [f for f in (other.get("families") or []) if f.get("hops") == 2]
+    if not two:
+        fails.append("T14 多跳没生效：「楼层错位」经共用陷阱应当能到达别的家族，"
+                     "实得 %r —— 检查 kb.json 的 graph.out 与 MAX_HOPS"
+                     % [f["slug"] for f in (other.get("families") or [])])
+    if any(f.get("hops") not in (0, 1, 2) for f in (other.get("families") or [])):
+        fails.append("T14 有家族节点没带跳数（hops）—— 「直接指到」与「被带进来的」"
+                     "不许印成同一行字")
 
     cmds = [r.get("cmd") for f in (kb.get("playbook") or {}).values()
             for r in (f.get("runs") or []) if isinstance(r, dict)]
@@ -922,6 +1087,67 @@ def selftest():
     if fw and fw[0] >= 1.0:
         fails.append("T11 阴性对照：家族在「饱和」上竟然也是满权重（%.2f）—— "
                      "那这条词就是真歧义，判据得换成「点得准」以外的说法" % fw[0])
+
+    # ── T15 扩散激活这一层自己的四条（2026-09-24 加：多跳 + 卫星 + 回落 + 截断）──
+    #    ★ 共同的前提：**每一条都要两面都走**。只测「不该亮的没亮」的话，
+    #      把 spread 整个改成 return {} 照样绿（本仓栽过：只改一个方向 = 没改）。
+    #
+    # (a) 卫星（`ev:` / `run:` / 认不出的前缀）**不许当主命中**。
+    #     实测动机：`run:` / `ev:` 节点被点亮后原先落进 entry 支，于是查一个只跟证据串
+    #     沾边的词，答出来的是个 title/content 全空、state 却是 "hit" 的空壳 ——
+    #     屏幕上与真命中一模一样。
+    #    ★ 两种卫星**各有各的守门人**，必须分开测（2026-09-24 修自检时实测：
+    #      只测 `ev:` 那一格，把「回查产物」那句拆掉照样全绿 —— 因为 `ev:` 的
+    #      分类发生在**前缀表**里，根本走不到那句；而那句真正的守门对象是
+    #      「**裸名**节点」—— `node_kind()` 对没有前缀的串一律当 entry，
+    #      于是图上任何一条没登记的裸名，都会变成一个 title/content 全空的答案）。
+    for term, node, why in (("孤证串", "ev:某文件:1", "前缀表守（ev: 是卫星）"),
+                            ("幽灵条目", "幽灵条目", "回查产物守（裸名但没这条）")):
+        fake_sat = {"index": {"alias": {term: [node]}},
+                    "traps": {}, "playbook": {}, "entries": {},
+                    "graph": {"out": {}, "in": {}}}
+        a_sat = answer(fake_sat, term)
+        if a_sat.get("hit_kind"):
+            fails.append("T15 只点亮了 %s（%s），却给了主命中 %s=%s —— 卫星就是答案了"
+                         % (node, why, a_sat.get("hit_kind"),
+                            a_sat.get("entry") or a_sat.get("trap")))
+        if not any(s["node"] == node for s in (a_sat.get("satellites") or [])):
+            fails.append("T15 阴性对照：%s 该出现在 satellites 里却没出现"
+                         "（判据整个空转，第一面也是假绿）" % node)
+    # 真产物上再走一遍「条目栏里只许有真条目」：别名表今天不指卫星，但扩散会带出卫星，
+    # 这条断言量的是**扩散之后**的名单，不是别名表。
+    for q in ("楼层错位", "饱和", "漏墙"):
+        a = answer(kb, q)
+        stray = [e["slug"] for e in (a.get("entries") or [])
+                 if e["slug"] not in (kb.get("entries") or {})]
+        if stray:
+            fails.append("T15 「%s」的条目栏里混进了非条目节点 %r —— "
+                         "「可答的」和「附带的」印成了同一行字" % (q, stray))
+    # (b) 图不在 ⇒ 必须**说出来**是回落（`legacy`），不许静默只走一跳。
+    no_graph = {k: v for k, v in kb.items() if k != "graph"}
+    if (answer(no_graph, "饱和").get("spread") or {}).get("mode") != "legacy":
+        fails.append("T15 产物里没有 graph 一节时没报 legacy —— "
+                     "「图没建好」与「图就长这样」在屏幕上会一样")
+    if (answer(kb, "饱和").get("spread") or {}).get("mode") != "graph":
+        fails.append("T15 阳性对照：真产物带 graph，却没走 graph 模式（那 (b) 第一面是假绿）")
+    # (c) 截断要**报出被截掉多少**，且两头的数要对得上
+    #     （铁律 22：由别的数推出来的数，要两个方向各量一次 —— 这里「截掉几个」
+    #      是推的，「全量几个」是量的，两边必须相等）。
+    seeds = seeds_of(kb["index"]["alias"], "楼层错位")
+    act_big, how_full = spread(kb, seeds, cap=10 ** 6)   # 全量（不截断）
+    act_cut, how_cut = spread(kb, seeds, cap=3)
+    n_cut = (how_cut.get("cut") or {}).get("n")
+    if len(act_cut) != 3 or (n_cut or 0) != len(act_big) - 3:
+        fails.append("T15 截断报的数与实得对不上：全量 %d、留下 %d、声称截掉 %r"
+                     % (len(act_big), len(act_cut), n_cut))
+    if n_cut and ((how_cut["cut"].get("min_shown") is None)
+                  or (how_cut["cut"].get("min_cut") is None)):
+        fails.append("T15 报了截断却没给两侧的权重边界 —— 读的人看不出截在哪一刀")
+    if n_cut and how_cut.get("hops") is None:
+        fails.append("T15 截断的报告里丢了 hops —— 只剩一个数，读不出走了几跳")
+    #     阴性对照：默认上限下**不该**报截断。只要跑就报截断的话，(c) 第一面是假绿。
+    if (how_full.get("cut") or {}).get("n"):
+        fails.append("T15 阴性对照：默认上限下不该截断，实得 %r" % (how_full.get("cut"),))
 
     tmp = os.path.join(KB_DIR, "_pending_selftest.json")
     try:
@@ -1128,7 +1354,9 @@ def selftest():
           "实例层「没量过」≠「一处也没有」；两把尺子不许互相挡门；"
           "带引号的整句也要认出楼名；"
           "主命中按证据强弱取、且 activated[0] 与它同源；"
-          "执行前自己再过一次只读闸（判不了就不跑）；`--` 之后的词永远当查询词"
+          "执行前自己再过一次只读闸（判不了就不跑）；`--` 之后的词永远当查询词；"
+          "多跳真的到达了别的家族（且标着 hops）、卫星不许当主命中、"
+          "图不在要报 legacy、截断要报出截掉多少"
           % len(grp))
     print("现表：家族 %d、陷阱 %d（只有人记着 %d）、别名 %d"
           % (len(kb.get("playbook") or {}), len(kb.get("traps") or {}),

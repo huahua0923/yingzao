@@ -45,6 +45,19 @@ import subprocess
 import sys
 import tempfile
 
+# ★ 图的派生**只有一份实现**：`kb/gate.py:graph_edges`。产物里装的、门禁 ⑫ 核的、
+#   `ask.py` 走的，都是它算出来的那一份。这里若重写一遍派生逻辑，
+#   就分成两份写法 —— 漂了不报错，只会在「门禁绿、查询查不到」时才发现。
+#   借用方式照 `gate.py` 借 `values.py` 的成例（本仓不用包，脚本之间用 spec 直接加载）。
+def _gate_module():
+    """加载 `kb/gate.py`。★ 只借它的 `graph_edges`，不触发任何判据。"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "kg_gate_for_build", os.path.join(os.path.dirname(os.path.abspath(__file__)), "gate.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
 # 中文日志不设编码必糊字；★ 更要紧的是：Windows 管道 stdout 默认 GBK，
 # 而本文件会打「↔」这类字符 ⇒ 打印时自己崩、退出码非 0，调用方读成「判据红了」。
 # 见 kb/gate.py 同一段落，以及 backend/checks/kg_citation.py。
@@ -232,6 +245,11 @@ def build(src_dir: str | None = None,
     payload["dropped_keys"] = {
         f: sorted(k for k in m["keys"] if k not in carried)
         for f, m in (("playbook.json", pmeta), ("traps.json", tmeta))}
+    # ── 图：由**上面这份 payload** 派生（不是另建一套边）──────────────
+    # ★ 必须在 `entries`/`traps`/`playbook` 都装好之后派生：图是它们的**函数**。
+    #   放在这里而不是写死在字面量里，是为了让「产物里的图」与「源」永远同步 ——
+    #   源一改、产物一重建，图自己就跟着变，不靠人记得去改图。
+    payload["graph"] = _gate_module().graph_edges(payload)
     return payload
 
 
@@ -247,7 +265,9 @@ def _index(entries: dict, traps: dict | None = None,
     （「假红」「饱和」「没量成」……）。同一个词可以同时点亮条目和陷阱 ——
     那正是我们要的：一个说法往往既指向知识、又指向学它的那个坑。
 
-    邻接（out/in）等 K1 有边了再出 —— 现在不占位：空邻接表会被读成「没有边」。
+    邻接（out/in）不在这里 —— 它在产物的**另一节** `payload["graph"]`（由
+    `kb/gate.py:graph_edges` 派生）。分两节不是分家：`index.alias` 回答「这个词点亮谁」，
+    `graph` 回答「点亮之后往哪儿走」；两者都由同一份 entries/traps/playbook 派生。
 
     ★ 迭代**必须 sorted**，不许直接遍历 `set`（2026-09-24 实测抓到）：
       直接 `for t in set(...)` 时，键的**插入顺序**随进程的哈希种子变 ——
@@ -297,10 +317,21 @@ def _diff(old: dict, new: dict) -> list[str]:
               "playbook_criterion_version", "traps_criterion_version",
               "criterion_version_means", "dropped_keys",
               "self_sha12",
-              "manifest_sha12", "sources", "order", "traps", "playbook", "index"):
+              "manifest_sha12", "sources", "order", "traps", "playbook", "index",
+              "graph"):
         if old.get(k) != new.get(k):
             if k in ("self_sha12", "manifest_sha12", "sources"):
                 out.append("%s 变了（源码/清单/尺子动过）" % k)
+            elif k == "graph":
+                # ★ 报**边数差多少**，不只说「变了」——「图不一样」这四个字
+                #   跟「边上少了个锚点」在屏幕上信息量差着十个量级。
+                og, ng = old.get("graph") or {}, new.get("graph") or {}
+                oe = {(e["from"], e["to"], e["kind"]) for e in (og.get("edges") or [])}
+                ne2 = {(e["from"], e["to"], e["kind"]) for e in (ng.get("edges") or [])}
+                only_o = sorted(oe - ne2)[:3]
+                only_n = sorted(ne2 - oe)[:3]
+                out.append("graph 变了（由 %d 条边 → %d 条；旧独有 %s；新独有 %s）"
+                           % (len(oe), len(ne2), only_o or "无", only_n or "无"))
             elif k == "playbook":
                 ov, nv = old.get("playbook") or {}, new.get("playbook") or {}
                 gone = sorted(set(ov) - set(nv))

@@ -88,6 +88,18 @@ def main():
          "expect": "无", "read": "无", "evidence": "qa_structural.py:check_building"}]
     cases.append((kb, "登记一条带 shell 元字符的命令（前缀合法，注入在后面）", "argv"))
 
+    # ── 图那一层：改的不是 ask.py，是**产物**（kb.json 的内存副本）──────────
+    #    「多跳能到别的家族」这句话的**唯一**依据就是产物里的 `graph.out`。
+    #    把某个家族的出边抽掉，它就该红 —— 不然「多跳」可能只是别名表自己绕出来的。
+    kb = copy.deepcopy(BASE)
+    gone_e = kb["graph"]["out"].pop("pb:floor-misalign", [])
+    cases.append((kb, "抽掉 floor-misalign 的全部出边（%d 条）—— 两跳就断了" % len(gone_e),
+                  "T14"))
+
+    kb = copy.deepcopy(BASE)
+    del kb["graph"]
+    cases.append((kb, "整个 graph 一节删掉（旧产物的形状）", "T15"))
+
     bad = 0
     for kb, label, must_say in cases:
         code, txt = run(kb, label)

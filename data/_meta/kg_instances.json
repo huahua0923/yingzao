@@ -54,7 +54,7 @@
    "_qa/defect_ny28.json": "0c059ed96dac",
    "_qa/defect_ny29.json": "1baf9926a1d8",
    "_qa/defects.json": "6fa9d31d0590",
-   "kb/kb.json": "345c9be2727a"
+   "kb/kb.json": "fb14225f0de4"
   },
   "qa_defects": "_qa/defects.json",
   "kb_alias": "kb/kb.json"

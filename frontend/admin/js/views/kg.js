@@ -51,7 +51,9 @@ const ORDER = ['title', 'kind', 'symptom', 'cause', 'fix', 'run', 'related',
   //   那三个正是 `content` / `domain` / `entry` —— 条目那一支当时只画出了标题，
   //   正文落进了 JSON 兜底块。上面那句「宁可难看，不许吞」当时只做到了"说没画"，
   //   而这三栏恰恰是这一支的**全部内容**。
-  'content'];
+  // ★ 2026-09-24 补：`spread` / `activated` / `satellites` 是扩散激活那一层的三个键。
+  //   加进 ORDER ＝ 真的画（见下面 `spreadBlock` 那一段的说明），**不是**加进 DRAWN 了事。
+  'spread', 'activated', 'satellites', 'content'];
 
 // ── 小件 ────────────────────────────────────────────────────────────
 
@@ -226,6 +228,84 @@ function trapBlock(traps) {
         ? el('div', { class: 'kg-masq' }, el('b', { text: '它装成：' }), t.masquerades_as) : null))));
 }
 
+// ── 中栏：扩散激活那一层（`spread` / `activated` / `satellites`）──────
+//
+// ★ 这三栏是 2026-09-24 补的，补它的直接原因是 **K5 的 `--shapes` 判据当场红了 46 处**：
+//   引擎的答案多了 `spread` 与 `satellites` 两个键，而本页没有画它们的代码 ⇒
+//   它们落进「还有 N 个字段本页没画」。★ 更早的一处更值得记：`activated`
+//   原本就写在 `DRAWN` 里、却**一个渲染分支都没有** —— `DRAWN` 是手写的名单，
+//   把一个键写进去就够让兜底块闭嘴，所以"声明画得出来"和"真的画了"在屏幕上
+//   是两件事（本仓铁律：形式≠语义）。这也是把这三栏做成**真代码**而不是加进 `DRAWN` 的理由。
+//
+// ★ 画法全部**按值的形状**（与上面那条教训同一条）：对象 → 键值行、数组 → 列表，
+//   认不出的形状照样原样打出来，绝不 silent skip。
+
+/** 扩散那一栏：这一屏的「点亮」是怎么来的，以及**它有没有被截断/回落**。 */
+function spreadBlock(s) {
+  if (!s || typeof s !== 'object') {
+    return card('扩散（图上的传播）', 'kg-warn', el('div', { class: 'kg-note' },
+      `这一屏带了 spread 字段，但它的形状本页认不出（${typeof s}）：`,
+      code(JSON.stringify(s, null, 0)), ' —— 原样贴出来，不猜。'));
+  }
+  const legacy = s.mode !== 'graph';
+  const cut = s.cut && typeof s.cut === 'object' ? s.cut : null;
+  // ★ 三态必须分开写（本仓铁律 16）：① 回落（图不在）② 截断（亮着的没列全）
+  //   ③ 没截断。**「没截断」与「没量过截断」不是一句话** —— 旧产物没有 cut 字段时
+  //   只能说「说不了」，不许折成「没有截断」。
+  const cutText = cut === null
+    ? '这一份产物里没有 cut 字段（旧产物）⇒ 截没截断说不了：跑 python -u kb/build_kb.py 重建。'
+    : (cut.n ? `亮着的节点被截断：另有 ${cut.n} 个更弱的没列出来`
+        + `（列到的最弱 ${cut.min_shown}、被截掉的最强 ${cut.min_cut}）。`
+      : '没有截断：亮着的节点这里全都列出来了。');
+  return card('扩散（图上的传播，不是查表）', legacy || (cut && cut.n) ? 'kg-warn' : null,
+    el('div', { class: 'kg-kv' },
+      el('b', { text: '模式 ' }),
+      legacy ? '回落成一跳（产物里没有 graph 一节）' : '扩散（沿图走）',
+      el('b', { text: ' ｜ 实走 ' }), String(s.hops ?? '—'),
+      el('b', { text: ' 跳 / 上限 ' }), String(s.max_hops ?? '—'), ' 跳'),
+    legacy ? el('div', { class: 'kg-warnline' },
+      '★ 这一屏是「回落」的：只有直接指向这个词的那些节点，转一手能到的那一片不在上面。'
+      + '两者的区别是「答案不全」，不是「答案一样」。') : null,
+    el('div', { class: cut === null || cut.n ? 'kg-warnline' : 'kg-note', text: cutText }));
+}
+
+/** 激活路径：每个节点带**跳数** —— 直指 / 一转 / 两转，这是"凭什么觉得它相关"的凭据。 */
+function activationBlock(a) {
+  if (!Array.isArray(a)) {
+    return card('激活路径', 'kg-warn', el('div', { class: 'kg-note' },
+      `activated 不是数组（${typeof a}）—— 原样贴出来：`, code(JSON.stringify(a, null, 0))));
+  }
+  return card(`激活路径（扩散激活，不是查表）${a.length ? ` — ${a.length} 个节点` : ''}`, null,
+    el('div', { class: 'kg-note' },
+      '一个词点亮一片：权重 1.0 = 这个词直接指到它；下面标着几跳的，就是转了几手才碰上。'
+      + '跳数越大越可能是噪声，别看权重排序就当结论。'),
+    el('ul', { class: 'kg-traps' }, a.map((n) => el('li', {},
+      el('div', { class: 'kg-trap-head' },
+        pill(n.hops === 0 ? '直指' : `${n.hops} 跳`, n.hops === 0 ? 'ok' : null),
+        jumpTo(n.node, n.node),
+        el('span', { class: 'kg-kv' }, el('b', { text: ' 权重 ' }), String(n.weight ?? '—'))),
+      n.why ? el('div', { class: 'kg-ev', text: String(n.why) }) : null,
+      n.via ? el('div', { class: 'kg-kv' }, el('b', { text: '由 ' }), code(String(n.via))) : null))));
+}
+
+/** 附属节点：**「还点亮」不等于「答案」** —— 这一栏单列，就是不许它们混进主命中。 */
+function satellitesBlock(sats) {
+  if (!Array.isArray(sats)) {
+    return card('还点亮（附属节点）', 'kg-warn', el('div', { class: 'kg-note' },
+      `satellites 不是数组（${typeof sats}）—— 原样贴出来：`, code(JSON.stringify(sats, null, 0))));
+  }
+  return card(`还点亮（附属节点，不是答案） — ${sats.length} 个`, null,
+    el('div', { class: 'kg-note' },
+      '这些是**被带亮的实物/用例/命令节点**（`ev:` / `run:`）：它们告诉你"这个词在哪落过地"，'
+      + '但它们不是这个说法本身。'),
+    el('ul', { class: 'kg-traps' }, sats.map((n) => el('li', {},
+      el('div', { class: 'kg-trap-head' },
+        pill(String(n.kind ?? '?')),
+        el('span', { class: 'kg-trap-title', text: String(n.node ?? '') }),
+        el('span', { class: 'kg-kv' }, el('b', { text: ' 权重 ' }), String(n.weight ?? '—'))),
+      n.why ? el('div', { class: 'kg-ev', text: String(n.why) }) : null))));
+}
+
 // ── 中栏：三态横幅 ＋ 链 ────────────────────────────────────────────
 
 function stateBanner(d) {
@@ -338,6 +418,13 @@ function chainBlock() {
       continue;
     } else if (key === 'run') {
       blocks.push(runBlock(v));
+    } else if (key === 'spread' || key === 'activated' || key === 'satellites') {
+      // ★ 扩散激活那一层：**这三支必须排在通用分支前面**。
+      //   排在后面的话 `activated`/`satellites` 会被 `Array.isArray(v)` 那一支吃掉、
+      //   `spread` 会被对象支吃掉 —— 画出来的东西**看着有内容**，只是跳数/截断/回落
+      //   这些"这次这份答案可不可信"的信息全没了，而屏幕上一点异常都看不出来。
+      blocks.push(key === 'spread' ? spreadBlock(v)
+        : key === 'activated' ? activationBlock(v) : satellitesBlock(v));
     } else if (key === 'content') {
       // 整篇 md：**原样**放 `<pre>`，不做 markdown 渲染 ——
       // 渲染器一旦漏掉一段，屏幕上就少一段而没人知道（本项目最恨的那类安静假话）。

@@ -20,6 +20,7 @@
     ⑥ 陈旧即红     证据文件的**内容 sha12** 与登记时不同 ⇒ 依赖它的边全部待复核
     ⑦ --run 只读   登记的命令形里出现写操作 ⇒ 拒绝登记
     ⑪ ASCII 引号   `"` 被当成中文引号用（铁律 15）—— 见 `check_cjk_quotes`
+    ⑫ 图 out/in    双向邻接由边派生，且**互为逆表**（手改任一侧即红）—— 见 `check_graph`
 
 （编号从 ⑦ 跳到 ⑪：⑧⑨⑩ 是**刑具组**的号，不是判据号，保持原号免得与既往记录对不上。）
 
@@ -43,7 +44,7 @@
 ## 用法（本仓不用 argparse；不认 --help）
 
     python -u kb/gate.py                 # 复核，有红则退出码 1
-    python -u kb/gate.py --selftest      # 十一条刑具，每条都要能红
+    python -u kb/gate.py --selftest      # 十二条刑具，每条都要能红
     python -u kb/gate.py --record        # 记下证据文件的内容指纹（kb/evidence-lock.json）
     python -u kb/gate.py --json
 """
@@ -83,7 +84,9 @@ LOCK = os.path.join(KB, "evidence-lock.json")
 #:   v1 量过的东西全部照旧，但「这份 gate 结果合格」的含义变了：v1 的绿勾不含引号这一项。
 #:   所以凡是拿 v1 的结论当「全绿」的地方，都得知道它少量了一档（铁律 24：换了尺子的产物
 #:   与对的产物在屏幕上一样）。
-CRITERION_VERSION = 2
+#: v3（2026-09-24）：加 ⑫「图 out/in 互为逆表」。同上：v2 的绿勾不含「产物里的双向邻接
+#:   与边一致」这一项 —— 一份 v2 的 ``图: PASS`` 只能说那批边本身没错。
+CRITERION_VERSION = 3
 
 _FLAGS = ("--selftest", "--record", "--anchors", "--json")
 
@@ -163,11 +166,30 @@ def _status():
 
 # ── 边：从 kb.json 收来 ─────────────────────────────────────
 
+def traps_table(payload: dict | None) -> dict:
+    """这次复核用的**陷阱表**。产物里带了就以产物为准，没带才回落到盘上的 `traps.json`。
+
+    ★ 为什么要这条规矩（2026-09-24 修）：原先 `collect_edges(payload)` 用 payload 判
+      识别边、却**掉头去读盘上的 traps.json** 收陷阱边。后果不是报错，是**两份来源**：
+      kb.json 一旦比 traps.json 旧（改了源忘了重建），①②③ 复核的是**文件里的**那批陷阱，
+      而 ⑧ 报的条数也是文件里的那批 —— 屏幕上一片绿，**产物里那份陷阱表一次都没被核过**。
+      与 `one-judgement-many-implementations` 同族：一个判断落成两份实现，而两份不会一起说话。
+    ★ `traps: {}` 也算「带了」—— 它是「这个产物没有陷阱」这条**宣称本身**，
+      不许被盘上的文件偷偷替换（那正是上面这条缺陷的镜像）。
+    """
+    if isinstance(payload, dict) and isinstance(payload.get("traps"), dict):
+        return payload["traps"]
+    if not os.path.exists(TRAPS):
+        return {}
+    return json.loads(io.open(TRAPS, encoding="utf-8").read()).get("traps") or {}
+
+
 def collect_edges(payload: dict | None = None) -> list[dict]:
     """图谱里所有**可复核的边**：每条带 `src`（谁在宣称）＋ `evidence`（据什么）。
 
-    两个来源：`kb.json` 的识别映射边、`kb/traps.json` 的陷阱实物证据。
-    两处的 `evidence` 走**同一套**复核（路径/行号/符号），不放宽 ——
+    三个来源：`kb.json` 的识别映射边、`traps.json`（或产物里的 `traps` 一节）、
+    `playbook.json`（或产物里的 `playbook` 一节）。
+    三处的 `evidence` 走**同一套**复核（路径/行号/符号），不放宽 ——
     陷阱的理由可以写得再漂亮，它的锚点照样要能在仓里指出来。
     """
     if payload is None:
@@ -179,7 +201,7 @@ def collect_edges(payload: dict | None = None) -> list[dict]:
                           "what": rec.get("drafting") or "", "evidence": rec.get("evidence")})
         for rel in e.get("related") or []:
             edges.append({"src": "%s.related" % slug, "what": "关联代码", "evidence": rel})
-    edges.extend(collect_trap_edges()[0])
+    edges.extend(collect_trap_edges(traps_table(payload))[0])
     edges.extend(collect_playbook_edges(payload)[0])
     return edges
 
@@ -227,20 +249,23 @@ def collect_playbook_edges(payload: dict | None) -> tuple[list[dict], list[dict]
     return edges, bare, declared
 
 
-def collect_trap_edges() -> tuple[list[dict], list[dict]]:
+def collect_trap_edges(traps: dict | None = None) -> tuple[list[dict], list[dict]]:
     """返回 `(可核的陷阱证据边, 无锚点的陷阱)`。
+
+    `traps` 不给 ⇒ 读盘上的 `traps.json`（自检用这一路，它把 TRAPS 指向临时文件）；
+    给了 ⇒ 用它（`collect_edges` 就是这么把**产物里那份**递进来的，见 `traps_table`）。
 
     ★ 第二个返回值不是装饰：**「只有人记着」本身就是信息**。
       一条陷阱没有仓内锚点 ⇒ 它不可复核、会随人走。把它静默丢掉，
       输出就会说「12 条陷阱全部有据」；数出来才叫诚实
       （`UNAVAILABLE ≠ PASS` 的同一条道理）。
     """
-    if not os.path.exists(TRAPS):
+    table = traps if traps is not None else traps_table(None)
+    if not table:
         return [], []
-    d = json.loads(io.open(TRAPS, encoding="utf-8").read())
     edges: list[dict] = []
     bare: list[dict] = []
-    for slug, t in (d.get("traps") or {}).items():
+    for slug, t in table.items():
         title = t.get("title") or ""
         cases = t.get("cases") or []
         if not cases:
@@ -268,6 +293,241 @@ def collect_trap_edges() -> tuple[list[dict], list[dict]]:
             edges.append({"src": "trap:%s.related[%d]" % (slug, j),
                           "what": "关联的边", "evidence": rel})
     return edges, bare
+
+
+# ── ⑫ 图：边 → 双向邻接（out / in）──────────────────────────
+#
+# ★ 图**必须**由 `collect_edges()` 派生，不许另建一套边。理由是实的：
+#   另建 = 一个事实两份写法（本仓栽过的坑：`one-judgement-many-implementations`）。
+#   派生之后，「图里每一条边都被 ①②③ 核过它的锚点」是**结构性**的性质 ——
+#   不靠人记得去核，也不可能出现「核过的那批」与「图里那批」不一致。
+#
+# ★ `out` 与 `in` 是**同一份 edges 的两个物化方向**（不是两份独立的边表）。
+#   冗余在这里是**故意的**：⑫ 逐条要求两边互为逆表 ⇒ 手改任一侧当场红。
+
+#: kind → 边权（0 < w ≤ 1）。★ 权重只在这一个地方出现 ——
+#: 谁想调「陷阱比根因更该被点亮」，改这一行，改完 `gate.py --selftest` 与
+#: `ask.py --selftest` 两个方向都会说话。
+GRAPH_KINDS: dict[str, float] = {
+    "并列陷阱": 0.5,   # 家族 ↔ 它登记的陷阱（原先 spread() 手写的正是这条，现在落成数据）
+    "同族": 0.3,       # 两个家族共用一个陷阱（机器派生、对称、无锚点）
+    "症状": 0.4, "根因": 0.4, "处置": 0.4, "实例": 0.4, "相关": 0.35,
+    "判据": 0.6,       # 家族 → 可跑的命令节点 `run:<脚本>`
+    "实物": 0.45,      # 陷阱 → 它的实物证据
+    "识别": 0.5,       # 条目 → 识别判据的出处
+}
+
+#: 手册里带锚点的五栏 → kind。`runs` 不在表里：它指向 `run:` 节点，不指向锚点。
+_PB_KIND = {"symptoms": "症状", "causes": "根因", "fixes": "处置",
+            "instances": "实例", "related": "相关"}
+
+_RUN_SCRIPT_RE = re.compile(r"\S+\.py")
+
+#: 节点 id 前缀 → 类别。**全仓只有这一处**说「什么前缀是什么」——
+#: `kb/ask.py:_branch_of` 那边判断「这个节点属于哪一支」时按同一套前缀分流。
+_NODE_KINDS = {"pb:": "family", "trap:": "trap", "run:": "run", "ev:": "evidence"}
+
+
+def node_kind(node: str) -> str:
+    """节点 id → 类别。条目没有前缀（它就是 md 的 slug），所以兜底是 entry。"""
+    for pre, k in _NODE_KINDS.items():
+        if node.startswith(pre):
+            return k
+    return "entry"
+
+
+def run_script(cmd: str) -> str | None:
+    """从登记的命令里取出**脚本名**当 `run:` 节点的 id。取不出 ⇒ None（不许编）。"""
+    m = _RUN_SCRIPT_RE.search(cmd or "")
+    return os.path.basename(m.group(0)) if m else None
+
+
+def graph_edges(payload: dict | None) -> dict:
+    """把「带锚点的宣称」变成图的边。返回 `{nodes, edges, out, in, counts, skipped}`。
+
+    **不落盘**：build_kb 拿它进产物，gate ⑫ 拿它复核产物 —— 同一份实现，两个调用方。
+    """
+    edges: list[dict] = []
+    skipped: list[dict] = []
+
+    def add(a: str, b: str, kind: str, label: str, src: str) -> None:
+        edges.append({"from": a, "to": b, "kind": kind,
+                      "w": GRAPH_KINDS[kind], "label": label, "src": src})
+
+    for e in collect_edges(payload):
+        src, what, ev = e.get("src") or "", e.get("what") or "", e.get("evidence")
+        if src.startswith("pb:"):
+            body = src[3:]
+            fslug, rest = (body.split(".", 1) + [""])[:2]
+            key = rest.split("[")[0]
+            node = "pb:" + fslug
+            if key == "runs":
+                script = run_script(what)
+                if script is None:
+                    skipped.append({"src": src, "why": "命令里取不出脚本名：%s" % what[:60]})
+                    continue
+                add(node, "run:" + script, "判据", what, src)
+                continue
+            kind = _PB_KIND.get(key)
+            if kind is None:
+                skipped.append({"src": src, "why": "手册这一栏不在表里：%r" % key})
+                continue
+            if not ev:
+                # ★ 「声明无实现 / 没写 evidence」不进图 —— 它没有可指的地址。
+                #   但**要数出来**：静默丢掉会让「图里有 N 条边」读成「宣称就这么多」。
+                skipped.append({"src": src, "why": "这条没有 evidence（无可指的锚点）"})
+                continue
+            add(node, "ev:" + ev, kind, what, src)
+            continue
+        if src.startswith("trap:"):
+            body = src[5:]
+            slug = body.split("[")[0].split(".")[0]
+            kind = "相关" if ".related[" in body else "实物"
+            if not ev:
+                skipped.append({"src": src, "why": "陷阱这条锚点是空的"})
+                continue
+            add("trap:" + slug, "ev:" + ev, kind, what, src)
+            continue
+        # 条目（slug 无前缀）
+        slug = src.split(".")[0]
+        kind = "识别" if ".recognition[" in src else "相关"
+        if not ev:
+            # 显式声明「无实现」（如「资产图通常不画 ⇒ 引擎不需处理」）走的就是这一档。
+            skipped.append({"src": src, "why": "这条 evidence 是 null（声明无实现）"})
+            continue
+        add(slug, "ev:" + ev, kind, what, src)
+
+    # ── 结构边：家族 ↔ 陷阱（手册的 `traps` 栏）────────────────
+    fams = (payload or {}).get("playbook") or {}
+    # ★ 与 `collect_edges` 用的是**同一处**取表逻辑（`traps_table`）：
+    #   两处各写一遍「产物优先还是文件优先」，就是同一个判断两份实现。
+    traps = traps_table(payload)
+    by_trap: dict[str, list[str]] = {}
+    for fslug, fam in fams.items():
+        for raw in (fam.get("traps") or []):
+            tslug = raw[5:] if raw.startswith("trap:") else raw
+            if tslug not in traps:
+                # ★ 悬空引用：手册点了一个不存在的陷阱。原先 `spread()` 是**静默丢掉**的
+                #   （那条边就没点亮过），所以这个缺陷一直没有人看见。
+                skipped.append({"src": "pb:%s.traps" % fslug,
+                                "why": "登记的陷阱不存在：%s" % raw})
+                continue
+            add("pb:" + fslug, "trap:" + tslug, "并列陷阱",
+                (traps.get(tslug) or {}).get("title") or "", "pb:%s.traps" % fslug)
+            by_trap.setdefault(tslug, []).append(fslug)
+
+    # 同族：共用一个陷阱的两个家族。对称 ⇒ 每对**只存一条**（无序对，起点取小），
+    # 反向由 `in` 表给出 —— 不重复存两条对称边（存两条的话「边数」会虚高一倍）。
+    for tslug, owners in by_trap.items():
+        for i in range(len(owners)):
+            for j in range(i + 1, len(owners)):
+                a, b = sorted((owners[i], owners[j]))
+                add("pb:" + a, "pb:" + b, "同族", "共陷阱 %s" % tslug, "derived:shared-trap")
+
+    # ── 物化 out / in（同一份 edges 的两个方向）────────────────
+    # ★ 排序**必须**确定（同 `_index` 的教训）：直接遍历 dict/set，键序随哈希种子变，
+    #   同一份源 build 两次得到两个 sha12 ⇒ 指纹失效。
+    edges.sort(key=lambda e: (e["from"], e["to"], e["kind"]))
+    out: dict[str, list] = {}
+    rev: dict[str, list] = {}
+    for e in edges:
+        out.setdefault(e["from"], []).append(
+            {"to": e["to"], "kind": e["kind"], "w": e["w"], "src": e["src"]})
+        rev.setdefault(e["to"], []).append(
+            {"from": e["from"], "kind": e["kind"], "w": e["w"], "src": e["src"]})
+    nodes: dict[str, str] = {}
+    for n in sorted(set(out) | set(rev)):
+        nodes[n] = node_kind(n)
+    counts: dict[str, int] = {}
+    for e in edges:
+        counts[e["kind"]] = counts.get(e["kind"], 0) + 1
+    counts["_edges"] = len(edges)
+    counts["_nodes"] = len(nodes)
+    counts["_edges_no_anchor"] = sum(1 for e in edges if e["kind"] == "同族")
+    return {"nodes": nodes, "edges": edges, "out": out, "in": rev,
+            "counts": counts, "skipped": skipped}
+
+
+def check_graph(payload: dict | None) -> dict:
+    """⑫ 图（out / in）：四条。任一条不成立即 GAP。
+
+    这里**不**重写边的锚点复核（那是 ①②③ 的活）—— 它只回答「这份物化有没有走样」：
+      (a) out/in 逐条互为逆表（手改任一侧 ⇒ 红）；
+      (b) 端点都在 `nodes` 里、类别合法、权重落在 (0,1]；
+      (c) `edges` 与由本 payload 再派生一遍的结果**逐条相同**（手改了边表 ⇒ 红）；
+      (d) 没有悬空引用 / 取不出脚本名这种「派生时被跳过」的条（有 ⇒ 数出来并红）。
+    """
+    g = (payload or {}).get("graph")
+    if not g:
+        return {"status": "unavailable", "detail":
+                "kb.json 里没有 graph 一节 —— 图一次都没查过（先跑 kb/build_kb.py）",
+                "nodes": 0, "edges": 0, "counts": {}}
+    fails: list[str] = []
+    edges = g.get("edges") or []
+    out = g.get("out") or {}
+    rev = g.get("in") or {}
+    nodes = g.get("nodes") or {}
+
+    # (a) 逆表
+    fwd = {(e["from"], e["to"], e["kind"]) for e in edges}
+    back = {(r["from"], r["to"], r["kind"]) for r in
+            ({"from": n, "to": t["to"], "kind": t["kind"]} for n, lst in out.items() for t in lst)}
+    miss_out = sorted(fwd - back)
+    miss_edge = sorted(back - fwd)
+    if miss_out:
+        fails.append("edges 里有 %d 条没进 out（首条 %s）" % (len(miss_out), miss_out[0]))
+    if miss_edge:
+        fails.append("out 里有 %d 条不在 edges 里（首条 %s）" % (len(miss_edge), miss_edge[0]))
+    # in 侧同样对一遍 —— 只对 out 等于「逆表」只查了一半
+    fin = {(r["from"], r["to"], r["kind"]) for n, lst in rev.items() for r in
+           ({"from": t["from"], "to": n, "kind": t["kind"]} for t in lst)}
+    if fin != fwd:
+        only_e = sorted(fwd - fin)[:2]
+        only_i = sorted(fin - fwd)[:2]
+        fails.append("in 表与 edges 不等（edges 独有 %s；in 独有 %s）" % (only_e, only_i))
+
+    # (b) 端点 / 类别 / 权重
+    dangling = sorted({n for e in edges for n in (e["from"], e["to"]) if n not in nodes})
+    if dangling:
+        fails.append("%d 个端点没登记在 nodes 里（首条 %s）" % (len(dangling), dangling[0]))
+    bad_kind = sorted({e["kind"] for e in edges if e["kind"] not in GRAPH_KINDS})
+    if bad_kind:
+        fails.append("认不得的 kind：%s" % bad_kind)
+    bad_w = [(e["from"], e["to"], e["w"]) for e in edges
+             if not isinstance(e.get("w"), (int, float)) or not 0 < e["w"] <= 1]
+    if bad_w:
+        fails.append("权重不在 (0,1]：%s（首条）" % (bad_w[0],))
+    bad_node_kind = sorted({k for k in nodes.values()
+                            if k not in set(_NODE_KINDS.values()) | {"entry"}})
+    if bad_node_kind:
+        fails.append("认不得的节点类别：%s" % bad_node_kind)
+
+    # (c) 再派生一遍。★ 这不是「同源比同源」：比的是**产物里那份物化**与
+    #     **由产物当前内容重新派生的那批** —— 手改了 `edges` 而没改源 ⇒ 红。
+    fresh = graph_edges(payload)
+    if fresh["edges"] != edges:
+        old = {(e["from"], e["to"], e["kind"]) for e in edges}
+        new = {(e["from"], e["to"], e["kind"]) for e in fresh["edges"]}
+        fails.append("edges 与再派生不等（产物独有 %s；再派生独有 %s）"
+                     % (sorted(old - new)[:2], sorted(new - old)[:2]))
+
+    # (d) 派生时被跳过的条。★ 数出来：跳过是**信息**（缺锚点/悬空引用），
+    #     静默丢掉会让「图里有 N 条边」读成「宣称就只有这么多」。
+    skipped = g.get("skipped") or []
+    dangling_ref = [s for s in skipped if "不存在" in (s.get("why") or "")]
+    if dangling_ref:
+        fails.append("悬空引用 %d 条（首条 %s：%s）"
+                     % (len(dangling_ref), dangling_ref[0]["src"], dangling_ref[0]["why"]))
+
+    return {"status": "gap" if fails else "pass",
+            "detail": "；".join(fails) if fails else
+                      "%d 个节点 / %d 条边，out/in 互为逆表" % (len(nodes), len(edges)),
+            "nodes": len(nodes), "edges": len(edges),
+            "kinds": {k: v for k, v in sorted((g.get("counts") or {}).items())
+                      if not k.startswith("_")},
+            "no_anchor": (g.get("counts") or {}).get("_edges_no_anchor", 0),
+            "skipped": skipped,
+            "fails": fails}
 
 
 # ── ① ② ③ ─────────────────────────────────────────────────
@@ -641,9 +901,12 @@ def run(payload: dict | None = None) -> dict:
         #   执行侧 `kb/ask.py:run_registered` 调的是同一个函数。
         ok, why = readonly_verdict(c["cmd"], c.get("writes") or "")
         cmd_rows.append((c["cmd"], ok, why, c.get("src") or ""))
-    _te, bare = collect_trap_edges()
+    # ★ 用**产物里那份**陷阱表（`traps_table`）—— 与 ①②③ 收边时用的是同一份。
+    #   这里若改回读文件，「边来自产物、条数来自文件」，两者不一致时屏幕上看不出来。
+    _te, bare = collect_trap_edges(traps_table(payload))
     cjk = check_cjk_quotes()
     pb_edges, pb_bare, pb_declared = collect_playbook_edges(payload)
+    graph = check_graph(payload)
     # ★ 单位要分清：**条数是条数、边数是边数**，混在一行里报就是量纲错
     #   （铁律 23(c)：判据的量纲必须是被判定量的量纲）。
     # ★★ 分档只许有**一个**判据：先前用两条正则分「实物锚点/关联」，而
@@ -659,7 +922,7 @@ def run(payload: dict | None = None) -> dict:
         scope.add(body.split("[")[0].split(".")[0])
     scope.update(b["slug"] for b in bare)
     return {"edges": edge_rows, "stale": stale, "dual": dual, "value": value,
-            "cmds": cmd_rows, "edge_files": files, "cjk": cjk,
+            "cmds": cmd_rows, "edge_files": files, "cjk": cjk, "graph": graph,
             # ★ 陷阱分两栏报：**有锚点的**已并入上面的边，**没锚点的**单列。
             #   只报「12 条陷阱全部有据」就是把「只有人记着」抹平成了合格 ——
             #   与 UNAVAILABLE 被读成 PASS 是同一条错。
@@ -799,6 +1062,21 @@ def _print(res: dict) -> None:
     for b in cq["bad_json"]:
         print("     ✗ JSON 解析不了：%s" % b)
 
+    gp = res["graph"]
+    if gp["status"] == "unavailable":
+        print("⑫ 图（out/in）：**UNAVAILABLE** —— %s" % gp["detail"])
+    else:
+        print("⑫ 图（out/in）：%s —— %s" % (_LABEL[gp["status"]], gp["detail"]))
+        print("     " + "；".join("%s %d" % (k, v) for k, v in gp["kinds"].items()))
+        if gp["no_anchor"]:
+            print("     （其中 **%d 条没有锚点**：同族边是机器派生的对称关系，不指任何文件 —— "
+                  "它单列在这里，不算「有据」那一档。★ 它**有** src，值是 `derived:shared-trap`，"
+                  "别读成「这些边没有 src」）" % gp["no_anchor"])
+        # ★ 未进图的条目**逐条印**：缺锚点/悬空引用被静默丢掉，图里就少一条边，
+        #   而「图里有 N 条边」在屏幕上读起来像「宣称就只有这么多」（铁律 16）。
+        for s in gp["skipped"]:
+            print("     ○ 未进图 %s —— %s" % (s["src"], s["why"]))
+
     print("⑦ --run 只读：待登记命令 **%d** 条%s"
           % (len(res["cmds"]),
              "（一个都还没查过 —— 这不等于都安全）" if not res["cmds"] else ""))
@@ -821,6 +1099,10 @@ def _fails(res: dict) -> list[str]:
         out.append("双源：%s" % res["dual"]["detail"])
     if res["value"]["status"] == "gap":
         out.append("值漂移：%s" % res["value"]["detail"])
+    if res["graph"]["status"] == "gap":
+        out.append("图：%s" % res["graph"]["detail"])
+    elif res["graph"]["status"] == "unavailable":
+        out.append("图：%s" % res["graph"]["detail"])
     for h in res["cjk"]["hits"]:
         out.append("引号 %s:%d col%d：ASCII 引号被当中文引号用（%s）"
                    % (h["file"], h["line"], h["col"], h["text"][:60]))
@@ -949,7 +1231,7 @@ def anchors_report() -> int:
     return 0
 
 
-# ── 自检：十一条刑具，每条都要能红 ──────────────────────────
+# ── 自检：十二条刑具，每条都要能红 ──────────────────────────
 
 def selftest() -> int:
     fails: list[str] = []
@@ -1214,6 +1496,97 @@ def selftest() -> int:
         if os.path.exists(tmp_j):
             os.unlink(tmp_j)
 
+    # ⑫ 图：派生 / 逆表 / 端点 / 权重 / 再派生 / 悬空引用。
+    #   ★ 这一组分两半：**前半证明它绿**（阴性对照），**后半逐条证明它能红**。
+    #     只测红 ⇒ 判据可能恒红（那不是严格，是坏了）；只测绿 ⇒ 正是本仓排第一的坑
+    #     （`saturation`：全绿先问「它是不是在全部样本上都取极值」）。
+    # 夹具把陷阱**放进 payload**（`traps_table` 的「产物优先」那一路），不碰真表 ——
+    # 顺带证明这条取表规矩是通的。
+    fake12 = {"entries": {"e-1": {"recognition": [
+                  {"what": "识A", "evidence": "kb/gate.py:node_kind"}]}},
+              "traps": {
+                  "t-known": {"title": "对照陷阱",
+                              "cases": [{"where": "kb/gate.py:readonly_ok", "what": "对照"}]},
+                  "t-other": {"title": "另一个对照陷阱",
+                              "cases": [{"where": "kb/gate.py:check_edge", "what": "对照"}]}},
+              "playbook": {
+                  "f-a": {"title": "家族A", "traps": ["trap:t-known"],
+                          "symptoms": [{"what": "症状A", "evidence": "kb/gate.py:sha12"}],
+                          "runs": [{"cmd": "python -u kb/ask.py x", "writes": "无",
+                                    "evidence": "kb/gate.py:main"}]},
+                  "f-b": {"title": "家族B", "traps": ["t-known"],
+                          "symptoms": [{"what": "症状B", "evidence": "kb/gate.py:sha12"}]}}}
+    g12 = graph_edges(fake12)
+    # 九条：症状×2 ＋ 判据（run:ask.py）＋ 识别 ＋ 陷阱实物×2 ＋ 并列陷阱×2 ＋ 同族×1 = 9。
+    # ⚠ 第一次我写的是 7 —— 漏了「陷阱的 cases 也收边」这一路（实测报 9）。
+    #   数边的时候先分类打印，别心算（铁律 22：推出来的数要跟量出来的数对一次）。
+    if len(g12["edges"]) != 9:
+        fails.append("T⑫ 夹具应派生 9 条边，实得 %d（%r）"
+                     % (len(g12["edges"]), sorted(e["kind"] for e in g12["edges"])))
+    # 家族A 写的是 `trap:t-known`（带前缀），家族B 写的是 `t-known` —— 两种写法都必须
+    # 落到同一个节点，否则「同族」这条派生边永远出不来（而且不会报错）。
+    if not any(e["kind"] == "同族" for e in g12["edges"]):
+        fails.append("T⑫ 两种陷阱写法（trap:x / x）没归到同一个节点 ⇒ 同族边生不出来")
+    # run: 节点取的是**脚本名**，不是整条命令
+    if not any(n == "run:ask.py" for n in g12["nodes"]):
+        fails.append("T⑫ run: 节点没建出来（节点=%r）" % sorted(g12["nodes"])[:6])
+    pay12 = dict(fake12, graph=g12)
+    # ★ 阴性对照：**一字未改 ⇒ 必须绿**。它红了说明判据坏了，不是产物坏了。
+    ok12 = check_graph(pay12)
+    if ok12["status"] != "pass":
+        fails.append("T⑫ 未改动的图 ⇒ %s（应为 pass）：%s" % (ok12["status"], ok12["detail"]))
+    # ★ 没有 graph 一节 ⇒ **unavailable**，不许是 pass（「没量过」不是「干净」）
+    if check_graph(fake12)["status"] != "unavailable":
+        fails.append("T⑫ 产物里没有 graph 一节 ⇒ %s（应为 unavailable）"
+                     % check_graph(fake12)["status"])
+
+    def _mut12(what: str, want: str, fn) -> None:
+        """改坏一处，要求**红且指名**。want 是那句话里必须出现的词。"""
+        bad = json.loads(json.dumps(pay12))
+        fn(bad["graph"])
+        r = check_graph(bad)
+        if r["status"] != "gap":
+            fails.append("T⑫ %s ⇒ %s（应为 gap：%s）" % (what, r["status"], r["detail"]))
+        elif want not in r["detail"]:
+            fails.append("T⑫ %s 红了但没指名 %r：%s" % (what, want, r["detail"]))
+
+    _mut12("out 里少一条边", "out", lambda g: g["out"].__setitem__(
+        sorted(g["out"])[0], g["out"][sorted(g["out"])[0]][1:]))
+    _mut12("in 里少一条边", "in", lambda g: g["in"].__setitem__(
+        sorted(g["in"])[0], g["in"][sorted(g["in"])[0]][1:]))
+    _mut12("edges 里多一条假边", "没进 out", lambda g: g["edges"].append(
+        {"from": "pb:f-a", "to": "ev:假的", "kind": "症状", "w": 0.4,
+         "label": "手加的", "src": "手加"}))
+    _mut12("端点没登记在 nodes 里", "端点", lambda g: g["nodes"].pop("trap:t-known"))
+    _mut12("权重越界", "权重", lambda g: g["edges"][0].__setitem__("w", 1.5))
+    _mut12("认不得的 kind", "kind", lambda g: g["edges"][0].__setitem__("kind", "乱写"))
+    # ★ 只改 label（from/to/kind 一字未动）⇒ 逆表两半全都还是绿的，
+    #   只有「与再派生逐条相同」这一条能抓住它。这正是 (c) 存在的理由：
+    #   它证明**产物里那份边表**才是被比的对象，而不是「out 与 in 互相对了一遍」。
+    _mut12("只手改 edges 的标签", "再派生", lambda g: g["edges"][0].__setitem__(
+        "label", "手改的"))
+
+    # 悬空引用：手册点了一个不存在的陷阱 —— 原先 spread() 是**静默丢掉**这条边的
+    dang = json.loads(json.dumps(fake12))
+    dang["playbook"]["f-b"]["traps"] = ["t-不存在的"]
+    gd = graph_edges(dang)
+    if not [s for s in gd["skipped"] if "不存在" in s["why"]]:
+        fails.append("T⑫ 悬空陷阱引用没落进 skipped（静默丢掉 = 那条边少一条而无人知）")
+    rd = check_graph(dict(dang, graph=gd))
+    if rd["status"] != "gap" or "悬空引用" not in rd["detail"]:
+        fails.append("T⑫ 悬空陷阱引用 ⇒ %s / %s（应为 gap 且指名「悬空引用」）"
+                     % (rd["status"], rd["detail"]))
+    # ★ `traps_table` 的「产物优先」：带了 traps 节的 payload 不许被盘上的文件顶掉。
+    #   这一条正是上面修掉的那个缺陷（判边用产物、取表读文件）。
+    if traps_table({"traps": {}}) != {} or traps_table({}) == {}:
+        fails.append("T⑫ traps_table 的产物优先没生效（空表 vs 没有这一节 分不开）")
+    # 节点/脚本名的判法本身（一处判断，别处都跟着它）
+    if (node_kind("pb:x"), node_kind("trap:x"), node_kind("run:a.py"),
+            node_kind("制图标准总览")) != ("family", "trap", "run", "entry"):
+        fails.append("T⑫ 节点类别判法不全（run:/entry 兜底那两格最容易漏）")
+    if run_script("python -u kb/ask.py x") != "ask.py" or run_script("curl http://x") is not None:
+        fails.append("T⑫ run_script 的取法不对（取不出时必须回 None，**不许编**）")
+
     if fails:
         print("--selftest 红：%d 条刑具没通过" % len(fails))
         for f in fails:
@@ -1229,10 +1602,12 @@ def selftest() -> int:
                    if n_f else "手册 **未登记**（0 个家族）—— 症状→根因→处置 这条链一次都没查过")
     else:
         pb_note = "手册 **量不了**（kb.json 不在）"
-    print("--selftest 绿：**11 条**刑具全部能红（①路径 ②行号 ③符号+注释不算 ④接上 ⑤非空转 "
+    print("--selftest 绿：**12 条**刑具全部能红（①路径 ②行号 ③符号+注释不算 ④接上 ⑤非空转 "
           "⑥改一字节即红+无表即说量不了 ⑦写操作被拒/只读放行 ⑧陷阱分两栏 ⑨手册三栏 "
           "⑩re-baseline 差异报告只报真变动的文件、且打出锚点此刻指到的内容 "
-          "⑪引号两档各自能红+掩码生效+分母非零"
+          "⑪引号两档各自能红+掩码生效+分母非零 "
+          "⑫图：未改即绿／无这一节即「量不了」／逆表两侧各能红／假边／悬空端点／权重／"
+          "kind／只手改标签＋悬空陷阱引用"
           "；现表：陷阱可核边 %d 条、只有人记着 %d 条；%s" % (len(n_e), len(n_b), pb_note))
     return 0
 
@@ -1258,7 +1633,7 @@ def main(argv: list[str]) -> int:
     if as_json:
         json.dump({"edges": res["edges"], "stale": res["stale"], "dual": res["dual"],
                    "value": res["value"], "cmds": res["cmds"], "traps": res["traps"],
-                   "cjk": res["cjk"],
+                   "cjk": res["cjk"], "graph": res["graph"],
                    "playbook": res["playbook"],
                    "fails": _fails(res),
                    "self_sha12": res["self_sha12"], "values_sha12": res["values_sha12"],
