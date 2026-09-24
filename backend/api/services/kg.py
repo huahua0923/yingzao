@@ -14,6 +14,11 @@
 2. **只读**：`ask.py --run` 会跑判据并写 `data/_meta/kg_runs.json`，`--pending` 会写
    `kb/pending.json` —— 两条都是**写**操作。本域一个都不开放：HTTP 只做 `--json`
    查询，要跑判据走 CLI（`python -u kb/ask.py "<说法>" --run`）。
+   ★ 这句话**有实现兜着**（2026-09-24 安全评审逼出来的）：`ask.py` 的开关是**与位置无关**
+   识别的（`"--run" in args`），而本模块把用户敲的词原样当一个 argv 递进去 ⇒
+   `?building=--run&q=…` 会让一次只读查询变成一次真跑判据 + 写台账。
+   ⇒ 两道：`_switch_like()` 在边界上**拒**（并说清理由），argv 里位置参数前插 `--`
+   让那个词**结构上不可能**成为开关（`kb/ask.py:split_at_dashdash`）。
 3. **门禁结论不在这里重算**：C4 那两行已经在 `data/_meta/checks/fleet.json` 里，
    `GET /api/checks/fleet` 已经会读（`services/checks.py`）。本域只报**尺子指纹**
    并指明去哪看门禁 —— 同一个结论两份实现 = 两份会漂的写法
@@ -57,7 +62,27 @@ _ASK_TIMEOUT_S = 60
 # （响应 meta 里回 `top_clamped_from`）—— 悄悄夹住会让调用方以为它要的就是这个数。
 _MAX_TOP = 20
 _QUERY_MAX_CHARS = 200
-_BUILDING_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+_BUILDING_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_-]{0,31}$")
+#: 长得像开关的词（`-x` / `--x`）。★ 判据与 `kb/ask.py` 的开关识别**同形**：
+#: 那边是 `a.startswith("-")`，这里要求 `-` 后面还跟一个字母 —— 单独一个 `-`
+#: （中文说法里可能出现的连字符）不算开关，不许误拒。
+_SWITCH_RE = re.compile(r"^--?[A-Za-z]")
+
+
+def _switch_like(word: str) -> bool:
+    """这个词会被 `kb/ask.py` 当成开关吗。
+
+    ★ 为什么本域必须在**边界**上先拒一次：`ask.py` 的开关是**与位置无关**地识别的
+      （`"--run" in args`），而本模块把用户敲的词原样当**一个 argv** 递给它。
+      实测（`_scratch/_sec_review_argv_probe.py`）：`building=--run` 那条 argv 里
+      `--run` 是**独立的一项** ⇒ `ask.py` 照收 ⇒ 一次 GET 会真跑判据并写
+      `data/_meta/kg_runs.json`；换成 `--pending` 则写 `kb/pending.json` ——
+      而本路由的约定白纸黑字写着「两条都是写操作，本域一个都不开放」。
+    ⇒ 两层：这里**拒**（并告诉人为什么），`kb/ask.py` 那边用 `--` 让这个词
+      **结构上不可能**变成开关。两层都要 —— 只靠 `--`，被拒的理由就没人说了；
+      只靠拒，将来多一个调用方就又漏一次。
+    """
+    return bool(_SWITCH_RE.match(word or ""))
 
 
 def _kbdir(cfg) -> Path:
@@ -261,7 +286,17 @@ def ask(cfg, q: str, building: str = "", top: int = 3) -> tuple[dict, dict]:
                           hint="GET %s/kg/ask?q=%s" % (cfg.api_prefix, "楼层错位"))
     if len(q) > _QUERY_MAX_CHARS:
         raise bad_request("查询词太长（上限 %d 字）" % _QUERY_MAX_CHARS, got=len(q))
+    # ★ 开关形的词先拒（理由见 `_switch_like`）：它是命令行的开关位置，不是说法。
+    #   整串与逐个词都查 —— 整串决定**此刻**会不会被当成开关，逐词是防调用方改成分词传参。
+    for w in [q] + q.split():
+        if _switch_like(w):
+            raise bad_request(
+                "查询词里不许出现开关形的词：%r —— 那是命令行的开关位置，不是说法"
+                % w, q=q)
     b = (building or "").strip()
+    if _switch_like(b):
+        raise bad_request("楼号不许是开关形的词：%r（本域只做只读查询，"
+                          "`--run`/`--pending` 一律走命令行）" % b, building=building)
     if b and not _BUILDING_RE.match(b):
         raise bad_request("楼号只接受字母数字与 -_（最多 32 位）", building=building)
 
@@ -275,7 +310,9 @@ def ask(cfg, q: str, building: str = "", top: int = 3) -> tuple[dict, dict]:
     if not script.is_file():
         raise ApiError(500, "kg_engine_missing", "找不到图谱查询入口：kb/%s" % ASK_NAME)
 
-    argv = [sys.executable, "-u", str(script), "--json", "--top", str(top)]
+    # ★ `--` 之后一律是查询词：没有它，`?q=--list` 会让「查一个说法」当场变成「列症状表」
+    #   （两者都 exit 0，屏幕上分不出来 —— 实测 `_scratch/_sec_review_argv_probe.py` ②）。
+    argv = [sys.executable, "-u", str(script), "--json", "--top", str(top), "--"]
     # 楼号**当一个词传**，不拼进查询串：ask.py 自己从词里认楼号
     # （kb/ask.py:main 的 `query = " ".join(words)` ＋ `building_in(words, query)`），
     # 在这里替它拼串就等于在本模块里复制一份它的解析规则。
@@ -322,6 +359,8 @@ def ask(cfg, q: str, building: str = "", top: int = 3) -> tuple[dict, dict]:
         # 拼串就得处理引号/负号，而那句拼出来的话一旦和真实 argv 不一致，照它复现
         # 就会得到一个**不同的查询** —— 第一版就撞上了（引号落到了 `--json` 后面，
         # 屏幕上看着像句正常的命令）。列表没有这个面。
-        "argv": ["python", "-u", "kb/ask.py", "--json", "--top", str(top)]
+        # ★ 回的是**真的那条 argv**，`--` 也在里面 —— 少一个元素，照它复现就会
+        #   得到一个不同的东西（这正是本字段存在的理由）。
+        "argv": ["python", "-u", "kb/ask.py", "--json", "--top", str(top), "--"]
                 + ([b] if b else []) + [q],
     }

@@ -73,6 +73,9 @@ GATE_PY = os.path.join(KB_DIR, "gate.py")
 sys.path.insert(0, KB_DIR)
 try:
     from gate import _READONLY_PREFIX as READONLY_PREFIX
+    #: ★「这条命令能不能跑」的**唯一裁决处**（`kb/gate.py:readonly_verdict`，
+    #:   登记侧与执行侧共用）—— 执行侧也调它，见 `_run_guard`。
+    from gate import readonly_verdict as READONLY_VERDICT
 except ImportError as _ex:                      # pragma: no cover - 只在文件被搬走时发生
     raise SystemExit("kb/ask.py 依赖同目录的 gate.py 取只读白名单，导入失败：%s" % _ex)
 
@@ -666,8 +669,36 @@ def argv_of(cmd):
     return (parts, None) if parts else (None, "解析成空 argv")
 
 
+def _run_guard(cmd, writes="", _judge=None):
+    """跑之前**执行侧自己**再判一次「这条能不能跑」。回 `(放行?, 原因)`。
+
+    ★ 为什么执行侧必须自己判（2026-09-24 安全评审指出，**是真的**）：
+      原先 `--run` 执行的是 kb.json 里 `run[].cmd` **有什么跑什么**，而「能不能跑」
+      这个判断只活在 `kb/gate.py` 的 ⑦ 里 —— 那是**另一条命令**，跑不跑由人定
+      （`--selftest` 的 T6 只是它的回声，同样得有人先敲 `--selftest`）。
+      于是链子是「**数据文件 → 执行**」，中间那道闸可以被绕过。
+    ★ `argv_of` 挡不住它：那只挡 shell 元字符，而 `python -u -c "…"` 一个元字符都没有
+      ⇒ 拒不了，它也不在白名单里。
+    ★ **判不了就不跑**（fail-closed）：闸自己抛、闸取不到，都不许退化成「那就跑吧」——
+      这正是原缺陷的形状（没人问过它，于是它照跑）。
+
+    `_judge` 只为自检注入（默认引 ⑦ 那份**同一实现**）。
+    """
+    judge = _judge or globals().get("READONLY_VERDICT")
+    if not callable(judge):
+        return False, "取不到只读闸（gate.readonly_verdict 不可用）—— 判不了就不跑"
+    try:
+        ok, why = judge(cmd, writes)
+    except Exception as exc:                    # 闸自己坏了 ⇒ 也拒
+        return False, "只读闸自己坏了（%s: %s）—— 判不了就不跑" % (type(exc).__name__, exc)
+    if not ok:
+        return False, "只读闸⑦否决：%s" % why
+    return True, "只读"
+
+
 def run_registered(kb, ans, ledger=LEDGER):
-    """★只跑图里登记过的命令。跑完留痕（含尺子指纹）。"""
+    """★只跑图里登记过的命令，且**每条都再过一次只读闸**（`_run_guard`）。
+    跑完留痕（含尺子指纹）。"""
     runs = ans.get("run") or []
     if not runs:
         return {"ran": 0, "note": "本家族没有登记可跑判据 —— 不跑任何东西，也不猜一条命令出来"}
@@ -676,6 +707,16 @@ def run_registered(kb, ans, ledger=LEDGER):
     for r in runs:
         cmd = r.get("cmd") or ""
         print("  ▸ %s\n    声明的写盘副作用：%s" % (cmd, r.get("writes") or "（没写！）"))
+        # ★ 先过闸（⑦），再过 argv 形 —— 两道都拒，但**理由不许混**：
+        #   「入口不在白名单」和「含 shell 元字符」是两种病，报同一种话就得靠猜。
+        allowed, gate_why = _run_guard(cmd, r.get("writes") or "")
+        if not allowed:
+            print("    ★拒跑（只读闸）：%s" % gate_why)
+            out.append({"cmd": cmd, "exit": "REFUSED", "seconds": 0.0,
+                        "tail": gate_why, "expect": r.get("expect") or "",
+                        "read": r.get("read") or "", "writes": r.get("writes") or "",
+                        "evidence": r.get("evidence") or ""})
+            continue
         argv, why = argv_of(cmd)
         if argv is None:
             print("    ★拒跑：%s" % why)
@@ -957,6 +998,122 @@ def selftest():
         if os.path.exists(probe):
             os.remove(probe)
 
+    # ── T12 执行侧的只读闸（★ 2026-09-24 安全评审逼出来的那一条）────────────
+    # ★ 为什么不去断言「_run_guard 的判决 == gate.readonly_verdict 的判决」：
+    #   本函数**就是**转调它 ⇒ 那条断言**恒绿**（memory: same-source-comparison-always-green，
+    #   「两边同源必恒绿」——一致性检查对「两处相同的错值」是盲的）。
+    #   要证明的是**它肚子里没有第二套规则**，所以改注入一个假闸、看判决跟不跟着走。
+    reg = [(r.get("cmd") or "", r.get("writes") or "")
+           for f in (kb.get("playbook") or {}).values()
+           for r in (f.get("runs") or []) if isinstance(r, dict)]
+
+    # ① 不在白名单里的命令必须被**闸**拒（不是被 argv 拒）——两个理由不许混同
+    sneak = "python -u something_else.py c057"
+    if argv_of(sneak)[0] is None:
+        fails.append("T12 前提不成立：%r 过不了 argv 解析 ⇒ 拒它的会是 argv_of，"
+                     "这一格就量不到闸（变量没被孤立出来）" % sneak)
+    ok, why = _run_guard(sneak, "无")
+    if ok:
+        fails.append("T12 不在只读白名单里的命令被放行了：%r" % sneak)
+    elif "白名单" not in why:
+        fails.append("T12 拒了但理由不对（%r）—— 分不清是白名单拒的还是 argv 拒的" % why)
+    # ② 白名单入口 + 写标记 ⇒ 拒
+    ok, why = _run_guard("python -u backend/checks/qa_structural.py c057 --apply", "无")
+    if ok or "写操作标记" not in why:
+        fails.append("T12 带 --apply 的命令没被按「写标记」拒掉（ok=%s, why=%s）" % (ok, why))
+    # ③ 阳性对照：**真登记的**只读命令必须放行（否则把闸写死成恒拒也能绿）
+    if not reg:
+        fails.append("T12 阳性对照无从谈起：图里一条登记命令都没有")
+    else:
+        ok, why = _run_guard(*reg[0])
+        if not ok:
+            fails.append("T12 阳性对照红了：登记的只读命令 %r 被自己的闸拒了（%s）—— "
+                         "闸宽成了「一律拒」，比漏放更坏（`--run` 会变成永远跑不动）"
+                         % (reg[0][0], why))
+        # ④ 「只读」不许是空话：写了命令却没写 writes ⇒ 拒
+        ok, why = _run_guard(reg[0][0], "")
+        if ok or "writes" not in why:
+            fails.append("T12 没写 writes 的条目被放行了（ok=%s, why=%s）—— "
+                         "副作用没人知道就跑，与 ⑦ 的规矩不一致" % (ok, why))
+    # ⑤ 单源：判决必须**跟着闸走**，本函数不许自己说了算
+    yes = lambda c, w: (True, "假装放行")            # noqa: E731
+    if not _run_guard(sneak, "无", _judge=yes)[0]:
+        fails.append("T12 注入了「一律放行」的闸，本函数却仍拒 —— 它肚子里还藏着一套规则"
+                     "（一个判断两份实现）")
+    if reg:
+        no = lambda c, w: (False, "假装否决")        # noqa: E731
+        if _run_guard(*reg[0], _judge=no)[0]:
+            fails.append("T12 注入了「一律否决」的闸，本函数却仍放行 —— 同上")
+    # ⑥ fail-closed 两面：判不了就不跑（这正是原缺陷的形状：没人问过它，于是它照跑）
+    def _boom(c, w):
+        raise RuntimeError("假装的闸故障")
+
+    ok, why = _run_guard("python -u kb/ask.py --list", "无", _judge=_boom)
+    if ok:
+        fails.append("T12 fail-open：闸自己抛异常时放行了 —— 坏了就该拒，不许退化成「那就跑吧」")
+    elif "坏了" not in why:
+        fails.append("T12 闸抛异常被拒了，但理由没说清是闸坏了（%r）" % why)
+    _saved = globals().pop("READONLY_VERDICT", None)
+    try:
+        ok2, why2 = _run_guard("python -u kb/ask.py --list", "无")
+    finally:
+        if _saved is not None:
+            globals()["READONLY_VERDICT"] = _saved
+    if ok2:
+        fails.append("T12 fail-open：取不到只读闸时放行了 —— 判不了就不许跑")
+    elif "取不到" not in why2:
+        fails.append("T12 取不到闸时被拒了，但理由不对（%r）" % why2)
+
+    # ⑦ 走**真调用点**（`run_registered`）两方向 —— ★ 上面六格全是直接调 `_run_guard`，
+    #   而「函数写了」和「函数被调了」是两件事（铁律 17）：把调用点那一行删掉，
+    #   上面六格**照样全绿**。所以这一格必须从调用点发问、看它真的拦在跑之前。
+    #   留痕写到临时路径，**不碰真台账**；一条命令都不真跑（除阳性对照那条只读的）。
+    tled = os.path.join(KB_DIR, "_run_guard_selftest.json")
+    try:
+        ans = {"state": "hit", "query": "自检", "family": "floor-misalign",
+               "run": [{"cmd": sneak, "writes": "无", "expect": "不许跑"}]}
+        r = run_registered(kb, ans, ledger=tled)
+        row = (r.get("results") or [{}])[0]
+        if row.get("exit") != "REFUSED":
+            fails.append("T12 调用点没拦住：不在白名单的命令 exit=%r（期望 REFUSED）—— "
+                         "拒跑判断写好了却没被调用" % row.get("exit"))
+        elif "白名单" not in (row.get("tail") or ""):
+            fails.append("T12 调用点拦住了但理由不对（%r）" % row.get("tail"))
+        # 阳性对照：**真登记的**那类只读命令必须真的跑到（此处用最轻的一条只读命令）
+        ans2 = {"state": "hit", "query": "自检", "family": "floor-misalign",
+                "run": [{"cmd": "python -u kb/ask.py --list", "writes": "无（只列症状表）",
+                         "expect": "0"}]}
+        r2 = run_registered(kb, ans2, ledger=tled)
+        row2 = (r2.get("results") or [{}])[0]
+        if row2.get("exit") != 0:
+            fails.append("T12 阳性对照红了：登记的只读命令没跑成（exit=%r, tail=%s）—— "
+                         "把闸写死成恒拒也会让上面那格绿" % (row2.get("exit"),
+                                                          (row2.get("tail") or "")[-120:]))
+    finally:
+        if os.path.exists(tled):
+            os.remove(tled)
+
+    # ── T13 `--`：位置参数区里的词**永远**不是开关 ────────────────────────
+    sw, pos = split_at_dashdash(["--json", "--top", "3", "c057"])
+    if "--json" not in sw or pos:
+        fails.append("T13 没有 `--` 时行为必须与从前逐字相同（开关区=全部、位置区=空），"
+                     "实得 %r / %r" % (sw, pos))
+    sw2, pos2 = split_at_dashdash(["--json", "--", "--run"])
+    if "--run" in sw2:
+        fails.append("T13 `--` 之后的 `--run` 仍被算进开关区 ⇒ 它照样会被当开关执行（注入面还在）")
+    elif pos2 != ["--run"]:
+        fails.append("T13 `--` 之后的都该是查询词，实得 %r" % (pos2,))
+    # 端到端两个方向（拿只读的 `--list` 当探针，一个字节都不写）
+    hdr = "已知症状家族"
+    o1 = subprocess.run([sys.executable, "-u", ask_py, "--json", "--list"],
+                        capture_output=True, cwd=ROOT).stdout.decode("utf-8", "replace")
+    o2 = subprocess.run([sys.executable, "-u", ask_py, "--json", "--", "--list"],
+                        capture_output=True, cwd=ROOT).stdout.decode("utf-8", "replace")
+    if hdr not in o1:
+        fails.append("T13 阳性对照没亮：开关位的 `--list` 本该列出症状表（没亮=这组在空跑）")
+    if hdr in o2:
+        fails.append("T13 `-- --list` 仍被当成开关 —— 位置参数区没生效")
+
     if fails:
         print("--selftest 红：%d 条" % len(fails))
         for f in fails:
@@ -970,7 +1127,9 @@ def selftest():
           "（不经过 shell）；pending 是追加；单字别名不许凭子串点亮；"
           "实例层「没量过」≠「一处也没有」；两把尺子不许互相挡门；"
           "带引号的整句也要认出楼名；"
-          "主命中按证据强弱取、且 activated[0] 与它同源" % len(grp))
+          "主命中按证据强弱取、且 activated[0] 与它同源；"
+          "执行前自己再过一次只读闸（判不了就不跑）；`--` 之后的词永远当查询词"
+          % len(grp))
     print("现表：家族 %d、陷阱 %d（只有人记着 %d）、别名 %d"
           % (len(kb.get("playbook") or {}), len(kb.get("traps") or {}),
              len([1 for v in (kb.get("traps") or {}).values() if not v.get("cases")]),
@@ -978,12 +1137,33 @@ def selftest():
     return 0
 
 
+def split_at_dashdash(args):
+    """`--` 之后一律是**查询词**，永远不当开关。回 `(开关区, 位置参数区)`。
+
+    ★ 这是「一个 token 是开关还是说法」这件事**唯一**的裁决处（铁律 29：
+      语义判断只许有一个出处）。
+    ★ 为什么必须有它：开关是**与位置无关**地识别的（`"--run" in args`），而 HTTP 层 /
+      转发器把用户敲的词原样当**一个 argv** 递进来 ⇒ `?building=--run&q=楼层错位`
+      会让一次「只读查询」变成一次真跑判据 + 写留痕。实测
+      （`_scratch/_sec_review_argv_probe.py` ①）：那条 argv 里 `--run` 是**独立的一项**，
+      本文件照收；②把 `--run` 换成只读的 `--list`，「查楼层错位」当场变成「列症状表」——
+      两者都 exit 0，屏幕上分不出来。
+    ⇒ 调用方在位置参数前插一个 `--`，这个歧义就不存在了。
+    """
+    if "--" in args:
+        i = args.index("--")
+        return args[:i], args[i + 1:]
+    return args, []
+
+
 def main():
-    args = sys.argv[1:]
+    switches, positionals = split_at_dashdash(sys.argv[1:])
+    args = switches                      # 下面**每一处**开关判断只看开关区
     for a in args:
         if a.startswith("-") and a not in FLAGS:
             print("不认识的开关 %r。本仓不认 --help（会被当成查询词）；"
-                  "可用开关：%s" % (a, " ".join(FLAGS)))
+                  "可用开关：%s。★`--` 之后的都算查询词，不当开关。"
+                  % (a, " ".join(FLAGS)))
             return 2
     if "--selftest" in args:
         return selftest()
@@ -1006,7 +1186,7 @@ def main():
         i = args.index("--who")
         who = args[i + 1] if i + 1 < len(args) else ""
 
-    words = query_words(args)
+    words = query_words(args) + positionals
     if not words:
         print(__doc__.strip().splitlines()[0])
         print("给一个说法试试：python -u kb/ask.py \"楼层错位\"")

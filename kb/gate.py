@@ -603,6 +603,25 @@ def readonly_ok(cmd: str) -> tuple[bool, str]:
     return True, "只读"
 
 
+def readonly_verdict(cmd: str, writes: str = "") -> tuple[bool, str]:
+    """一条登记的判据命令**能不能跑** —— ★**唯一**的裁决处。
+
+    登记侧（`run()` 那一列 `cmd_rows`）与执行侧（`kb/ask.py:run_registered`）都调它，
+    所以两边**不可能给出不同判决**。这是 2026-09-24 安全评审逼出来的一件事：
+    原先「能不能跑」只在登记侧判，而执行侧是「kb.json 里有什么跑什么」——
+    **判断在一处、动作在另一处，而动作那一侧不调它**（铁律 20：形式检查通过、语义没发生）。
+    更糟的是执行侧那份 `argv_of` 只挡 shell 元字符，`python -u -c "…"` 那种命令
+    一个元字符都没有 ⇒ 它拦不住，而它也不在白名单里。
+
+    ★ 「只读」不许是空话：白名单是按**前缀**放的，而这些盘上脚本**会写报告**。
+      没写 `writes` 的条目 = 副作用没人知道 ⇒ 拒（不是警告）。
+    """
+    ok, why = readonly_ok(cmd)
+    if ok and not (writes or "").strip():
+        return False, "没写 writes —— 判据命令的写盘副作用必须写明"
+    return ok, why
+
+
 # ── 汇总 ────────────────────────────────────────────────────
 
 def run(payload: dict | None = None) -> dict:
@@ -618,11 +637,9 @@ def run(payload: dict | None = None) -> dict:
     value = _run_values()
     cmd_rows = []
     for c in _declared_commands(payload):
-        ok, why = readonly_ok(c["cmd"])
-        if ok and not (c.get("writes") or "").strip():
-            # ★ 「只读」不许是空话：白名单是按前缀放的，而这些盘上脚本**会写报告**。
-            #   没写 `writes` 的条目 = 副作用没人知道 ⇒ 拒登（不是警告）。
-            ok, why = False, "没写 writes —— 判据命令的写盘副作用必须写明"
+        # ★ 判决调 `readonly_verdict`（唯一裁决处），不在这里写第二遍 ——
+        #   执行侧 `kb/ask.py:run_registered` 调的是同一个函数。
+        ok, why = readonly_verdict(c["cmd"], c.get("writes") or "")
         cmd_rows.append((c["cmd"], ok, why, c.get("src") or ""))
     _te, bare = collect_trap_edges()
     cjk = check_cjk_quotes()

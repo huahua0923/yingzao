@@ -1,0 +1,5375 @@
+{
+ "criterion_version": 1,
+ "_note": "图谱的 instance 层（机器派生）。两个轴：qa_defects = 识别侧缺陷记录（按 code、再按层分组），qa_reports = 几何侧逐层实测（按 flags 分组）。★unmapped 里的数不是「无缺陷」，是「图谱里还没有对应家族」—— 必须被数出来，不许静默为零。★_cross_floor 不是层：源里 floor=null 的行（跨层重复/整栋级）落这里。",
+ "self_sha12": "4b17cc53a5f3",
+ "generated_from": {
+  "src_sha": {
+   "_qa/defect_c006.json": "2af0350dbf52",
+   "_qa/defect_c009.json": "754d6a08d484",
+   "_qa/defect_c017.json": "ed9a59220ba7",
+   "_qa/defect_c018.json": "e1ba7188180e",
+   "_qa/defect_c019.json": "efb1198a7f39",
+   "_qa/defect_c022.json": "9948af934a26",
+   "_qa/defect_c025.json": "a2cd9e211b28",
+   "_qa/defect_c026.json": "de5241d305d9",
+   "_qa/defect_c027.json": "2331605f29be",
+   "_qa/defect_c028.json": "8688327ed096",
+   "_qa/defect_c029.json": "307534ffdc4e",
+   "_qa/defect_c030.json": "c6f117ae66cd",
+   "_qa/defect_c031.json": "af7c29e0261d",
+   "_qa/defect_c032.json": "03f7ac1c3cac",
+   "_qa/defect_c033.json": "3fc33ba0d226",
+   "_qa/defect_c034.json": "b753e8101917",
+   "_qa/defect_c041.json": "a75faeed699a",
+   "_qa/defect_c043.json": "6c9c0bbacd7f",
+   "_qa/defect_c044.json": "a8ae0a2461e9",
+   "_qa/defect_c045.json": "dfd56bec0b69",
+   "_qa/defect_c046.json": "a75c9883854b",
+   "_qa/defect_c054.json": "6264b86b1e78",
+   "_qa/defect_c055.json": "70f7e716cc3f",
+   "_qa/defect_c056.json": "951ddcb6b824",
+   "_qa/defect_c057.json": "4a6135056713",
+   "_qa/defect_c059.json": "3ccd2cc4401a",
+   "_qa/defect_c060.json": "a67699b5e913",
+   "_qa/defect_c061.json": "c106776f0b2d",
+   "_qa/defect_c062.json": "cc1bea2e963a",
+   "_qa/defect_c063.json": "6fd717ab4bdc",
+   "_qa/defect_c064.json": "86e793c22be4",
+   "_qa/defect_c065.json": "b0baeb4b35d4",
+   "_qa/defect_c072.json": "12b8e1fb69f6",
+   "_qa/defect_c073.json": "ae963cd16d95",
+   "_qa/defect_c079.json": "e164ea55e424",
+   "_qa/defect_c080.json": "8274fc6e934f",
+   "_qa/defect_c083.json": "d5ec187d65e2",
+   "_qa/defect_c084.json": "80657058903d",
+   "_qa/defect_c085.json": "19d4a79b3ba4",
+   "_qa/defect_c086.json": "7a5915bea845",
+   "_qa/defect_c103.json": "c22dde0ecff9",
+   "_qa/defect_c104.json": "3d6a8a496528",
+   "_qa/defect_c108.json": "e09258baf4f8",
+   "_qa/defect_c109.json": "e0bd650bffb9",
+   "_qa/defect_c114.json": "1a5d247fcef7",
+   "_qa/defect_c116.json": "f02264bff270",
+   "_qa/defect_ny27.json": "4bb2dd289167",
+   "_qa/defect_ny28.json": "0c059ed96dac",
+   "_qa/defect_ny29.json": "1baf9926a1d8",
+   "_qa/defects.json": "6fa9d31d0590",
+   "kb/kb.json": "345c9be2727a"
+  },
+  "qa_defects": "_qa/defects.json",
+  "kb_alias": "kb/kb.json"
+ },
+ "universe": {
+  "src": "data/buildings/*（与 backend/state/census.py 同一条形状：iterdir + is_dir，含分片楼 f1/f2）",
+  "n": 95,
+  "with_report": 49,
+  "without_report": 46
+ },
+ "totals": {
+  "defect_rows": 2512,
+  "qa_rows": 296,
+  "qa_floors_declared": 296,
+  "flag_instances": 64,
+  "flag_mapped": 52,
+  "flag_unmapped": 12,
+  "codes_mapped": 2512,
+  "floor_null_rows": 13,
+  "buildings": 95,
+  "with_report": 49,
+  "unavailable": 46
+ },
+ "codes": {
+  "D3": {
+   "n": 4,
+   "group": "缺层",
+   "family": "ledger-vs-delivery",
+   "evidence": "scan_defects.py:check_floor_files",
+   "floor_null": 4,
+   "sev": {
+    "ERROR": 4
+   }
+  },
+  "D7": {
+   "n": 7,
+   "group": "并块",
+   "family": "room-merged-duplicate",
+   "evidence": "scan_defects.py:check_merged_rooms",
+   "floor_null": 0,
+   "sev": {
+    "ERROR": 7
+   }
+  },
+  "I1": {
+   "n": 335,
+   "group": "结构",
+   "family": "column-and-slab-support",
+   "evidence": "qa_structural.py:I1_col_in_own_outline",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 313,
+    "ERROR": 22
+   }
+  },
+  "I2": {
+   "n": 618,
+   "group": "结构",
+   "family": "column-and-slab-support",
+   "evidence": "qa_structural.py:I2_col_through",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 618
+   }
+  },
+  "I8": {
+   "n": 83,
+   "group": "结构",
+   "family": "floor-misalign",
+   "evidence": "qa_structural.py:I8_stacking",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 83
+   }
+  },
+  "I9": {
+   "n": 450,
+   "group": "结构",
+   "family": "diagonal-and-curve-walls",
+   "evidence": "qa_structural.py:I9_irregular_walls",
+   "floor_null": 0,
+   "sev": {
+    "INFO": 450
+   }
+  },
+  "I10": {
+   "n": 10,
+   "group": "结构",
+   "family": "column-and-slab-support",
+   "evidence": "qa_structural.py:I10_col_beyond_plate_inside_hull",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 10
+   }
+  },
+  "I11": {
+   "n": 487,
+   "group": "结构",
+   "family": "door-host-broken",
+   "evidence": "qa_structural.py:I11_opening_hosts",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 487
+   }
+  },
+  "I17": {
+   "n": 239,
+   "group": "结构",
+   "family": "stair-shaft-broken",
+   "evidence": "qa_structural.py:I17_stair_shaft",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 239
+   }
+  },
+  "D0": {
+   "n": 10,
+   "group": "退化",
+   "family": "room-merged-duplicate",
+   "evidence": "scan_defects.py:check_degenerate",
+   "floor_null": 0,
+   "sev": {
+    "ERROR": 7,
+    "WARN": 3
+   }
+  },
+  "D1": {
+   "n": 32,
+   "group": "重复",
+   "family": "room-merged-duplicate",
+   "evidence": "scan_defects.py:check_duplicates",
+   "floor_null": 7,
+   "sev": {
+    "ERROR": 32
+   }
+  },
+  "I5": {
+   "n": 5,
+   "group": "结构",
+   "family": "outdoor-geometry-in-union",
+   "evidence": "qa_structural.py:I5_empty_dropband",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 5
+   }
+  },
+  "I18": {
+   "n": 11,
+   "group": "结构",
+   "family": "floor-misalign",
+   "evidence": "qa_structural.py:I18_stacking",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 11
+   }
+  },
+  "D2": {
+   "n": 28,
+   "group": "台账",
+   "family": "ledger-vs-delivery",
+   "evidence": "scan_defects.py:check_ledger_vs_floors",
+   "floor_null": 0,
+   "sev": {
+    "ERROR": 7,
+    "WARN": 21
+   }
+  },
+  "I7": {
+   "n": 26,
+   "group": "结构",
+   "family": "column-duplicate",
+   "evidence": "qa_structural.py:I7_dup_columns",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 26
+   }
+  },
+  "D5": {
+   "n": 1,
+   "group": "台账",
+   "family": "ledger-vs-delivery",
+   "evidence": "scan_defects.py:check_ledger_sentinel",
+   "floor_null": 1,
+   "sev": {
+    "WARN": 1
+   }
+  },
+  "QA": {
+   "n": 1,
+   "group": "其他",
+   "family": "criterion-crashed",
+   "evidence": "scan_defects.py:scan",
+   "floor_null": 1,
+   "sev": {
+    "INFO": 1
+   }
+  },
+  "I4": {
+   "n": 142,
+   "group": "结构",
+   "family": "outdoor-geometry-in-union",
+   "evidence": "qa_structural.py:I4_walls_not_outside",
+   "floor_null": 0,
+   "sev": {
+    "WARN": 142
+   }
+  },
+  "D4": {
+   "n": 1,
+   "group": "错帧",
+   "family": "floor-misalign",
+   "evidence": "scan_defects.py:check_iso_group_rooms",
+   "floor_null": 0,
+   "sev": {
+    "ERROR": 1
+   }
+  },
+  "I3": {
+   "n": 15,
+   "group": "结构",
+   "family": "room-outside-outline",
+   "evidence": "qa_structural.py:I3_room_within_outline",
+   "floor_null": 0,
+   "sev": {
+    "ERROR": 7,
+    "WARN": 8
+   }
+  },
+  "D8": {
+   "n": 7,
+   "group": "台账",
+   "family": "ledger-vs-delivery",
+   "evidence": "scan_defects.py:check_ledger_area_mismatch",
+   "floor_null": 0,
+   "sev": {
+    "ERROR": 7
+   }
+  }
+ },
+ "flags": {
+  "层错位6.7m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "层错位9.5m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "只剩外壳(内墙0.1%)": {
+   "n": 1,
+   "family": "missing-wall-blob"
+  },
+  "层错位3.3m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "漏墙>=15%": {
+   "n": 18,
+   "family": "missing-wall-blob"
+  },
+  "内墙巨块x1": {
+   "n": 7,
+   "family": "missing-wall-blob"
+  },
+  "内墙巨块x2": {
+   "n": 2,
+   "family": "missing-wall-blob"
+  },
+  "内墙巨块x3": {
+   "n": 1,
+   "family": "missing-wall-blob"
+  },
+  "内墙巨块x4": {
+   "n": 7,
+   "family": "missing-wall-blob"
+  },
+  "层错位6.2m": {
+   "n": 2,
+   "family": "floor-misalign"
+  },
+  "层错位7.4m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "层错位4.2m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "层错位3.8m": {
+   "n": 2,
+   "family": "floor-misalign"
+  },
+  "层错位3.6m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "层错位3.5m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "层错位6.9m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "越界42%": {
+   "n": 1,
+   "family": "room-outside-outline"
+  },
+  "越界10%": {
+   "n": 1,
+   "family": "room-outside-outline"
+  },
+  "层错位8.6m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "层错位5.0m": {
+   "n": 1,
+   "family": "floor-misalign"
+  },
+  "墙占比>0.35": {
+   "n": 12,
+   "family": null
+  }
+ },
+ "unmapped": {
+  "codes": {},
+  "flags": {
+   "墙占比>0.35": 12
+  },
+  "why": "这些数在图谱里没有对应家族 ⇒ 只登记、只计数，不硬塞进任何家族"
+ },
+ "buildings": {
+  "c001": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c001.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D3": 1
+    },
+    "5": {
+     "D7": 1,
+     "I2": 8,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "0": {
+     "I1": 5,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1
+    },
+    "1": {
+     "I1": 12,
+     "I2": 11,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I2": 52,
+     "I8": 1,
+     "I9": 1,
+     "I17": 2
+    },
+    "4": {
+     "I2": 18,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I17": 2
+    }
+   },
+   "codes": {
+    "D3": 1,
+    "D7": 1,
+    "I2": 89,
+    "I9": 6,
+    "I11": 4,
+    "I17": 9,
+    "I1": 17,
+    "I10": 2,
+    "I8": 2
+   }
+  },
+  "c002": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c002.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D3": 1
+    },
+    "5": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "6": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "7": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "8": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "9": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "D3": 1,
+    "D0": 3,
+    "I9": 10,
+    "I11": 9,
+    "I17": 9
+   }
+  },
+  "c003": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c003.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1,
+     "D3": 1
+    },
+    "0": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "D0": 1,
+     "D1": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "7": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "8": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "9": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "D1": 2,
+    "D3": 1,
+    "D0": 5,
+    "I9": 10,
+    "I11": 9,
+    "I17": 9,
+    "I8": 1
+   }
+  },
+  "c004": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c004.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 3,
+    "I17": 3,
+    "I11": 1
+   }
+  },
+  "c004f1": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c004f1.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "2": {
+     "I5": 1,
+     "I9": 1,
+     "I17": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1
+    },
+    "0": {
+     "I9": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I5": 1,
+    "I9": 4,
+    "I17": 3,
+    "I8": 1
+   }
+  },
+  "c004f2": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c004f2.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I1": 4,
+     "I9": 1
+    }
+   },
+   "codes": {
+    "I1": 4,
+    "I9": 1
+   }
+  },
+  "c005": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c005.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I18": 2
+    }
+   },
+   "codes": {
+    "I8": 1,
+    "I9": 5,
+    "I11": 5,
+    "I17": 1,
+    "I18": 3
+   }
+  },
+  "c006": {
+   "report": true,
+   "floors_declared": 11,
+   "rows": 11,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [
+      "层错位6.7m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "5": {
+     "flags": [
+      "层错位9.5m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "6": {
+     "flags": [
+      "只剩外壳(内墙0.1%)"
+     ],
+     "families": [
+      "missing-wall-blob"
+     ]
+    },
+    "7": {
+     "flags": [
+      "层错位3.3m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "8": {
+     "flags": [],
+     "families": []
+    },
+    "9": {
+     "flags": [],
+     "families": []
+    },
+    "10": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1
+    },
+    "6": {
+     "D2": 1,
+     "I5": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "7": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "8": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "9": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "10": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "D2": 1,
+    "I5": 1,
+    "I9": 11,
+    "I11": 18,
+    "I17": 12,
+    "I8": 4
+   }
+  },
+  "c007": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c007.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "D7": 1,
+     "I2": 8,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I7": 2,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D7": 1,
+    "I2": 8,
+    "I9": 5,
+    "I11": 5,
+    "I17": 2,
+    "I7": 2,
+    "I8": 3
+   }
+  },
+  "c008": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c008.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I1": 7,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1
+    },
+    "1": {
+     "I1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I1": 8,
+    "I9": 5,
+    "I10": 1,
+    "I11": 5,
+    "I8": 2
+   }
+  },
+  "c008f1": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c008f1.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I8": 1,
+    "I9": 2,
+    "I11": 2,
+    "I17": 2
+   }
+  },
+  "c008f2": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c008f2.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I2": 6,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I2": 6,
+    "I8": 1,
+    "I9": 2,
+    "I11": 2,
+    "I17": 1
+   }
+  },
+  "c009": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "1": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x2"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "2": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x3"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "3": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "4": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x2"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "5": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    }
+   },
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D5": 1,
+     "QA": 1
+    },
+    "3": {
+     "D1": 1
+    },
+    "4": {
+     "D1": 1
+    }
+   },
+   "codes": {
+    "D5": 1,
+    "QA": 1,
+    "D1": 2
+   }
+  },
+  "c010": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c010.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "I9": 1
+   }
+  },
+  "c010f1": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c010f1.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I2": 5,
+     "I9": 1,
+     "I11": 2
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I2": 5,
+    "I9": 2,
+    "I11": 3
+   }
+  },
+  "c011": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c011.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I1": 61,
+     "I4": 18,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I2": 61,
+     "I4": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I2": 17,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "3": {
+     "I2": 37,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I1": 61,
+    "I4": 19,
+    "I9": 4,
+    "I10": 1,
+    "I11": 4,
+    "I17": 4,
+    "I2": 115,
+    "I8": 3
+   }
+  },
+  "c012": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c012.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I8": 2,
+    "I9": 3,
+    "I11": 3
+   }
+  },
+  "c012f1": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c012f1.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2
+    }
+   },
+   "codes": {
+    "I8": 1,
+    "I11": 3,
+    "I9": 1
+   }
+  },
+  "c015": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c015.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I1": 12,
+     "I4": 10,
+     "I8": 1,
+     "I9": 1,
+     "I10": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I1": 4,
+     "I2": 34,
+     "I4": 23,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I1": 16,
+    "I4": 33,
+    "I8": 2,
+    "I9": 3,
+    "I10": 1,
+    "I11": 6,
+    "I17": 3,
+    "I2": 34
+   }
+  },
+  "c017": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 7,
+    "I17": 1,
+    "I11": 6
+   }
+  },
+  "c018": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6,
+    "I17": 5
+   }
+  },
+  "c019": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 7,
+    "I11": 7,
+    "I17": 7
+   }
+  },
+  "c020": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c020.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I2": 2,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I2": 2,
+    "I8": 4,
+    "I9": 5,
+    "I11": 5,
+    "I18": 3,
+    "I17": 1
+   }
+  },
+  "c021": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c021.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1
+    },
+    "0": {
+     "I1": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I2": 8,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I2": 6,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I1": 1,
+    "I9": 5,
+    "I11": 5,
+    "I17": 2,
+    "I2": 15,
+    "I8": 1
+   }
+  },
+  "c022": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D0": 1,
+     "D4": 1,
+     "I7": 1,
+     "I3": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "D0": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I7": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D0": 2,
+    "D4": 1,
+    "I7": 2,
+    "I3": 1,
+    "I9": 7,
+    "I11": 7,
+    "I17": 1
+   }
+  },
+  "c023": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c023.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "D1": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "0": {
+     "I4": 5,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I8": 1,
+    "I9": 4,
+    "I11": 6,
+    "I17": 4,
+    "I4": 5
+   }
+  },
+  "c024": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c024.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 3,
+    "I11": 3,
+    "I17": 3
+   }
+  },
+  "c025": {
+   "report": true,
+   "floors_declared": 3,
+   "rows": 3,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "1": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I9": 3,
+    "I11": 5,
+    "I17": 3
+   }
+  },
+  "c026": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "3": {
+     "I2": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "5": {
+     "I2": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2
+    },
+    "2": {
+     "I9": 1,
+     "I11": 2
+    }
+   },
+   "codes": {
+    "I2": 2,
+    "I8": 3,
+    "I9": 6,
+    "I11": 12
+   }
+  },
+  "c027": {
+   "report": true,
+   "floors_declared": 8,
+   "rows": 8,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位6.2m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    },
+    "7": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1
+    },
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "5": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "6": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "7": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 2
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I8": 7,
+    "I9": 8,
+    "I11": 13,
+    "I17": 1
+   }
+  },
+  "c028": {
+   "report": true,
+   "floors_declared": 3,
+   "rows": 3,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "1": {
+     "D2": 1,
+     "I3": 4,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I3": 5,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I3": 4,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D2": 1,
+    "I3": 13,
+    "I9": 3,
+    "I11": 4,
+    "I17": 3
+   }
+  },
+  "c029": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6,
+    "I17": 6
+   }
+  },
+  "c030": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位7.4m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 7,
+    "I11": 7,
+    "I17": 7
+   }
+  },
+  "c031": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位4.2m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6,
+    "I17": 6
+   }
+  },
+  "c032": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位3.8m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6,
+    "I17": 6
+   }
+  },
+  "c033": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位3.6m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6,
+    "I17": 6
+   }
+  },
+  "c034": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "1": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D2": 3,
+    "I9": 6,
+    "I11": 6,
+    "I17": 6,
+    "I8": 2
+   }
+  },
+  "c035": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c035.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I5": 1,
+     "I9": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1
+    },
+    "0": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "I5": 1,
+    "I9": 4,
+    "I8": 2
+   }
+  },
+  "c036": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c036.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I8": 3,
+    "I9": 5,
+    "I11": 5,
+    "I17": 3
+   }
+  },
+  "c037": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c037.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 7,
+    "I17": 6
+   }
+  },
+  "c038": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c038.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 5,
+    "I11": 5
+   }
+  },
+  "c041": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [
+      "漏墙>=15%"
+     ],
+     "families": [
+      "missing-wall-blob"
+     ]
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "2": {
+     "I1": 6,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I4": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    }
+   },
+   "codes": {
+    "I1": 6,
+    "I9": 6,
+    "I10": 1,
+    "I11": 6,
+    "I17": 7,
+    "I4": 1
+   }
+  },
+  "c043": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 7,
+    "I11": 7
+   }
+  },
+  "c044": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I1": 6,
+     "I7": 2,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "5": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I1": 6,
+    "I7": 2,
+    "I9": 6,
+    "I10": 1,
+    "I11": 6,
+    "I17": 7,
+    "I8": 1
+   }
+  },
+  "c045": {
+   "report": true,
+   "floors_declared": 7,
+   "rows": 7,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    },
+    "6": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I1": 6,
+     "I7": 3,
+     "I9": 1,
+     "I10": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "6": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I1": 6,
+    "I7": 3,
+    "I9": 7,
+    "I10": 1,
+    "I11": 8,
+    "I17": 7
+   }
+  },
+  "c046": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1
+    },
+    "0": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "1": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "2": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "3": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "4": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "5": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 2
+    }
+   },
+   "codes": {
+    "D1": 7,
+    "D8": 6,
+    "I9": 6,
+    "I11": 12,
+    "I17": 12
+   }
+  },
+  "c047": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c047.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "I9": 1
+   }
+  },
+  "c053": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c053.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 2,
+    "I11": 2,
+    "I17": 2
+   }
+  },
+  "c054": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c055": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c056": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位3.5m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "5": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c057": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位6.9m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c058": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c058.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I8": 2,
+    "I9": 3,
+    "I11": 4,
+    "I17": 1
+   }
+  },
+  "c059": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位6.2m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c060": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c061": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c062": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c063": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c064": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c065": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c066": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c066.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 1,
+    "I11": 1
+   }
+  },
+  "c066f1": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c066f1.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 2,
+    "I11": 2
+   }
+  },
+  "c071": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c071.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I4": 1,
+     "I9": 1
+    }
+   },
+   "codes": {
+    "I4": 1,
+    "I9": 1
+   }
+  },
+  "c072": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D2": 6,
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c073": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D2": 6,
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c074": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c074.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I17": 2
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I17": 2
+    },
+    "5": {
+     "I8": 1,
+     "I9": 1,
+     "I17": 2
+    },
+    "6": {
+     "I8": 1,
+     "I9": 1,
+     "I17": 2
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    }
+   },
+   "codes": {
+    "I8": 6,
+    "I9": 7,
+    "I11": 3,
+    "I17": 14
+   }
+  },
+  "c075": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c075.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I1": 145,
+     "I4": 33,
+     "I9": 1,
+     "I10": 1,
+     "I11": 2,
+     "I17": 2
+    },
+    "6": {
+     "I1": 1,
+     "I2": 24,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I7": 1,
+     "I2": 27,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I2": 145,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I2": 25,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I2": 25,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I1": 146,
+    "I4": 33,
+    "I9": 7,
+    "I10": 1,
+    "I11": 8,
+    "I17": 3,
+    "I2": 246,
+    "I8": 6,
+    "I7": 1
+   }
+  },
+  "c077": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c077.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 1,
+    "I11": 1
+   }
+  },
+  "c079": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 11,
+    "I17": 6
+   }
+  },
+  "c080": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "I7": 2,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I7": 2,
+    "I9": 6,
+    "I11": 11,
+    "I17": 6
+   }
+  },
+  "c081": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c081.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I1": 62,
+     "I4": 31,
+     "I9": 1,
+     "I10": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I1": 62,
+    "I4": 31,
+    "I9": 1,
+    "I10": 1,
+    "I11": 1,
+    "I17": 1
+   }
+  },
+  "c083": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 7,
+    "I17": 6
+   }
+  },
+  "c084": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 11,
+    "I17": 6
+   }
+  },
+  "c085": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 7,
+    "I17": 6
+   }
+  },
+  "c086": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "D8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "3": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "4": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "5": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "D1": 6,
+    "D8": 1,
+    "I9": 6,
+    "I11": 11,
+    "I17": 6
+   }
+  },
+  "c103": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "1": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "2": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "3": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "4": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x4"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "5": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1",
+      "层错位3.8m",
+      "越界42%"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob",
+      "floor-misalign",
+      "room-outside-outline"
+     ]
+    }
+   },
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D3": 1
+    },
+    "0": {
+     "D2": 1,
+     "D7": 1,
+     "I1": 2,
+     "I7": 8,
+     "I3": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "D2": 1,
+     "D7": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "D2": 1,
+     "D7": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "D2": 1,
+     "D7": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "D2": 1,
+     "D7": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "D2": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D3": 1,
+    "D2": 6,
+    "D7": 5,
+    "I1": 2,
+    "I7": 8,
+    "I3": 1,
+    "I9": 6,
+    "I11": 6,
+    "I8": 5
+   }
+  },
+  "c104": {
+   "report": true,
+   "floors_declared": 5,
+   "rows": 5,
+   "obs": {
+    "0": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "1": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1",
+      "越界10%"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob",
+      "room-outside-outline"
+     ]
+    },
+    "2": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "3": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    },
+    "4": {
+     "flags": [
+      "漏墙>=15%",
+      "内墙巨块x1"
+     ],
+     "families": [
+      "missing-wall-blob",
+      "missing-wall-blob"
+     ]
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D2": 1,
+     "I5": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "1": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "2": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "3": {
+     "D2": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "4": {
+     "D2": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    }
+   },
+   "codes": {
+    "D2": 5,
+    "I5": 1,
+    "I9": 5,
+    "I11": 5,
+    "I17": 6,
+    "I8": 1
+   }
+  },
+  "c105": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c105.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I4": 5,
+     "I8": 1,
+     "I9": 1
+    },
+    "0": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "I4": 5,
+    "I8": 1,
+    "I9": 2
+   }
+  },
+  "c106": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c106.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "2": {
+     "I5": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I5": 1,
+    "I9": 4,
+    "I11": 4,
+    "I8": 1
+   }
+  },
+  "c107": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c107.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I8": 3,
+    "I9": 4,
+    "I11": 5,
+    "I18": 1,
+    "I17": 1
+   }
+  },
+  "c108": {
+   "report": true,
+   "floors_declared": 4,
+   "rows": 4,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 4,
+    "I11": 4
+   }
+  },
+  "c109": {
+   "report": true,
+   "floors_declared": 5,
+   "rows": 5,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位8.6m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 5,
+    "I11": 5
+   }
+  },
+  "c110": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c110.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "I4": 2,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I4": 2,
+    "I9": 1,
+    "I11": 1
+   }
+  },
+  "c112": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c112.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1
+    },
+    "1": {
+     "I8": 1,
+     "I9": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1
+    },
+    "0": {
+     "I9": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I8": 2,
+    "I9": 3
+   }
+  },
+  "c113": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c113.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "_cross_floor": {
+     "D1": 1
+    },
+    "3": {
+     "I7": 2,
+     "I2": 24,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "1": {
+     "I7": 2,
+     "I2": 63,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "2": {
+     "I7": 2,
+     "I2": 1,
+     "I8": 1,
+     "I9": 1,
+     "I11": 2,
+     "I17": 1
+    },
+    "4": {
+     "I2": 8,
+     "I8": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    },
+    "0": {
+     "I4": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 2
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I7": 6,
+    "I2": 96,
+    "I8": 4,
+    "I9": 5,
+    "I11": 8,
+    "I17": 6,
+    "I4": 1
+   }
+  },
+  "c114": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "层错位5.0m"
+     ],
+     "families": [
+      "floor-misalign"
+     ]
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "D1": 2,
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "c115": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c115.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I4": 1,
+     "I9": 1,
+     "I11": 1,
+     "I17": 1
+    }
+   },
+   "codes": {
+    "I4": 1,
+    "I9": 1,
+    "I11": 1,
+    "I17": 1
+   }
+  },
+  "c116": {
+   "report": true,
+   "floors_declared": 4,
+   "rows": 4,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "1": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "0": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I8": 3,
+    "I9": 4,
+    "I11": 4
+   }
+  },
+  "c117": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c117.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1,
+     "I18": 2
+    }
+   },
+   "codes": {
+    "I9": 4,
+    "I11": 4,
+    "I18": 3
+   }
+  },
+  "c118": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_c118.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I4": 10,
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I4": 10,
+    "I9": 1,
+    "I11": 1
+   }
+  },
+  "m281": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_m281.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 2,
+    "I11": 2
+   }
+  },
+  "m282": {
+   "report": false,
+   "state": "UNAVAILABLE",
+   "reason": "_qa 下无 defect_m282.json —— 本栋在交付目录里，**几何侧**没有机器产物（「没量过」不等于「合格」）；识别侧的 code 见 codes_by_floor",
+   "codes_by_floor": {
+    "0": {
+     "D1": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I8": 1,
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1,
+     "I18": 1
+    }
+   },
+   "codes": {
+    "D1": 1,
+    "I9": 4,
+    "I11": 4,
+    "I8": 1,
+    "I18": 1
+   }
+  },
+  "ny27": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [],
+     "families": []
+    },
+    "1": {
+     "flags": [],
+     "families": []
+    },
+    "2": {
+     "flags": [],
+     "families": []
+    },
+    "3": {
+     "flags": [],
+     "families": []
+    },
+    "4": {
+     "flags": [],
+     "families": []
+    },
+    "5": {
+     "flags": [],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "ny28": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "2": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "3": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "4": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "5": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  },
+  "ny29": {
+   "report": true,
+   "floors_declared": 6,
+   "rows": 6,
+   "obs": {
+    "0": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "1": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "2": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "3": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "4": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    },
+    "5": {
+     "flags": [
+      "墙占比>0.35"
+     ],
+     "families": []
+    }
+   },
+   "codes_by_floor": {
+    "0": {
+     "I9": 1,
+     "I11": 1
+    },
+    "1": {
+     "I9": 1,
+     "I11": 1
+    },
+    "2": {
+     "I9": 1,
+     "I11": 1
+    },
+    "3": {
+     "I9": 1,
+     "I11": 1
+    },
+    "4": {
+     "I9": 1,
+     "I11": 1
+    },
+    "5": {
+     "I9": 1,
+     "I11": 1
+    }
+   },
+   "codes": {
+    "I9": 6,
+    "I11": 6
+   }
+  }
+ }
+}

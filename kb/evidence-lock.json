@@ -1,6 +1,6 @@
 {
  "criterion_version": 2,
- "self_sha12": "9e9cebdd57f3",
+ "self_sha12": "ad32c5ec8e14",
  "files": {
   "README.md": "f2cf69aa889e",
   "_qa/AUDIT_BASELINE.json": "f7719eb199f5",
@@ -39,10 +39,10 @@
   "backend/state/roster.py": "2ad7c9543c9f",
   "backend/web/control.py": "2e3f08470384",
   "data/buildings/c057/profile.json": "09ae2eba33bb",
-  "kb/ask.py": "6ee055cf0183",
+  "kb/ask.py": "ecaa98cf7979",
   "kb/build_kb.py": "c421ec935c63",
   "kb/derive.py": "4b17cc53a5f3",
-  "kb/gate.py": "9e9cebdd57f3",
+  "kb/gate.py": "ad32c5ec8e14",
   "kb/playbook.json": "bcdf8bef96b9",
   "kb/traps.json": "d2bbacd786fd",
   "kb/values.py": "3ece0d092730",
