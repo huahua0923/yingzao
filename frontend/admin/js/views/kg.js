@@ -362,10 +362,18 @@ function chainBlock() {
   if (d.state === 'miss') blocks.push(missBlock(d));
   blocks.push(leftoverBlock(d));
   // 尺子：没有它，这个结论分不清是哪把尺子量的（铁律 24）。
+  // ★ 三个版本号**分开印、各自带名**：`criterion_version` 只是**打包器**的版本，
+  //   真正决定这条结论的是手册与陷阱表；只印一个泛名，读的人会拿它当"语义版本"用
+  //   （`trap-same-field-name-different-artifact`：同名不同制品，字段在、量级合理、没人再问）。
+  //   "谁是谁"那句话来自产物（`criterion_version_means`），页面不再自己写一份。
   const r = d.ruler || {};
+  const v = (k) => (r[k] === undefined || r[k] === null ? '—' : r[k]);
   blocks.push(el('div', { class: 'kg-ruler' },
     el('b', { text: '尺子 ' }),
-    code(`kb ${r.kb_self_sha12 ?? '—'} · gate ${r.gate_sha12 ?? '—'} · criterion v${r.criterion_version ?? '—'}`),
+    code(`kb ${r.kb_self_sha12 ?? '—'} · gate ${r.gate_sha12 ?? '—'}`),
+    el('span', { class: 'kg-ver', text: `· 打包器 v${v('criterion_version')}`
+      + ` · 手册 v${v('playbook_criterion_version')}`
+      + ` · 陷阱 v${v('traps_criterion_version')}` }),
     ' ', el('span', { class: 'dim', text: '（报告任何「这条不对」时请连它一起报）' })));
   return el('div', {}, blocks);
 }

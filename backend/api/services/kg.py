@@ -209,9 +209,24 @@ def inventory(cfg) -> dict:
 
 
 def _ruler(kb: dict, cfg) -> dict:
+    """这份产物是哪把尺子量的。
+
+    ★ `criterion_version` 这个名字在本仓有**三个**出处（打包器 `kb/build_kb.py` /
+    手册 `kb/playbook.json` / 陷阱表 `kb/traps.json`），所以一个都不许省 ——
+    过去这里只报裸名那一个，于是页面印着 `criterion v1`，而真正决定结论的手册语义
+    改到 v4 了它一动不动（`trap-same-field-name-different-artifact`，2026-09-24 修）。
+
+    ★ 键名与 `kb/ask.py:ruler()` **逐字相同**，「谁是谁」的那句话也**取自产物**
+    （`criterion_version_means`）—— 一个判断只许有一个出处：两处各写一遍，
+    改了一处另一处照旧指着老名字，而这件事**不报错**。
+    改这里的字段名就要同时改 `kb/ask.py:ruler`，`kg_view_accept.py --parity` 会红。
+    """
     return {
         "version": kb.get("version"),
         "criterion_version": kb.get("criterion_version"),
+        "criterion_version_means": kb.get("criterion_version_means"),
+        "playbook_criterion_version": kb.get("playbook_criterion_version"),
+        "traps_criterion_version": kb.get("traps_criterion_version"),
         "kb_self_sha12": kb.get("self_sha12"),
         "manifest_sha12": kb.get("manifest_sha12"),
         "gate_sha12": _sha12_of(_kbdir(cfg) / GATE_NAME),

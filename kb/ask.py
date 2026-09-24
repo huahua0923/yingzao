@@ -241,7 +241,10 @@ def ruler(kb):
         #   手册语义从 3 改到 4 时它一动不动，于是它答不了「这份数是哪把尺子量的」。
         #   手写的那半指纹恰好被丢掉，只剩机械 sha12（铁律 24 要两个都在）。
         "criterion_version": kb.get("criterion_version"),
-        "criterion_version_means": "kb.json 打包器（kb/build_kb.py:CRITERION_VERSION）",
+        # ★「谁是谁」这句话的**出处是产物**（`build_kb.py` 写进 kb.json 的
+        #   `criterion_version_means`），这里只透传 —— 一句话只许有一个写法，
+        #   否则消费端各写一遍，改了一处另一处照旧指着老名字（T10 守着它的键集合）。
+        "criterion_version_means": kb.get("criterion_version_means"),
         "playbook_criterion_version": kb.get("playbook_criterion_version"),
         "traps_criterion_version": kb.get("traps_criterion_version"),
         "kb_self_sha12": kb.get("self_sha12"),

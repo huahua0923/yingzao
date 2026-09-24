@@ -202,6 +202,19 @@ def build(src_dir: str | None = None,
         #   三个都报，因为「哪把尺子量的」这件事，三个制品各有一份答案。
         "playbook_criterion_version": pmeta["criterion_version"],
         "traps_criterion_version": tmeta["criterion_version"],
+        # ★「谁是谁」这句话**存在产物里**，不许散在各消费端各写一遍：
+        #   键名与上面三个字段逐一对应，一处赋值、两处消费（`kb/ask.py:ruler` 与
+        #   `backend/api/services/kg.py:_ruler` 都只是原样透传）。
+        #   给它的理由是实的：裸名 `criterion_version` 装的只是**打包器**的版本，
+        #   而同一个名字在本仓有三个出处 —— 同名不同制品是本仓栽过的坑
+        #   （`trap-same-field-name-different-artifact`），现场证据就是
+        #   `backend/api/services/kg.py` 那个第二份实现：它只报一个泛名，
+        #   于是页面上印着 `criterion v1`，读的人分不清「手册语义改了，它为什么不动」。
+        "criterion_version_means": {
+            "criterion_version": "kb.json 打包器（kb/build_kb.py:CRITERION_VERSION）",
+            "playbook_criterion_version": "手册自己声明（kb/playbook.json 顶层）",
+            "traps_criterion_version": "陷阱表自己声明（kb/traps.json 顶层）",
+        },
         "self_sha12": self_sha if self_sha is not None else _self_sha12(),
         "manifest_sha12": sha12(json.dumps(man, ensure_ascii=False, sort_keys=True).encode("utf-8")),
         "sources": sources,
@@ -281,7 +294,8 @@ def _diff(old: dict, new: dict) -> list[str]:
     """逐字段报出漂在哪 —— 只说「不一样」等于没说。"""
     out: list[str] = []
     for k in ("title", "description", "version", "criterion_version",
-              "playbook_criterion_version", "traps_criterion_version", "dropped_keys",
+              "playbook_criterion_version", "traps_criterion_version",
+              "criterion_version_means", "dropped_keys",
               "self_sha12",
               "manifest_sha12", "sources", "order", "traps", "playbook", "index"):
         if old.get(k) != new.get(k):
@@ -353,7 +367,7 @@ def check() -> int:
 
 
 def selftest() -> int:
-    """九条刑具（T0–T9），**每条都要能红**。只验「干净时是绿的」等于没验。
+    """十条刑具（T0–T10），**每条都要能红**。只验「干净时是绿的」等于没验。
 
     ★ 判据全绿先自问「它是不是在全部样本上都取极值」—— 所以这里每条都**故意造坏**，
       并要求它**在那一处**报出来。
@@ -495,6 +509,38 @@ def selftest() -> int:
         fails.append("T9 阴性对照：两个哈希种子下 hash() 相同 ⇒ 哈希没有被随机化，"
                      "上面那条比较是恒绿的摆设（判据失效却不报）")
 
+    # T10 版本说明书的**键**必须与它解释的那三个字段逐一对上。
+    #     ★ 来由：`criterion_version_means` 这句话是给读的人指路的，字段一旦改名
+    #       （或以后多出一个版本号），说明书照旧指着老名字 —— 而这**不报错**，
+    #       读的人照旧拿错名去找，正是 `trap-same-field-name-different-artifact`
+    #       那一档「名字对了、值不是想找的那个」。⇒ 键集合相等是最便宜的那条判据。
+    means = base.get("criterion_version_means") or {}
+    want = {"criterion_version", "playbook_criterion_version", "traps_criterion_version"}
+
+    def _means_problem(m) -> str | None:
+        if set(m) != want:
+            return ("键 %r 与三个版本字段 %r 对不上 —— 字段改名而说明书没跟着改，"
+                    "读的人会照旧名字去找" % (sorted(m), sorted(want)))
+        if not all(isinstance(v, str) and v.strip() for v in m.values()):
+            return "有空的说明：%r" % m
+        return None
+
+    p = _means_problem(means)
+    if p:
+        fails.append("T10 " + p)
+    # ★ 这条判据的**自证**：把比较项本身改坏，它必须在**那一处**红（铁律 26 ——
+    #   断言绿了不等于它验到了；把被测的那一维拆掉/改坏再跑一遍才算）。
+    #   三个分支各造一个坏样本：多一个键、少一个键、值只剩空白。
+    for bad in ({**means, "packager_version": "多出来的名字"},
+                {k: v for k, v in means.items() if k != "traps_criterion_version"},
+                {**means, "criterion_version": "   "}):
+        if not _means_problem(bad):
+            fails.append("T10 把版本说明书改坏（%r）而判据不红 —— 这条是恒绿的摆设"
+                         % (sorted(bad),))
+    t10 = dict(base, criterion_version_means=dict(means, criterion_version="别的说法"))
+    if not any("criterion_version_means" in x for x in _diff(base, t10)):
+        fails.append("T10 版本说明书改了而 _diff 不指名 —— 这句话没人看着（判据恒绿）")
+
     if fails:
         print("--selftest 红：%d 条刑具没通过" % len(fails))
         for f in fails:
@@ -509,7 +555,7 @@ def selftest() -> int:
     # ★ 手册还没建时**必须写出来**，不许让「0 家族」看起来像合格（`UNAVAILABLE` ≠ `PASS`）。
     fam_note = ("%d 个家族（%d 个别名能点亮手册节点）" % (n_fam, n_pb) if n_fam
                 else "**未登记**（0 个家族）—— 症状→根因→处置 这条链一次都没查过")
-    print("--selftest 绿：9 条刑具全部能红（含 T0/T9 阴性对照）；%d 篇，%d 个别名，"
+    print("--selftest 绿：10 条刑具全部能红（含 T0/T9 阴性对照）；%d 篇，%d 个别名，"
           "%d 条陷阱（%d 个别名能点亮陷阱节点），手册 %s（手册语义 v%s／陷阱语义 v%s）"
           % (len(base["entries"]), len(base["index"]["alias"]), n_trap, n_light, fam_note,
              base.get("playbook_criterion_version"), base.get("traps_criterion_version")))

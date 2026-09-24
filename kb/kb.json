@@ -5,7 +5,12 @@
  "criterion_version": 1,
  "playbook_criterion_version": 4,
  "traps_criterion_version": 5,
- "self_sha12": "7134cb6b4a98",
+ "criterion_version_means": {
+  "criterion_version": "kb.json 打包器（kb/build_kb.py:CRITERION_VERSION）",
+  "playbook_criterion_version": "手册自己声明（kb/playbook.json 顶层）",
+  "traps_criterion_version": "陷阱表自己声明（kb/traps.json 顶层）"
+ },
+ "self_sha12": "c421ec935c63",
  "manifest_sha12": "a531bb0ce2aa",
  "sources": {
   "00-overview.md": "b160e71d51e4",
