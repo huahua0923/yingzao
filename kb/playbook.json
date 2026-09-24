@@ -1,0 +1,1043 @@
+{
+ "criterion_version": 4,
+ "_note": "实战手册（症状 → 根因 → 处置 → 判据）。★与 manifest.json / traps.json 同址、同规矩：只存边不存值 —— 每条 items[].evidence 必须是 file:行 或 file:符号，由 kb/gate.py 用 AST 全仓解析复核。★字段表写死（见 _schema）：symptoms/causes/fixes/instances/related/runs 的**每一条都必须带 evidence**，缺了会落进「缺 evidence」那一栏并被门禁判红；确实仓内无锚点的，写进该家族的 unverified[]（那是**声明**，不是漏写，门禁会单列数出来）。数字一律带日期，因为「这份数是旧尺子量的」和「这份数是对的」在屏幕上长得一样。★★引用 `_qa/<楼>_qa.txt` 之前先记两件事：①它**按严重度过滤**（只印 WARN/ERROR，INFO 档恒为 0）；②它是**可重生成的产物**，重跑会覆盖它（引了它的边会被门禁 ⑥ 降级为待复核，改完要 `gate.py --record`）。2026-09-24 实测：7 栋用今天的码重跑，结果与全库扫描**逐码相等** —— 旧报告的差值是**数据**造的，不是尺子。另：本文件自己的 `criterion_version` 是**手写语义版本**（家族集合/口径变了才 +1），机器身份是它的 `sha12`（`kb/evidence-lock.json` 里登记、门禁 ⑥ 盯它）。",
+ "_schema": {
+  "title": "家族名（也是别名表的一个入口）",
+  "kind": "symptom（症状）/ cause / other —— 家族的主身份",
+  "alias": "★神经网络种子：这个症状的所有叫法、俗称、错写。build_kb 另外自动把 symptoms/causes/fixes 的 what 原文也当别名，故此处只收**短说法**，不收整句",
+  "symptoms": "[{what, evidence}] 观察到的现象 —— 必须能对着某条判据或某份报告核",
+  "causes": "[{what, evidence}] 根因。★指向**代码里的机制**，不是猜",
+  "fixes": "[{what, evidence}] 处置。能指到代码/数据的指过去；只有散文的写 unverified",
+  "runs": "[{cmd, writes, expect, read, evidence}] ★可跑的判据。cmd 必须过门禁⑦只读白名单，且**必须带楼名**（本仓脚本裸跑 = 全库）",
+  "instances": "[{what, evidence}] 实测命中的楼/层。★证据必须落在仓内产物上，不许凭记忆写",
+  "related": "[{what, evidence}] 关联边：同一症状的另一把尺子、覆盖账、盲区",
+  "traps": "[trap-slug] 并列的陷阱节点（kb/traps.json 里的 slug）",
+  "unverified": "[{what, reason}] ★只来自实战、仓内确实无锚点的。单列，不混进上面几栏"
+ },
+ "families": {
+  "floor-misalign": {
+   "title": "楼层错位（上下层平面不在同一局部坐标系）",
+   "kind": "symptom",
+   "alias": [
+    "楼层错位",
+    "层错位",
+    "错位",
+    "上下层不对齐",
+    "上下层错开",
+    "逐层漂",
+    "楼层漂移",
+    "平面错位",
+    "层间错位",
+    "楼层平移",
+    "offset 漂",
+    "offset 标错",
+    "offset标错",
+    "局部坐标系漂",
+    "质心位移超差",
+    "误读成退台",
+    "南墙逐层退台"
+   ],
+   "symptoms": [
+    {
+     "what": "相邻两层轮廓同构、却互不重合（I18 报 (+dx,+dy)，超过 STACK_TOL=0.05m）",
+     "evidence": "qa_structural.py:I18_stacking"
+    },
+    {
+     "what": "质心位移 >3m —— 这只是粗筛：楼层形状本就不同时它必然假阳性（c057 的 F0 是 19 边形、F1 是 13 边形）",
+     "evidence": "_qa/defect_c057.json:60"
+    },
+    {
+     "what": "几何中心距 F0 偏移 >3.0m（CENT_SHIFT）—— **同一件事的粗筛**：I8 与 I18 量的都是「层间错位」，但形状本就不同的楼层（多翼/错列/退台）在 I8 上必然假阳性；文件头把它写成「INFO，非失败」，而 `I8_stacking()` 实际 append 的是 WARN —— 本轮 83 行全部落 WARN（判据与注释不一致，按代码为准）",
+     "evidence": "qa_structural.py:I8_stacking"
+    }
+   ],
+   "causes": [
+    {
+     "what": "profile.offset 与 DXF 实测层距不一致：每层累加，越高越歪（c057 曾为 89554、实测层距 90000 ⇒ 六层累计歪 2.23m）",
+     "evidence": "qa_structural.py:I18_stacking"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "把 profile.offset 改成 DXF 实测层距（c057 改成 90000 后，F1–F5 全部落回 STACK_TOL 内、I18 归零）",
+     "evidence": "data/buildings/c057/profile.json:7"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c057",
+     "writes": "_qa/c057_qa.txt",
+     "expect": "2026-09-24 16:29 实测：6 层报告共 14 行，I18 = 0 行。★阳性对照**不能**用「同一份报告里的别的码」——I18 在没有同构层对时整段 continue，与「都对上了」在报告上同形（原先这里记的「有 6 行 I11」只证明报告不是空的）。正确的对照是**数同构层对**：现测 c057 有 4 个相邻同构层对、全部 dx,dy ≤ STACK_TOL=0.05m ⇒ 这 0 行是「量过且对上了」。★并且这条判据在全库不是恒绿的：179 个同构对里 9 对超差（5 栋）",
+     "read": "报告里 I18 的行数；同时数 I11/I17 行数以确认判据跑过",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c005：F1→F2 (+0.000,+0.200)m、F2→F3 (+0.000,+0.913)m（同构 15 边形）；同一对层的楼梯踏步盒也不重合",
+     "evidence": "_qa/c005_qa.txt:15"
+    },
+    {
+     "what": "c057 真阴性：I18 按设计跳过 F0→F1（19 边形 vs 13 边形，不同构），F1–F5 在容差内；6.88m 是质心尺子的假阳性",
+     "evidence": "_qa/defect_c057.json:60"
+    }
+   ],
+   "related": [
+    {
+     "what": "★I18 的跳过条件（轮廓不同构 ⇒ continue）会被 offset 漂移本身满足：漂移一旦改变抽出的边数，判据就对它失明。所以 I18=0 只等于「在它判得动的层对上没错位」，不等于「没错位」",
+     "evidence": "qa_structural.py:_shape_key"
+    },
+    {
+     "what": "覆盖账（95 个 profile 目录口径）：全库 361 对相邻层里 I18 只判 179 对（同构），**40 栋一个同构对都没有** —— 判据在那些楼上不可用，不是合格；只看 49 栋交付则是 245 对里判 155 对、5 栋不可用。★判得动的 179 对里**有 9 对超差**（c005 2 / c020 3 / c107 1 / c117 2 / m282 1）⇒ 它不是恒绿判据，0 行才有意义",
+     "evidence": "qa_structural.py:I18_stacking"
+    },
+    {
+     "what": "同族的**房间粒度**版本是 `check_iso_group_rooms`（D4）：同构层的房间并集探出本层轮廓 ⇒ 房间没跟轮廓走。修完后全库只剩 1 行（c022 F0），而它是 2026-09-12 的产物 —— 这一档要看「还剩几行」而不是「有没有过」",
+     "evidence": "scan_defects.py:check_iso_group_rooms"
+    }
+   ],
+   "traps": [
+    "trap-proxy-geometry-false-red",
+    "trap-saturated-criterion",
+    "trap-unavailable-reads-as-pass"
+   ],
+   "unverified": [
+    {
+     "what": "c020 三对 / c107 一对 / c117 两对 / m282 一对超过 STACK_TOL（本次以官方 I18_stacking 现测：c020 −0.213、−0.079、+0.249；c107 −0.150；c117 +0.300、−0.900；m282 −0.090，单位 m，仅 y 向）",
+     "reason": "_qa 下这四栋没有报告（61 份报告对 95 个 profile 目录），仓内无落盘产物可指；这些数只存在于本次现测，尚未回写台账"
+    }
+   ]
+  },
+  "room-outside-outline": {
+   "title": "房间骑墙外溢（房间越出轮廓）",
+   "kind": "symptom",
+   "alias": [
+    "骑墙",
+    "越界",
+    "外溢",
+    "房间出轮廓",
+    "房间越出轮廓",
+    "房间跑到楼外",
+    "墙围了轮廓没圈",
+    "房间在轮廓外",
+    "房间不在轮廓里",
+    "房间压轮廓",
+    "轮廓没圈住墙"
+   ],
+   "symptoms": [
+    {
+     "what": "房间多边形越出所在层轮廓（I3 报）",
+     "evidence": "qa_structural.py:I3_room_within_outline"
+    },
+    {
+     "what": "轮廓由多个块拼出来而拼不上时，`outline_fields` 退回**主块外环** —— 旧版是**静默**退回且把 `outline_parts` 写成空，于是其余块整个丢掉、面积骤减。★今天这一支**已出声**并**照写 `outline_parts`**（`outline.py` 里那段注释明记「旧版这里没有一行日志」）⇒ 残留代价只剩一条：**读 `outline` 的 QA（I3 那类）看不见非主块**。",
+     "evidence": "backend/recognizer/outline.py:outline_fields"
+    }
+   ],
+   "causes": [
+    {
+     "what": "多块桥接（bridge_ring）拼不上时的回退分支：退回主块外环填实",
+     "evidence": "backend/recognizer/outline.py:bridge_ring"
+    },
+    {
+     "what": "多翼/阶梯楼跨层复用同一轮廓（outline_unify）时，基准轮廓与其余层实际墙线不一致",
+     "evidence": "backend/recognizer/floor.py:reference_outline_for"
+    },
+    {
+     "what": "真病根：块表里的**退化薄片**（buffer/取整造出的 0.02~0.48㎡ 碎片，c113 F3 实测 38 块里 34 块，含 17 个零面积点片）与真块相切 ⇒ `_mst_edges` 给出距离 0 的边、`_neck_quad` 对距离 0 返回 None（已相接不用桥）⇒ **一块都焊不上**。修复 = `MIN_BLOCK_THIN=0.25` 去退化，且最大块永远保留（滤完不可能为空）",
+     "evidence": "backend/recognizer/outline.py:_blocks_clean"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "跨层复用轮廓只给「同足迹」的层（outline_unify_floors 指定子集），塔楼/过渡层各自推导",
+     "evidence": "backend/recognizer/floor.py:outline_unify_floors"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c113",
+     "writes": "_qa/c113_qa.txt",
+     "expect": "2026-09-24 16:26 实测：报告 128 行，I3 = 0 行。阳性对照：同一份报告有 121 行 WARN（I2 96 / I11 8 / I7 6 / I17 6 / I8 4 / I4 1）⇒ 判据确实跑到了，不是没量。★这**不是**「c113 没问题」的证明：轮廓被回退截小这件事 I3 看不见 —— 它只判「交付的房间是否在交付的轮廓内」，轮廓自己缩小它不报。判它要另看轮廓点数/面积相对图纸是否骤减，而**本仓目前没有这条判据**",
+     "read": "报告里 I3 的行数；另需人工比对该层轮廓点数与图纸翼数",
+     "evidence": "qa_structural.py:I3_room_within_outline"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c113 F3（**旧版**产物）：轮廓退回主块，827.8 → 432.9㎡（丢 37 块 394.9㎡，含 366.9㎡ 椭圆观众厅）。★这个数**只存在于 `outline.py` 的注释里** —— c113 **没有任何归档快照**（`.orig` 全库 49 栋里没有 c113），**装不回旧状态**，所以它是「注释里记着」而不是「复核过」。今天交付的 c113 F0~F3 各 2~4 块，最坏块落在 `outline` 外 ≤0.0039 ⇒ 回退未生效（注释记修后一次焊成单块 824.3㎡）",
+     "evidence": "backend/recognizer/outline.py:outline_fields"
+    }
+   ],
+   "related": [
+    {
+     "what": "轮廓「多圈了」与「缺翼」用占比分不开 —— 占比说明不了问题，要看房间离轮廓多远",
+     "evidence": "backend/recognizer/outline.py:floor_outline"
+    },
+    {
+     "what": "★引擎缺口（现状）：轮廓被截小/丢块这一类，**引擎内没有判据会红** —— I3 只在「房间 vs **已交付的**轮廓」之间判，轮廓自己缩小它不报。2026-09-24 用一次性探针（`_scratch/_outline_fallback_census.py`）量过全库：**137 个多块层、0 层有块落在 `outline` 之外**（最坏 deficit 0.0039）⇒「今天没发生」是**量过**的，不是没量；但「以后不再发生」仍没有门禁。★探针在 `_scratch/`（不在 `--run` 只读白名单里，故未登记成命令）；P3 把 `_scratch` 移出仓库时，这条要么跟着搬、要么做成引擎内判据",
+     "evidence": "qa_structural.py:I3_room_within_outline"
+    },
+    {
+     "what": "★交付件的直读形态（供以后复核用）：多块层的 `outline` 是**钥匙孔单环**、`outline_parts` 是各块外环；**回退生效的特征 = 有块落在 `outline` 外**（不是「Σparts 面积 > outline 面积」—— 钥匙孔环自交时那个比值也会 >1，分不开，见 traps）",
+     "evidence": "backend/recognizer/outline.py:outline_fields"
+    }
+   ],
+   "traps": [
+    "trap-proxy-geometry-false-red",
+    "trap-guess-default-on-probe-failure"
+   ],
+   "unverified": [
+    {
+     "what": "c113 F3 那次丢块（827.8→432.9㎡）**发生在哪一版产物**、那一版还有没有别层同病 —— 只登记不追",
+     "reason": "c113 无任何归档快照（`.orig` 全库 49 栋里没有 c113，名字含 113 的也搜过）⇒ 旧状态**装不回去**，这条只能停在「代码注释里记着」。★但「今天还在不在」是能复核的，已实测：0/137 层 —— 两件事分开写，混成一栏就会让「改文」冒充「复核」"
+    }
+   ]
+  },
+  "missing-wall-blob": {
+   "title": "漏墙与糊块（源墙对不上 / 单块墙面积过大）",
+   "kind": "symptom",
+   "alias": [
+    "漏墙",
+    "缺墙",
+    "墙丢了",
+    "墙没识别出来",
+    "漏墙率高",
+    "糊块",
+    "墙糊成一块",
+    "大块墙",
+    "内墙巨块",
+    "墙体并块",
+    "墙面积过大",
+    "只剩外壳"
+   ],
+   "symptoms": [
+    {
+     "what": "单块墙面积 ≥ BLOB_M2=50㎡ ⇒ 判「糊成一块」（正常墙最厚 0.4m、最长约 60m ≈ 24㎡，50㎡ 已无正常解释）",
+     "evidence": "backend/checks/_defect_census.py:BLOB_M2"
+    },
+    {
+     "what": "漏墙率（交付墙对不上源图墙线）偏高 —— 全库分布：最小 0.0 / 中位 0.4 / 最大 71.1（%）",
+     "evidence": "_qa/AUDIT_BASELINE.json:12"
+    }
+   ],
+   "causes": [
+    {
+     "what": "女儿墙环带落进 inner 桶，被 BLOB_M2=50 判成「内墙巨块 ×2」—— 屋面没有内墙是设计，不是糊块",
+     "evidence": "_qa/AUDIT_BASELINE.json:60"
+    },
+    {
+     "what": "楼梯踏步带没剔除时，踏步线被算进源墙分母 ⇒ 漏墙率虚高（c006|F6 剔除 103m 后 71.1%→8.2%）",
+     "evidence": "_qa/AUDIT_BASELINE.json:61"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "按楼梯踏步带剔除后再算漏墙率（F0/F6 分别剔 450m / 103m），并把屋面层的身份显式判为 roof_terrace",
+     "evidence": "_qa/AUDIT_BASELINE.json:62"
+    },
+    {
+     "what": "糊块另用平均厚度判据（is_blob_floor / BLOB_MEAN_THICKNESS），不只看单块面积",
+     "evidence": "_wall_thin_batch.py:is_blob_floor"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_defect_census.py c006",
+     "writes": "_qa/defect_c006.json; _qa/defect_ranking.md",
+     "expect": "2026-09-24 16:27 实测：c006|F6 blobs_inner=0（不再有内墙巨块）、miss_pct=10.2、flags=[只剩外壳(内墙0.1%)]、max_wall=65.2㎡ 而 max_wall_inner=1.7 ⇒ 那块不是内墙。★原记「max_wall 记在 outer 桶」是错的：blobs=2 而 blobs_inner=blobs_outer=0 ⇒ 两块既不在内墙也不在外墙，落在**第三个桶（女儿墙）**；而该桶**没有单独输出到 JSON**，只能由减法认出（blobs − 两桶 = 2）。★漏墙率与基线记的 8.2% 的差已查明是数据不是尺子（见 related）",
+     "read": "rows[] 里 F6 的 blobs / blobs_inner / blobs_outer / max_wall / max_wall_inner / miss_pct / flags",
+     "evidence": "backend/checks/_defect_census.py:BLOB_M2"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c006|F6（屋面）：女儿墙环带原先被 BLOB_M2=50 判成内墙巨块 ×2；口径修正后 blobs_inner=0，今日实测漏墙 10.2%",
+     "evidence": "_qa/AUDIT_BASELINE.json:60"
+    },
+    {
+     "what": "c041|F0：21.7% MISS_HIGH 但「不是错位，是真缺墙」—— 源墙仅 499.1m，分母小；漏点 289 点一个没变（口径更新不改几何）",
+     "evidence": "_qa/AUDIT_BASELINE.json:45"
+    }
+   ],
+   "related": [
+    {
+     "what": "BLOB_M2 只在 backend/checks/_defect_census.py 定义一处，qa_defect_census.py 直接沿用（不复制成新常数）—— 阈值只有一个判断源",
+     "evidence": "qa_defect_census.py:BLOB_M2"
+    },
+    {
+     "what": "★分桶是**完备三分**（wall_blocks 把每个 poly 恰好放进 outer / parapet / inner 之一，阈值同一个 BLOB_M2）⇒ `blobs == blobs_inner + blobs_outer + blobs_parapet` 恒成立。但产物只输出前两个 ⇒「两桶都是 0 而 blobs=2」只能靠减法认出女儿墙桶（F6 正是这一例）：桶本身看不见，等于那条结论没有直读证据",
+     "evidence": "qa_defect_census.py:wall_blocks"
+    },
+    {
+     "what": "★8.2% vs 10.2% 已查明是**交付数据**变了，不是尺子换了：把 _dxf_audit.BASE 指向临时树、装入 09-14 21:26 的 floors 快照（.orig/treadfilter_20260914_212620/floors），用**今天的尺子和同一份源 DXF** 跑出 miss_m=218.7 / 8.2% —— 与基线一字不差；今日 floors 与 09-15 22:59 快照都跑出 272.6 / 10.2%。⇒ F6 的源墙覆盖在这段窗口里掉了 53.9m（walls 111→81、rooms 6→0、doors 33→34）",
+     "evidence": "qa_defect_census.py:defect_of"
+    }
+   ],
+   "traps": [
+    "trap-measure-one-write-another",
+    "trap-blanket-ban-illegal-polygon"
+   ],
+   "unverified": [
+    {
+     "what": "c006|F6 掉的那 53.9m 覆盖与 6 间房是**哪一步**改的（窗口 09-14 21:26 → 09-15 22:59）、是否有意为之 —— 只登记不追（c006 是人工修过、明令不许动数据的栋）",
+     "reason": "该窗口内没有更细的分步快照；rooms.json 的 F6 只剩 1 间（mtime 09-17）。复现方法在 related 里（换 BASE 即可，不需要动 c006 数据），但「哪一步」查不出来就不写"
+    }
+   ]
+  },
+  "room-merged-duplicate": {
+   "title": "房间并块与重复（同房号出现多次 / 多间糊成一间）",
+   "kind": "symptom",
+   "alias": [
+    "并块",
+    "房间合并",
+    "多个房间并成一块",
+    "房间重复",
+    "房号重复",
+    "同房号多次",
+    "重复房间",
+    "错位副本",
+    "同形状差平移",
+    "房间糊在一起",
+    "房间数对不上"
+   ],
+   "symptoms": [
+    {
+     "what": "同一房号在图上出现多次，且必须分两档报：错位副本（同形状、差平移）／形状不同（错号或并块）—— 两种病修法不同，不许合成一句",
+     "evidence": "scan_defects.py:check_duplicates"
+    },
+    {
+     "what": "多间房被识别成一块（并块），交付房间数少于图上房号数",
+     "evidence": "scan_defects.py:check_merged_rooms"
+    },
+    {
+     "what": "整层未被切分：该层房间数极少且有一间占本层轮廓 >60%（D0）—— 台账同号**相符**也不能免罪：相符说明图纸/台账本身就没细分这一层，而建模出来的是空盒子（无内墙、无门可依）—— D0 共 10 行",
+     "evidence": "scan_defects.py:check_degenerate"
+    }
+   ],
+   "causes": [
+    {
+     "what": "房间合并判据（MERGE_IN / MERGE_K / MERGE_N 三个阈值）把相邻房间并进一块",
+     "evidence": "scan_defects.py:check_merged_rooms"
+    },
+    {
+     "what": "等同形状 + 平移的房间被判为同一间房的副本（iso group 判据）",
+     "evidence": "scan_defects.py:check_iso_group_rooms"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "按房号分组**逐条打印**，不要用推理代替逐条：先列出每个房号的所有实例及其形状/平移差，再判是并块还是错号",
+     "evidence": "scan_defects.py:check_iso_group_rooms"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u scan_defects.py c001",
+     "writes": "只写 _qa/defects_partial.json ＋ _qa/defect_partial_summary.md。全库 _qa/defects.json **物理上够不着** —— out_paths() 按范围分址，点名跑与全库跑落两处不同文件",
+     "expect": "D7 ERROR 1 条 / 1 栋（c001 f5：1011.8㎡ ＝ 该层中位 19.7 的 51.4 倍，真盖住 3/24 间）。★同一份报告里另有 D3 ERROR 1 条与 I 系 119 条 WARN，证明判据确实跑到过，不是没量（2026-09-24 15:50 实测）",
+     "read": "总表里「D7  ERROR  1 条 / 1 栋  c001」那一行；逐条在 _qa/defects_partial.json 里筛 code==\"D7\"，**先读记录自带的 metric{ratio, n_swallowed, n_floor_rooms} 再下结论** —— 只看布尔会把「判据没跑到」当成「没病」",
+     "evidence": "scan_defects.py:out_paths"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c009 F3：09-A-04-07 出现 2 次（错位副本 Δ=(+43.80,+0.00)）；09-B-04-01 出现 2 次且形状不同（面积 42/42）—— 同一行里两种病各 1 条（2026-09-24 15:56 全库重扫后仍逐字成立）",
+     "evidence": "scan_defects.py:check_duplicates"
+    },
+    {
+     "what": "c114：花坛 出现 2 次（错位 Δ=(+10.65,+0.00)）（同上，重扫后仍成立）",
+     "evidence": "scan_defects.py:check_duplicates"
+    }
+   ],
+   "related": [
+    {
+     "what": "本判据与 I18 同族：都拿「同形状 + 平移≠0」当指纹，粒度不同（这里判房间、I18 判整层轮廓）—— 房间粒度不受「整层轮廓必须同构」这个前提限制",
+     "evidence": "scan_defects.py:check_iso_group_rooms"
+    },
+    {
+     "what": "D0 判「与台账相符」时**复用** D8 的同一组阈值（D8_RATIO_LO/HI）—— 代码注释写明理由：两处对同一件事用不同阈值，迟早出现「同一间房 D8 说不符、D0 说忠实」",
+     "evidence": "scan_defects.py:D8_RATIO_HI"
+    }
+   ],
+   "traps": [
+    "trap-zero-and-two-are-different",
+    "trap-grep-counts-comments-as-code",
+    "trap-ledger-older-than-its-own-subject"
+   ],
+   "unverified": []
+  },
+  "column-and-slab-support": {
+   "title": "柱脚无支撑 / 楼板漏盖柱区（柱与板对不上）",
+   "kind": "symptom",
+   "alias": [
+    "柱脚无支撑",
+    "柱子悬空",
+    "悬空柱",
+    "悬空鳍",
+    "柱在轮廓外",
+    "柱在板外",
+    "柱在楼板外",
+    "楼板漏盖柱区",
+    "板漏柱区",
+    "开放柱廊没楼板",
+    "柱族无锚点",
+    "门廊柱",
+    "转换柱",
+    "退台柱",
+    "柱脚下没板"
+   ],
+   "symptoms": [
+    {
+     "what": "柱在自身轮廓外 0.6m —— 判据自注「地面层:可能入口门廊/廊柱,人工核图纸」；I1 共 335 行，其中 313 行 WARN（299 行是这一档）＋ 22 行 ERROR",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "柱在楼板轮廓外**且柱族无锚点无板**（同轴下柱与下层板都没有）= 真悬空鳍；22 行 ERROR 只在缺陷「起跳」层报一次（每柱族一条），上面楼层的延续合并成 INFO",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "上层内柱脚下无同轴柱也无下层板（退台/挑出，判据自注「人工核」）—— I2 共 618 行、**全部**是这一档；代码里那条「跨层柱数抖动聚合成楼级一条」本轮 0 行",
+     "evidence": "qa_structural.py:I2_col_through"
+    },
+    {
+     "what": "柱落点在板轮廓外、却被墙凸包罩着，且 ≥3 根、占比 >10% ⇒ 楼板疑似只盖了房间块、漏了开放柱廊/柱区（c001 实测 12/41）—— I10 共 10 行（c001 2 行）",
+     "evidence": "qa_structural.py:I10_col_beyond_plate_inside_hull"
+    }
+   ],
+   "causes": [
+    {
+     "what": "柱与楼板来自两条链：柱族要「锚定」（f0 有同轴柱=落基，或脚下某下层板包住它），锚点一断（柱族中间某层少识一根柱）整族就报悬空；楼板则从房间/轮廓并集来，房间块之外没有板 —— 两条链各自的缺口落在同一根柱上显形",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "I2 会跳过「本层或上层没柱」的层对（避免只画部分层的图刷屏）⇒ I2 = 0 不等于贯通链完整，只等于「两层都有柱」的层对上没断",
+     "evidence": "qa_structural.py:I2_col_through"
+    },
+    {
+     "what": "I10 的墙包络是 `convex_hull`（凸包）：凹形楼的凹口也会被罩进来，所以它量的是「墙包络 vs 板」而不是「这柱脚下该有板」的精确判据 —— 判据自己把它写成 WARN",
+     "evidence": "qa_structural.py:I10_col_beyond_plate_inside_hull"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "按柱族补锚点：把该族漏掉的那根柱补回识别结果，或明确把柱脚挂到下层板 —— 悬空鳍那 22 行会退回「人工核」档（WARN）",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "楼板要盖到开放柱廊，就得在楼板并集里并入柱区（改数据，不是改判据）——c009 类就是「板只盖房间块」的既有形状",
+     "evidence": "qa_structural.py:I10_col_beyond_plate_inside_hull"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c001",
+     "writes": "_qa/c001_qa.txt（可重生成的报告，不碰交付物）",
+     "expect": "2026-09-24 实测：c001 报告 12 行 I1（第 8 行起）＋ 1 行 I10（第 127 行）；全库口径（同日 15:56 的 _qa/defects.json）I1 335 / I2 618 / I10 10",
+     "read": "报告里 I1/I2/I10 的行数与坐标；★报告头不写尺子指纹，引用必须连报告日期一起写",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c113 F1 起：上层内柱脚下无同轴柱也无下层板 @(-10.27,28.39) 等（该报告 2026-09-24 16:33 生成，与当日 15:56 的全库扫描同一时段）",
+     "evidence": "_qa/c113_qa.txt:14"
+    },
+    {
+     "what": "c001：12 行 I1（f0 柱在自身轮廓外 0.6m @(-9.10,-13.22) 起）＋ 1 行 I10「12/41 柱在板轮廓外却在墙包络内」＋ I2 103 行 —— **这些数在归档副本上**（2026-09-23 19:34 生成）。★ 活动产物 `_qa/c001_qa.txt` 当日被重跑覆盖：行数 139 → 131、第 8 行成了**空行**（原话挪到第 9 行）、柱的 y 从 -13.22 变成 -16.20，码数也变了（I2 103→89 / I1 12→17 / I10 1→2）⇒ **锚点指归档副本，不指活动产物**",
+     "evidence": "_qa/_archive_qa_txt_20260924/c001_qa.txt:8"
+    }
+   ],
+   "related": [
+    {
+     "what": "★三个码是同一判断原点的三个方向：I1 看柱在**自身**轮廓外、I10 看柱在**板**轮廓外却在墙包络内、I2 看**上下层**柱与板的贯通。任一码为 0 都不等于「柱都站得住」——它们各自会跳过层对或按占比卡",
+     "evidence": "qa_structural.py:I2_col_through"
+    },
+    {
+     "what": "全库口径（识别侧 _qa/defects.json，2026-09-24 15:56 全库重扫）：I1 335 行分布在95 栋，**前四栋占 286 行**（c075 146 / c081 62 / c011 61 / c001 17），而这四栋里只有 c001 有逐楼报告 ⇒ 说「哪栋多」必须连口径一起写",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "★逐楼报告与全库扫描是**两个出口**，且字段集不同：`_qa/<楼>_qa.txt` 只印 WARN/ERROR（INFO 被丢掉），记的是**生成那一刻**的数据。2026-09-24 实测：61 份报告跨 09-15 → 09-24；挑 7 栋（c002/c003/c001/c026/c008f1/c041/c044）用**今天的码**重跑，结果与全库扫描（09-24 15:56）**逐码相等** ⇒ 旧报告的差值来自**数据**（其间被修过），不是尺子换了。例：c002 的 I4 69 → 0、c001 的 I2 103 → 89、c026 的 I1 2 → 0。旧报告留档在 _qa/_archive_qa_txt_20260924/",
+     "evidence": "_qa/_archive_qa_txt_20260924/c002_qa.txt:8"
+    }
+   ],
+   "traps": [
+    "trap-ledger-older-than-its-own-subject",
+    "trap-unavailable-reads-as-pass",
+    "trap-proxy-geometry-false-red"
+   ],
+   "unverified": [
+    {
+     "what": "柱族自动补锚（按轴网吸柱之类）的处置实现",
+     "reason": "本次在 backend/ 与根脚本里没有指得到的实现（**不是**「已确认不存在」）；仓内 I1/I2 两档都只报告不修，处置目前是人核"
+    }
+   ]
+  },
+  "column-duplicate": {
+   "title": "同层重复柱（识别副本 —— 判据自注「无害但应知道」）",
+   "kind": "other",
+   "alias": [
+    "重复柱",
+    "同位置重复柱",
+    "识别副本",
+    "柱重复",
+    "柱子重了",
+    "重复的柱",
+    "一根柱识别成两根"
+   ],
+   "symptoms": [
+    {
+     "what": "同一层里两根柱落在同一 (x,y)（容差 TOL_DUP=0.2m）⇒ 报 WARN，「出现在楼层 …」列出该坐标在**哪些层**重复；按坐标聚合到楼级，每处只报一次",
+     "evidence": "qa_structural.py:I7_dup_columns"
+    },
+    {
+     "what": "★这一族**不是缺陷档**：qa_structural 的文件头把它写成「同 (x,y) 多根柱 = 识别重复副本（无害但应知道）」—— 它的作用是「知道」，不是「修」",
+     "evidence": "qa_structural.py:I7_dup_columns"
+    }
+   ],
+   "causes": [
+    {
+     "what": "识别把同一处柱的两次图元（柱块与柱填充、或 INSERT 与轮廓各出一次）都收进了 columns；判据只量「同层同坐标出现两次」，不判哪一次才对",
+     "evidence": "qa_structural.py:I7_dup_columns"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "要消掉它，得在识别侧按 (x,y) 去重 —— 但仓内**没有**这一步：I7 只报不修（见 unverified），所以本族的处置停在「知道+人工核对」",
+     "evidence": "qa_structural.py:I7_dup_columns"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c113",
+     "writes": "_qa/c113_qa.txt（可重生成的报告，不碰交付物）",
+     "expect": "2026-09-24 实测（报告 16:33 生成）：6 行 I7，如 @(31.60,-3.20) 出现在楼层 3",
+     "read": "报告里 I7 的行数与被重复的坐标（坐标相同的柱会在多层各报一次）",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c113：6 行 I7 —— @(31.60,-3.20) 出现在楼层 3、@(31.60,-1.40) 出现在楼层 1、@(31.60,-0.80) 出现在楼层 2（同一列的重复柱逐层各一次）",
+     "evidence": "_qa/c113_qa.txt:8"
+    }
+   ],
+   "related": [
+    {
+     "what": "全库口径（_qa/defects.json 2026-09-24 15:56）：I7 26 行，前两栋 c103 8 / c113 6；★c103 的逐楼报告（2026-09-16 07:54）里是 **20 行** —— 同栋同码两个产物差 12 行，说明中间改过判据或重跑过数据，引用必须带日期与来源",
+     "evidence": "qa_structural.py:I7_dup_columns"
+    }
+   ],
+   "traps": [
+    "trap-ledger-older-than-its-own-subject",
+    "trap-zero-and-two-are-different"
+   ],
+   "unverified": [
+    {
+     "what": "识别侧的柱去重实现",
+     "reason": "本次在 backend/recognizer/ 下没有指得到的去重实现；本族的处置因此只是「人核」，不是「已实施的修复」"
+    }
+   ]
+  },
+  "door-host-broken": {
+   "title": "门宿主链断 / 门被墙吞（只判带门洞盒的楼层）",
+   "kind": "symptom",
+   "alias": [
+    "门宿主链断",
+    "门没登记宿主墙",
+    "门夹在墙里",
+    "门被墙吞",
+    "门看不见",
+    "wallId 为空",
+    "门洞残墙",
+    "门在实心墙里",
+    "门扇被墙吞",
+    "宿主墙丢了"
+   ],
+   "symptoms": [
+    {
+     "what": "门洞盒里的残墙 >50% ⇒ 门夹在实心墙里（用户原话「有的门夹在墙里看不到」）——I11 共 487 行，其中 407 行是这一档",
+     "evidence": "qa_structural.py:I11_opening_hosts"
+    },
+    {
+     "what": "门带了门洞盒却没登记宿主墙 `wallId` ⇒ 墙定稿后漏走 `finalize_floor()`，宿主链在交付物里就断了 —— 80 行是这一档（c006 F0 门 60/113）",
+     "evidence": "qa_structural.py:I11_opening_hosts"
+    }
+   ],
+   "causes": [
+    {
+     "what": "门洞盒在识别期算出（`openings.py`），宿主墙要等墙**定稿**之后才回填 —— 定稿流程漏跑一次，盒子在、宿主不在，两条判据同时命中",
+     "evidence": "backend/recognizer/openings.py:register_hosts"
+    },
+    {
+     "what": "「门心压在墙里」是盒子盖了门、墙却没被挖穿：`buried_doors()` 量的就是盒内残墙，残墙比例越大说明挖得越不干净",
+     "evidence": "backend/recognizer/openings.py:buried_doors"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "墙定稿后重跑宿主登记 `register_hosts()`、再跑挖墙 `punch_walls()`；交付前用 `buried_doors()` 复查盒内残墙（独立量具，不用 punch_walls 自己的输出）",
+     "evidence": "backend/recognizer/openings.py:register_hosts"
+    },
+    {
+     "what": "盒子对不上时用 `repair_boxes()` 修盒 —— 盒深 ≤ 墙厚是这一族的老病灶",
+     "evidence": "backend/recognizer/openings.py:repair_boxes"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c027",
+     "writes": "_qa/c027_qa.txt（可重生成的报告，不碰交付物）",
+     "expect": "仓内那份报告（2026-09-15 23:36）实测：f0 门 1/33 未登记宿主墙 ＋ 门心压在墙里 12/33 道（最低洞口残墙 40%）；全库口径 487 行 = 407 压墙 ＋ 80 无宿主",
+     "read": "报告里 I11 两档的行数与比例；★该报告是旧的（09-15），重跑会覆盖它",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c113 F0：门心压在墙里 81/90 道（最低洞口残墙 2%）—— 报告 2026-09-24 16:33 生成，是仓库里最新的一份逐楼报告",
+     "evidence": "_qa/c113_qa.txt:115"
+    },
+    {
+     "what": "c006 F0：门 60/113 未登记宿主墙 wallId（报告 2026-09-23 19:34）—— 全库单栋最多",
+     "evidence": "_qa/c006_qa.txt:19"
+    }
+   ],
+   "related": [
+    {
+     "what": "★覆盖率先说清：I11 只判**带门洞盒**的楼层，没有盒子的楼层整层跳过；普查（2026-09-11，记在判据 docstring 里）49 栋 22461 道门里只有 1187 道带盒子 ⇒ 487 行**不是**「全库门的缺陷数」，是「带盒子的那批门里的缺陷数」",
+     "evidence": "qa_structural.py:I11_opening_hosts"
+    },
+    {
+     "what": "挖穿率不许拿 `punch_walls()` 自己的输出量（那是自证）—— I17 的围合率与 I11 的残墙都改拿独立量具在盒子/井内量，是同一个教训的两处落地",
+     "evidence": "backend/recognizer/openings.py:buried_doors"
+    }
+   ],
+   "traps": [
+    "trap-unavailable-reads-as-pass",
+    "trap-measure-one-write-another",
+    "trap-saturated-criterion"
+   ],
+   "unverified": [
+    {
+     "what": "没有门洞盒的那两万多道门（识别链早于门洞盒特性的楼）的宿主链状况",
+     "reason": "判据设计上跳过它们（不是漏报，是当年没有这条特性）；要量得先把盒子补齐，仓内没有这一步"
+    }
+   ]
+  },
+  "diagonal-and-curve-walls": {
+   "title": "斜墙 / 曲墙（斜墙是合法登记项 · 曲墙识别是缺口）",
+   "kind": "other",
+   "alias": [
+    "斜墙",
+    "斜向墙段",
+    "异形墙",
+    "弧面墙",
+    "弧形墙",
+    "曲墙",
+    "圆弧墙",
+    "切角墙",
+    "锯口轮廓",
+    "半圆后墙",
+    "圆环墙"
+   ],
+   "symptoms": [
+    {
+     "what": "斜向墙段登记：偏离正交 >5° 的墙段逐层计数登记，**全部 INFO**（斜墙/切角合法）——全库 450 行、一行 WARN 都没有（I9 是唯一全 INFO 的码）",
+     "evidence": "qa_structural.py:I9_irregular_walls"
+    },
+    {
+     "what": "「疑似弧面/曲墙」那一档（同一条判据的后半：段数 ≥7、转角序列同号、平均转角 0.5~15°、弓高 > 4% 弦长 ⇒ WARN）在本轮全库扫描里 **0 行**：450 行 I9 里**没有一行含「弧」**。0 行的含义是「这一档一次都没命中过」，**不是**「全库没有曲墙问题」",
+     "evidence": "qa_structural.py:I9_irregular_walls"
+    }
+   ],
+   "causes": [
+    {
+     "what": "弧被离散成短弦后，斜段配对默认不开启（`pair_curved: bool = False`）——「斜段与弧离散出的短弦被直接丢弃」⇒ 曲墙识别不出来，只能以成串斜墙段的形状留下",
+     "evidence": "backend/recognizer/profile.py:pair_curved"
+    },
+    {
+     "what": "真走弧的通道是 `pair_curved_faces()`（弧面对配对）：开关与真弧两条路，前者默认关、后者要求输入本来就是弧",
+     "evidence": "backend/recognizer/curve_walls.py:pair_curved_faces"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "要按弧建模的楼（礼堂半圆后墙、门厅弧墙、圆环）必须**整体按弧**处理：把 `pair_curved` 打开、让弧面走 `pair_curved_faces()`；否则窗会按段布、外轮廓呈多边形锯口",
+     "evidence": "backend/recognizer/profile.py:pair_curved"
+    },
+    {
+     "what": "「这一段是弧还是斜墙」的离散判据在 `_step_tread_mask` 一类转角掩膜里，弧段最小半径是 `CURVE_MIN_R`（=2.0）—— 两处是同一套判据的不同侧面",
+     "evidence": "backend/recognizer/classify_line.py:_step_tread_mask"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c002",
+     "writes": "_qa/c002_qa.txt（可重生成的报告，不碰交付物）",
+     "expect": "★仓内那份 c002 报告（2026-09-23 19:34）里**一行 I9 都没有**，而全库口径说 c002 有 10 行 I9 ⇒ 重跑会覆盖它、并给出今天的行数（两种结果都要读出来：出了几行=尺子变过；仍为 0=差异来自数据。别猜）",
+     "read": "报告里 I9 的行数；并与全库口径（I9 450 行，c006 11 / c002 10 / c003 10）对账",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "全库口径（_qa/defects.json 2026-09-24 15:56）：I9 450 行、**全部是 INFO 的「斜向墙段 N 处(约Nm, 斜墙/切角合法, 登记)」**，前几栋 c006 11 / c002 10 / c003 10 / c027 8 / c017 7；★450 行里没有一行是 WARN 的疑似弧面墙",
+     "evidence": "qa_structural.py:I9_irregular_walls"
+    }
+   ],
+   "related": [
+    {
+     "what": "★I9 是全库唯一全 INFO 的码：把它当缺陷行数会凭空造出 450 个「不存在的问题」；反过来，「0 行 WARN」也不等于弧墙都建对了 —— 那一档从来没命中过",
+     "evidence": "qa_structural.py:I9_irregular_walls"
+    },
+    {
+     "what": "★「报告里没有 I9」是**出口的过滤**造的，不是尺子更旧：逐楼报告只印 WARN/ERROR，而 I9 的 450 行全是 INFO ⇒ 它在任何 `_qa/<楼>_qa.txt` 里都恒为 0（2026-09-24 实测：重跑 c002 得 18 行 = I11 9 / I17 9，I9 仍是 0；同一栋的全库口径是 I9 10 行）。要数 I9（以及任何 INFO 档）只能读全库口径，**不能拿逐楼报告去对**",
+     "evidence": "qa_structural.py:main"
+    }
+   ],
+   "traps": [
+    "trap-saturated-criterion",
+    "trap-ledger-older-than-its-own-subject",
+    "trap-unavailable-reads-as-pass"
+   ],
+   "unverified": [
+    {
+     "what": "26 栋有真斜段的楼里有多少栋其实该开 `pair_curved`（即「斜段是弧的离散」与「斜段真的是斜墙」的比例）",
+     "reason": "要逐栋看图纸判弧/斜，本轮没有逐栋核过；仓内没有落盘产物可指"
+    }
+   ]
+  },
+  "stair-shaft-broken": {
+   "title": "楼梯井被塞满 / 井道围合不足（踏步线被配成墙）",
+   "kind": "symptom",
+   "alias": [
+    "楼梯井假墙",
+    "踏步假墙",
+    "楼梯井被塞满",
+    "井道围合不足",
+    "楼梯画不出来",
+    "井道还原不出来",
+    "井道塞满",
+    "踏步线被配成墙"
+   ],
+   "symptoms": [
+    {
+     "what": "踏步盒内出现碎片墙（0.3m 级的「墙」= 踏步线被配成墙）⇒ 楼梯井被塞满、梯段画不出来、井道占地也算错 —— I17 共 239 行，其中 210 行是这一档",
+     "evidence": "qa_structural.py:I17_stair_shaft"
+    },
+    {
+     "what": "井道周长被**实体墙**盖住的比例 <0.45 ⇒ 井道占位算不准 —— 29 行是这一档（c046 实测井 7/10 口围合不足，最低 0.29）",
+     "evidence": "qa_structural.py:I17_stair_shaft"
+    }
+   ],
+   "causes": [
+    {
+     "what": "踏步线被当成墙参与配对：碎片墙的判定/剔除在 `stairs.is_fragment()`，井道还原在 `wells_of()` —— 两者是同一份实现（识别/剔除/门禁共用），剔不干净就一路带进交付物",
+     "evidence": "backend/recognizer/stairs.py:is_fragment"
+    },
+    {
+     "what": "井道是**跨层量**：单看一层看不出「井被塞满」，要沿竖向对齐井道才看得见",
+     "evidence": "backend/recognizer/stairs.py:wells_of"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "把碎片墙从配对输入里剔掉（`is_fragment` 的阈值），再用 `wells_of()` 还原井道；围合率务必在**扩后的井**上、只用**实体墙**量",
+     "evidence": "backend/recognizer/stairs.py:wells_of"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c046",
+     "writes": "_qa/c046_qa.txt（可重生成的报告，不碰交付物）",
+     "expect": "仓内那份报告（2026-09-15 23:37）实测：c046 f0 踏步假墙 30 块（第 21 行）＋ 井 7/10 口围合不足（最低 0.29，第 22 行）；全库口径 239 行 = 210 ＋ 29",
+     "read": "报告里 I17 两档的行数与块数/比例",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c046 F0：井内踏步假墙 30 块 ＋ 井 7/10 口围合不足（最低 0.29）（报告 2026-09-15 23:37）",
+     "evidence": "_qa/c046_qa.txt:21"
+    },
+    {
+     "what": "c113 F0：井内踏步假墙 11 块（报告 2026-09-24 16:33，最新一份）",
+     "evidence": "_qa/c113_qa.txt:123"
+    }
+   ],
+   "related": [
+    {
+     "what": "★围合率**必须在扩后的井上、且只用实体墙**量：井 bbox 本来就是踏步的包围盒，假墙正压在它的周长上，用全部墙量是**自证**（恒 1.00）—— 与「拿 punch_walls 自己的输出量挖穿率」是同一个错",
+     "evidence": "qa_structural.py:I17_stair_shaft"
+    },
+    {
+     "what": "量的范围是**踏步盒**不是井道：井道合法地含楼梯口门垛与平台墙（c027 实测 0 vs 2~3），拿井道量会冤枉真墙",
+     "evidence": "qa_structural.py:I17_stair_shaft"
+    },
+    {
+     "what": "当前是 WARN 不是 ERROR：交付数据大面积建在这次修复之前（普查 2026-09-11：28 栋有待办井），一次性判红等于把整仓判 FAIL —— 计数即重识别的工作清单",
+     "evidence": "qa_structural.py:I17_stair_shaft"
+    }
+   ],
+   "traps": [
+    "trap-saturated-criterion",
+    "trap-unavailable-reads-as-pass",
+    "trap-proxy-geometry-false-red"
+   ]
+  },
+  "outdoor-geometry-in-union": {
+   "title": "室外构造混进墙的 union（墙外溢 / 外扩带空腔）",
+   "kind": "symptom",
+   "alias": [
+    "墙外溢",
+    "墙跑到轮廓外",
+    "室外构造混进墙",
+    "台阶污染",
+    "apron污染",
+    "入口台阶混进墙",
+    "外扩带空腔",
+    "裙房屋面空腔",
+    "散水混进墙"
+   ],
+   "symptoms": [
+    {
+     "what": "墙身主体在轮廓外 >1.2m（WALL_OUT），且外溢 >15% 墙面积 且 >2.0㎡ ⇒ 疑似入口台阶/apron 等室外构造混进了墙的 union —— I4 共 142 行 WARN",
+     "evidence": "qa_structural.py:I4_walls_not_outside"
+    },
+    {
+     "what": "下层轮廓比上层多出的带里无柱、无房、无内墙 ⇒ 外扩带是空腔（疑似同样的污染；判据自注「若为裙房屋面则正常可忽略」）—— I5 共 5 行 WARN",
+     "evidence": "qa_structural.py:I5_empty_dropband"
+    }
+   ],
+   "causes": [
+    {
+     "what": "识别把室外构造（台阶、散水、门廊铺装）收进了墙的并集；阈值是「越出距离 >1.2m」＋「外溢 >15% 且 >2.0㎡」两条同时成立才报，所以一条远处的薄墙不会单独立案",
+     "evidence": "qa_structural.py:I4_walls_not_outside"
+    },
+    {
+     "what": "外扩带空腔是同一根在**竖向**上的显形：下层多出来的部分既没结构也没用途 ⇒ 不是退台，是混进来的面（I5 的 `band` 由轮廓差算出）",
+     "evidence": "qa_structural.py:I5_empty_dropband"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "把台阶/散水从墙 union 里排掉：台阶的判据在 `classify_line._step_tread_mask`（踏步带掩膜），按它剔除比按面积阈值更早、更准",
+     "evidence": "backend/recognizer/classify_line.py:_step_tread_mask"
+    },
+    {
+     "what": "确属裙房屋面的空腔不必修（判据自己写明「正常可忽略」）—— 处置前先看那栋有没有裙房",
+     "evidence": "qa_structural.py:I5_empty_dropband"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c113",
+     "writes": "_qa/c113_qa.txt（可重生成的报告，不碰交付物）",
+     "expect": "2026-09-24 实测（报告 16:33）：c113 f0 第 110 行有 1 行 I4「墙身主体在轮廓外>1.2m 外溢5㎡」；全库口径 I4 142 / I5 5",
+     "read": "报告里 I4/I5 的行数与外溢面积；★I4 是逐楼报告与全库扫描差得最凶的一档，引用必须带日期",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c113 F0：墙身主体在轮廓外 >1.2m、外溢 5㎡ @(-17.82,-13.68)（报告 2026-09-24 16:33）",
+     "evidence": "_qa/c113_qa.txt:110"
+    },
+    {
+     "what": "c006 F6：外扩带空腔 —— 比上层多 4456㎡、厚 41.1m、无柱/房/内墙（报告 2026-09-23 19:34；判据自注「若为裙房屋面则正常可忽略」）",
+     "evidence": "_qa/c006_qa.txt:14"
+    }
+   ],
+   "related": [
+    {
+     "what": "★两个码是同一根的两个观测面：I4 量**墙**越出轮廓多少、I5 量**板**多出来的带里有没有东西；只看 I4=0 不等于没有室外构造 —— 它按面积卡（>2㎡ 且 >15%）",
+     "evidence": "qa_structural.py:I4_walls_not_outside"
+    },
+    {
+     "what": "★这一族是「出口过滤 ＋ 数据时点」的实例：c002 的 2026-09-23 19:34 报告有 **69 行 I4**，而 20 小时后的全库扫描（09-24 15:56）对 c002 记 **0 行**；2026-09-24 用**今天的码**重跑 c002 得 I4 **0**、与全库相等 ⇒ 差的是**数据**（其间被修过），不是尺子；c003 同形（报告 75 / 全库 0，重跑 0 也相等）。两份旧报告留档在 _qa/_archive_qa_txt_20260924/（别拿它们当现况）",
+     "evidence": "_qa/_archive_qa_txt_20260924/c003_qa.txt:8"
+    }
+   ],
+   "traps": [
+    "trap-ledger-older-than-its-own-subject",
+    "trap-proxy-geometry-false-red"
+   ]
+  },
+  "ledger-vs-delivery": {
+   "title": "交付与台账对不上（缺层 / 层号哨兵 / 同号面积不符）",
+   "kind": "symptom",
+   "alias": [
+    "台账对不上",
+    "交付与台账不符",
+    "缺层",
+    "层数不符",
+    "层号哨兵",
+    "假楼层",
+    "面积不符",
+    "台账面积不符",
+    "交付比图纸小",
+    "房间数对不上",
+    "台账有交付无"
+   ],
+   "symptoms": [
+    {
+     "what": "台账有、交付无的房间号（反之亦然），逐号列出 —— D2 共 28 行（7 ERROR / 21 WARN）",
+     "evidence": "scan_defects.py:check_ledger_vs_floors"
+    },
+    {
+     "what": "楼层文件数与台账声明的层数不符（声明 6 层 / 实际 5 个文件）—— D3 共 4 行 ERROR；判据自注「前端载入会抛错并停在上一栋的几何上」",
+     "evidence": "scan_defects.py:check_floor_files"
+    },
+    {
+     "what": "台账层号是哨兵值/越界（层号 [-1] 各 4 行）—— 哨兵值被当分组键会产出**假楼层** F-1 —— D5 共 1 行",
+     "evidence": "scan_defects.py:check_ledger_sentinel"
+    },
+    {
+     "what": "台账里同层同号的房间是**另一块几何**：交付面积/台账面积 = 0.19 倍 —— D8 共 7 行 ERROR（6 行在 c046）",
+     "evidence": "scan_defects.py:check_ledger_area_mismatch"
+    }
+   ],
+   "causes": [
+    {
+     "what": "台账的行是**按号**对的、交付的几何是**按块**生成的：号对上了尺寸没对上（D8 的 0.19 倍）、或几何对了号错了（D2）—— 两个方向都要各判一次",
+     "evidence": "scan_defects.py:check_ledger_area_mismatch"
+    },
+    {
+     "what": "台账里存在**汇总行**（如「11/11 层」）与哨兵层号（-1）：它们不是某一层，按号直接比对会造出假楼层与假缺号",
+     "evidence": "scan_defects.py:check_ledger_sentinel"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "先按粒度判台账行（汇总行/哨兵行单列），再做逐号比对；比值阈值只有一份（`D8_RATIO_LO`=0.5 / `D8_RATIO_HI`=2.0，全库 8904 对实测标定）并被 D0 复用 —— 改阈值只改这一处",
+     "evidence": "scan_defects.py:D8_RATIO_LO"
+    },
+    {
+     "what": "交付侧缺号（D2）与几何不符（D8）分开处置：前者多半是识别漏块，后者多半是台账那一行描述的是另一块形状",
+     "evidence": "scan_defects.py:check_ledger_vs_floors"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u scan_defects.py c046",
+     "writes": "_qa/defects_partial.json ＋ _qa/defect_partial_summary.md（点名单栋时按范围分址，够不着全库的 _qa/defects.json 那两份）",
+     "expect": "2026-09-24 全库扫描：D8 7 行里 6 行在 c046；D2 28 行（c072 / c073 / c103 各 6）",
+     "read": "两份产物里 D2/D3/D5/D8 各几行，与全库口径对账；★只跑单栋，别裸跑",
+     "evidence": "scan_defects.py:out_paths"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c046：6 行 D8「交付 8.3㎡ / 台账 44.4㎡ = 0.19 倍」类（46-B-01-01 等）—— 号对上了、几何是另一块",
+     "evidence": "scan_defects.py:check_ledger_area_mismatch"
+    },
+    {
+     "what": "c009：台账层号 [-1] 各 4 行（哨兵值被当分组键 ⇒ 假楼层 F-1）",
+     "evidence": "scan_defects.py:check_ledger_sentinel"
+    }
+   ],
+   "related": [
+    {
+     "what": "★台账对得上 ≠ 建模对：`check_degenerate`（D0，10 行）量的是「某号占本层面积 >60%」—— 台账那一行与它**相符**（图纸/台账本身就没细分这一层），所以 D0 报的是「建模出的是空盒子（无内墙、无门可依）」，不是台账错",
+     "evidence": "scan_defects.py:check_degenerate"
+    },
+    {
+     "what": "实例证据只能指**产生它的代码**：`_qa/defects.json` 每次全库重扫都整体重写（当前那份 2026-09-24 15:56、2512 行），行号必然漂 —— 指行号会指错，而门禁②只核「那一行存在」，照样绿",
+     "evidence": "scan_defects.py:check_ledger_area_mismatch"
+    }
+   ],
+   "traps": [
+    "trap-ledger-older-than-its-own-subject",
+    "trap-zero-and-two-are-different",
+    "trap-unavailable-reads-as-pass"
+   ],
+   "unverified": [
+    {
+     "what": "D2 那 21 行 WARN 里哪些是台账旧、哪些是识别漏",
+     "reason": "判据只列号不判因；要分因得逐号回图纸核，仓内没有落盘产物可指"
+    }
+   ]
+  },
+  "criterion-crashed": {
+   "title": "判据整栋崩溃未跑，而它看起来像「干净」（0 行 ≠ 没有）",
+   "kind": "symptom",
+   "alias": [
+    "判据自身异常",
+    "qa_structural 调用异常",
+    "判据崩了",
+    "量具崩了",
+    "整栋 0 行",
+    "一条判据都没跑",
+    "MultiPolygon 没有 exterior",
+    "QA 行",
+    "调用异常",
+    "判据未跑",
+    "整栋跳过",
+    "18 条判据共用一个失败点"
+   ],
+   "symptoms": [
+    {
+     "what": "逐楼跑会**直接抛栈**：`o.exterior` 落在多面轮廓上 ⇒ AttributeError: 'MultiPolygon' object has no attribute 'exterior'（2026-09-24 实测 c009，退出码非 0）",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "全库扫描对同一栋**一条 I 码都不记**，只留下一行 `code=QA`、`sev=INFO` 的「qa_structural 调用异常」（msg 里就是那句 AttributeError）—— 那一行是**唯一的痕迹**，而 INFO 在汇总表里跟「正常」同一栏",
+     "evidence": "scan_defects.py:scan"
+    }
+   ],
+   "causes": [
+    {
+     "what": "I1 假定每层轮廓是**单面**（直接取 `o.exterior`）；轮廓成了 MultiPolygon 时这个假定就断 —— 而 `check_building` 里 I1 是**第一条**，它一抛，后面 I2…I18 全都不执行（整栋 18 条判据共用一个失败点）",
+     "evidence": "qa_structural.py:I1_col_in_own_outline"
+    },
+    {
+     "what": "调用侧只兜了**一层**：`except Exception` 记一个 QA 行，不重试、不逐条降级 —— 于是「18 条里坏了 1 条」在产物上的表现是「18 条全部没有」",
+     "evidence": "scan_defects.py:scan"
+    }
+   ],
+   "fixes": [
+    {
+     "what": "★**不改 qa_structural.py**（用户明令冻结）⇒ 处置落在**读法**上：某栋 I 码全 0 时，先去 `_qa/defects.json` 查同栋有没有 `code=QA` 的行；有 ⇒ 该栋的 I 层是 UNAVAILABLE（没跑），**不是干净**",
+     "evidence": "scan_defects.py:scan"
+    }
+   ],
+   "runs": [
+    {
+     "cmd": "python -u qa_structural.py c009",
+     "writes": "理论上写 _qa/c009_qa.txt，但崩在**写报告之前** ⇒ **不落盘**（现有那份 09-15 的内容因此原样留着）",
+     "expect": "2026-09-24 实测：AttributeError: 'MultiPolygon' object has no attribute 'exterior'；控制台只有栈，没有汇总表",
+     "read": "栈顶是 `I1_col_in_own_outline` —— 这就是该栋 I 码全 0 的原因",
+     "evidence": "qa_structural.py:check_building"
+    }
+   ],
+   "instances": [
+    {
+     "what": "c009 F0：柱在自身轮廓外 0.3m @(-56.70,11.52) 起，共 29 行 I1 —— 这是 c009 **最后一次量成功**的结果（2026-09-15 23:36）；今日重跑会崩，别指望重生成它",
+     "evidence": "_qa/c009_qa.txt:8"
+    }
+   ],
+   "related": [
+    {
+     "what": "★`_qa/defects.json` 里 c009 只有 **4 行**：D1 ERROR×2 / D5 WARN×1 / QA INFO×1 —— I 码**一条都没有**，而这与「18 条判据全过了」在汇总表上长得一模一样",
+     "evidence": "scan_defects.py:scan"
+    },
+    {
+     "what": "同一形状的另一面是**出口过滤**：逐楼报告只印 WARN/ERROR（INFO 全被丢掉）⇒ 全 INFO 的档（I9 450 行、UA 行）在任何报告里恒为 0。⇒ 「这份产物里 0 行」要先问一句：这一档**能不能出现在**这份产物里",
+     "evidence": "qa_structural.py:main"
+    }
+   ],
+   "traps": [
+    "trap-unavailable-reads-as-pass",
+    "trap-ledger-older-than-its-own-subject"
+   ],
+   "unverified": [
+    {
+     "what": "c009 的轮廓为什么成了 MultiPolygon、该不该修",
+     "reason": "本轮只确认了「现在跑会崩」与崩溃点（I1 的 `o.exterior`），没有逐层核过它的轮廓形态是哪一次改动造成的；仓内没有落盘产物可指"
+    }
+   ]
+  }
+ }
+}

@@ -1,16 +1,371 @@
 {
-  "title": "CAD 制图识图知识库",
-  "description": "建筑施工图 + 高校资产图识别规范，服务于数字孪生识别引擎",
-  "version": "1.0.0",
-  "order": [
-    "00-overview.md",
-    "01-line-types.md",
-    "02-section-materials.md",
-    "03-door-window.md",
-    "04-stair.md",
-    "05-dimension-annotation.md",
-    "06-grid-axes.md",
-    "07-asset-survey.md",
-    "08-su-reference.md"
-  ]
+ "title": "CAD 制图识图知识库",
+ "description": "三域：drafting 读图 ｜ solid 成体 ｜ twin 孪生。建筑施工图 + 高校资产图识别规范，服务于数字孪生识别引擎",
+ "version": "1.0.0",
+ "criterion_version": 1,
+ "_note": "手工域知识。domain 见各条；title/slug 由 build_kb.py 从 md 的 H1 推，本文件不许写（一个事实一份写法）",
+ "_schema": {
+  "domain": "drafting 读图 | solid 成体 | twin 孪生（twin 见后续）",
+  "standard": "依据的标准号，实测约定写『本项目实测』",
+  "tags": "分面标签，供检索",
+  "alias": "★神经网络种子：一个概念的所有叫法。缺了它，换个说法就查不到",
+  "keys": "关键结论，每条一句、可独立成立",
+  "recognition": "识别映射：现象 → 判据 → 实现（evidence 必须是 file:symbol 或 file:行，且已全仓解析过）。★ 字段名 `drafting` 是历史遗留：drafting 域读作『制图含义』，twin 域读作『孪生现象 / 行业做法』—— 形状一样（X → 判据 → 实现），只是 X 换了域。evidence 写 null = 显式声明『本域没有对应实现』（不算红，也不算绿）",
+  "related": "关联代码符号 file:symbol"
+ },
+ "order": [
+  "00-overview.md",
+  "01-line-types.md",
+  "02-section-materials.md",
+  "03-door-window.md",
+  "04-stair.md",
+  "05-dimension-annotation.md",
+  "06-grid-axes.md",
+  "07-asset-survey.md",
+  "08-su-reference.md",
+  "twin/00-overview.md",
+  "twin/01-lineage.md",
+  "twin/02-industry-benchmark.md"
+ ],
+ "entries": {
+  "00-overview.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50001-2017", "GB/T 50104-2010"],
+   "tags": ["第一原则", "规则优先于几何", "逐栋差异", "ODA转换", "资产图"],
+   "alias": ["制图标准", "总览", "第一原则", "规则优先于几何", "规则优先", "资产图", "ODA", "国标", "识图总纲"],
+   "keys": [
+    "第一原则：能用建筑规则就用建筑规则，实在没有规则信号才退回几何规则",
+    "GB/T 50001-2017 房屋建筑制图统一标准（2018-05-01 实施）；GB/T 50104-2010 建筑制图标准（2011-03-01 实施）",
+    "知识链是三段：制图规范 → DXF 里长什么样 → 识别引擎怎么判。三段都要写全，只写第一段等于没写",
+    "ODA 转换丢弃线宽/颜色/图层中文名 ⇒ 线宽语义在资产图上失效，只能靠闭合性 + 尺寸 + 图层数字前缀替代",
+    "没有两栋楼画得一样：逐栋约定差异必须逐栋侦查，不许套模板"
+   ],
+   "recognition": [],
+   "related": [
+    "backend/recognizer/detect_params.py:89",
+    "backend/recognizer/profile.py:36"
+   ]
+  },
+  "01-line-types.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50001-2017"],
+   "tags": ["线宽组", "线型", "粗实线", "中实线", "细实线", "点划线", "线宽丢失"],
+   "alias": ["线宽", "线型", "线宽组", "粗实线", "中实线", "细实线", "点划线", "点化线", "虚线", "双点划线", "波浪线"],
+   "keys": [
+    "线宽组 b : 0.5b : 0.25b（4:2:1）；2010 版细分出中粗 0.7b",
+    "粗实线 = 剖切到的主要构造：承重墙、柱断面",
+    "中实线 = 次要构造：墙身、台阶、门扇开启线",
+    "细实线 = 尺寸线、图例、窗轮廓",
+    "细单点长划线 = 定位轴线",
+    "★资产图 DXF 不携带线宽 ⇒ 线宽语义整体失效，改用闭合性 + 尺寸区间 + 图层数字前缀"
+   ],
+   "recognition": [
+    {
+     "drafting": "承重墙（粗实线）",
+     "criterion": "墙皮双线间距落在 [wall_min, wall_max] 区间的闭合区域",
+     "evidence": "backend/recognizer/profile.py:36"
+    },
+    {
+     "drafting": "柱断面（粗实线）",
+     "criterion": "独立小闭合多边形；或 INSERT 块（_FZHK / _YZHK）",
+     "evidence": "backend/recognizer/detect_params.py:37"
+    },
+    {
+     "drafting": "门扇开启线（中实线）",
+     "criterion": "不闭合折线，最长段落在 [DOOR_LEAF_MIN, DOOR_LEAF_MAX] 区间",
+     "evidence": "backend/recognizer/component_library.py:33"
+    },
+    {
+     "drafting": "定位轴线（细单点长划线）",
+     "criterion": "资产图通常不画 ⇒ 识别引擎不需处理",
+     "evidence": null
+    },
+    {
+     "drafting": "不可见轮廓（虚线）",
+     "criterion": "资产图少用 ⇒ 忽略，不参与成体",
+     "evidence": null
+    }
+   ],
+   "related": ["backend/recognizer/component_library.py:72"]
+  },
+  "02-section-materials.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50104-2010"],
+   "tags": ["材料图例", "剖面", "填充", "涂黑", "斜线", "负例"],
+   "alias": ["材料图例", "图例", "剖面", "剖面图", "填充", "涂黑", "斜线", "45度斜线", "楼板填充", "地坪填充", "钢筋混凝土"],
+   "keys": [
+    "剖面材料图例（钢筋混凝凝土涂黑 / 斜线、砖、砂浆、保温等）",
+    "★本篇在识别上最大的价值是**负例**：大面积涂黑 / 45° 斜线填充是楼板或地坪填充，不是墙",
+    "判据：面积/长度比 > SLAB_RATIO ⇒ 是板状填充，从墙里剔掉",
+    "内隔墙另有判据：质心偏移相对外皮比例 > INNER_WALL_CENTROID_FACTOR"
+   ],
+   "recognition": [
+    {
+     "drafting": "大面积涂黑 / 45° 斜线填充",
+     "criterion": "面积/长度比 > SLAB_RATIO ⇒ 楼板/地坪填充，剔出墙候选",
+     "evidence": "backend/recognizer/component_library.py:29"
+    },
+    {
+     "drafting": "内隔墙（与外墙同图层、同线宽）",
+     "criterion": "按质心相对外皮的偏移比例区分内墙/外墙",
+     "evidence": "backend/recognizer/component_library.py:60"
+    }
+   ],
+   "related": ["backend/recognizer/component_library.py:245"]
+  },
+  "03-door-window.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50104-2010"],
+   "tags": ["门", "窗", "门扇", "开启线", "门窗编号", "缺口", "三种画法"],
+   "alias": ["门", "窗", "门洞", "窗洞", "门扇", "开启线", "开启弧", "门窗", "门窗编号", "M", "C", "缺口", "门宽", "洞口"],
+   "keys": [
+    "门窗编号用 M（门）、C（窗）代号 + 编号",
+    "★统一结论：门 = 墙的**缺口**，不是洞。识别门只需抓住『墙在这里断开、断口宽度在门宽区间』",
+    "门的三种画法（逐栋不同，必须逐栋侦查）：理化楼=多点 LWPOLYLINE（>=10 点）；c006=INSERT 块 $DorLib2D$（2 点单扇 / 17 点双扇）；c009 等=不闭合折线（门扇线 0.6~3.0m）",
+    "★窗是**合成数据**：不从图纸读，由墙段与规则生成 ⇒ 图里找不到窗是正常的，不许报缺陷",
+    "门洞盒深度必须 > 墙厚，否则门洞被打穿成洞而不是缺口（README 铁律 2）"
+   ],
+   "recognition": [
+    {
+     "drafting": "不闭合折线门扇线（c009 等）",
+     "criterion": "最长段落在 [DOOR_LEAF_MIN, DOOR_LEAF_MAX] = [0.6, 3.0]m",
+     "evidence": "backend/recognizer/geometry.py:1408"
+    },
+    {
+     "drafting": "INSERT 块门（c006）",
+     "criterion": "块名 $DorLib2D$；2 点=单扇，17 点=双扇",
+     "evidence": "backend/extract/extract_rooms_c006.py:70"
+    },
+    {
+     "drafting": "门洞（墙的缺口）",
+     "criterion": "在宿主墙上按门洞盒切出缺口；盒被墙吃掉（埋门）要能报出来",
+     "evidence": "backend/recognizer/openings.py:334"
+    }
+   ],
+   "related": [
+    "backend/recognizer/openings.py:282",
+    "backend/recognizer/component_library.py:254"
+   ]
+  },
+  "04-stair.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50104-2010"],
+   "tags": ["楼梯", "踏步", "梯段", "楼梯井", "折断线", "栏杆", "平台"],
+   "alias": ["楼梯", "楼梯井", "梯井", "踏步", "踏步线", "梯段", "跑", "平台", "休息平台", "栏杆", "扶手", "折断线", "上下箭头", "楼梯间"],
+   "keys": [
+    "楼梯四要素：踏步线、折断线（45°）、上下行箭头、栏杆/扶手双线",
+    "底层 / 标准层 / 顶层画法不同：底层只画第一跑，标准层两跑上下叠，顶层画到平台为止",
+    "候选楼梯 = 一列短水平段（0.8~3.0m）按 y 聚类",
+    "★判据有两道，缺一就出假井：① 短水平段 >= MIN_FLIGHT_STEPS 段；② 踏步纵向跨度 >= MIN_FLIGHT_RUN (1.5m)",
+    "判例：c114 / c103 / c022 曾因只上第一道判据出 36~146 个假楼梯井",
+    "楼梯井是**跨层量** —— 同一井道在相邻层必须对得上，单层看不出来"
+   ],
+   "recognition": [
+    {
+     "drafting": "楼梯井",
+     "criterion": "短水平段按 y 聚类 + 踏步纵向跨度 >= MIN_FLIGHT_RUN(1.5m)",
+     "evidence": "backend/recognizer/stairs.py:56"
+    },
+    {
+     "drafting": "踏步级距",
+     "criterion": "踏步面间距落在 [TREAD_PITCH_MIN, TREAD_PITCH_MAX]（GB/T 50104 踏步宽 220~300）",
+     "evidence": "backend/recognizer/stairs.py:52"
+    },
+    {
+     "drafting": "梯段 / 井道",
+     "criterion": "由踏步索引聚成梯段，再由梯段围出井道",
+     "evidence": "backend/recognizer/stairs.py:281"
+    }
+   ],
+   "related": [
+    "backend/recognizer/geometry.py:1457",
+    "backend/recognizer/stairs.py:367"
+   ]
+  },
+  "05-dimension-annotation.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50104-2010", "本项目实测（图层数字前缀）"],
+   "tags": ["尺寸标注", "图层数字前缀", "房间号", "面积", "用途", "单位", "MTEXT"],
+   "alias": ["尺寸", "标注", "尺寸标注", "面积", "建筑面积", "房间号", "房号", "用途", "使用单位", "单位", "图层前缀", "数字前缀", "MTEXT", "面积标注"],
+   "keys": [
+    "图层按数字前缀分义：5=面积，6=房间号，7=用途，8=单位，Defpoints=弃用",
+    "★7/8 的语义逐栋相反：理化楼老图 7=使用单位 / 8=用途；c006 口径 7=用途 / 8=单位。默认按 c006，须逐栋覆盖",
+    "房间号格式 BB-FF-RR（楼-层-号），与图层数字前缀是两回事",
+    "MTEXT 靠『点落在多边形内』关联到房间（poly.buffer(LABEL_TOL).covers(point)）",
+    "中文编码逐栋确认：UTF-8 与 GBK 混用，坏字节需 errors='replace'",
+    "★面积标注值与几何值可差 10%，一律以 area_m2（几何）为权威，图上的标注只作旁证"
+   ],
+   "recognition": [
+    {
+     "drafting": "图层数字前缀 → 语义",
+     "criterion": "5→area / 6→number / 7→purpose / 8→dept，逐栋可覆盖",
+     "evidence": "backend/extract/extract_rooms_generic.py:137"
+    },
+    {
+     "drafting": "标注文本 → 房间归属",
+     "criterion": "MTEXT 的点落在房间多边形内（带 LABEL_TOL 缓冲）即归属该房间",
+     "evidence": "backend/extract/extract_rooms_generic.py:557"
+    },
+    {
+     "drafting": "房间号编号体系",
+     "criterion": "ID_BASE 代号映射；房间号里含层号，故不许跨层配对",
+     "evidence": "backend/extract/extract_rooms_generic.py:49"
+    }
+   ],
+   "related": ["backend/extract/extract_rooms_generic.py:138"]
+  },
+  "06-grid-axes.md": {
+   "domain": "drafting",
+   "standard": ["GB/T 50001-2017"],
+   "tags": ["定位轴线", "轴号", "编号规则", "跳过IOZ"],
+   "alias": ["轴线", "定位轴线", "轴号", "轴网", "编号", "横轴", "纵轴", "附加轴线"],
+   "keys": [
+    "横向轴线编号用阿拉伯数字 1,2,3…；纵向用大写拉丁字母 A,B,C…",
+    "★字母轴线**跳过 I、O、Z**（易与 1、0、2 混淆）",
+    "附加轴线写成 1/2（分母式）",
+    "资产图通常不画轴线 ⇒ 识别引擎不需处理轴线图层",
+    "★但 I/O/Z 的跳号约定外溢到别处：房间号 6-A-01-00 里的 A 是**翼号**不是轴号，别混"
+   ],
+   "recognition": [
+    {
+     "drafting": "定位轴线图层",
+     "criterion": "资产图通常不画 ⇒ 声明无实现，不需识别",
+     "evidence": null
+    }
+   ],
+   "related": []
+  },
+  "07-asset-survey.md": {
+   "domain": "drafting",
+   "standard": ["本项目实测"],
+   "tags": ["资产图", "实测约定", "逐栋差异", "层名", "编码", "几何判据"],
+   "alias": ["资产图", "实测", "实测约定", "逐栋差异", "层名", "层名撒谎", "编码", "GBK", "UTF-8", "房间提取", "几何判据"],
+   "keys": [
+    "GB/T 50001-2001 第 10.1.2 条：不同幅面图纸的线宽与字高按比例调整 —— 但资产图整体不携带线宽",
+    "层名约定：5=面积 / 6=房间号 / 7=用途 / 8=单位，其中 7/8 逐栋相反（c006 7=用途/8=单位；理化楼 7=单位/8=用途）",
+    "★『层名撒谎』有 8 栋例外，登记在 LAYER_ROLE_OVERRIDE；不许靠层名猜语义",
+    "编码坑：UTF-8 中文标注里混坏字节（如代理对 \\udcb7），读的时候必须 errors='replace'",
+    "§六 铁律：每踩一个新坑，先更新 component_library.py，再更新本文件 —— 一份知识两处落点，缺一处就会漂"
+   ],
+   "recognition": [
+    {
+     "drafting": "层名 → 语义（逐栋覆盖）",
+     "criterion": "默认 LAYER_ROLE 按 c006 口径；命中例外栋则整表覆盖",
+     "evidence": "backend/extract/extract_rooms_generic.py:138"
+    },
+    {
+     "drafting": "§五 几何判据汇总",
+     "criterion": "墙 / 柱断面 / 门 / 楼板填充 / 楼梯井 / 房间 —— 六类构件各自的几何判据都固化在构件库",
+     "evidence": "backend/recognizer/component_library.py:72"
+    }
+   ],
+   "related": [
+    "backend/recognizer/component_library.py:199",
+    "backend/extract/extract_rooms_generic.py:137"
+   ]
+  },
+  "08-su-reference.md": {
+   "domain": "solid",
+   "standard": ["SketchUp 官方建模实践（非国标）"],
+   "tags": ["SketchUp", "实体建模", "读图成图", "法线", "装配式", "对标标准", "差距清单"],
+   "alias": ["SU", "SketchUp", "建模", "实体建模", "三维", "3D", "法线", "反面", "去重", "装配式", "组件", "群组", "墙", "门", "窗", "玻璃", "楼梯", "电梯", "柱", "楼板", "地面", "屋顶", "读图成图", "对标"],
+   "keys": [
+    "★核心原则：从 CAD 平面图的实际线条出发建模（读图成图），**不臆造构件**",
+    "0.5 三条铁律：① 法线必须一致朝外（反面即渲染成黑/穿透）；② 共面重合面必须去重；③ 构件按『装配式』建，不粘成一块",
+    "五步工作流：清底图 → 定标准层 → 起墙 → 开门窗洞 → 装楼梯电梯",
+    "§1 墙是最大的偏差来源：墙厚、墙高、墙与墙的交接都要按图，不许取整",
+    "末尾有『差距清单（按优先级）』—— 这是实体建模域的待办清单，也是孪生域的输入"
+   ],
+   "recognition": [],
+   "related": [
+    "backend/modeling/build_standard_glb.py:542",
+    "backend/modeling/build_standard_glb.py:628",
+    "backend/modeling/build_standard_glb.py:673"
+   ]
+  },
+  "twin/00-overview.md": {
+   "domain": "twin",
+   "standard": ["本项目实测"],
+   "tags": ["数字孪生", "孪生域", "可信度", "五段链", "派生", "原图", "新鲜度", "三态"],
+   "alias": ["数字孪生", "孪生", "孪生域", "数字孪生域", "孪生可信度", "可信度", "五段链", "派生", "派生物", "原图", "CAD 原图", "无链", "三态", "档案", "档案体系", "链上的错"],
+   "keys": [
+    "孪生不是一件东西而是一串派生：几何对、账本对，链上任何一环陈旧或被呈现成上游的样子，下游就安静地错",
+    "孪生 = 五段派生：原始 DWG → DXF → profile.json → floors/rooms → <name>-building.glb，其中前两段在仓外",
+    "界面上那个『原图』不是原图：dxf_plan_fast 是本仓渲染的 PNG，同一份仓的 docstring 叫它『忠实渲染』而界面标签叫它『CAD 原图』",
+    "『原图 vs 识别结果』这个对拍左栏不是真值，两次渲染共有的误差在对拍里一律不可见",
+    "新鲜度判据的正确形状 = 下游 vs 它的真输入，真输入是生成它的那些文件，不是中间产物",
+    "陈旧是不出声的：『这份数是旧尺子量的』和『这份数是对的』在屏幕上一模一样"
+   ],
+   "recognition": [
+    {"drafting": "交付几何陈旧（模型没跟上 floors）", "criterion": "现码重出比 sha256，不看 mtime（按 mtime 判已实测漏 28/48 栋）", "evidence": "backend/checks/__init__.py:53"},
+    {"drafting": "派生物被呈现成上游原图", "criterion": "目录里装的是渲染 PNG（dxf_plan_fast/floor*.png），而 API 常量与前端标签写『CAD 原图』", "evidence": "backend/api/services/artifacts.py:51"},
+    {"drafting": "同一批产物有两个来源计数", "criterion": "逐口径分别计数并写明是哪个口径（95 个楼栋目录 / 管线 49 栋 / 源目录 105 个 DWG，三个都对）", "evidence": "backend/state/census.py:260"},
+    {"drafting": "行业做法：交付分 raw / working / deliverable 三层，并记录参数、变换矩阵与 QC 备注", "criterion": "本仓只有产物层（③④⑤），①② 在仓外 ⇒ 这正是档案体系要补的第一环", "evidence": null}
+   ],
+   "related": [
+    "backend/paths.py:26",
+    "backend/api/services/artifacts.py:18",
+    "backend/checks/findings.py:27"
+   ]
+  },
+  "twin/01-lineage.md": {
+   "domain": "twin",
+   "standard": ["本项目实测"],
+   "tags": ["血缘", "新鲜度", "陈旧", "真输入", "缓存键", "内容指纹", "mtime", "双源", "断链"],
+   "alias": ["血缘", "血缘链", "新鲜度", "陈旧", "过期", "变旧", "mtime", "修改时间", "内容指纹", "sha256", "sha12", "缓存键", "真输入", "上游", "下游", "源 DXF", "GYM3D_DXF_DIR", "双源", "两份实现"],
+   "keys": [
+    "判据的正确形状 = 下游 vs 它的真输入；真输入是生成它的那些文件，不是中间产物",
+    "render_floor_png 全程读 DXF + profile、不读 floors/*.json ⇒ 拿 floor JSON 当它的新鲜度判据会把本来有效的图一律判旧",
+    "只判『文件在不在』等于永远不刷新：实测全库 49/49 栋的预渲染图都停在 2026-09-11 那版，而 DXF 之后重出过",
+    "同一判据两份实现（请求期与预渲染），注释自己写着『改一处要改两处』—— 这类双源不会自己红",
+    "prerender_floor_png.py 开头的模块 docstring 仍写『判据 = 不比本层 floor JSON 旧』，而 120 行后的实现已改成 DXF/profile：实现是新的，开头那句结论是旧的",
+    "两种新鲜度口径并存：内容指纹 sha12 与 mtime+size；mtime 会被 cp -p 原样带走 ⇒ 从备份恢复不会让缓存失效",
+    "缓存键必须覆盖被缓存的值真正读到的每一份文件，少放一份就会出现『改了它、页面还显示旧值』且不报错",
+    "全量实测：data/buildings/ 下 95 个楼栋目录，含 .dxf/.dwg 的 0 个，而 dxf_plan_fast/ 95/95 全有 ⇒ 应用里能看到的图纸全是派生渲染"
+   ],
+   "recognition": [
+    {"drafting": "预渲染图永远不刷新", "criterion": "已存在的图 mtime ≥ max(源 DXF, profile.json) mtime 才算新鲜", "evidence": "prerender_floor_png.py:is_fresh"},
+    {"drafting": "拿中间产物 floors 当新鲜度判据", "criterion": "错因：render_floor_png 不读 floors ⇒ floors 天天改会把有效图判旧、退回请求期现算", "evidence": "backend/web/control.py:149"},
+    {"drafting": "同一判据两份实现", "criterion": "请求期判据与 prerender 的 is_fresh 是同一套，改一处要改两处", "evidence": "backend/web/control.py:152"},
+    {"drafting": "模块 docstring 与实现相反（过期注释）", "criterion": "开头仍写 floor JSON，实现已改成 DXF/profile —— 读开头那段的人会照着错的做", "evidence": "prerender_floor_png.py:30"},
+    {"drafting": "缓存键漏文件 ⇒ 改了不刷新且不报错", "criterion": "缓存键必须覆盖被缓存值读到的每一份文件（除 profile/rooms 外还有 floors/*.json）", "evidence": "backend/api/services/artifacts.py:102"},
+    {"drafting": "缓存键用 mtime + size", "criterion": "便宜，但 cp -p 会保留 mtime ⇒ 从备份恢复这个动作不会让缓存失效", "evidence": "backend/api/services/artifacts.py:96"},
+    {"drafting": "内容指纹是新鲜度判据的正确形状", "criterion": "sha12(bytes)，全仓一份实现", "evidence": "backend/state/roster.py:178"},
+    {"drafting": "源 DXF 在仓外", "criterion": "未配置 GYM3D_DXF_DIR ⇒ B 层读不到源 DXF 跑不了（是环境事实，不是这一栋的缺陷）", "evidence": "backend/api/services/checks.py:195"}
+   ],
+   "related": [
+    "backend/paths.py:26",
+    "backend/api/services/artifacts.py:174",
+    "backend/state/census.py:65",
+    "backend/recognizer/detect_params.py:2",
+    "backend/modeling/build_standard_glb.py:40"
+   ]
+  },
+  "twin/02-industry-benchmark.md": {
+   "domain": "twin",
+   "standard": ["ISO 19650", "GB/T 51301-2018", "ISO 16739-1:2018", "ISO 19157", "USIBD LOA"],
+   "tags": ["案例", "行业对标", "scan-to-BIM", "点云", "LiDAR", "LOA", "精度验证", "CDE", "实测", "真值"],
+   "alias": ["案例", "行业案例", "对标", "行业对标", "scan-to-BIM", "扫描到BIM", "点云", "激光扫描", "LiDAR", "TLS", "摄影测量", "LOA", "精度等级", "精度验证", "CDE", "ISO 19650", "IFC", "Golden Thread", "实测", "现场实测", "真值", "语义验证"],
+   "keys": [
+    "行业把交付分 raw / working / deliverable 三层并记录参数、变换矩阵与 QC 备注；本仓只有产物层，原始图与 DXF 都不在仓里",
+    "行业用 ObjectID 把模型元素锚到外部数据库让构件可回溯；本仓已有同形物——图谱每条边锚 file:符号并由门禁逐条核，缺的是覆盖到实例层",
+    "语义验证 ≠ 几何验证：装配正确性要看材质与连接；本仓同形——房间的用途/使用单位只能从标注图层读，几何再准也推不出用途",
+    "配准质量可能根本没有数（点云预配准过则软件不暴露 RMSE，只能目视查漂移）；本仓把这条写成状态词 UNAVAILABLE ≠ PASS",
+    "★ 本仓没有任何实测源，真值就是图纸本身 ⇒ 图纸自己错了查不出来；这是结构性的认知边界：我们的孪生是图纸的忠实派生，不是建筑的忠实测量",
+    "行业精度路线不止一条，但都要求偏差有数、有参照、有网格（LOA 分级 / 点云偏差热力图 / 现场参考尺寸）",
+    "来源要分级：一手论文（有点位有偏差数）可当判据设计参考；厂商案例当『能做成什么样』的参考；营销文只当线索，不引它的数字"
+   ],
+   "recognition": [
+    {"drafting": "行业做法：交付分 raw/working/deliverable 三层", "criterion": "本仓只有产物层 —— 磁盘布局清单即产物层的全部", "evidence": "backend/api/services/artifacts.py:14"},
+    {"drafting": "行业做法：ObjectID 锚到外部数据库", "criterion": "本仓同形物：图谱每条边锚 file:符号，门禁 check_edge 逐条核路径/行号/符号", "evidence": "kb/gate.py:check_edge"},
+    {"drafting": "行业做法：语义验证 ≠ 几何验证", "criterion": "本仓用途/单位只能从标注图层读（标注文本的点落在房间多边形内即归属）", "evidence": "backend/extract/extract_rooms_generic.py:557"},
+    {"drafting": "行业通病：配准质量没有数 ⇒ 只能目视 QC", "criterion": "本仓状态词 UNAVAILABLE ≠ PASS，四个结局各有独立分支不许合并", "evidence": "backend/checks/findings.py:27"},
+    {"drafting": "行业做法：用现场实测（点云/参考尺寸）当真值校核模型", "criterion": "本仓无实测源，真值=图纸自身 ⇒ 图纸错了查不出（档案体系要收的照片是唯一入口）", "evidence": null}
+   ],
+   "related": [
+    "backend/api/services/artifacts.py:18",
+    "backend/checks/__init__.py:53"
+   ]
+  }
+ }
 }
