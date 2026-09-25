@@ -11,7 +11,7 @@
   "traps_criterion_version": "陷阱表自己声明（kb/traps.json 顶层）"
  },
  "self_sha12": "4157fdf54769",
- "manifest_sha12": "a531bb0ce2aa",
+ "manifest_sha12": "9c2b1588798b",
  "sources": {
   "00-overview.md": "b160e71d51e4",
   "01-line-types.md": "a174a9eab94f",
@@ -598,7 +598,7 @@
     {
      "drafting": "交付几何陈旧（模型没跟上 floors）",
      "criterion": "现码重出比 sha256，不看 mtime（按 mtime 判已实测漏 28/48 栋）",
-     "evidence": "backend/checks/__init__.py:53"
+     "evidence": "backend/checks/builtin.py:check_a5"
     },
     {
      "drafting": "派生物被呈现成上游原图",
@@ -810,7 +810,7 @@
    ],
    "related": [
     "backend/api/services/artifacts.py:18",
-    "backend/checks/__init__.py:53"
+    "backend/checks/builtin.py:check_a5"
    ],
    "content": "# 孪生行业案例与对标\n\n> 域：`twin`。本篇收**外部**做法（本仓没有的），并逐条问一句：\n> **本仓现在对应的是哪件东西？没有对应物的话，缺的是哪一环？**\n> ★ 只收案例不对标，就只是又一份会过期的文档 —— 所以每条都尽量挂到本仓的实物上。\n\n## 来源分级（先说清「这条有多硬」）\n\n| 级 | 是什么 | 怎么用 |\n|---|---|---|\n| A | 一手论文 / 学位论文（有点位、有偏差数、有方法） | 可直接当判据设计的参考 |\n| B | 厂商案例（数字自报，有工艺细节） | 当「能做成什么样」的参考，不当精度证据 |\n| C | 行业媒体/营销文（无方法、无偏差） | **只当线索**，不引它的数字 |\n\n## 案例清单\n\n| 案例 | 做法 | 关键数 | 级 | 来源 |\n|---|---|---|---|---|\n| 土耳其 工业厂房（MDPI Buildings 15(24):4469） | 地面 LiDAR 36 站 → ReCap 配准 → Revit 参数化 → 数字孪生 | LOD300；模型↔点云偏差 ~10mm | A | mdpi.com/2075-5309/15/24/4469 |\n| ITB Jatinangor 宿舍 | scan-to-BIM，按 USIBD **LOA** 分级验证 | LOD3 达 **LOA20**（偏差 <5cm）；2cm 网格热力图 | A | digilib.itb.ac.id |\n| 塞内加尔 生态数字建筑 | 无人机 RTK 387 影像 ＋ Trimble X7 TLS(±2mm)，IFC4 互操作 | — | A | publication.lecames.org |\n| Venaria Reale 遗产（HERITALISE） | TLS ＋ SLAM ＋ UAV 多传感器融合 | 室内外基线偏差达 2.5cm | A | mdpi.com/2076-3417/16/16/8306 |\n| 瓜纳华托大学 Belén 楼 | Matterport Pro 2 扫描 → 信息模型 ＋ CAD，按 **ISO 19650** 组织存 CDE | — | A | actauniversitaria.ugto.mx |\n| 81 Newgate Street（Mace） | 7,000+ 穿孔全库协调，Autodesk Tandem | 100% 孔洞已建模或已核；终版数字 QA 零严重消防问题 | B | macegroup.com |\n| Smart DCU（都柏林城市大学） | 无人机摄影测量(5600+ 影像, 30–100m) ＋ 手持 LiDAR ＋ 既有 BIM | — | B | bentley.com |\n| 清华大学 智慧校园数字孪生 | 无人机 ＋ 地面激光扫描 | 自报 280 栋、误差 ±3cm | C | easyv.cloud（营销文，**不引其数字**） |\n| 上海交大 / 南航 | IoT 终端 ＋ 一卡通数据驱动 | 自报能耗 −13% | C | easyv.cloud（同上） |\n\n**标准**：ISO 19650（信息容器/CDE/命名/审批状态）、GB/T 51301-2018（BIM 设计交付标准）、\nIFC（ISO 16739-1:2018）、ISO 19157（位置精度）、USIBD **LOA**（精度等级）、UNI 11337。\n行业精度路线不止一条，但**都要求偏差有数、有参照、有网格**（LOA 分级 / 点云偏差热力图 / 现场参考尺寸）。\n\n## 关键结论（与本仓收敛的五条）\n\n- **行业把交付分三层 `raw / working / deliverable`，并记录参数、变换矩阵与 QC 备注。**\n  本仓只有 ③④⑤（产物层），**①② 原始图与 DXF 都不在仓里** ⇒ 这正是档案体系的第一环。\n- **行业用 ObjectID 把模型元素锚到外部数据库**，让每个构件可回溯。\n  本仓已经有一份同形的东西：**图谱的每条边都锚到 `文件:符号`**，门禁逐条核 ——\n  缺的是覆盖到**实例层**（每栋每层每间）。\n- **行业反复强调「语义验证 ≠ 几何验证」**：装配正确性要看材质与连接，不只是位置对不对。\n  本仓同形：房间的**用途/使用单位**只能从标注图层读，几何再准也推不出用途。\n- **量不到就得说量不到**：土耳其案例里点云预配准过，软件**不暴露 RMSE**，\n  只能靠目视查重叠、剖切、漂移 ⇒ 配准质量实际**没有数**。本仓把这条写成了状态词：\n  `UNAVAILABLE ≠ PASS`，四个结局各有独立分支。\n- **行业用现场实测当真值校核模型**（点云偏差、参考尺寸、基线）。\n  ★ 本仓**没有任何实测源**：真值就是图纸本身 ⇒ **图纸自己错了，本仓查不出来**。\n  这是结构性的认知边界，不是待办的 bug —— 它决定了本仓的孪生是**图纸的忠实派生，\n  不是建筑的忠实测量**。照片/实测是把这条边界往外推的唯一入口（档案体系要收的那批）。\n\n## 与本仓的对照（可核的边）\n\n```\n行业做法                                  本仓对应物\n交付分 raw/working/deliverable 三层   →   ⚠ 只有产物层；原始图在仓外（第一环待补）\nObjectID 锚到外部数据库               →   ✅ 图谱边锚 file:符号，门禁逐条核（缺实例层覆盖）\n语义验证 ≠ 几何验证                    →   ✅ 用途/单位只从标注图层读\n配准质量没数 ⇒ 只能目视                →   ✅ UNAVAILABLE ≠ PASS，四结局分列\n现场实测当真值                         →   ✗ 本仓无实测源（真值=图纸自身）\n```\n"
   }
@@ -4476,8 +4476,8 @@
    "ev:backend/api/services/artifacts.py:51": "evidence",
    "ev:backend/api/services/artifacts.py:96": "evidence",
    "ev:backend/api/services/checks.py:195": "evidence",
-   "ev:backend/checks/__init__.py:53": "evidence",
    "ev:backend/checks/_defect_census.py:BLOB_M2": "evidence",
+   "ev:backend/checks/builtin.py:check_a5": "evidence",
    "ev:backend/checks/findings.py:17": "evidence",
    "ev:backend/checks/findings.py:27": "evidence",
    "ev:backend/checks/findings.py:44": "evidence",
@@ -7108,7 +7108,7 @@
    },
    {
     "from": "孪生行业案例与对标",
-    "to": "ev:backend/checks/__init__.py:53",
+    "to": "ev:backend/checks/builtin.py:check_a5",
     "kind": "相关",
     "w": 0.35,
     "label": "关联代码",
@@ -7188,7 +7188,7 @@
    },
    {
     "from": "数字孪生域总览",
-    "to": "ev:backend/checks/__init__.py:53",
+    "to": "ev:backend/checks/builtin.py:check_a5",
     "kind": "识别",
     "w": 0.5,
     "label": "交付几何陈旧（模型没跟上 floors）",
@@ -9258,7 +9258,7 @@
      "src": "孪生行业案例与对标.related"
     },
     {
-     "to": "ev:backend/checks/__init__.py:53",
+     "to": "ev:backend/checks/builtin.py:check_a5",
      "kind": "相关",
      "w": 0.35,
      "src": "孪生行业案例与对标.related"
@@ -9322,7 +9322,7 @@
      "src": "数字孪生域总览.recognition[1]"
     },
     {
-     "to": "ev:backend/checks/__init__.py:53",
+     "to": "ev:backend/checks/builtin.py:check_a5",
      "kind": "识别",
      "w": 0.5,
      "src": "数字孪生域总览.recognition[0]"
@@ -11632,7 +11632,7 @@
      "src": "数字孪生域总览.related"
     }
    ],
-   "ev:backend/checks/__init__.py:53": [
+   "ev:backend/checks/builtin.py:check_a5": [
     {
      "from": "孪生行业案例与对标",
      "kind": "相关",

@@ -46,6 +46,7 @@
     python -u kb/gate.py                 # 复核，有红则退出码 1
     python -u kb/gate.py --selftest      # 十二条刑具，每条都要能红
     python -u kb/gate.py --record        # 记下证据文件的内容指纹（kb/evidence-lock.json）
+    python -u kb/gate.py --cjk-baseline  # 重登记 ⑪ 仓内 .md 档基线（会逐条打出新增命中）
     python -u kb/gate.py --json
 """
 from __future__ import annotations
@@ -88,7 +89,7 @@ LOCK = os.path.join(KB, "evidence-lock.json")
 #:   与边一致」这一项 —— 一份 v2 的 ``图: PASS`` 只能说那批边本身没错。
 CRITERION_VERSION = 3
 
-_FLAGS = ("--selftest", "--record", "--anchors", "--json")
+_FLAGS = ("--selftest", "--record", "--anchors", "--json", "--cjk-baseline")
 
 #: `file:128` 还是 `file:SYM`：冒号后全是数字 ⇒ 行号，否则是符号名。
 _EV_LINE = re.compile(r"^(?P<f>[^:]+):(?P<n>\d+)$")
@@ -708,8 +709,16 @@ def check_dual_source() -> dict:
 #     ① 值里的中文引号与 md 同源（`kb.json` 的内容就是从 md 派生的），套规则 = 一条缺陷报两次；
 #     ② 引号写坏在 JSON 里首先表现为**解析失败**，那比引号规则更接近要害。
 #
-# ★ 分母必须写出来：**只量 `kb/` 内的自有文件**。仓内其他文件一次都没量过 ——
-#   「没量过」和「干净」在屏幕上必须不是同一行字（与 ①②③ 的 N/A 同理）。
+# ★ 分母必须写出来。**四档各有各的分母**：
+#   · `md` / `py` / `json` 三档量的是 **`kb/` 内的自有文件**；
+#   · 第四档 `md-repo` 量的是**仓内 kb/ 之外的全部 .md**（实测 54 个文件 / 510 处），
+#     **带基线**：基线内放行、新增即红。它跟前面三档的区别不是规则宽窄，是**存量**——
+#     那 510 处散在 13 份历史台账与规划里，一次改不干净，而「永久全红」的判据会被学会忽略
+#     （`append-only-ledger-whole-table-assertion`）。
+#   · 两处**排除**必须说清：① `_REPO_MD_SKIP` 里的目录（含 `_scratch` / `.orig` ——
+#     已判退役、要移出仓外，算进来只会让基线随迁移 churn），**排除掉几个文件要数出来**；
+#     ② `kb/` 本身（已在前三档里，剔掉前缀是为了**两档互斥、同一处不被数两次**）。
+#   ⇒ 「没量过」和「干净」在屏幕上必须不是同一行字（与 ①②③ 的 N/A 同理）。
 
 _CJK_SPAN = re.compile(r"`[^`]*`")
 
@@ -744,7 +753,11 @@ def _cjk_quote_hits(text: str, wide: bool) -> list[dict]:
             hit = ((_is_cjk(left) or _is_cjk(right)) if wide
                    else (_is_han(left) and _is_han(right)))
             if hit:
-                out.append({"line": i, "col": j + 1, "text": line.strip()[:96]})
+                # ★ `raw12` = **整行（去首尾空白）** 的 sha12，`text` 只是给人看的截断版。
+                #   基线拿它当键 ⇒ 行号漂了不影响，而**内容一改键就对不上**
+                #   （那正是我们要的：动到一条已有命中的行，就顺手把它改对）。
+                out.append({"line": i, "col": j + 1, "text": line.strip()[:96],
+                            "raw12": sha12(line.strip().encode("utf-8"))})
     return out
 
 
@@ -755,8 +768,112 @@ def _kb_sources(suffix: str) -> list[str]:
                   if os.path.isfile(p))
 
 
+#: 仓内 `.md` 那一档**排除掉的目录** —— 排除了什么必须**在输出里数出来**
+#: （铁律 23(b)：排除规则把真值排除了，比误报更坏，而且它一声不吭）。
+#: `_scratch` / `.orig` 是**已判退役、要整体移出仓外**的暂存区：把它们算进来，
+#: 基线会随迁移整批 churn，而那批 churn 会淹没新增的那一两处。
+_REPO_MD_SKIP = (".git", "node_modules", "__pycache__", ".orig", "_scratch", ".claude")
+
+
+def _repo_md_sources() -> list[str]:
+    """除 `kb/` 之外的仓内所有 `.md`（相对 ROOT 的 posix 路径，已排序）。
+
+    ★ 为什么单列一档而不是并进 `md` 档：`md` 档的分母是 `kb/`，
+      而**仓内另外那几十个 .md 一次都没量过** —— 「没量过」与「干净」不许是同一行字。
+      两档**互斥**（这里剔掉 `kb/` 前缀），所以同一个文件不会被数两次。
+    """
+    out: list[str] = []
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        dirnames[:] = [d for d in dirnames if d not in _REPO_MD_SKIP]
+        for fn in filenames:
+            if not fn.lower().endswith(".md"):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+            if not rel.startswith("kb/"):
+                out.append(rel)
+    return sorted(out)
+
+
+#: ⑪ 的**仓内 .md 档**基线：既有命中登记在此，**只对新增报红**。
+#:
+#: ★ 为什么需要基线，而不是「把这批改干净就完了」：实测 510 处，散在 13 份
+#:   **历史台账与规划**里 —— 手工清一遍只是把位置腾出来，而「永久全红」的判据
+#:   会被学会忽略（`append-only-ledger-whole-table-assertion`）。基线让这道闸
+#:   **从此以后有牙齿**：新增一处就红，清理掉的如实数出来。
+#: ★ 键是 `(文件, 行内容 sha12)`，**不是行号** —— 行号会随编辑漂，而漂了照样指向别处
+#:   （铁律 31）。代价是一条明说的约定：**动到一条已有命中的行，就得顺手把它改对**
+#:   （内容一变，旧键对不上 ⇒ 按新增报红）。
+#: ★ 基线自己带**尺子指纹**（`ruler_sha12` = 生成它那一刻 `gate.py` 的 sha12）：
+#:   「这份基线是旧尺子量的」和「这份基线是对的」在屏幕上必须不是同一行字（铁律 24）。
+CJK_BASELINE = os.path.join(KB, "cjk-quote-baseline.json")
+
+
+def _band_diff(hits: list[dict], entry: dict) -> tuple[list[dict], int, int]:
+    """纯函数：命中清单 vs 基线里那一档 ⇒ (新增, 命中基线的处数, 基线里已不存在的处数)。
+
+    ★ 为什么要回**三个**数：只回「新增」的话，**基线被人悄悄删空**（闸门随之变哑）
+      在屏幕上什么都不发生。清理掉的那一侧也要数出来 —— 它下降是好事，
+      但**「好事」也得看得见**，否则「基线被清空」和「基线本来就小」同形。
+    """
+    left = {f: dict(d) for f, d in (entry or {}).items()}
+    new, known = [], 0
+    for h in hits:
+        bucket = left.setdefault(h["file"], {})
+        if bucket.get(h["raw12"], 0) > 0:
+            bucket[h["raw12"]] -= 1
+            known += 1
+        else:
+            new.append(h)
+    cleaned = sum(v for d in left.values() for v in d.values())
+    return new, known, cleaned
+
+
+def load_cjk_baseline() -> tuple[dict | None, str]:
+    """读基线 ⇒ (内容, 为什么读不到)。文件不在 = `None` ＋ 一句人话（不许当空基线）。"""
+    if not os.path.exists(CJK_BASELINE):
+        return None, "没有 %s" % os.path.relpath(CJK_BASELINE, ROOT).replace(os.sep, "/")
+    try:
+        return json.loads(io.open(CJK_BASELINE, encoding="utf-8").read()), ""
+    except Exception as exc:
+        return None, "%s 解析不了：%s" % (os.path.basename(CJK_BASELINE), str(exc)[:70])
+
+
+def cjk_repo_band(hits: list[dict]) -> dict:
+    """仓内 `.md` 档：带基线地判。**唯一**的分档处（打印与自检都读它的返回值）。"""
+    base, why = load_cjk_baseline()
+    ruler_now = _self_sha12()
+    if base is None:
+        # ★ 这一档**整档判不了**（不是「干净」）。`new` 故意留空、只留一句人话：
+        #   把 510 处原封不动塞进 `new` 会淹掉屏幕 —— 而屏幕上真正该看见的是
+        #   「先登记」这一句。数量另用 `blocked_hits` 带着，不丢。
+        return {"state": "gap", "new": [], "known": 0, "cleaned": 0, "files": 0,
+                "blocked": True, "blocked_hits": len(hits),
+                "ruler": "unregistered", "ruler_now": ruler_now,
+                "detail": "%s —— 这一档**判不了**（命中的 %d 处里，哪一处是新长的、"
+                          "哪一处是本来就有的，分不开）。先跑 `--cjk-baseline` 登记"
+                          % (why, len(hits))}
+    entry = ((base.get("bands") or {}).get("md_repo") or {})
+    new, known, cleaned = _band_diff(hits, entry)
+    ruler_was = base.get("ruler_sha12") or "?"
+    if ruler_was != ruler_now:
+        # ★ 尺子换了 ⇒ 这份基线可能已经不是按同一把尺子量的。**红**，不是提示：
+        #   「旧尺子量的」与「对的」同形，正是铁律 24 要防的那一件事。
+        return {"state": "gap", "new": [], "known": 0, "cleaned": 0, "files": 0,
+                "blocked": True, "blocked_hits": len(hits),
+                "ruler": ruler_was, "ruler_now": ruler_now,
+                "detail": "尺子变了（基线登记 %s，现在 %s）—— 这份基线可能已经不是"
+                          "按同一把尺子量的 ⇒ 整档判不了（此刻命中的 %d 处**一处也没比**）。"
+                          "确认没被漏检后跑 `--cjk-baseline` 重登记"
+                          % (ruler_was, ruler_now, len(hits))}
+    return {"state": "gap" if new else "pass", "new": new, "known": known,
+            "cleaned": cleaned, "files": len(entry), "blocked": False,
+            "blocked_hits": 0, "ruler": ruler_was, "ruler_now": ruler_now,
+            "detail": "命中 %d 处＝基线内 %d ＋ **新增 %d**；基线里另有 %d 处已不存在"
+                      "（清理掉了是好事，**也得看得见**）" % (len(hits), known, len(new), cleaned)}
+
+
 def check_cjk_quotes() -> dict:
-    """⑪：ASCII 引号被当中文引号用 ⇒ 红。三档的分工见上面那段注释。"""
+    """⑪：ASCII 引号被当中文引号用 ⇒ 红。**四**档的分工见上面那段注释。"""
     hits: list[dict] = []
     bad_json: list[str] = []
     mds, pys, jss = _kb_sources(".md"), _kb_sources(".py"), _kb_sources(".json")
@@ -771,12 +888,25 @@ def check_cjk_quotes() -> dict:
             json.loads(_read_text(rel) or "")
         except Exception as exc:                      # 解析不了 ⇒ 明说，不许当绿
             bad_json.append("%s：%s" % (rel, str(exc)[:80]))
+    # ★ 第四档：**仓内 kb/ 之外的 .md**。它跟上面三档的区别不是规则宽窄，是
+    #   **它对既有命中带基线**：这批（实测 510 处 / 13 份历史台账与规划）一次改不干净，
+    #   而「永久全红」的判据会被学会忽略 ⇒ 基线内放行、**新增即红**。
+    repo_files = _repo_md_sources()
+    repo_hits: list[dict] = []
+    for rel in repo_files:
+        for h in _cjk_quote_hits(_read_text(rel) or "", wide=True):
+            repo_hits.append(dict(h, file=rel, band="md-repo"))
+    repo = cjk_repo_band(repo_hits)
     n = len(mds) + len(pys) + len(jss)
-    return {"status": "gap" if (hits or bad_json) else "pass",
+    gap = bool(hits or bad_json or repo["state"] != "pass")
+    return {"status": "gap" if gap else "pass",
             "checked": n, "md": len(mds), "py": len(pys), "json": len(jss),
             "hits": hits, "bad_json": bad_json,
-            "detail": "%d 个文件（md %d 宽档 / py %d 严档 / json %d 只判能解析）；命中 %d 处"
-                      % (n, len(mds), len(pys), len(jss), len(hits) + len(bad_json))}
+            "md_repo": len(repo_files), "repo": repo, "repo_hits": len(repo_hits),
+            "detail": "%d 个文件（md %d 宽档 / py %d 严档 / json %d 只判能解析）；命中 %d 处；"
+                      "另量仓内 .md %d 个／命中 %d 处（带基线：%s）"
+                      % (n, len(mds), len(pys), len(jss), len(hits) + len(bad_json),
+                         len(repo_files), len(repo_hits), repo["detail"])}
 
 
 # ── ⑥ 陈旧：按**内容**指纹，不按 mtime ──────────────────────
@@ -802,7 +932,11 @@ def watched_files(edges: list[dict]) -> list[str]:
       这道摩擦力是**故意的**。
     """
     out = evidence_files(edges)
-    for name, path in (("kb/traps.json", TRAPS), ("kb/playbook.json", PLAYBOOK)):
+    for name, path in (("kb/traps.json", TRAPS), ("kb/playbook.json", PLAYBOOK),
+                       # ★ ⑪ 的基线也盯上：它**承载裁决**（哪些命中原谅、哪些不放）。
+                       #   不盯的话，「往基线里悄悄塞 50 条」= 把闸门调哑，
+                       #   而屏幕上什么都不发生（同族：`traps.json`）。
+                       ("kb/cjk-quote-baseline.json", CJK_BASELINE)):
         # ★ 手册与陷阱一样**承载锚点**：改它 = 改判据。不盯的话，
         #   「悄悄删一个家族」「把某条的 evidence 挪一指」在屏幕上什么都不发生。
         if os.path.exists(path) and name not in out:
@@ -1054,13 +1188,33 @@ def _print(res: dict) -> None:
             print("     ✗ %s（%s）—— %s" % (b["slug"], b["title"], b["reason"]))
 
     cq = res["cjk"]
-    print("⑪ ASCII 引号当中文引号：%s（量过 %d 个文件：md %d 宽档 / py %d 严档 / json %d 只判能解析）"
-          % (_LABEL[cq["status"]], cq["checked"], cq["md"], cq["py"], cq["json"]))
-    print("     （★ 只量 kb/ 内的自有文件；**仓内其他文件一次都没量过** —— 不是「干净」）")
+    print("⑪ ASCII 引号当中文引号：%s（kb/ 内量过 %d 个文件：md %d 宽档 / py %d 严档 / "
+          "json %d 只判能解析；命中 %d 处）"
+          % (_LABEL[cq["status"]], cq["checked"], cq["md"], cq["py"], cq["json"],
+             len(cq["hits"]) + len(cq["bad_json"])))
     for h in cq["hits"]:
         print("     ✗ %s:%d col%d [%s档] %s" % (h["file"], h["line"], h["col"], h["band"], h["text"]))
     for b in cq["bad_json"]:
         print("     ✗ JSON 解析不了：%s" % b)
+    rp = cq["repo"]
+    print("     ＋ 仓内 .md（kb/ 之外）：%s —— 量过 %d 个文件、命中 %d 处"
+          % (_LABEL[rp["state"]], cq["md_repo"], cq["repo_hits"]))
+    if rp["blocked"]:
+        # ★ 「整档没比」必须与「比过、没有新增」**分开写**。两者都能让 status=gap，
+        #   但一个是「尺子/基线不在」，另一个是「真长了东西」（铁律 16 的同族）。
+        print("        ⚠ 本档**整档未比**：那 %d 处命中一处也没跟基线对过。" % rp["blocked_hits"])
+    print("        %s" % rp["detail"])
+    for h in rp["new"]:
+        print("     ✗ [新增] %s:%d col%d %s" % (h["file"], h["line"], h["col"], h["text"]))
+    # ★ 「没量过」与「干净」不许同形：把**排除掉的目录**和它们各自有几个 .md 数出来。
+    skipped = []
+    for d in _REPO_MD_SKIP:
+        p = os.path.join(ROOT, d)
+        if os.path.isdir(p):
+            k = sum(1 for dp, dn, fns in os.walk(p) for f in fns if f.lower().endswith(".md"))
+            skipped.append("%s %d" % (d, k))
+    print("        （排除清单：%s —— 这些目录里的 .md **一处都没量过**；"
+          "没量到和干净不是同一行字）" % ("、".join(skipped) if skipped else "无"))
 
     gp = res["graph"]
     if gp["status"] == "unavailable":
@@ -1212,6 +1366,69 @@ def record() -> int:
     else:
         print("（相对上次登记，证据文件内容一字未变）")
     print("已登记 %d 个证据文件 → %s" % (len(payload["files"]), LOCK))
+    return 0
+
+
+def rebaseline_cjk() -> int:
+    """登记 ⑪ 仓内 `.md` 档的基线（`kb/cjk-quote-baseline.json`）。
+
+    ★ 这是**一次要人读的动作**，不是「点一下」：它把此刻命中的每一处**按文件列出来**，
+      并把**与旧基线相比新增的那几处单独列在最前面** —— 只打印一句「已登记 510 处」
+      等于把新增的那一两处**默默洗进基线**（铁律 31：re-baseline 必须打印
+      「现在指到什么」，不能只记一串指纹）。
+    ★ 内容里**不写时刻**：基线该是 (命中, 尺子) 的纯函数，写进时间戳只会让
+      「一字未改」也产生新内容，而那种 churn 会把真正的变动淹掉。
+    """
+    files = _repo_md_sources()
+    hits: list[dict] = []
+    for rel in files:
+        for h in _cjk_quote_hits(_read_text(rel) or "", wide=True):
+            hits.append(dict(h, file=rel, band="md-repo"))
+    old, _ = load_cjk_baseline()
+    old_entry = ((old or {}).get("bands") or {}).get("md_repo") or {}
+    added, _known, cleaned = _band_diff(hits, old_entry)
+
+    entry: dict[str, dict[str, int]] = {}
+    for h in hits:
+        b = entry.setdefault(h["file"], {})
+        b[h["raw12"]] = b.get(h["raw12"], 0) + 1
+    payload = {
+        "criterion_version": 1,
+        "ruler_sha12": _self_sha12(),
+        "what": "⑪ 仓内 .md 档（kb/ 之外）的**既有命中基线**：基线内放行、新增即红。",
+        "keys": "文件 → {整行(去首尾空白)的 sha12: 处数}；用内容不用行号（行号会漂，见铁律 31）",
+        "excluded": list(_REPO_MD_SKIP),
+        "counts": {"files": len(entry), "hits": len(hits),
+                   "new_vs_old": len(added), "cleaned_vs_old": cleaned},
+        "bands": {"md_repo": {f: dict(sorted(d.items())) for f, d in sorted(entry.items())}},
+    }
+    fd, tmp = tempfile.mkstemp(dir=KB, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=1)
+        os.replace(tmp, CJK_BASELINE)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+    print("⑪ 基线登记：仓内 .md 量过 %d 个文件、命中 %d 处，落在 %d 个文件里"
+          % (len(files), len(hits), len(entry)))
+    if not old:
+        print("（首次登记 —— 没有旧基线可比，下面全部按「基线内」放行）")
+    elif added:
+        print("★ 相对旧基线**新增 %d 处** —— 这几处是本次真正要人看的东西，"
+              "确认它们可以留在库里再签收：" % len(added))
+        for h in added:
+            print("   ✗ [新增] %s:%d col%d %s" % (h["file"], h["line"], h["col"], h["text"]))
+    else:
+        print("（相对旧基线**一处新增都没有**）")
+    if old:
+        print("基线里 %d 处已不存在（清理掉了是好事，但也要看得见）" % cleaned)
+    print("已写入 %s（尺子 kb/gate.py sha12 = %s）"
+          % (os.path.relpath(CJK_BASELINE, ROOT).replace(os.sep, "/"), payload["ruler_sha12"]))
     return 0
 
 
@@ -1481,6 +1698,124 @@ def selftest() -> int:
     if not (rq["md"] and rq["py"] and rq["json"]):
         fails.append("T⑪ 有一档没量到文件（md %d / py %d / json %d）—— 那个档等于不存在"
                      % (rq["md"], rq["py"], rq["json"]))
+    if rq["md_repo"] == 0:
+        fails.append("T⑪ 第四档（仓内 .md）量到 0 个文件 —— 那一档等于不存在，"
+                     "而它在屏幕上和「干净」一模一样")
+
+    # ★ 第四档（仓内 .md，带基线）。**夹具的形状必须抄真产物**：真的在仓库根上放
+    #   `.md`（README.md 就在根上），而不是塞给纯函数一个字符串 ——
+    #   本仓实测过「13 条自检全绿而 bug 活了一轮」，成因就是夹具形状与真产物不同。
+    #   ★ 三件事分开验，因为它们会**各自**坏：基线内放行 / 新增报红 / 排除清单生效。
+    fx_line = "正文 把\"甲\"的写成引号"
+    h_fx = _cjk_quote_hits(fx_line, wide=True)
+    if len(h_fx) != 2:
+        fails.append("T⑪repo 夹具行应命中 2 处（引号对的左右两边），实得 %d" % len(h_fx))
+    else:
+        k = h_fx[0]["raw12"]
+        if k != h_fx[1]["raw12"]:
+            fails.append("T⑪repo 同一行的两处命中 raw12 不同 —— 基线的键没按「行」算")
+        hits_x = [dict(h, file="_qa/x.md") for h in h_fx]
+        nm, kn, cl = _band_diff(hits_x, {"_qa/x.md": {k: 2}})
+        if (len(nm), kn, cl) != (0, 2, 0):
+            fails.append("T⑪repo 两处都在基线内却报 新增%d/命中%d/清理%d（应 0/2/0）"
+                         % (len(nm), kn, cl))
+        nm2, kn2, _ = _band_diff(hits_x + [dict(h_fx[0], file="_qa/y.md")],
+                                 {"_qa/x.md": {k: 2}})
+        if (len(nm2), kn2) != (1, 2):
+            fails.append("T⑪repo 换了个文件的那一处没被报成新增（新增 %d / 命中 %d，"
+                         "应 1/2）—— 键里少了「文件」这一维" % (len(nm2), kn2))
+        nm3, _, cl3 = _band_diff([], {"_qa/x.md": {k: 2}})
+        if (len(nm3), cl3) != (0, 2):
+            fails.append("T⑪repo 基线被清空后「清理了 %d 处」没数出来 —— 那样「基线被"
+                         "清空」和「基线本来就小」会同形（闸门变哑而屏幕上一片绿）" % cl3)
+    #   ★ 尺子指纹那一支：**必须红**。这是铁律 24 的形态 ——
+    #     「这份基线是旧尺子量的」与「这份基线是对的」在屏幕上必须不是同一行字。
+    global CJK_BASELINE
+    keep_cb = CJK_BASELINE
+    tmp_cb = tmp_cb2 = ""
+    try:
+        one = [{"file": "_qa/x.md", "line": 1, "col": 1, "text": "t", "raw12": "aaaaaaaaaaaa"}]
+        fd_c1, tmp_cb = tempfile.mkstemp(dir=KB, suffix=".json")
+        with os.fdopen(fd_c1, "w", encoding="utf-8") as fh:
+            # ★ 这一份基线里**命中是在的** —— 与下面那份只差 `ruler_sha12` 一个变量。
+            #   第一版这里写的是空基线，于是「状态应为 gap」在**拆掉尺子判断之后照样绿**
+            #   （空基线本来就报新增 ⇒ 恒 gap）—— 那条断言是空的。
+            json.dump({"criterion_version": 1, "ruler_sha12": "000000000000",
+                       "bands": {"md_repo": {"_qa/x.md": {"aaaaaaaaaaaa": 1}}}}, fh)
+        CJK_BASELINE = tmp_cb
+        rb = cjk_repo_band(one)
+        if rb["state"] != "gap":
+            fails.append("T⑪repo 尺子指纹对不上时状态仍为 %s（应为 gap）" % rb["state"])
+        if "尺子变了" not in rb["detail"]:
+            fails.append("T⑪repo 尺子对不上，但说明里没点出是尺子变了：%r" % rb["detail"][:60])
+        if not rb["blocked"] or rb["new"]:
+            # ★ 「整档没比」不许长得像「真长了东西」：真库上那 510 处若全塞进 `new`，
+            #   屏幕会被淹掉，而最该看见的「先重登记」被埋在最下面。
+            fails.append("T⑪repo 尺子对不上时没标成整档未比（blocked=%r / new %d 条）"
+                         % (rb["blocked"], len(rb["new"])))
+        fd_c2, tmp_cb2 = tempfile.mkstemp(dir=KB, suffix=".json")
+        with os.fdopen(fd_c2, "w", encoding="utf-8") as fh:
+            json.dump({"criterion_version": 1, "ruler_sha12": _self_sha12(),
+                       "bands": {"md_repo": {"_qa/x.md": {"aaaaaaaaaaaa": 1}}}}, fh)
+        CJK_BASELINE = tmp_cb2
+        rb2 = cjk_repo_band(one)
+        if (rb2["state"], rb2["known"], len(rb2["new"])) != ("pass", 1, 0):
+            fails.append("T⑪repo 尺子对上且命中在基线内 ⇒ 应放行，实得 %s/命中%d/新增%d"
+                         % (rb2["state"], rb2["known"], len(rb2["new"])))
+    finally:
+        CJK_BASELINE = keep_cb
+        for p in (tmp_cb, tmp_cb2):
+            if p and os.path.exists(p):
+                os.unlink(p)
+
+    #   ★ 盘上三件事：坏引号的新文件必须**在 new 里**／正确写法的新文件必须**不在**／
+    #     排除目录里的必须**一处都不算**。第三条最要紧：排除规则坏了是**静默**的。
+    #   ★★ 这一组**必须自己带一份基线**（空 bands ＋ 当前尺子指纹），不许借真库那一份：
+    #      借的话，真库基线一旦是「尺子变了」的状态，整档就是 blocked、`new` 恒空 ⇒
+    #      「坏引号没被抓」这条**假红**（代码是对的，错在夹具没把要验的变量孤立出来
+    #      —— 本仓铁律 26 记的正是这个形状）。第一次跑就是这么红的。
+    keep_cb2 = CJK_BASELINE
+    tmp_cb3 = ""
+    tmp_md = []
+    try:
+        fd_c3, tmp_cb3 = tempfile.mkstemp(dir=KB, suffix=".json")
+        with os.fdopen(fd_c3, "w", encoding="utf-8") as fh:
+            json.dump({"criterion_version": 1, "ruler_sha12": _self_sha12(),
+                       "bands": {"md_repo": {}}}, fh)
+        CJK_BASELINE = tmp_cb3
+        fd_b, p_bad = tempfile.mkstemp(prefix="_tmp_cjk_bad_", suffix=".md", dir=ROOT)
+        with os.fdopen(fd_b, "w", encoding="utf-8") as fh:
+            fh.write(fx_line + "\n")
+        fd_o, p_ok = tempfile.mkstemp(prefix="_tmp_cjk_ok_", suffix=".md", dir=ROOT)
+        with os.fdopen(fd_o, "w", encoding="utf-8") as fh:
+            # 阴性对照：正确写法（「」＋ 反引号跨度里的 ASCII 引号）不许被算成命中。
+            fh.write("正文 把「甲」的写成引号，命令 `x \"y\" z` 落在反引号跨度里\n")
+        fd_s, p_sk = tempfile.mkstemp(prefix="_tmp_cjk_skip_", suffix=".md",
+                                      dir=os.path.join(ROOT, "_scratch"))
+        with os.fdopen(fd_s, "w", encoding="utf-8") as fh:
+            fh.write(fx_line + "\n")
+        tmp_md = [p_bad, p_ok, p_sk]
+        rq2 = check_cjk_quotes()
+        got_new = {os.path.relpath(h["file"], ROOT).replace(os.sep, "/")
+                   for h in rq2["repo"]["new"]}
+        r_bad = os.path.relpath(p_bad, ROOT).replace(os.sep, "/")
+        r_ok = os.path.relpath(p_ok, ROOT).replace(os.sep, "/")
+        r_sk = os.path.relpath(p_sk, ROOT).replace(os.sep, "/")
+        if r_bad not in got_new:
+            fails.append("T⑪repo 盘上新长的坏引号没被抓（%s）—— 这一档没接上盘" % r_bad)
+        if rq2["status"] != "gap":
+            fails.append("T⑪repo 有新增命中时整体状态仍为 %s（应为 gap）" % rq2["status"])
+        if r_ok in got_new:
+            fails.append("T⑪repo 阴性对照被误报（「」与反引号跨度里的引号撞红了）——"
+                         " 判据宽了会被学会忽略，比漏检更坏")
+        if r_sk in got_new:
+            fails.append("T⑪repo 排除清单没生效：_scratch/ 下的 .md 被算进来了（%s）"
+                         " —— 排除规则坏了是**静默**的" % r_sk)
+    finally:
+        CJK_BASELINE = keep_cb2
+        for p in tmp_md + ([tmp_cb3] if tmp_cb3 else []):
+            if os.path.exists(p):
+                os.unlink(p)
 
     # json 那一档的阳性对照：**把坏文件真放到 kb/ 下**再扫一遍（只喂函数不算接上了盘）。
     fd_j, tmp_j = tempfile.mkstemp(dir=KB, suffix=".json")
@@ -1605,7 +1940,8 @@ def selftest() -> int:
     print("--selftest 绿：**12 条**刑具全部能红（①路径 ②行号 ③符号+注释不算 ④接上 ⑤非空转 "
           "⑥改一字节即红+无表即说量不了 ⑦写操作被拒/只读放行 ⑧陷阱分两栏 ⑨手册三栏 "
           "⑩re-baseline 差异报告只报真变动的文件、且打出锚点此刻指到的内容 "
-          "⑪引号两档各自能红+掩码生效+分母非零 "
+          "⑪引号两档各自能红+掩码生效+分母非零、仓内 .md 档带基线（基线内放行/新增即红/"
+          "排除清单生效/尺子变了整档未比）"
           "⑫图：未改即绿／无这一节即「量不了」／逆表两侧各能红／假边／悬空端点／权重／"
           "kind／只手改标签＋悬空陷阱引用"
           "；现表：陷阱可核边 %d 条、只有人记着 %d 条；%s" % (len(n_e), len(n_b), pb_note))
@@ -1625,6 +1961,8 @@ def main(argv: list[str]) -> int:
         return anchors_report()
     if "--record" in argv:
         return record()
+    if "--cjk-baseline" in argv:
+        return rebaseline_cjk()
     if not os.path.exists(KBJSON):
         say.write("红：%s 不在。先跑 python -u kb/build_kb.py\n" % KBJSON)
         return 1

@@ -1,6 +1,6 @@
 {
  "criterion_version": 3,
- "self_sha12": "74b723902695",
+ "self_sha12": "37fa4d215f07",
  "files": {
   "README.md": "f2cf69aa889e",
   "_qa/AUDIT_BASELINE.json": "f7719eb199f5",
@@ -17,8 +17,8 @@
   "annotate_defects.py": "cd75a779165d",
   "backend/api/services/artifacts.py": "ea14012b00df",
   "backend/api/services/checks.py": "df362e667423",
-  "backend/checks/__init__.py": "5c5bbfd3e7f6",
   "backend/checks/_defect_census.py": "acbe673ec620",
+  "backend/checks/builtin.py": "3691f5d4fc56",
   "backend/checks/findings.py": "5038c8469bf4",
   "backend/checks/kg_citation.py": "a2294d75747b",
   "backend/extract/extract_rooms_c006.py": "71cf6f668cbf",
@@ -41,8 +41,9 @@
   "data/buildings/c057/profile.json": "09ae2eba33bb",
   "kb/ask.py": "68ef786289ed",
   "kb/build_kb.py": "4157fdf54769",
+  "kb/cjk-quote-baseline.json": "2837e0ed490b",
   "kb/derive.py": "4b17cc53a5f3",
-  "kb/gate.py": "74b723902695",
+  "kb/gate.py": "37fa4d215f07",
   "kb/playbook.json": "bcdf8bef96b9",
   "kb/traps.json": "d2bbacd786fd",
   "kb/values.py": "3ece0d092730",

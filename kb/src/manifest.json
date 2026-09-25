@@ -297,7 +297,7 @@
     "陈旧是不出声的：『这份数是旧尺子量的』和『这份数是对的』在屏幕上一模一样"
    ],
    "recognition": [
-    {"drafting": "交付几何陈旧（模型没跟上 floors）", "criterion": "现码重出比 sha256，不看 mtime（按 mtime 判已实测漏 28/48 栋）", "evidence": "backend/checks/__init__.py:53"},
+    {"drafting": "交付几何陈旧（模型没跟上 floors）", "criterion": "现码重出比 sha256，不看 mtime（按 mtime 判已实测漏 28/48 栋）", "evidence": "backend/checks/builtin.py:check_a5"},
     {"drafting": "派生物被呈现成上游原图", "criterion": "目录里装的是渲染 PNG（dxf_plan_fast/floor*.png），而 API 常量与前端标签写『CAD 原图』", "evidence": "backend/api/services/artifacts.py:51"},
     {"drafting": "同一批产物有两个来源计数", "criterion": "逐口径分别计数并写明是哪个口径（95 个楼栋目录 / 管线 49 栋 / 源目录 105 个 DWG，三个都对）", "evidence": "backend/state/census.py:260"},
     {"drafting": "行业做法：交付分 raw / working / deliverable 三层，并记录参数、变换矩阵与 QC 备注", "criterion": "本仓只有产物层（③④⑤），①② 在仓外 ⇒ 这正是档案体系要补的第一环", "evidence": null}
@@ -364,7 +364,7 @@
    ],
    "related": [
     "backend/api/services/artifacts.py:18",
-    "backend/checks/__init__.py:53"
+    "backend/checks/builtin.py:check_a5"
    ]
   }
  }
