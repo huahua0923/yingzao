@@ -89,7 +89,8 @@ GYM3D_PORT=8140
 GYM3D_ENV=prod
 GYM3D_COMPUTE=0                 # ★ 执行面整条关死
 GYM3D_LOOPBACK_BREAKGLASS=0     # ★ 环回放行闸关掉
-GYM3D_SESSION_COOKIE_SECURE=1   # 走 HTTPS 时；纯 http 的 IP:端口 要置 0，否则登录后立刻又变匿名
+GYM3D_SESSION_COOKIE_SECURE=0   # ★ 已定：走 IP:8141 的 http。置 1 会让浏览器**不发**这个 cookie
+                                #   ⇒ 登录成功后下一个请求又变匿名，症状像"登录没生效"
 GYM3D_CORS_ORIGINS=
 GYM3D_CAMPUS_DIR=/opt/gym3d/campus-terrain
 LIHUA_DB_HOST=localhost
@@ -117,10 +118,12 @@ sudo systemctl daemon-reload && sudo systemctl enable --now gym3d-api
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**2.7 开端口**（走内网域名 + 443 就不需要这一步）
+**2.7 开端口**（★ 已定用 IP:8141 对外，**这一步必须做**）
 ```
 sudo firewall-cmd --permanent --add-port=8141/tcp && sudo firewall-cmd --reload
 ```
+> 漏了它的症状不是报错，是「服务器本机 curl 全通、外面一律连不上」——
+> 本仓出过一次（5005），排查了半天才发现是 firewalld。
 
 ## 阶段 3 · 探针（你跑，把输出贴回来）
 
