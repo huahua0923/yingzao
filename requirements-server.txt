@@ -6,27 +6,43 @@
 # 验收方式见计划 Phase 6：
 #     python -c "import ezdxf"   →  必须 ImportError
 #
-# 装法（Linux 服务器，Python 3.12）：
-#     python3.12 -m venv /opt/gym3d/venv
-#     /opt/gym3d/venv/bin/pip install -r requirements-server.txt
+# 装法（Linux 服务器）：
+#     /opt/python3.12/bin/python3.12 -m venv /opt/gym3d/.venv
+#     /opt/gym3d/.venv/bin/pip install -r requirements-server.txt
 #
-# 版本用 ~= 而非 ==：这套栈还没在服务器上装过一次，现在写死精确版本等于凭空猜。
-# **首次部署成功后立刻改成 == 并提交**，让线上版本可复现。
+# ★ 2026-10-01 首次部署成功，据此把 ~= 钉成 ==（下面每个版本都是在
+#   202.115.132.14 上**装完并逐个 import 过**的那一个，不是猜的）：
+#     fastapi 0.142.2 · uvicorn 0.54.0 · pydantic 2.13.5 · pydantic-settings 2.15.0
+#     python-dotenv 1.2.4 · psycopg 3.3.6 · numpy 1.26.4
 
 # ── Web 框架 ────────────────────────────────────────────────────
-fastapi~=0.115
-uvicorn[standard]~=0.32      # [standard] 带 uvloop/httptools；不带则纯 asyncio
-pydantic~=2.9
-pydantic-settings~=2.6       # 读 .env、按字段做类型校验；prod 缺口令直接拒绝启动
-python-dotenv~=1.0           # pydantic-settings 解析 .env 的后端
+fastapi==0.142.2
+uvicorn[standard]==0.54.0    # [standard] 带 uvloop/httptools；不带则纯 asyncio
+pydantic==2.13.5
+pydantic-settings==2.15.0    # 读 .env、按字段做类型校验；prod 缺口令直接拒绝启动
+python-dotenv==1.2.4         # pydantic-settings 解析 .env 的后端
 
 # ── 数据库（只读账号连 lihua_twin）──────────────────────────────
-psycopg[binary]~=3.2
+psycopg[binary]==3.3.6
 
 # ── /api/path 的服务端 A* ───────────────────────────────────────
 # 只做「读 1-bit 掩膜 + 纯 numpy 寻路」，不做任何栅格化 ——
 # 栅格化（要 shapely）放在本机构建期完成，结果落 nav/floorN.mask.bin。
-numpy~=2.1
+#
+# ★★ 为什么钉在 1.26 而不是 2.x（2026-10-01 实测，两条都测过）：
+#   · 202.115.132.14 是 QEMU 虚机（`model name: QEMU Virtual CPU version 2.5+`），
+#     CPU **没有 AVX2**；而 numpy 2.x 的官方 manylinux wheel 是按 **x86-64-v2** 基线编的
+#     ⇒ 装得上，但 `import numpy` 当场崩：
+#       RuntimeError: NumPy was built with baseline optimizations: (X86_V2)
+#                     but your machine doesn't support: (X86_V2).
+#     （同一个 venv 里 fastapi/uvicorn/pydantic/pydantic_core/psycopg[binary] 全部
+#       import 正常 —— **只有 numpy 2.x 中招**，所以这不是「这台机器不能用 wheel」。）
+#   · numpy 1.26.4（最后一个 1.x，wheel 按通用 x86-64 基线编）在这台机上
+#     实测 `import numpy → numpy 1.26.4 OK`。
+#   · numpy **不在 API 的启动路径上**：`rooms.py:335` 是函数内懒加载
+#     （`from build_path import compute_path`），缺依赖回 503 —— 所以就算这条
+#     钉错了，倒的也只是 /api/path 一个路由，不是整个服务。
+numpy==1.26.4
 
 # 刻意**不在**这里出现的（它们的缺席本身就是防线）：
 #   ezdxf  shapely  trimesh  mapbox-earcut  matplotlib  Pillow  playwright
