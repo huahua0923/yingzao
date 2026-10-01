@@ -1,0 +1,47 @@
+[Unit]
+Description=校园数字孪生平台 API (gym3d)
+Documentation=https://github.com/huahua0923/yingzao
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gym3d
+Group=gym3d
+WorkingDirectory=/opt/gym3d
+
+# 所有可配的键都在这里（含 LIHUA_DB_*、GYM3D_COMPUTE、GYM3D_LOOPBACK_BREAKGLASS）
+EnvironmentFile=/opt/gym3d/.env
+
+# 判词全是中文；不加这两行会在打印时抛 UnicodeEncodeError（本仓铁律 168）
+Environment=PYTHONIOENCODING=utf-8
+Environment=PYTHONUNBUFFERED=1
+
+# ★ 不带 --reload：run_api.py 只在显式传参时才开 reload，
+#   而 reload 会起一个监视子进程，systemd 的 Restart 语义会变得不可预测。
+ExecStart=/opt/gym3d/.venv/bin/python -u /opt/gym3d/backend/api/run_api.py
+
+Restart=always
+RestartSec=3
+
+# 只监听 127.0.0.1（由 .env 的 GYM3D_HOST 决定），nginx 反代过来。
+# 这里再加一层内核级的限制：即使 .env 被改错写成 0.0.0.0，非回环的包也进不来。
+# ★ 这两行管的是**进出两个方向**。数据库就在本机（LIHUA_DB_HOST=localhost）时它是对的；
+#   若哪天把 PG 挪到别的机器，必须把那个地址加进 IPAddressAllow，否则症状是
+#   「服务在跑、健康检查也过，但所有要读库的路由全部超时」—— 一个很难归因的半死状态。
+IPAddressAllow=localhost
+IPAddressDeny=any
+
+# 加固：本服务只需要读 /opt/gym3d，写它的 data/_jobs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/gym3d/data
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gym3d-api
+
+[Install]
+WantedBy=multi-user.target

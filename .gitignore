@@ -88,3 +88,6 @@ _scratch/_commitmsg_*.txt
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# 部署打包产物（本机产出、传服务器解包；不进仓）
+gym3d-data-*.tar.gz

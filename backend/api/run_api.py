@@ -2,8 +2,14 @@
 """启动入口：`python -u backend/api/run_api.py`
 
 端口/地址只从 settings（环境变量 > .env > 默认）来，**代码里不写死数字**。
-生产用 PM2 起这个文件（`instances:1, exec_mode:'fork'` —— 多进程会让
-带内存缓存的产物索引各算各的，且没有共享状态可依赖）。
+生产用 systemd 起这个文件（见 `deploy/gym3d-api.service`）。
+
+★ 这里原先是"用 PM2 起"——那段话是错的，盘上从来没有 PM2 的配置文件，
+   Server 上也不是 PM2。2026-10-01 换成 systemd 时一并改掉：留着它，
+   下一个人会去找一个不存在的配置，然后以为是环境没装好。
+
+★ **单进程**（uvicorn 默认 workers=1）。多进程会让带内存缓存的产物索引
+   各算各的，且没有共享状态可依赖 —— 这不是性能取舍，是正确性。
 
 用法（不要加 --help 探参数，本文件只认 --reload 一个开关）：
     python -u backend/api/run_api.py              # 正常启动
