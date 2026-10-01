@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     frontend_dist: Path | None = None     # 默认 <root>/frontend/dist
     # 源 DXF 目录：**只有本机建模需要**，服务器留空（留空时相关阶段直接标记为不可跑）
     dxf_dir: Path | None = None
+    # 校区地形产物目录（`campus_terrain.glb` + `campus_terrain_viewdata.json` + 洞底截图）。
+    # ★ 默认值落在 `_scratch/` 下，这是**如实**不是设计：构建器
+    #   （`_scratch/_campus3d/campus-terrain/build_campus_terrain_glb.py`）与数据层导出器
+    #   都还在那儿，交付件也跟着留在那儿。
+    # ★ 这个字段是那条依赖的**唯一出口**。服务器上 `_scratch` 不存在 ⇒
+    #   `routers/campus.py` 的三条路由回 404 并**明说找的是哪个目录**，而不是白屏。
+    #   要把产物收进 `data/` 时**改这一行**（.env 里 `GYM3D_CAMPUS_DIR=...`），
+    #   不要复制文件 —— 8 MB 的 GLB 有两份，「哪份是新的」立刻就无解了。
+    campus_dir: Path | None = None
 
     # ── 能力开关：本进程是全功能控制台，还是只读服务器 ──────────────
     # True  = 本机（可跑管道 / 可改参数 / 可下 DXF）
@@ -66,7 +75,7 @@ class Settings(BaseSettings):
     # 刻意**不给默认值**：端口只存在于 .env，代码里不留数字字面量。
     # 不设 = 老服务拒绝启动 —— 逼部署方显式确认，而不是「碰巧跑在某个端口上」。
     legacy_console_port: int | None = None   # backend/web/control.py
-    legacy_rooms_port: int | None = None     # backend/db/serve_rooms.py
+    legacy_rooms_port: int | None = None     # backend/db/serve_rooms.py（已退役，留档 _scratch/_retired_20260925/）
     # 房间台账后台（backend/db/serve_rooms_admin.py）：**会写库**的管理页，只在本机跑。
     # 同样刻意不给默认值 —— 端口只存在于 .env。
     rooms_admin_port: int | None = None      # backend/db/serve_rooms_admin.py
@@ -92,9 +101,38 @@ class Settings(BaseSettings):
     job_max_concurrency: int = 1
     job_persist: bool = True              # 日志与状态落盘 data/_jobs/，进程重启后能报出孤儿作业
 
+    # ── 权限（账号 / 角色 / 授权 / 会话）────────────────────────────
+    # ★ break-glass：**来自 127.0.0.1 的请求直接当「搭建方」**（全校区、全能力）。
+    #
+    #   为什么留着它（不是偷懒，是刻意的）：
+    #     `db_required` 默认 False ⇒ PG 没起时本进程照常跑。账号存在 PG 里，
+    #     所以 **PG 一挂就谁都进不来，包括你自己** —— 而那正是你最需要进去改东西的时刻。
+    #     回环通道让"你自己这台机器"永远有一条路，局域网那三类人才走登录。
+    #   为什么默认 True：**你今天的用法一点不变**（本机直接开页面，不用登录）。
+    #   为什么它必须是**可见的**：`authz.describe()` 会把它印在启动日志里 ——
+    #     一个"连自己有没有开都不知道"的后门，比有后门更糟。
+    #   要关掉：`GYM3D_LOOPBACK_BREAKGLASS=0`（真上公网前**必须**关）。
+    loopback_breakglass: bool = True
+    # 会话 cookie 名。★ **只此一份** —— `backend/db/accounts.py` 里原来那份已删。
+    #   同一个字符串写两处 = 「两处写同一个数，一致证明不了它对」（CLAUDE.md 铁律 18）。
+    session_cookie: str = "lihua_twin_sid"
+    # cookie 的 Secure 属性。★ 默认 **False**，因为内网/本机多为纯 HTTP：
+    #   写死 True 的话浏览器会**静默丢掉** Set-Cookie，表现为「登录成功但立刻又是未登录」
+    #   —— 没有报错、没有日志，只有一个像 bug 的现象。
+    #   上了 HTTPS（或 nginx 反代且外网可及）就设 `GYM3D_SESSION_COOKIE_SECURE=1`。
+    session_cookie_secure: bool = False
+
     # ── 敏感值（服务器留空）─────────────────────────────────────────
     deepseek_api_key: str = ""
-    admin_token: str = ""                 # 留空 = 完全交给 nginx 的 auth_basic
+    # ★ 2026-09-25：这个值的含义变了，注释跟着改。旧注释写的是「留空 = 完全交给
+    #   nginx 的 auth_basic」—— 那是「HTTP 上根本没有执行通路」时代的说法，现在
+    #   `--run` 之类已经可达（见 routers/kg.py），那句话成了假话。
+    #   它现在是 `deps.py` 执行面闸门的**唯一**开关：
+    #     留空 ⇒ 执行面只认回环，局域网一律 403 `local_only`；
+    #     设了 ⇒ 非回环**带对** `X-Admin-Token` 头也放行（带错不放行）。
+    #   刻意**不**做成「不设就拒绝启动」：那会让忘了配的人下次重启直接起不来，
+    #   而默认姿势（局域网只读）本身已经是安全的。
+    admin_token: str = ""
 
     # ── 派生路径与开关 ──────────────────────────────────────────────
 
@@ -107,6 +145,11 @@ class Settings(BaseSettings):
     @property
     def resolved_frontend_dist(self) -> Path:
         return self.frontend_dist or (self.root / "frontend" / "dist")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def resolved_campus_dir(self) -> Path:
+        return self.campus_dir or (self.root / "_scratch" / "_campus3d" / "campus-terrain")
 
     @computed_field  # type: ignore[prop-decorator]
     @property

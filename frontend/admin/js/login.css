@@ -1,0 +1,96 @@
+/* 登录页 — 延续 app.css 的「工程制图 / 蓝图」方向：暗室、网格、等宽字。
+   这一屏是**进门第一眼**，所以它要一眼看出这是哪个系统，而不是一张通用登录卡。 */
+
+.lg-wrap {
+  min-height: calc(100vh - 220px);
+  display: grid;
+  place-items: center;
+  padding: var(--sp-6) var(--sp-4);
+}
+
+/* 图签卡片：左侧一条青色规线 + 右上角折角，像一张图纸的标题栏。
+   刻意**不做**居中标题 + 渐变光斑那一套 —— 那是模板，不是这个系统。 */
+.lg-card {
+  position: relative;
+  width: min(430px, 100%);
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--r-2);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, .85);
+}
+.lg-card::after {                      /* 右上折角 */
+  content: "";
+  position: absolute; top: 0; right: 0;
+  width: 22px; height: 22px;
+  background: linear-gradient(225deg, var(--ink) 50%, var(--rule) 50%);
+}
+
+.lg-title {
+  margin: 0 0 var(--sp-2);
+  font-size: 22px; font-weight: 650; letter-spacing: .05em;
+}
+.lg-sub {
+  margin: 0 0 var(--sp-5);
+  color: var(--text-dim); font-size: 13px;
+}
+
+.lg-form { display: grid; gap: var(--sp-4); }
+
+.lg-field { display: grid; gap: var(--sp-2); }
+.lg-label {
+  color: var(--text-dim);
+  font-size: 12px; letter-spacing: .12em; text-transform: none;
+}
+
+.lg-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--ink);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  font: 14px/1.4 var(--mono);          /* 账号/口令按等宽显示，便于逐位核对 */
+  letter-spacing: .02em;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.lg-input:hover { border-color: var(--text-faint); }
+.lg-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(53, 198, 212, .16);
+}
+.lg-input::placeholder { color: var(--text-faint); font-family: var(--sans); }
+
+.lg-btn {
+  margin-top: var(--sp-2);
+  padding: 11px 16px;
+  background: var(--cyan); color: var(--ink);
+  border: none; border-radius: var(--r-1);
+  font: 600 14px/1 var(--sans); letter-spacing: .1em;
+  cursor: pointer;
+  transition: filter 150ms, transform 120ms;
+}
+.lg-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.lg-btn:active:not(:disabled) { transform: translateY(1px); }
+.lg-btn:disabled { background: var(--cyan-dim); color: var(--text-dim); cursor: progress; }
+
+/* 状态行。★ 四种状态**颜色不同**，因为下一步动作不同：等一会儿 / 重输 /
+   找管理员 / 找运维。全用同一片灰字的话，用户分不出该做什么。 */
+.lg-msg { min-height: 1.5em; margin: var(--sp-4) 0 0; font-size: 13px; color: var(--text-dim); }
+.lg-msg:empty { margin-top: 0; }
+.lg-msg.is-err  { color: var(--red); }
+.lg-msg.is-warn { color: var(--amber); }
+.lg-msg.is-ok   { color: var(--green); }
+
+.lg-foot {
+  margin: var(--sp-4) 0 0;
+  padding-top: var(--sp-4);
+  border-top: 1px dashed var(--rule);
+  color: var(--text-faint); font-size: 12px; line-height: 1.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-btn, .lg-input { transition: none; }
+}

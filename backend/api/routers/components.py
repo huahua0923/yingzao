@@ -13,11 +13,19 @@ import math
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from ..authz import require_cap
 from ..responses import ok
 
-router = APIRouter(tags=["components"])
+# ★ 权限（2026-10-01 批次 2）：**全校区口径** —— 挂 `view` 但**不做范围过滤**。
+#   这两条回的是"识别器按什么规则认构件"（11 个构件签名 + 3 件外部量具），
+#   里面**没有一栋楼**、也没有一个房间，所以 "哪几栋" 这个问题在这里没有对象。
+#   ★ 把这个口径写下来而不是留白：`require_cap("view")`（不传 target）在语义上
+#     等于"任何在这个系统里被授过 view 的人"，哪天有人往里塞进逐栋数据，
+#     这道闸**不会**跟着变细 —— 那时必须改成 `require_cap("view", ...)`。
+#     「全校区」是**一次决定**，不是现状的默认值。
+router = APIRouter(tags=["components"], dependencies=[Depends(require_cap("view"))])
 
 # `recognizer` 是 `backend/` 下的顶层包（不是 `backend.recognizer`），
 # 而 run_api.py 只把**仓库根**塞进 sys.path —— 所以 `from recognizer import …`

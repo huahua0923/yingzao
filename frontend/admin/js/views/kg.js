@@ -14,18 +14,47 @@
 //   3. **前端一个判断都不做**：链上的每一条结论、每个指纹都原样来自
 //      `GET /api/kg/ask` 的 `data`（它就是 `kb/ask.py --json` 的那一份，
 //      逐字段相同由 `python -m backend.checks.kg_view_accept --parity` 守着）。
-//   4. **本页不执行任何命令**：`run[]` 里给的是命令与其预期，跑不跑由人/智能体
-//      去命令行决定。所以这里只画、只给复制按钮，连"运行"按钮都不放。
+//   4. **跑判据这条路是"有路 + 有闸门"，不是"没有路"**（★ 2026-09-25 这条事实变了）。
+//      原先这里写着「本页不执行任何命令，连"运行"按钮都不放」，靠的是
+//      「`kb/ask.py --run` **没有 HTTP 通路**」这个更强的保证。**那个保证已经放弃** ——
+//      用户拍板把「跑判据」按钮直接放在这一屏上，走 `POST /api/kg/run`
+//      （真起一个作业，最坏 900 秒；等结果靠轮询，不挂在请求上）。
+//      ⇒ 新的闸门是**「通路 ＋ 本机限定」**，就挂在既有的那一处判定上
+//        （`deps.exec_denied_reason`，与真正执行时**同一个函数**）：
+//        · 非回环来源 ⇒ 403 `local_only`（除非设了 `GYM3D_ADMIN_TOKEN` 且带对
+//          `X-Admin-Token`）；`GYM3D_COMPUTE=0` ⇒ 403 `compute_disabled`；
+//        · 只读的那些照旧在局域网上可用 —— 这一屏本来就是"给局域网看的"。
+//      ⇒ 所以按钮的状态**先问 `API.capabilities()`**，不行就置灰并把**后端自己那句话**
+//        原样显示出来 —— 「点了才发现不能用」和「一开始就写明」不是一回事。
+//      ⇒ 仍然**没有** HTTP 通路的是另外两条，别顺手也给它们开口子：
+//        `kb/ask.py --pending`（登记，写 `kb/pending.json`）、`kb/build_kb.py`（重打包）。
+//        那两条只给复制按钮。
 import { el, add, mount } from '../dom.js';
 import { API, ApiError } from '../api.js';
 
 export const label = '图谱';
 
 const state = { inv: null, invMeta: null, invErr: null, data: null, meta: null, askErr: null,
-  of: null };   // 点链接的人想打开的节点 id（手打的查询没有这个，见 parseSub）
+  of: null,      // 点链接的人想打开的节点 id（手打的查询没有这个，见 parseSub）
+  view: 'chain', // 'chain' | 'graph'
+  act: null, actMeta: null, actErr: null,  // 扩散激活那张图（`GET /api/kg/activation`）
+  caps: null, capsErr: null,        // `GET /api/capabilities` —— 按钮开关的**唯一**依据
+  run: null,                        // 当前那个「跑判据」作业的最近一次读数
+  q: '', root: null, sub: '' };     // 重画要用的东西（视图一换就得重画整屏）
 
 let disposed = false;
-export function dispose() { disposed = true; }
+let pollTimer = null;
+let resizeWired = false;
+
+export function dispose() {
+  disposed = true;
+  stopPoll();
+  if (resizeWired) { window.removeEventListener('resize', onResize); resizeWired = false; }
+  // canvas 本身随 `mount()` 的 clear() 一起离开 DOM；这里只是把引用放开，
+  // 免得下一屏拿到一个已经不在文档里的画布（画上去什么也看不见，且不报错）。
+  GVDOM = { wrap: null, cv: null, tip: null, note: null };
+  GV.nodes = []; GV.edges = []; GV.pos = {}; GV.adj = {};
+}
 
 /** 三态各自的说法。★ 措辞是判据的一部分：`miss` 那句必须说清"不是没问题"。 */
 const STATES = {
@@ -190,11 +219,13 @@ function itemList(items) {
   }));
 }
 
-/** 「跑一条命令」的块。★ 会写盘的要先说出来 —— 白名单里只收只读命令。 */
+/** 「跑一条命令」的块。★ 会写盘的要先说出来 —— 一条命令写不写盘，是它自己的字段。 */
 function runBlock(runs) {
-  return card('可跑判据（本页不执行，只给命令）', 'kg-run', el('div', { class: 'kg-note' },
-    '这些命令请到命令行跑。`--run` 那条路是**写**操作（跑判据要落 `data/_meta/kg_runs.json`），'
-    + '所以 HTTP 那两条路由刻意不开口子。'), (runs || []).map((r) => {
+  return card('可跑判据（命令原样给出来，跑不跑随你）', 'kg-run', el('div', { class: 'kg-note' },
+    '每一条都能照原样在命令行跑；复制按钮给的就是那条命令。'
+    + '上面那个「跑判据」按钮走的是同一条命令，只是经由 HTTP —— 它由**后端**按来源判：'
+    + '本机放行、局域网一律 403（见那一行的说明）。'
+    + '两条路都要落盘（`_qa/<楼>_qa.txt` 与 `data/_meta/kg_runs.json`），所以都不是只读的。'), (runs || []).map((r) => {
     const writes = r.writes || r.write || null;
     return el('div', { class: `kg-cmd${writes ? ' writes' : ''}` },
       el('div', { class: 'kg-cmd-line' }, code(r.cmd || '(没有 cmd 字段)'), copyBtn(r.cmd || '')),
@@ -636,6 +667,514 @@ function railBlock() {
         ' 里，本页不重算它。')));
 }
 
+// ── 关系图（中栏的第二个视图） ──────────────────────────────────────
+//
+// ★ **数据在后端、布局在页面** —— 这是这次收编时定的分界，不是随手写的：
+//   节点与边来自 `GET /api/kg/activation`（`services/kg.py:graph()`），页面只负责**摆放**。
+//   理由：这张图上有一层语义 —— 「哪几个机器节点还没映射到任何症状」**就是图上那几个
+//   虚线空心的点**，把它算进页面，就是同一份判断的第二个实现（两份必然漂，而漂的那天
+//   两张图各自都像是对的）。⇒ 这里**一次都不读** `data/_meta/kg_instances.json`。
+//
+// ★ 节点 id 的三种前缀（`fam:` / `trap:` / `ent:`）必须与上面 `wordFor()` 认的逐字一致。
+//   拼错的话，图上点一个节点会跳到别的东西上，而**那种错不报错**（后端那侧同一个理由）。
+//
+// ★ 配色**与 8155 那版不同，这是有意的、也必须说出来**：那份页面是米色纸面
+//   （`--paper:#f2efe7`），这一屏是深色工程底（`app.css` 的 `--ink:#0e1116`）。
+//   同一组色值搬过来，深灰（图元）与暗金（缺陷码）在深底上几乎看不见 ——
+//   而「看不见」与「图上没有这一类」在屏幕上是同一件事。所以按深底重挑了一组，
+//   并且把**每一类的含义**写在表里：这张图上颜色是**分类**，不是深浅。
+//
+//   | 类     | 为什么是这个色 |
+//   |--------|----------------|
+//   | 症状   | 橙红：图上的入口与锚，最大一号 |
+//   | 根因   | 琥珀：与「待拍板」同族 —— 它是这条链的由来 |
+//   | 处置   | 绿：与「对账通过」同族 —— 有解法 |
+//   | 命令   | 青：与「可信」同族 —— 可复核 |
+//   | 陷阱   | 紫：**方法论**坑，与几何根因不是一类（同族不同色） |
+//   | 规范   | 青绿：制图约定，手册的第三支 |
+//   | 图元   | 灰：被规范描述的那个制图对象 |
+//   | 缺陷码 | 暗金：机器**数出来**的（来自实例产物） |
+//   | 实测旗 | 铜：机器**逐层量出来**的（与缺陷码同一层，两把尺子） |
+const GV = { nodes: [], edges: [], adj: {}, pos: {}, hover: null, sel: null, scale: 1, cx: 0, cy: 0 };
+let GVDOM = { wrap: null, cv: null, tip: null, note: null };
+
+const KIND = {
+  symptom: { c: '#ff8a5c', r: 24, label: '症状（家族）', always: true },
+  cause:   { c: '#e8a33d', r: 7,  label: '根因', always: false },
+  fix:     { c: '#46a758', r: 7,  label: '处置', always: false },
+  run:     { c: '#35c6d4', r: 7,  label: '可跑命令', always: false },
+  trap:    { c: '#a98cf0', r: 14, label: '陷阱（方法论）', always: true },
+  entry:   { c: '#5fd0b0', r: 12, label: '规范 / 约定', always: true },
+  geom:    { c: '#8b98a3', r: 5,  label: '图元（制图对象）', always: false },
+  code:    { c: '#c9a227', r: 10, label: '缺陷码（机器数出来的）', always: false },
+  flag:    { c: '#d98a4b', r: 9,  label: '实测旗（逐层量出来的）', always: false },
+};
+const EDGE_C = { trap: '#a98cf0', cause: '#e8a33d', fix: '#46a758', run: '#35c6d4',
+  code: '#c9a227', flag: '#d98a4b', geom: '#5fd0b0', none: '#8b98a3' };
+// ★ 后端加了一类而这里没跟上时，**不许**让它静默变成 `undefined.c`（那是 TypeError，
+//   整屏白掉），也不许悄悄画成别的颜色 —— 画成红点**并数出来**，屏幕上要能看见它。
+const UNKNOWN_KIND = { c: '#e5484d', r: 8, label: '★这一屏不认识的类', always: true };
+const kindOf = (k) => KIND[k] || UNKNOWN_KIND;
+
+/**
+ * 画布上的短名。★ 与后端 `services/kg._short_title` **同一套规则**
+ * （去掉全角括号里的补语、截 14 字），所以对已经短过的 `symptom` 标签再用一次是幂等的；
+ * 对根因/处置/规范那些**没短过的**，这一步才是真的在起作用。
+ */
+function shortTitle(t) { return String(t || '').replace(/（.*?）/g, '').slice(0, 14); }
+
+/**
+ * 一个节点**该画什么字**。
+ *
+ * ★ 这里必须分两类，不能一律用 `label`：`cause` / `fix` / `run` 这三类的 `label`
+ *   是**类名**（「根因」「处置」「命令」，后端 `graph()` 里写死的 `cname`），
+ *   它们的内容在 `full` 里。一律画 `label` 的话，几十个根因节点会**全部**印着
+ *   「根因」两个字 —— 那不是"看不清"，是**把内容换成了类别**，而图上没有任何地方
+ *   提示这件事发生过。（其余类别的 `label` 本来就是内容：家族短名 / 陷阱标题 /
+ *   条目标题 / 图元 drafting / 缺陷码键。）
+ */
+function drawLabel(n) {
+  const contentInFull = n.kind === 'cause' || n.kind === 'fix' || n.kind === 'run';
+  return shortTitle(contentInFull ? (n.full || n.label) : n.label);
+}
+
+/** 一条边里谁是父。认不出父的（未映射的码与旗）落到最外圈 —— **缺口必须画出来**。 */
+function isParentKind(k) { return k === 'symptom' || k === 'entry'; }
+
+/** 只算摆放。**不读任何文件**（见本节开头那条分界）。 */
+function layoutGraph() {
+  const act = state.act || {};
+  GV.nodes = (act.nodes || []).map((n) => Object.assign({}, n));
+  GV.edges = (act.edges || []).map((e) => Object.assign({}, e));
+  GV.adj = {};
+  for (const n of GV.nodes) GV.adj[n.id] = [];
+  for (const e of GV.edges) {
+    (GV.adj[e.a] = GV.adj[e.a] || []).push(e.b);
+    (GV.adj[e.b] = GV.adj[e.b] || []).push(e.a);
+  }
+  const byId = {};
+  for (const n of GV.nodes) byId[n.id] = n;
+  const kids = {}; const isKid = {};
+  for (const e of GV.edges) {
+    const A = byId[e.a]; const B = byId[e.b];
+    if (!A || !B) continue;
+    const parent = isParentKind(A.kind) ? A : (isParentKind(B.kind) ? B : null);
+    if (!parent) continue;
+    const kid = parent === A ? B : A;
+    isKid[kid.id] = 1;
+    (kids[parent.id] = kids[parent.id] || []).push(kid);
+  }
+  // 症状排内圈、规范排外圈，各自的子节点贴着父母扇形铺开。
+  const fams = GV.nodes.filter((n) => n.kind === 'symptom');
+  const ents = GV.nodes.filter((n) => n.kind === 'entry');
+  const SPC = 2 * Math.PI / Math.max(fams.length, 1);
+  fams.forEach((n, i) => { n.a = -Math.PI / 2 + i * SPC; n.r = 92; });
+  ents.forEach((n, i) => {
+    n.a = -Math.PI / 2 + 2 * Math.PI * (i + 0.5) / Math.max(ents.length, 1); n.r = 372;
+  });
+  const RING = { cause: 152, fix: 196, run: 238, code: 186, flag: 170, trap: 300, entry: 372, geom: 418 };
+  const R3 = { cause: 1, fix: 1, run: 1, code: 1, flag: 1 };   // 同类里再错开三层，免得叠死
+  const place = (parent, spread) => {
+    const arr = (kids[parent.id] || []).slice().sort((x, y) =>
+      (RING[y.kind] || 0) - (RING[x.kind] || 0) || String(x.id).localeCompare(String(y.id)));
+    arr.forEach((n, i) => {
+      const frac = arr.length === 1 ? 0.5 : i / (arr.length - 1);
+      n.a = parent.a + spread * (frac - 0.5);
+      n.r = (RING[n.kind] || 200) + (R3[n.kind] ? (i % 3) * 14 : 0);
+    });
+  };
+  for (const f of fams) place(f, 1.7);      // 这一圈只有症状，扇面角度是它的
+  for (const en of ents) place(en, 0.5);    // 图元贴着它所属的那篇规范
+  const free = GV.nodes.filter((n) => !isKid[n.id] && !isParentKind(n.kind));
+  free.forEach((n, i) => {
+    n.r = 478; n.a = -Math.PI / 2 + 2 * Math.PI * (i + 0.5) / Math.max(free.length, 1);
+  });
+  const maxR = Math.max(520, ...GV.nodes.map((n) => (n.r || 0) + 46));
+  const W = (GVDOM.wrap && GVDOM.wrap.clientWidth) || 760;
+  const H = (GVDOM.wrap && GVDOM.wrap.clientHeight) || 560;
+  GV.scale = Math.min(W, H) * 0.47 / maxR;
+  GV.cx = W / 2; GV.cy = H / 2;
+  for (const n of GV.nodes) {
+    GV.pos[n.id] = { x: GV.cx + n.r * GV.scale * Math.cos(n.a),
+      y: GV.cy + n.r * GV.scale * Math.sin(n.a) };
+  }
+  return {
+    nodes: GV.nodes.length, edges: GV.edges.length,
+    // 外圈（未映射）由**服务端给的那份清单**数出来，不在这里重新判一遍 —— 判两遍就是
+    // 两个分母（服务端 `counts.orphans` 与这里各算一个，屏幕上会同时出现两个数）。
+    orphans: ((state.act || {}).counts || {}).orphans,
+    unknown: GV.nodes.filter((n) => !KIND[n.kind]).length,
+  };
+}
+
+function resizeCanvas() {
+  const cv = GVDOM.cv; const wrap = GVDOM.wrap;
+  if (!cv || !wrap) return;
+  const d = window.devicePixelRatio || 1;
+  cv.width = Math.max(320, Math.round((wrap.clientWidth || 320) * d));
+  cv.height = Math.max(320, Math.round((wrap.clientHeight || 320) * d));
+  cv.getContext('2d').setTransform(d, 0, 0, d, 0, 0);
+}
+
+/** 画一张。**只画，不解释** —— 数据是接口给的，摆放是上面那个函数定的。 */
+function drawGraph() {
+  const cv = GVDOM.cv; const wrap = GVDOM.wrap;
+  if (!cv || !wrap) return;
+  const ctx = cv.getContext('2d');
+  const w = wrap.clientWidth || 320;
+  const h = wrap.clientHeight || 320;
+  ctx.clearRect(0, 0, w, h);
+  const sel = GV.sel; const near = new Set();
+  if (sel) { near.add(sel); (GV.adj[sel] || []).forEach((x) => near.add(x)); }
+  for (const e of GV.edges) {
+    const pa = GV.pos[e.a]; const pb = GV.pos[e.b];
+    if (!pa || !pb) continue;
+    const on = !sel || (near.has(e.a) && near.has(e.b));
+    ctx.strokeStyle = on ? (EDGE_C[e.kind] || EDGE_C.none) : 'rgba(255,255,255,.07)';
+    ctx.lineWidth = on ? 1.2 : 0.7;
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+  }
+  for (const n of GV.nodes) {
+    const p = GV.pos[n.id]; const K = kindOf(n.kind);
+    if (!p) continue;
+    const on = !sel || near.has(n.id);
+    // ★ 缺口 = 「机器数出来的、但还没映射到任何症状」。它由**服务端**那一份
+    //   `unmapped` 决定（后端 graph() 里同一个判断），这里画成**虚线空心**：
+    //   一眼能分出「这一片还没接上」，而不是靠数颜色深浅去猜。
+    const orphan = (n.kind === 'code' || n.kind === 'flag') && !n.mapped;
+    ctx.globalAlpha = on ? 1 : 0.22;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, K.r * (n.id === sel ? 1.25 : 1), 0, 2 * Math.PI);
+    if (orphan) {
+      ctx.fillStyle = '#151a21'; ctx.fill();
+      ctx.setLineDash([3, 3]); ctx.strokeStyle = K.c; ctx.lineWidth = 1.6;
+      ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = K.c; ctx.fill();
+      if (n.id === sel) { ctx.strokeStyle = '#e6edf3'; ctx.lineWidth = 2; ctx.stroke(); }
+    }
+    if (K.always || K.r >= 10 || n.id === sel || n.id === GV.hover) {
+      const txt = drawLabel(n);
+      ctx.font = (n.kind === 'symptom' ? '600 12px ' : '11px ') + 'system-ui,"Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#0e1116';
+      ctx.strokeText(txt, p.x, p.y + K.r + 12); ctx.fillStyle = '#e6edf3';
+      ctx.fillText(txt, p.x, p.y + K.r + 12);
+      if (n.n !== undefined && n.n !== null) {
+        // `×行数`：机器层节点的**分母**。只有名字没有行数的机器节点，读的人不知道
+        // 它是一条还是一千条 —— 而"1 条"和"1000 条"在这张图上不该长得一样。
+        ctx.font = '10px ui-monospace,Consolas,monospace';
+        ctx.strokeText('×' + n.n, p.x, p.y + K.r + 23);
+        ctx.fillStyle = EDGE_C.none;
+        ctx.fillText('×' + n.n, p.x, p.y + K.r + 23);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function hitTest(mx, my) {
+  let best = null;
+  for (const n of GV.nodes) {
+    const p = GV.pos[n.id];
+    if (!p) continue;
+    const d = Math.hypot(mx - p.x, my - p.y);
+    const r = kindOf(n.kind).r + 3;
+    if (d <= r && (!best || d < best.d)) best = { id: n.id, d, n };
+  }
+  return best;
+}
+
+/** 图例。★ 由 `KIND` 一张表生成 —— 色值**只有这一个出处**（页面里没有第二份色表）。 */
+function legendEl() {
+  return el('div', { class: 'kg-glegend' },
+    Object.keys(KIND).map((k) => el('span', {},
+      el('i', { style: { background: KIND[k].c }, 'aria-hidden': 'true' }), KIND[k].label)),
+    el('span', {},
+      el('i', { class: 'gap', style: { borderColor: KIND.code.c }, 'aria-hidden': 'true' }),
+      '★未映射（缺口）'));
+}
+
+/** 「图上点一个节点」→ 那个节点在 hash 里的样子。**认不出就回 null，不硬拼。** */
+function graphNodeId(n) {
+  if (n.kind === 'symptom') return `pb:${n.slug}`;
+  if (n.kind === 'trap') return `trap:${n.slug}`;
+  if (n.kind === 'entry') return n.slug || null;    // 条目的 id 本身就是查询词
+  return null;                                      // 根因/处置/命令/图元/机器码：没有落地页
+}
+
+function graphPane() {
+  if (state.actErr) {
+    const e = state.actErr instanceof ApiError ? state.actErr
+      : new ApiError('unknown', String(state.actErr));
+    const down = e.code === 'network' || e.status === 0;
+    return el('div', { class: 'kg-panic' },
+      el('h2', { class: 'kg-card-h', text: down ? '接口不可用' : `取图失败：${e.code}` }),
+      el('p', { class: 'dim', text: e.message }),
+      // ★ 图取不到**不画一张空图**：空白画布与「图里一个点都没有」在屏幕上是一样的，
+      //   而这两件事的补救办法完全不同（修接口 vs 重打包产物）。
+      el('p', { class: 'kg-warnline' },
+        '★ 这里不画空白画布 —— 一张空图会被读成「图上什么都没有」，'
+        + '而实际是「这一屏没取到图」。'));
+  }
+  if (!state.act) return el('div', { class: 'kg-empty dim', text: '正在读图…' });
+  const cv = el('canvas', { class: 'kg-gcv' });
+  const tip = el('div', { class: 'kg-gtip' });
+  const wrap = el('div', { class: 'kg-graphwrap' }, cv, tip, legendEl());
+  GVDOM.wrap = wrap; GVDOM.cv = cv; GVDOM.tip = tip;
+  return wrap;
+}
+
+function onResize() {
+  if (state.view !== 'graph') return;
+  resizeCanvas(); drawGraph();
+}
+
+/** 挂上之后才能量尺寸 ⇒ 这一步必须在 `mount()` **之后**调。 */
+function mountGraph() {
+  const cv = GVDOM.cv; const wrap = GVDOM.wrap; const tip = GVDOM.tip;
+  if (!cv || !wrap) return;
+  const info = layoutGraph();
+  resizeCanvas();
+  drawGraph();
+  if (GVDOM.note) {
+    // ★ 三个数必须分开写：节点/边是一回事，**外圈**（缺口）是另一回事，
+    //   而 `missing` 又是第三件事 —— 那一份源整个不在时，机器节点**一个都没有**，
+    //   这时"外圈 0 个"会被读成"全都映射好了"（铁律 16 的正身）。
+    const miss = (state.act && state.act.missing) || {};
+    mount(GVDOM.note,
+      `节点 ${info.nodes} ｜ 边 ${info.edges} ｜ 外圈 ${info.orphans} 个机器节点还没映射到任何症状（虚线空心）`,
+      Object.keys(miss).length
+        ? el('div', { class: 'kg-warnline' }, '★ 机器层的源整个没读到：',
+          code(Object.entries(miss).map(([k, v]) => `${k}：${v}`).join('；')),
+          ' ⇒ 上面那两个机器类**一个点都没有**。这与「机器层本来就是空的」不是一回事。')
+        : null,
+      info.unknown
+        ? el('div', { class: 'kg-warnline' },
+          `★ 有 ${info.unknown} 个节点的类这一屏不认识（画成红点）—— 后端加了类而这里没跟上。`)
+        : null);
+  }
+  const at = (ev) => {
+    const r = cv.getBoundingClientRect();
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  };
+  cv.addEventListener('mousemove', (ev) => {
+    const p = at(ev); const hit = hitTest(p.x, p.y);
+    const id = hit ? hit.id : null;
+    if (id !== GV.hover) { GV.hover = id; drawGraph(); }
+    if (hit) {
+      const n = hit.n;
+      tip.style.display = 'block';
+      tip.style.left = `${Math.min(p.x + 12, Math.max(0, (wrap.clientWidth || 320) - 340))}px`;
+      tip.style.top = `${p.y + 12}px`;
+      tip.textContent = (n.full || n.label || '')
+        + (n.n === undefined || n.n === null ? '' : `\n行数 ${n.n}`)
+        + (n.noimpl ? '\n★这一格没有实现（声明了「无实现」）' : '')
+        + (graphNodeId(n) ? '\n点一下用它的别名查这条链' : '\n（这一类没有落地页，点它只高亮）');
+    } else tip.style.display = 'none';
+  });
+  cv.addEventListener('mouseleave', () => {
+    GV.hover = null; tip.style.display = 'none'; drawGraph();
+  });
+  cv.addEventListener('click', (ev) => {
+    const p = at(ev); const hit = hitTest(p.x, p.y);
+    if (!hit) { GV.sel = null; drawGraph(); return; }
+    const n = hit.n;
+    GV.sel = GV.sel === n.id ? null : n.id;
+    const nid = graphNodeId(n);
+    const w = nid ? wordFor(nid) : null;
+    if (w) {
+      window.location.hash = hrefOf(w, nid);      // 走同一套链接：查词 + 想打开谁
+      return;
+    }
+    drawGraph();
+    // ★ 认不出词时**说出来**，不做成"点了没反应"（本页对这种假链接最不容忍）。
+    if (GVDOM.note) {
+      add(GVDOM.note, el('div', { class: 'kg-warnline' },
+        `「${String(n.label || n.id)}」认不出一个查得动的词 ⇒ 这一屏不跳`
+        + '（清单没取到，或这一条没有别名）。'));
+    }
+  });
+  if (!resizeWired) { window.addEventListener('resize', onResize); resizeWired = true; }
+}
+
+// ── 「跑判据」那一行 ────────────────────────────────────────────────
+//
+// ★ 能不能点，**只问后端**（`GET /api/capabilities` → 它用**执行时同一个函数**
+//   `deps.exec_denied_reason` 回答同一件事）。页面上任何"自己判 location.hostname"
+//   的写法都是那件事的第二份实现，两份迟早不一致，而屏幕上会同时出现
+//   「能用」与「不能用」两种说法。
+// ★ 置灰时把后端那一句**原样显示**：两句理由的补救办法不同（去改本机配置 / 换个地址
+//   打开），页面不许把它们揉成一句"当前不可用"。
+// ★ 取不到 capabilities ⇒ **先禁用**（不知道就别放行）并说明。
+const POLL_MS = 1500;         // 常态轮询间隔
+const POLL_MS_SLOW = 5000;    // 连续失败之后放慢（不是停止）
+const POLL_SLOW_AFTER = 3;
+
+/** 后端 `run.outcome` 七档 → 屏幕上的一句话。**七档分开写，不许合并。** */
+const RUN_HEAD = {
+  running: ['', '运行中'],
+  ok: ['ok', '跑完了，拿到结论'],
+  no_criteria: ['miss', '这个说法没有可跑判据'],
+  unparsable: ['warn', '跑完了，但这次的输出读不出来'],
+  bad_shape: ['warn', '跑完了，但输出的形状不认识'],
+  timeout: ['warn', '到了超时上限，已杀掉'],
+  lost: ['miss', '作业记录坏了，这一趟没有结论'],
+};
+
+function stopPoll() { if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; } }
+
+function schedulePoll(id) {
+  stopPoll();
+  const n = (state.run && state.run.polls) || 0;
+  const ms = n >= POLL_SLOW_AFTER ? POLL_MS_SLOW : POLL_MS;
+  pollTimer = setTimeout(() => { pollTimer = null; pollOnce(id); }, ms);
+}
+
+async function pollOnce(id) {
+  if (disposed) return;
+  const cur = () => state.run && state.run.job && state.run.job.id === id;
+  if (!cur()) return;                     // 视图换了 / 又起了别的作业 ⇒ 这一轮作废
+  try {
+    const rep = await API.kgRunStatus(id);
+    if (disposed || !cur()) return;
+    state.run.report = rep; state.run.err = null; state.run.polls = 0;
+  } catch (e) {
+    if (disposed || !cur()) return;
+    // ★★ 轮询失败**既不停止轮询、也不把状态清成 idle**：一次网络抖动就让「运行中」
+    //   永远为真、按钮永久禁用，正是本仓 `frontend/control.js:359` 那个真 bug 的形状
+    //   （`if (!j.success) return;` —— 不重排下一次）。这里两头都写：**报出失败次数并继续排**。
+    state.run.err = e;
+    state.run.polls = (state.run.polls || 0) + 1;
+  }
+  repaint();
+  const r = state.run && state.run.report;
+  if (r && r.state !== 'running') return;   // 终态：停
+  if (r && r.run && r.run.outcome && r.run.outcome !== 'running') return;
+  if (!r && state.run.polls >= POLL_SLOW_AFTER * 4) {
+    // 读不到状态又一直失败 ⇒ 明说"不再自动重试"，而不是安静地永远转下去。
+    state.run.gaveUp = true;
+    return;
+  }
+  schedulePoll(id);
+}
+
+async function startRun() {
+  const q = state.q;
+  if (!q) return;
+  state.run = { job: null, meta: null, report: null, err: null, polls: 0, starting: true };
+  repaint();
+  try {
+    // ★ 回的是**整个信封** ⇒ 必须取 `.data`。少这一步不报错，只是每个字段恒 undefined。
+    const env = await API.kgRun(q, (state.data && state.data.building) || '', topOf());
+    if (disposed) return;
+    state.run.job = env.data; state.run.meta = env.meta; state.run.starting = false;
+  } catch (e) {
+    if (disposed) return;
+    state.run.starting = false; state.run.err = e; repaint();
+    return;
+  }
+  repaint();
+  schedulePoll(state.run.job.id);
+}
+
+function topOf() {
+  const t = state.meta && state.meta.top;
+  return (Number.isFinite(t) && t > 0) ? t : 3;
+}
+
+/** 一次 `--run` 的读数。**七档分开画**，`running` 与"跑坏了"绝不同形。 */
+function runReportBlock(rep) {
+  const r = rep.run || {};
+  const head = RUN_HEAD[r.outcome];
+  if (!head) {
+    // 后端加了档而这里没跟上：**说出来并原样贴**，不塞进任何一档（那会是一句假话）。
+    return card('跑判据的结果', 'kg-warn',
+      el('div', { class: 'kg-warnline' },
+        // ★ `code()` 回的是**元素**，塞进模板串会印成 `[object HTMLElement]`
+        //   （这正是本仓「模板串印出 undefined」那一族的正身）⇒ 它只能当小孩，不能当字。
+        '★ 后端给了一个这一屏不认识的 outcome：', code(String(r.outcome)),
+        ' —— 原样贴出来，不猜。'),
+      el('pre', { class: 'kg-json', text: JSON.stringify(r, null, 1) }));
+  }
+  const rows = Array.isArray(r.results) ? r.results : null;
+  return card(`跑判据的结果 —— ${head[1]}`, head[0] ? `kg-run ${head[0]}` : 'kg-run',
+    el('div', { class: 'kg-kv' },
+      el('b', { text: '作业 ' }), code(rep.id || '—'),
+      el('b', { text: ' ｜ 进程 ' }), String(rep.state ?? '—'),
+      el('b', { text: ' ｜ 退出码 ' }), rep.exit_code === null || rep.exit_code === undefined
+        ? '（还没跑完，不是 0）' : String(rep.exit_code),
+      el('b', { text: ' ｜ 用时 ' }), `${rep.elapsed_s ?? '—'}s`,
+      el('b', { text: ' ｜ 超时 ' }), r.timeout_s === null || r.timeout_s === undefined
+        ? '不判超时' : `${r.timeout_s}s（定它的是 ${r.timeout_source}）`),
+    // 后端那句话**原样**：每一档的话在服务端 import 时就核对过一一对应，页面不重写一份。
+    el('div', { class: 'kg-note', text: r.why || '（后端没给 why —— 这本身不正常）' }),
+    r.log_truncated_bytes
+      ? el('div', { class: 'kg-warnline' },
+        `★ 日志开头被截掉了 ${r.log_truncated_bytes} 字节 —— 下面是**尾巴**，不是全部输出。`)
+      : null,
+    r.ledger ? el('div', { class: 'kg-kv' }, el('b', { text: '留痕 ' }), code(String(r.ledger))) : null,
+    rows && rows.length
+      ? el('ul', { class: 'kg-items' }, rows.map((x) => el('li', {},
+        el('div', { class: 'kg-cmd-line' }, code(x.cmd || '(没有 cmd)')),
+        el('div', { class: 'kg-kv' },
+          el('b', { text: '退出码 ' }), String(x.exit ?? '—'),
+          el('b', { text: ' ｜ ' }), `${x.seconds ?? '—'}s`,
+          el('b', { text: ' ｜ 声明写：' }), x.writes || '（没写！）'),
+        x.expect ? el('div', { class: 'kg-kv' }, el('b', { text: '预期 ' }), String(x.expect)) : null,
+        x.tail ? el('pre', { class: 'kg-json', text: String(x.tail) }) : null)))
+      : null,
+    // ★ 原始输出**一直带**（不是只在出错时带）：`ok` 的时候它也是唯一的凭据 ——
+    //   退出码与 expect 的比对**留给人**，页面不替谁宣布合格。
+    el('details', { class: 'kg-leftover' },
+      el('summary', { text: `原始输出（最后 ${r.raw_lines ?? 0} 行里的末尾若干行）` }),
+      el('pre', { class: 'kg-json', text: r.raw_tail || '（没有输出）' })));
+}
+
+function runBar() {
+  const caps = state.caps;
+  const capsErr = state.capsErr;
+  const q = state.q;
+  const R = state.run;
+  const live = !!(R && R.job && !(R.report && R.report.state !== 'running'));
+  const enabled = !!(caps && caps.write_enabled) && !!q && !live;
+  const why = capsErr
+    ? `取不到 capabilities：${capsErr.message || capsErr} —— 按钮先禁用（不知道就别放行）。`
+    : !caps ? '正在问后端能不能执行…'
+      : !caps.write_enabled ? `★ 后端说不能执行：${caps.write_disabled_reason || caps.write_disabled_code}`
+        : !q ? '先给一个说法，再跑它登记的判据。'
+          : null;
+  const btn = el('button', {
+    class: 'kg-btn', type: 'button', text: live ? '正在跑…' : '跑判据（--run）',
+    disabled: !enabled, title: why || '真起一个作业跑这个说法登记的判据；最坏 900 秒。',
+    onclick: () => { if (enabled || (R && R.gaveUp)) startRun(); },
+  });
+  return el('div', { class: 'kg-runbar' },
+    btn,
+    R && R.gaveUp
+      ? el('button', { class: 'kg-btn ghost', type: 'button', text: '重新问一次',
+        onclick: () => { state.run = null; repaint(); } })
+      : null,
+    el('span', { class: 'kg-note' },
+      why
+        // ★ 可执行时也要**把代价与出处写在按钮旁边**：这一条不是只读的，
+        //   而且它只在本机可用 —— 局域网打开这一页的人应当一眼看到这件事。
+        || `可执行（本机）。它会真起一个作业跑登记的那条命令，最坏 900 秒，`
+           + `并落盘：_qa/<楼>_qa.txt 与 data/_meta/kg_runs.json。`
+           + `${caps.admin_token_configured ? '（本机配了 token，非本机带对头也能执行）' : ''}`),
+    R && R.err
+      ? el('span', { class: 'kg-warnline' },
+        `★ 轮询失败 ${R.polls} 次：${R.err.message || R.err}`
+        + `${R.gaveUp ? ' —— 已停止自动重试，按上面那个按钮重来。' : ' —— 仍在重试。'}`)
+      : null,
+    R && R.job
+      ? el('span', { class: 'kg-kv' },
+        ' ｜ 作业 ', code(R.job.id),
+        R.job.pid === null || R.job.pid === undefined ? '（还没起进程）' : `（pid ${R.job.pid}）`)
+      : null,
+    R && R.starting ? el('span', { class: 'kg-note', text: '正在起作业…' }) : null,
+    R && R.report ? runReportBlock(R.report) : null);
+}
+
 // ── 视图入口 ────────────────────────────────────────────────────────
 
 function searchBox(current) {
@@ -674,6 +1213,56 @@ async function loadAsk(q) {
   }
 }
 
+async function loadActivation(force) {
+  if (state.act && !force) return;
+  try {
+    const env = await API.kgActivation();
+    state.act = env.data; state.actMeta = env.meta; state.actErr = null;
+  } catch (e) {
+    // ★ 取不到就把图**清掉并留下错误**，不留一份半旧的数据 ——
+    //   旧图配上新错误，屏幕上会同时出现"图在此"与"取图失败"两句话。
+    state.act = null; state.actErr = e;
+  }
+}
+
+/** 能不能执行：**只问后端**。失败 ⇒ caps 保持 null，按钮按"不知道"处置（不放行）。 */
+async function loadCaps() {
+  try {
+    state.caps = await API.capabilities(); state.capsErr = null;
+  } catch (e) {
+    state.caps = null; state.capsErr = e;
+  }
+}
+
+const GRAPH_LABEL = { chain: '链条', graph: '关系图' };
+
+function viewBar() {
+  const note = el('span', { class: 'kg-vnote' });
+  GVDOM.note = note;
+  return el('div', { class: 'kg-toolbar' },
+    Object.keys(GRAPH_LABEL).map((v) => el('button', {
+      class: `kg-btn ghost kg-vbtn${state.view === v ? ' on' : ''}`,
+      type: 'button', text: GRAPH_LABEL[v],
+      title: v === 'chain' ? '这条说法的来龙去脉（引擎给的顺序）' : '谁连着谁（节点与边）',
+      onclick: () => setView(v),
+    })),
+    note);
+}
+
+/** 换视图。★ 切到图上时要**现取**激活数据（它是另一条路由），取完再重画。 */
+async function setView(v) {
+  if (v === state.view) return;
+  state.view = v;
+  if (v === 'graph' && !state.act && !state.actErr) {
+    repaint();                       // 先把「正在读图…」画出来，别让点击像没反应
+    await loadActivation(false);
+    if (disposed) return;
+  }
+  repaint();
+}
+
+function repaint() { if (state.root) paint(state.root, state.sub); }
+
 function askErrorBlock() {
   const e = state.askErr;
   if (!e) return null;
@@ -691,14 +1280,25 @@ function askErrorBlock() {
 }
 
 function paint(root, sub) {
-  const mid = el('div', { class: 'kg-mid' }, searchBox(sub), askErrorBlock() || chainBlock());
+  // ★ 每次重画都把 canvas 那一族的引用清干净：`mount()` 会先 `clear()` 掉旧 DOM，
+  //   留着旧引用的话下一屏会把像素画到一个**已经不在文档里**的画布上 ——
+  //   什么也看不见，且不报错（本仓对"安静的失效"最不容忍）。
+  GVDOM = { wrap: null, cv: null, tip: null, note: null };
+  const graph = state.view === 'graph';
+  const mid = el('div', { class: 'kg-mid' }, searchBox(sub), viewBar(),
+    // 图上不画三态横幅/链条（那是"这个说法"的解读），画的是**整张图**；
+    // 而查询失败那条**两种视图下都要出**（图取到了不等于这个词查到了）。
+    graph ? (askErrorBlock() || graphPane()) : (askErrorBlock() || chainBlock()));
   const right = el('div', { class: 'kg-right' },
-    state.data ? instancesBlock() : el('div', { class: 'kg-empty dim', text: '右边这一栏要有一个说法才算得出来。' }));
+    state.data ? instancesBlock() : el('div', { class: 'kg-empty dim', text: '右边这一栏要有一个说法才算得出来。' }),
+    runBar());
   mount(root, el('div', { class: 'kg-wrap' },
     el('div', { class: 'kg-rail' }, railBlock()),
     mid, right));
+  // ★ **量尺寸必须在 mount 之后**（`clientWidth` 在文档外恒 0 ⇒ 整张图缩成一个点）。
+  if (graph) mountGraph();
   // 带上耗时/退出码：这张屏上的结论是**一次子进程**产出的，代价要看得见。
-  if (state.meta) {
+  if (state.meta && !graph) {
     add(mid, el('div', { class: 'kg-transport dim' },
       `本次查询：退出码 ${state.meta.exit} · ${state.meta.elapsed_ms} ms`
       + ` · top ${state.meta.top}`
@@ -733,9 +1333,17 @@ export async function render(root, sub) {
   disposed = false;
   const { q, of } = parseSub(sub);
   state.of = of;              // ★ 必须在 paint 之前设好：intentBlock 在 paint 里读它
+  state.q = q;                // 「跑判据」那个按钮跑的就是它（`runBar` 读 state.q）
+  // ★ 换一屏就把上一屏的作业读数丢掉：留着的话，轮询里那句 `cur()` 会认为
+  //   "还是同一个作业"而继续排下去，于是**在另一个词的地盘上**弹出一条旧结论。
+  state.run = null;
+  // ★ `state.sub` 存的是**词**（`q`），不是 hash 里那段原文 —— 原文里可能带 `?of=`，
+  //   把它塞进搜索框，框里会显示「c057 楼层错位?of=pb:xxx」这种东西。
+  state.root = root; state.sub = q;     // 换视图/轮询回来时靠它俩重画整屏
   mount(root, el('div', { class: 'kg-empty dim', text: '正在读图谱…' }));
-  // 两份**分开取**：清单取不到不该挡住查询，查询挂了也不该让左栏空掉。
-  await Promise.all([loadInventory(false), loadAsk(q)]);
+  // 四份**分开取**：清单取不到不该挡住查询，查询挂了也不该让左栏空掉，
+  // 而"能不能执行"是**另一个问题**（后端答的），它慢/挂都不该拖住这一屏。
+  await Promise.all([loadInventory(false), loadAsk(q), loadCaps()]);
   if (disposed) return;
   paint(root, q);
 }

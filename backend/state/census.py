@@ -473,4 +473,9 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    # ★ 本文件判词含 `★`（U+2605），Windows 控制台默认 GBK ⇒ `UnicodeEncodeError`，
+    #   屏幕上看着像"这个工具坏了"。同族共有的那一步，本文件原来漏了（铁律 168）。
+    for _s in (sys.stdout, sys.stderr):
+        if hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main(sys.argv))

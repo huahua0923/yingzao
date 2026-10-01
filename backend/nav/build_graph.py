@@ -18,6 +18,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.path.insert(0, os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))    # backend/
 from paths import DATA  # noqa: E402
+from recognizer import outline as OUT  # noqa: E402
 
 ROOMS = str(DATA / "rooms.json")
 FLOORS_DIR = str(DATA / "floors")
@@ -43,7 +44,7 @@ for F in range(5):
     d = json.load(open(f"{FLOORS_DIR}/floor{F}.json", encoding="utf-8"))
     doors_by_floor[F] = d.get("doors", [])
     stairwells_by_floor[F] = d.get("stairwells", [])
-    outline_by_floor[F] = Polygon(d["outline"])
+    outline_by_floor[F] = OUT.floor_outline(d)
 
 
 def classify(F, x, y):

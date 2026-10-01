@@ -147,9 +147,17 @@ class FleetFloorRecorder(SF.FloorRecorder):
             ring = foot.buffer(SF.SITE_WIDTH, join_style=2).difference(foot)
         except Exception as e:                                   # noqa: BLE001
             raise SF.VerifyError("首层轮廓外扩 %.2f m 失败：%s" % (SF.SITE_WIDTH, e))
-        if ring.geom_type != "Polygon" or ring.is_empty:
-            raise SF.VerifyError("场地环不是单个多边形（%s）—— 首层轮廓被外扩拆碎了，不猜"
+        # ★★ 首层本身就是**多个分离区域**时（c004f2 / c007 / c008f1 / c012f1 / c020 实测），
+        #    外扩环天然是 MultiPolygon。这种情形下**每个分离区域各围一圈**才是几何真相：
+        #    把两圈并成一个大环，等于在两个分离区域之间的缝里凭空铺一块地垫（假几何，
+        #    且会把中间的空地当建筑用地）。所以按"首层几块分离区域 = 几圈散水"逐圈交付。
+        #    单环路径**逐字节不动** —— 已交付楼栋的复现门（sha256）不能因这条改动变红。
+        rings = ([g for g in ring.geoms if g.geom_type == "Polygon" and not g.is_empty]
+                 if ring.geom_type == "MultiPolygon" else [ring])
+        if not rings or (len(rings) == 1 and rings[0].is_empty):
+            raise SF.VerifyError("场地环不是多边形（%s）—— 首层轮廓被外扩拆碎了，不猜"
                                  % ring.geom_type)
+        site = unary_union(rings) if len(rings) > 1 else rings[0]
         # ★ 旧判据「环面积 vs 周长×宽」只在**凸形**上成立，梳子形必然假阳性：
         #   ny28 实测 0.655、ny29 实测 0.650（都跌破 0.9 的闸门），而它们的环完全正确 ——
         #   梳齿窄缝不足 2×SITE_WIDTH 时，向外扩会被相邻的齿吃掉，真环面积天然远小于该估计
@@ -161,35 +169,41 @@ class FleetFloorRecorder(SF.FloorRecorder):
         #   而宽度是具名常量、不随形状变，故不另设形状无关的上界（那会引入新的假阳性）。
         if SF.SITE_WIDTH <= 0:
             raise SF.VerifyError("SITE_WIDTH=%r 不是正数，场地环没意义" % SF.SITE_WIDTH)
-        eps = 1e-6 * max(1.0, ring.area)
-        leak = foot.buffer(0.9 * SF.SITE_WIDTH, join_style=1).difference(foot).difference(ring).area
+        eps = 1e-6 * max(1.0, site.area)
+        leak = foot.buffer(0.9 * SF.SITE_WIDTH, join_style=1).difference(foot).difference(site).area
         if leak > eps:
             raise SF.VerifyError("场地环没盖住离轮廓 0.9×%.2f m 以内的外扩面（漏 %.2f m²）"
                                  "—— 外扩没做对，不猜" % (SF.SITE_WIDTH, leak))
-        back = ring.intersection(foot).area
+        back = site.intersection(foot).area
         if back > eps:
             raise SF.VerifyError("场地环压回轮廓里（%.2f m²）—— 差集写反了，不猜" % back)
         rd = lambda r: [[round(x, 6), round(y, 6)] for x, y in r.coords[:-1]]   # noqa: E731
-        ext = rd(ring.exterior)
-        holes = [rd(r) for r in ring.interiors]
-        self.parts.append({
-            "ext": ext, "holes": holes, "z0": -SF.SITE_THICK, "z1": 0.0,
-            "cap": SF.C_SITE, "edgeCols": [], "holeEdgeCols": [], "edgeN": [], "holeEdgeN": [],
-            "kind": "site", "cat": SF.SITE_CAT, "sub": SF.SITE_SUB,
-            "band": -1, "floor": -1, "group": SF.SITE_CAT,
-            "vol": round(ring.area * SF.SITE_THICK, 6),
-            "nf": 2 + len(ext) + sum(len(h) for h in holes),
-        })
-        self.cat_counts[SF.SITE_CAT] += 1
-        self.sub_counts[SF.SITE_SUB] += 1
-        self.site = {"area": round(ring.area, 3), "width": SF.SITE_WIDTH,
-                     "thick": SF.SITE_THICK, "pts": len(ext)}
+        ring_pts = 0
+        for r in rings:
+            ext = rd(r.exterior)
+            holes = [rd(h) for h in r.interiors]
+            ring_pts += len(ext)
+            self.parts.append({
+                "ext": ext, "holes": holes, "z0": -SF.SITE_THICK, "z1": 0.0,
+                "cap": SF.C_SITE, "edgeCols": [], "holeEdgeCols": [], "edgeN": [], "holeEdgeN": [],
+                "kind": "site", "cat": SF.SITE_CAT, "sub": SF.SITE_SUB,
+                "band": -1, "floor": -1, "group": SF.SITE_CAT,
+                "vol": round(r.area * SF.SITE_THICK, 6),
+                "nf": 2 + len(ext) + sum(len(h) for h in holes),
+            })
+            self.cat_counts[SF.SITE_CAT] += 1
+            self.sub_counts[SF.SITE_SUB] += 1
+        self.site = {"area": round(site.area, 3), "width": SF.SITE_WIDTH,
+                     "thick": SF.SITE_THICK, "pts": ring_pts}
         # ★ 自证字段**只在首层楼板不止一块时**才加：`self.site` 是要写进 spec 的，
         #   无条件加就等于给**每一栋**的 spec 多一个键 —— 理化楼/ny27 这些单块楼
         #   的复现门（sha256 逐字节）立刻变红，而它们本来一个字都不该动。
         #   单块时本方法必须与父类**逐字节等价**，这一条是比"跑得通"更硬的约束。
         if len(f0) > 1:
             self.site["f0_slabs"] = len(f0)
+        # 自证：分离区域各有几圈（单圈时不加键，保持逐字节等价）
+        if len(rings) > 1:
+            self.site["site_rings"] = len(rings)
 
     r"""`su_spec_floors.FloorRecorder` 的地垫判据**宽容版**（只覆写 `_recolor_rooms`）。
 
@@ -272,13 +286,37 @@ class FleetFloorRecorder(SF.FloorRecorder):
                     k = inside[0]
                 pieces[k].append((i, pg))
 
-            missing = [k for k in range(len(rooms)) if not pieces.get(k)]
+            # 中庭开洞处的房间是**空间**（图上登记了面积、但楼板挖穿、不铺地垫）→ 不计入缺失。
+            # 判据用**几何重合**而不是房号：过渡层（c006 F4）是借邻层几何挖的，本层没有该房号。
+            _atr_idx = set()
+            _atr_nums = set(floor.get("atrium_room_nums") or [])
+            for _k, _r in enumerate(rooms):
+                if _r.get("number") in _atr_nums:
+                    _atr_idx.add(_k)
+            for _h in floor.get("atrium_holes") or []:
+                try:
+                    _hp = Polygon(_h)
+                    if not _hp.is_valid:
+                        _hp = _hp.buffer(0)
+                except Exception:
+                    continue
+                for _k, _rp in enumerate(polys):
+                    try:
+                        _iv = _hp.intersection(_rp.buffer(0)).area
+                    except Exception:
+                        continue
+                    if _iv > 0.9 * min(_hp.area, _rp.area):
+                        _atr_idx.add(_k)
+            missing = [k for k in range(len(rooms))
+                       if not pieces.get(k) and k not in _atr_idx]
             if missing:
                 raise SF.VerifyError("第 %d 层有 %d 间房没有地垫：%s"
                                      % (b, len(missing),
                                         [rooms[k].get("number") for k in missing][:10]))
 
             for k, r in enumerate(rooms):
+                if k in _atr_idx:
+                    continue          # 中庭开洞处：楼板挖穿、不铺地垫，跳过面积校验
                 ps = pieces[k]
                 tot = sum(pg.area for _, pg in ps)           # 单块时 == 该块面积（逐字节同原版）
                 ra = polys[k].area
@@ -413,7 +451,24 @@ def main():
     SF.PURPOSE_FAMILY = fam
     G.DATA = base
     G.OUT = out
-    G.INCLUDE_SYNTHETIC_WINDOWS = True    # 全库 49 栋 profile 都是 glb_windows=true（理化楼无 profile）
+    # ★ 2026-09-14：改成**读 profile 的同名字段**，不再写死 True ——
+    #   写死 True 会让 SU 里窗还在、而 GLB 里没有，两个出口打架。
+    #   没有 profile.json 的楼（理化楼）保持老行为 = 有窗。
+    # ⚠ 2026-09-26 更正本注释的**前提**：原文写「c006 已按用户要求把 glb_windows
+    #   设成 false（图纸不画窗）」—— 实测**不成立**：c006 现在是 true，而且
+    #   **96/96 栋全是 true**（= 模块默认）⇒ 今天拿现码全库重跑 SU，96 栋都会长出合成窗。
+    #   「这个键该不该伸进 SU 路」用户还没表态；本注释只记事实，不改行为。
+    _pj = os.path.join(base, "profile.json")
+    _cfg = {}
+    if os.path.exists(_pj):
+        try:
+            _cfg = json.load(open(_pj, encoding="utf-8"))
+        except Exception:                                  # noqa: BLE001
+            _cfg = {}
+    G.INCLUDE_SYNTHETIC_WINDOWS = bool(_cfg.get("glb_windows", True))
+    print("  合成窗：%s（profile.glb_windows=%r）"
+          % ("开" if G.INCLUDE_SYNTHETIC_WINDOWS else "关",
+             _cfg.get("glb_windows", "(无 profile，默认开)")))
     G.SKIP_FLOORS = set()
     G.MeshBuilder = FleetFloorRecorder
     print("[%s] data=%s" % (name, base))

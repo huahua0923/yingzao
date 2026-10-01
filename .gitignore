@@ -25,6 +25,10 @@ data/*
 _backup_glb_20260910/
 _tmp_c019_door/
 *.glb
+# SKP 同理：`build_floors.rb` **不存盘**（探针实测 path=""），要留存只能显式 save_copy。
+# 每栋几十 MB 的二进制，且可由 spec 重跑（指纹 c67ba3e8a19a…），不进版本库。
+*.skp
+_scratch/su_skp/
 
 # ── _scratch 里的大件（脚本要留，GLB/图不要）──────────────────────
 # _scratch/ 下 244 个 .py 是验证工具链（闭合审计/守卫重建/楼梯体检），必须留。
@@ -62,6 +66,10 @@ __pycache__/
 *.bak
 *.bak2*
 *.bak_*
+# ★ `*.bak-<日期>` / `*.bak-<说明>-<日期>` 这一类：`*.bak` 匹配不到（结尾是日期不是 `.bak`），
+#   `*.bak_*` 也匹配不到（中间是连字符不是下划线）。2026-10-01 干跑 `git add backend/`
+#   时发现 20+ 个这种备份会被提交进仓 —— 补这一行把整族按住。
+*.bak-*
 # 用 *.orig* 而不是 *.orig_*：库里还有 .orig2 / .orig_engine 这类变体
 *.orig*
 .orig_patch/

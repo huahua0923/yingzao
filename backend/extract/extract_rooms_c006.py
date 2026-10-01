@@ -107,7 +107,8 @@ def floor_rooms(F, walls, doors, p):
     for pts in walls:
         cx = sum(q[0] for q in pts) / len(pts)
         cy = sum(q[1] for q in pts) / len(pts)
-        if abs(floor_of(p, cx, cy) - F) < 0.5:
+        _f = floor_of(p, cx, cy)
+        if _f is not None and abs(_f - F) < 0.5:
             if wall_x is not None and not (wall_x[0] <= cx <= wall_x[1]):
                 continue
             wall_pts.append([to_local(p, x, y, F) for x, y in pts])

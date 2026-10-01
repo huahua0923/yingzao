@@ -236,6 +236,35 @@ def parse_list(text: str) -> tuple[dict, list[str]]:
     return {"families": fams, "traps": traps, "entries": entries, "aliases": aliases}, prob
 
 
+def argv_shape_problem(argv: list, building: str, q: str, top) -> str | None:
+    """接口自报的 `meta.argv`（去掉最前面的解释器名）形状对不对。回 None = 对。
+
+    ★ 判的是**不变式**，不是手抄一份"应该长什么样"的清单。这一段原来就是手抄的
+      （`want = [...HEAD] + ([b] if b else []) + [q]`），于是 2026-09-24 给真 argv
+      加上 `--` 之后，它一次报了 **5 处假红**，而红的那一侧（页面）是对的 ——
+      手抄的那份必然跟着真实现漂（memory: one-judgement-many-implementations），
+      而漂了之后它指的方向是**反的**：让人去改没坏的那半边。
+
+    两条不变式，各自对应一件真事：
+      ① `--` 必须在、且**紧随 `--top N`** —— 这是"位置参数之前必须有 `--`"那条
+         安全约定的机械形态。没有它，`?q=--list` 会让一次只读查询变成"列症状表"
+         （实测 `_scratch/_sec_review_argv_probe.py` ②）。
+      ② `--` 之后**恰好**是 `[楼号?, 词]` —— 楼号独立成词、不并进查询串
+         （并在串里就等于在验收器这边复制一份 `ask.py` 的解析规则）。
+    """
+    head = ["-u", "kb/ask.py", "--json", "--top", str(top)]
+    tail = ([building] if building else []) + [q]
+    if argv[:len(head)] != head:
+        return "前段不是 %r" % head
+    rest = argv[len(head):]
+    if not rest or rest[0] != "--":
+        return "`--` 不在 `--top %s` 之后（实为 %r）—— 缺了它，`?q=--list` 这种词" \
+               "会让一次只读查询变成别的动作" % (top, rest[:1])
+    if rest[1:] != tail:
+        return "`--` 之后应是 %r（楼号独立成词），实为 %r" % (tail, rest[1:])
+    return None
+
+
 # ── 模式一：对拍 ──────────────────────────────────────────────────────
 
 def mode_parity(base: str) -> int:
@@ -300,12 +329,11 @@ def mode_parity(base: str) -> int:
             bad += 1
             continue
         page, meta = env["data"], env["meta"]
-        # 形状：接口自己报的 argv 必须是那个形状（楼号独立成词、不并进查询串）
-        want = ["-u", "kb/ask.py", "--json", "--top", str(meta.get("top"))]
-        want += ([b] if b else []) + [q]
-        if meta.get("argv", [None] * 2)[1:] != want:
-            print("  ✗ %s 的 argv 形状不对：页面报 %r / 应 %r"
-                  % (label, (meta.get("argv") or [None])[1:], want))
+        # 形状：接口自己报的 argv 必须满足那两条不变式（见 `argv_shape_problem`）。
+        problem = argv_shape_problem((meta.get("argv") or [])[1:], b, q, meta.get("top"))
+        if problem:
+            print("  ✗ %s 的 argv 形状不对：%s（实报 %r）"
+                  % (label, problem, (meta.get("argv") or [None])[1:]))
             bad += 1
         rc, out, err = _child((meta["argv"] or [])[1:])
         if rc != 0:
@@ -549,11 +577,436 @@ def mode_falsify() -> int:
         bad += 0 if got == want else 1
     print("   ✓ 第 1 条是**阴性对照的反面**：旧判据在它上面全绿 —— 证明这条判据有分辨力")
 
+    # ② 那半边的形状判据（`argv_shape_problem`）也要有刑具 —— 它刚刚才因为"手抄了一份
+    #    期望值"报了 5 处假红。所以两头都跑：**对的必须放过**（不许误报），
+    #    **每一种坏法必须被指出来，而且理由要落在那一处**（铁律 36：红了不等于红在那条分支上）。
+    print("\n  `meta.argv` 形状判据：")
+    HEAD = ["-u", "kb/ask.py", "--json", "--top", "3"]
+    argv_cases = [
+        # (名字, argv, 楼号, 词, 期望理由里要含的片段；None = 必须放过)
+        ("合法（无楼号）", HEAD + ["--", "楼层错位"], "", "楼层错位", None),
+        ("合法（带楼号）", HEAD + ["--", "c057", "楼层错位"], "c057", "楼层错位", None),
+        ("缺 `--`（安全约定的退化）", HEAD + ["楼层错位"], "", "楼层错位", "--"),
+        ("`--` 落在位置参数之后（等于没写）",
+         HEAD + ["楼层错位", "--"], "", "楼层错位", "--"),
+        ("楼号并进了查询串", HEAD + ["--", "c057 楼层错位"], "c057", "楼层错位", "楼号独立成词"),
+        ("`--top` 报了夹之前的数", ["-u", "kb/ask.py", "--json", "--top", "99", "--", "楼层错位"],
+         "", "楼层错位", "前段不是"),
+    ]
+    for name, av, bld, qq, want in argv_cases:
+        got = argv_shape_problem(av, bld, qq, 3)
+        hit = (got is None) if want is None else bool(got) and (want in got)
+        print("   %s %-30s ⇒ %s" % ("✓" if hit else "✗", name[:30],
+                                    "放过" if got is None else got[:56]))
+        bad += 0 if hit else 1
+
+    # 扩散激活图那条判据（`activate_problems`）的刑具。
+    #
+    # ★ 这一组比上面几组更要紧：它判的是**新写的那半边**（P2 的 `/kg/activation`），
+    #   而"新写的"意味着它还没有被任何真实缺陷撞过 —— 一条没被撞过的判据，
+    #   它在屏幕上的绿只说明"它还没说话"（memory: verifier-needs-its-falsifier）。
+    #   所以下面每一条都是**一种真实的坏法**，而且要求它**报在那一处**。
+    print("\n  扩散激活图（`activate_problems`）：")
+
+    def _n(i, k, **x):
+        return dict(id=i, label=i, kind=k, **x)
+
+    act = {
+        "nodes": [_n("fam:a", "symptom"), _n("trap:t", "trap"),
+                  _n("code:C1", "code", mapped=True, n=3),
+                  _n("flag:F1", "flag", mapped=False, n=1)],
+        "edges": [{"a": "fam:a", "b": "trap:t", "kind": "trap"},
+                  {"a": "code:C1", "b": "fam:a", "kind": "code"}],
+        "counts": {"nodes": 4, "edges": 2, "orphans": 1,
+                   "by_kind": {"symptom": 1, "trap": 1, "code": 1, "flag": 1}},
+        "unmapped": [{"id": "flag:F1", "label": "F1", "kind": "flag", "full": "x"}],
+        "missing": {}, "pending": {"state": "ok", "n": 0},
+        "source": {"generated_by": "x"},
+    }
+    rec = {"node_ids": ["fam:a", "trap:t", "code:C1", "flag:F1"],
+           "edges": ["fam:a|trap:t|trap", "code:C1|fam:a|code"],
+           "instances_present": True, "machine_nodes": 2}
+
+    def _cp(**patch):
+        d = json.loads(json.dumps(act))
+        d.update(patch)
+        return d
+
+    def _act_check(name, payload, want_in, want_not_in=None):
+        nonlocal bad
+        got = activate_problems(payload, rec)
+        hit = any(want_in in x for x in got)
+        off = [x for x in got if want_not_in and want_not_in in x]
+        okc = hit and not off
+        print("   %s %-34s ⇒ %s" % ("✓" if okc else "✗", name[:34],
+                                    got[0][:64] if got else "★ 一条都没报出来"))
+        bad += 0 if okc else 1
+
+    d0 = activate_problems(json.loads(json.dumps(act)), rec)
+    print("   %s %-34s ⇒ %s" % ("✓" if not d0 else "✗", "阴性对照（原样）",
+                                "回空" if not d0 else "★ 回了 %d 条：%s" % (len(d0), d0[0])))
+    bad += 0 if not d0 else 1
+
+    _act_check("悬空的边（一端不存在）",
+               _cp(edges=act["edges"] + [{"a": "fam:a", "b": "fam:不存在", "kind": "trap"}]),
+               "悬空")
+    _act_check("机器节点少画了一个（源里还在）",
+               _cp(nodes=[n for n in act["nodes"] if n["id"] != "flag:F1"],
+                   counts={"nodes": 3, "edges": 2, "orphans": 0,
+                           "by_kind": {"symptom": 1, "trap": 1, "code": 1}},
+                   unmapped=[]),
+               "没画全")
+    _act_check("missing 说了源不在、却还画机器节点",
+               _cp(missing={"instances": "缺 data/_meta/kg_instances.json"}),
+               "却还画了")
+    _act_check("by_kind 与逐个数出来的不符",
+               _cp(counts={"nodes": 4, "edges": 2, "orphans": 1,
+                           "by_kind": {"symptom": 1, "trap": 1, "code": 2}}),
+               "by_kind")
+    _act_check("orphans 数错", _cp(counts={"nodes": 4, "edges": 2, "orphans": 0,
+                                          "by_kind": act["counts"]["by_kind"]}),
+               "orphans")
+    _act_check("边多了一条", _cp(edges=act["edges"] + [{"a": "trap:t", "b": "fam:a",
+                                                       "kind": "trap"}]),
+               "多给了")
+    _act_check("unmapped 那一列与实物不符", _cp(unmapped=[]), "unmapped")
+    _act_check("种类不在闭集里（页面会静默不画）",
+               _cp(nodes=[_n("fam:a", "症状"), _n("trap:t", "trap"),
+                          _n("code:C1", "code", mapped=True),
+                          _n("flag:F1", "flag", mapped=False)],
+                   unmapped=[{"id": "flag:F1"}] + act["unmapped"][1:]),
+               "闭集")
+    # ★ 反过来的那半（同 `diff` 那条规矩）：只报那一处，**不许乱指**。
+    d1 = activate_problems(_cp(nodes=[n for n in act["nodes"] if n["id"] != "flag:F1"],
+                               counts={"nodes": 3, "edges": 2, "orphans": 0,
+                                       "by_kind": {"symptom": 1, "trap": 1, "code": 1}},
+                               unmapped=[]), rec)
+    wrong = [x for x in d1 if "by_kind" in x or "orphans" in x]
+    print("   %s %-34s ⇒ %s" % ("✓" if not wrong else "✗", "只报那一处、不许乱指",
+                                "差异 %d 条、都没指到计数上" % len(d1) if not wrong
+                                else "★ 指到了：%s" % wrong[0]))
+    bad += 0 if not wrong else 1
+
     print("\n%s" % ("★ 刑具全部按预期报出来" if not bad else "★ 有 %d 条刑具没报出来" % bad))
     return 1 if bad else 0
 
 
-_MODES = ("--parity", "--falsify", "--shapes", "--walk")
+_MODES = ("--parity", "--falsify", "--shapes", "--walk",
+          "--activation", "--capture-activation")
+
+
+# ── 模式五：扩散激活图（P2 新增的 `GET /api/kg/activation`）────────────────
+#
+# ★ 为什么这条判据的**参考值**不是我自己重算一遍：
+#   合并 8155 时，「图里有哪些节点、哪些边」这件事**已经有一份实现在跑**
+#   ——`_scratch/_retired_20260925/_kg_view.html` 的 `graphData()`（浏览器里，180 行）。
+#   我自己再写一遍重算，比的是"我抄得像不像"，抄错一处两边一起错
+#   （memory: same-source-comparison-always-green 的同族）。
+#   ⇒ 参考值**从那一边采**：真开浏览器跑它的 `graphData()`，
+#     把节点 id / 边三元组**冻结**成 golden（`--capture-activation`），
+#     此后每次验收都跟这份 golden 比。
+#   ⇒ golden 带**源文件指纹**（kb.json ＋ kg_instances.json 的 sha12）。
+#     源变了 ⇒ 报「golden 过期，需重新采集」，**不是**报"图错了" ——
+#     这两件事的补救办法完全不同（一个是重新采，一个是改代码）。
+#     铁律 24：产物要知道自己是哪把尺子量的、量的是哪一版源。
+#
+# ★ golden 冻结的是**表示**（id 集合与边集合），不是像素。摆放（放射布局）
+#   仍在页面里，那属于表现，不归这条判据管。
+_GOLDEN = ROOT / "backend" / "checks" / "data" / "kg_activation_golden.json"
+_SRC_FILES = {"kb": "kb/kb.json", "instances": "data/_meta/kg_instances.json"}
+
+#: 图里允许出现的节点种类。★ 这是**闭集**：后端将来加了新种类而页面不认识，
+#: 它会画成一个没有颜色的默认点（`KIND[kind]` 是 undefined ⇒ 半径 undefined ⇒
+#: canvas 静默不画），而"少画几个点"在屏幕上与"图里就没这几个"一样。
+#: 所以这里硬列，多一种就红，逼着两边一起改。
+ACT_KINDS = ("symptom", "cause", "fix", "run", "trap", "entry", "geom",
+             "code", "flag")
+
+
+def _sha12(path: Path) -> str:
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def _src_fingerprints() -> dict:
+    out = {}
+    for k, rel in _SRC_FILES.items():
+        p = ROOT / rel
+        out[k] = _sha12(p) if p.is_file() else None
+    return out
+
+
+def _post_json(url: str, body: dict) -> tuple[dict, str]:
+    """POST 一个 JSON，回 `(信封, 状态描述)`。形状与 `_get` 同规。"""
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+            raw, status = r.read(), r.status
+    except urllib.error.HTTPError as ex:
+        raw, status = ex.read(), ex.code
+    except Exception as ex:                              # noqa: BLE001
+        return {}, "连不上 %s：%s" % (url, ex)
+    try:
+        env = json.loads(raw.decode("utf-8"))
+    except Exception as ex:                              # noqa: BLE001
+        return {}, "%s 回的体子不是 JSON：%s（前 120 字节 %r）" % (url, ex, raw[:120])
+    if not isinstance(env, dict):
+        return {}, "%s 回的体子是 %s，不是信封对象" % (url, type(env).__name__)
+    return env, "HTTP %s" % status
+
+
+def activate_problems(api: dict, recon: dict) -> list[str]:
+    """接口给的图 vs 照两份源重算的图 ＋ 图自身的不变式。回问题清单（空 = 过）。
+
+    ★ 三层，缺一层就有洞：
+      ① **与参考值比**（节点 id 集合、边三元组多重集）—— 抄漏一类节点看不出来，
+         只有比才看得见；
+      ② **图自己的不变式**（边两端必须存在、计数与实物必须一致、种类在闭集内）
+         —— 这些**不依赖参考值**，所以换一份源它们照样有效；
+      ③ **「缺文件」与「空的」必须分开**：`missing.instances` 说了源不在，
+         那么机器层节点（code/flag）就**必须一个都没有**。反过来，源在的时候
+         一个机器节点都没有，也要红 —— 那是"投影时整块没做"，而它与
+         "这台机器上就是没有机器层数据"在屏幕上长得一样（铁律 16）。
+    """
+    bad: list[str] = []
+    if not isinstance(api, dict):
+        return ["activation 的 data 不是对象"]
+    for k in ("nodes", "edges", "counts", "unmapped", "missing", "pending", "source"):
+        if k not in api:
+            bad.append("顶层少了 %s" % k)
+    if bad:
+        return bad
+    nodes, edges, counts = api["nodes"], api["edges"], api["counts"]
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        return ["nodes / edges 不是数组"]
+
+    ids = []
+    for i, n in enumerate(nodes):
+        if not isinstance(n, dict):
+            bad.append("nodes[%d] 不是对象" % i)
+            continue
+        for k in ("id", "label", "kind"):
+            if k not in n:
+                bad.append("nodes[%d] 少了 %s" % (i, k))
+        if n.get("kind") not in ACT_KINDS:
+            bad.append("nodes[%d] 的种类 %r 不在闭集里（页面画不出来而且不报错）"
+                       % (i, n.get("kind")))
+        ids.append(n.get("id"))
+    if len(set(ids)) != len(ids):
+        dup = sorted({x for x in ids if ids.count(x) > 1})
+        bad.append("节点 id 有重复（图上的点会互相盖住）：%s" % dup[:5])
+
+    # ② 边两端必须存在。悬空的边**画不出来**（`pos[id]` 是 undefined ⇒ 那一笔
+    #    静默跳过），于是"少画一条边"与"本来就没有这条边"长得一样。
+    idset = set(ids)
+    for e in edges:
+        if not isinstance(e, dict) or "a" not in e or "b" not in e or "kind" not in e:
+            bad.append("有一条边的形状不对：%r" % (e,))
+            continue
+        for end in ("a", "b"):
+            if e[end] not in idset:
+                bad.append("边 %s→%s（%s）的一端 %r 不在节点表里 —— 悬空的边画不出来"
+                           % (e["a"], e["b"], e["kind"], e[end]))
+
+    # ② 计数与实物必须一致
+    real = {"nodes": len(nodes), "edges": len(edges)}
+    for k, v in real.items():
+        if counts.get(k) != v:
+            bad.append("counts.%s 说 %r，实物是 %d" % (k, counts.get(k), v))
+    by = {}
+    for n in nodes:
+        by[n.get("kind")] = by.get(n.get("kind"), 0) + 1
+    if counts.get("by_kind") != by:
+        bad.append("counts.by_kind %r 与逐个数出来的 %r 不一致" % (counts.get("by_kind"), by))
+    orph = [n for n in nodes if n.get("kind") in ("code", "flag") and not n.get("mapped")]
+    if counts.get("orphans") != len(orph):
+        bad.append("counts.orphans 说 %r，实物是 %d" % (counts.get("orphans"), len(orph)))
+    if [u.get("id") for u in api["unmapped"]] != [n["id"] for n in orph]:
+        bad.append("unmapped 那一列与实物对不上（%d vs %d）"
+                   % (len(api["unmapped"]), len(orph)))
+
+    # ③ 「缺文件」与「空的」不许同形
+    mach = [n for n in nodes if n.get("kind") in ("code", "flag")]
+    if api["missing"].get("instances") and mach:
+        bad.append("missing 说了 %s 不在，却还画了 %d 个机器节点 —— 那是拿旧数或捏的数"
+                   % (_SRC_FILES["instances"], len(mach)))
+    if not api["missing"].get("instances") and recon["instances_present"]:
+        want = recon["machine_nodes"]
+        if len(mach) != want:
+            bad.append("机器层源在、却没画全：实得 %d 个机器节点，源里有 %d 个"
+                       % (len(mach), want))
+
+    # ① 与参考值（浏览器里那份 `graphData()`）比
+    want_ids = set(recon["node_ids"])
+    got_ids = {i for i in ids if i}
+    for x in sorted(want_ids - got_ids):
+        bad.append("参考值有、接口没有：节点 %s" % x)
+    for x in sorted(got_ids - want_ids):
+        bad.append("接口多给了参考值里没有的：节点 %s" % x)
+    got_e = sorted("%s|%s|%s" % (e["a"], e["b"], e["kind"]) for e in edges
+                   if isinstance(e, dict) and {"a", "b", "kind"} <= set(e))
+    want_e = sorted(recon["edges"])
+    if got_e != want_e:
+        for x in [y for y in want_e if y not in got_e][:6]:
+            bad.append("参考值有、接口没有：边 %s" % x)
+        for x in [y for y in got_e if y not in want_e][:6]:
+            bad.append("接口多给了参考值里没有：边 %s" % x)
+    return bad
+
+
+def _reconstruct() -> dict:
+    """照两份源**重新走一遍**（这条只是"接口有没有把源抄全"的对照，不是第二份判据）。
+
+    ★ 它在验收器里是**允许**的，因为参考值另有其人（浏览器里那份 `graphData()`）；
+      它的作用是让"源在一台机器上、结论在另一台上"这种错有个具体位置。
+      只读源，不重算任何映射关系（`family` 字段是产物里写好的）。
+    """
+    kb = json.loads((ROOT / _SRC_FILES["kb"]).read_text(encoding="utf-8"))
+    inst_p = ROOT / _SRC_FILES["instances"]
+    present = inst_p.is_file()
+    I = json.loads(inst_p.read_text(encoding="utf-8")) if present else {}
+    ids, edges = [], []
+
+    def add(i):
+        if i not in ids:
+            ids.append(i)
+
+    for slug, f in (kb.get("playbook") or {}).items():
+        add("fam:" + slug)
+        for j in range(len(f.get("causes") or [])):
+            add("cause:%s:%d" % (slug, j))
+            edges.append("fam:%s|cause:%s:%d|cause" % (slug, slug, j))
+        for j in range(len(f.get("fixes") or [])):
+            add("fix:%s:%d" % (slug, j))
+            edges.append("fam:%s|fix:%s:%d|fix" % (slug, slug, j))
+        for j in range(len(f.get("runs") or [])):
+            add("run:%s:%d" % (slug, j))
+            edges.append("fam:%s|run:%s:%d|run" % (slug, slug, j))
+    for k in (kb.get("traps") or {}):
+        add("trap:" + k)
+    for slug, f in (kb.get("playbook") or {}).items():
+        for t in (f.get("traps") or []):
+            if ("trap:" + str(t)) in ids:
+                edges.append("fam:%s|trap:%s|trap" % (slug, t))
+    for k, e in (kb.get("entries") or {}).items():
+        add("ent:" + k)
+        for r in (e.get("recognition") or []):
+            if isinstance(r, dict) and r.get("drafting"):
+                add("geom:" + str(r["drafting"]))
+                edges.append("ent:%s|geom:%s|geom" % (k, r["drafting"]))
+    for kind, rows in (("code", I.get("codes")), ("flag", I.get("flags"))):
+        for key, v in (rows or {}).items():
+            nid = "%s:%s" % (kind, key)
+            add(nid)
+            if v.get("family") and ("fam:" + str(v["family"])) in ids:
+                edges.append("%s|fam:%s|%s" % (nid, v["family"], kind))
+    n_mach = len([i for i in ids if i.startswith(("code:", "flag:"))])
+    return {"node_ids": ids, "edges": edges, "instances_present": present,
+            "machine_nodes": n_mach}
+
+
+def mode_capture_activation(legacy: str, out: Path) -> int:
+    """从**还在跑的 8155 页面**里采那份 `graphData()` 的结果，冻成 golden。
+
+    ★ 只在源变了之后重采，采完必须**读一眼**那张表（`--record` 那条规矩：
+      重新登记不是"点一下"，是"读一遍"）。所以这里把采到的东西**打印出来**。
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception as exc:                              # noqa: BLE001
+        print("  ✗ 没装 playwright ⇒ **这一条没量成**（不是通过）：%s" % exc)
+        return 3
+    with sync_playwright() as pw:
+        try:
+            br = pw.chromium.launch()
+        except Exception as exc:                          # noqa: BLE001
+            print("  ✗ 浏览器起不来 ⇒ **这一条没量成**：%s" % exc)
+            return 3
+        page = br.new_page()
+        page.goto(legacy.rstrip("/") + "/", wait_until="domcontentloaded")
+        # 等它自己那份数据到位（`boot()` 里 `G = await fetch('/api/graph')`）。
+        try:
+            page.wait_for_function("() => { try { graphData(); return true; } "
+                                   "catch (e) { return false; } }", timeout=20000)
+        except Exception as exc:                          # noqa: BLE001
+            print("  ✗ 8155 页面上跑不动 graphData()（它挂了 / 数据没到）：%s" % exc)
+            br.close()
+            return 3
+        got = page.evaluate("""() => {
+            const r = graphData();
+            return { node_ids: r.N.map(n => n.id),
+                     edges: r.E.map(e => e.a + '|' + e.b + '|' + e.kind),
+                     kinds: r.N.reduce((m, n) => (m[n.kind] = (m[n.kind]||0)+1, m), {}) };
+        }""")
+        br.close()
+    if not got.get("node_ids"):
+        print("  ✗ 采到 0 个节点 ⇒ 没采成，不写 golden")
+        return 3
+    doc = {"captured_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+           "from": "%s（`_scratch/_retired_20260925/_kg_view.html` 的 graphData()）" % legacy,
+           "source_sha12": _src_fingerprints(),
+           "counts": {"nodes": len(got["node_ids"]), "edges": len(got["edges"]),
+                      "by_kind": got["kinds"]},
+           "node_ids": sorted(got["node_ids"]),
+           "edges": sorted(got["edges"])}
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
+    print("采到：节点 %d ｜ 边 %d ｜ 种类 %s"
+          % (doc["counts"]["nodes"], doc["counts"]["edges"],
+             "、".join("%s×%d" % kv for kv in sorted(got["kinds"].items()))))
+    print("源指纹：%s" % doc["source_sha12"])
+    print("写进 %s" % out)
+    print("★ 请**读一眼**上面这些数再签收 —— 重新登记是「读一遍」的动作，不是「点一下」。")
+    return 0
+
+
+def mode_activation(base: str) -> int:
+    """`GET /api/kg/activation` 与冻结的 golden ＋ 图的不变式逐条比。"""
+    env, note = _get(base, "/api/kg/activation")
+    if not env.get("success"):
+        raise Unavailable("%s —— %s" % (note, (env.get("error") or {}).get("message", "没有信封")))
+    if not _GOLDEN.is_file():
+        print("  ✗ 没有 golden（%s）⇒ **这一条没量成**，不是通过。" % _GOLDEN)
+        print("      先采：python -m backend.checks.kg_view_accept --capture-activation")
+        return 3
+    g = json.loads(_GOLDEN.read_text(encoding="utf-8"))
+    now = _src_fingerprints()
+    if g.get("source_sha12") != now:
+        print("  ✗ golden 过期：它采自 %s，源现在是 %s"
+              % (g.get("source_sha12"), now))
+        print("      ⇒ **这不是「图错了」** —— 是参考值该重采了。"
+              "重采之后要读一眼数（见 `--capture-activation`）。")
+        return 3
+    recon = {"node_ids": g["node_ids"], "edges": g["edges"],
+             "instances_present": now.get("instances") is not None,
+             "machine_nodes": len([i for i in g["node_ids"]
+                                   if i.startswith(("code:", "flag:"))])}
+    api = env["data"]
+    bad = activate_problems(api, recon)
+    c = api.get("counts") or {}
+    print("  节点 %s ｜ 边 %s ｜ 外圈缺口 %s ｜ 种类 %d 类"
+          % (c.get("nodes"), c.get("edges"), c.get("orphans"),
+             len(c.get("by_kind") or {})))
+    print("  参考值（8155 页面 graphData() @ %s）：节点 %d ｜ 边 %d"
+          % (g.get("captured_at"), len(g["node_ids"]), len(g["edges"])))
+    print("  missing=%s ｜ pending=%s（%s 条）"
+          % (api.get("missing") or {}, (api.get("pending") or {}).get("state"),
+             (api.get("pending") or {}).get("n")))
+    if api.get("unmapped"):
+        print("  ★ 图上的缺口（%d 个，页面画成虚线空心）：%s"
+              % (len(api["unmapped"]),
+                 "、".join(u["id"] for u in api["unmapped"][:6])))
+    if bad:
+        print("\n★ 扩散激活图不通过：%d 处" % len(bad))
+        for x in bad[:20]:
+            print("   ✗ %s" % x)
+        return 1
+    print("\n★ 扩散激活图通过：与冻结参考值逐节点、逐边相同，图自身不变式全过")
+    return 0
+
+
 
 
 # ── 模式三：形状普查 —— 每一条能查到的说法，载荷里有没有页面画不出来的字段 ──
@@ -889,6 +1342,7 @@ def main(argv: list[str]) -> int:
 
 def _dispatch(argv: list[str]) -> int:
     base, mode, i = DEFAULT_BASE, "--parity", 0
+    legacy, out = "http://127.0.0.1:8155", _GOLDEN
     while i < len(argv):
         a = argv[i]
         if a in _MODES:
@@ -900,18 +1354,38 @@ def _dispatch(argv: list[str]) -> int:
             base, i = argv[i + 1], i + 1
         elif a.startswith("--base="):
             base = a.split("=", 1)[1]
+        elif a == "--legacy":
+            if i + 1 >= len(argv):
+                print("--legacy 后面要跟 8155 的 URL", file=sys.stderr)
+                return 2
+            legacy, i = argv[i + 1], i + 1
+        elif a.startswith("--legacy="):
+            legacy = a.split("=", 1)[1]
+        elif a == "--out":
+            if i + 1 >= len(argv):
+                print("--out 后面要跟一个路径", file=sys.stderr)
+                return 2
+            out, i = Path(argv[i + 1]), i + 1
+        elif a.startswith("--out="):
+            out = Path(a.split("=", 1)[1])
         else:
-            print("只认 --parity / --falsify / --shapes / --walk / --base URL / --base=URL"
+            print("只认 --parity / --falsify / --shapes / --walk / --activation /"
+                  " --capture-activation / --base URL / --legacy URL / --out PATH"
                   "（本仓不认 --help，见铁律 9）", file=sys.stderr)
             return 2
         i += 1
     if mode == "--falsify":
         return mode_falsify()
+    if mode == "--capture-activation":
+        print("从 %s 采 golden" % legacy)
+        return mode_capture_activation(legacy, out)
     print("基址 %s" % base)
     if mode == "--shapes":
         return mode_shapes(base)
     if mode == "--walk":
         return mode_walk(base)
+    if mode == "--activation":
+        return mode_activation(base)
     return mode_parity(base)
 
 

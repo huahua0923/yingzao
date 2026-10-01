@@ -160,7 +160,8 @@ class FloorRecorder(SuRecorder):
         idx = [i for i, p in enumerate(self.parts)
                if p["kind"] == "wall" and not p["edgeCols"]
                and abs((p["z1"] - p["z0"]) - pad_th) < 1e-9]
-        exp = sum(len(f["rooms"]) for f in floors)
+        # 中庭开洞处的房间是**空间**（图上登记了面积、但不铺地垫）→ 不计入地垫期望
+        exp = sum(len(f["rooms"]) - len(f.get("atrium_holes") or []) for f in floors)
         if len(idx) != exp:
             raise VerifyError("地垫识别失败：命中 %d 块，楼层数据里共 %d 间房" % (len(idx), exp))
 
@@ -424,9 +425,20 @@ class FloorRecorder(SuRecorder):
         self.roof_key = ROOF
         self.anchors = {}
         for b, floor in enumerate(floors):
+            # ★ 2026-09-14：期望值要**跟着合成窗开关走**。原先写死
+            #   `玻璃 = len(windows) / 窗框 = 4×`，于是把 `G.INCLUDE_SYNTHETIC_WINDOWS`
+            #   关掉（c006：图纸不画窗、合成窗全是虚构，用户要求先不要窗）之后，
+            #   实得 0 != 应得 34 ⇒ 自检报"逐带锚点校验不通过 22 处、不写盘"。
+            #   这不是判据变松：窗口开着时，期望值逐字不变。
+            _nw = len(floor["windows"]) if G.INCLUDE_SYNTHETIC_WINDOWS else 0
+            # 中庭开洞处的房间是**空间**（楼板挖穿、不铺地垫）→ 地垫期望扣除。
+            # ★ 只扣**该层实际存在**的那些房号：过渡层（c006 F4）是借邻层几何挖的，
+            #   本层根本没有那间房，一个地垫都不该少（否则报「实得 30 != 应得 29」）。
+            _atr_nums = set(floor.get("atrium_room_nums") or [])
+            _n_atr = sum(1 for _r in floor["rooms"] if _r.get("number") in _atr_nums)
             want = {"楼板": 1, "柱": len(floor["columns"]),
-                    "玻璃": len(floor["windows"]), "窗框": 4 * len(floor["windows"]),
-                    "地垫": len(floor["rooms"])}
+                    "玻璃": _nw, "窗框": 4 * _nw,
+                    "地垫": len(floor["rooms"]) - _n_atr}
             got = {"楼板": slab_is_floor[b], "柱": col[b], "玻璃": gs[b],
                    "窗框": fr[b], "地垫": pad[b]}
             self.anchors["F%d" % b] = {"want": want, "got": got}

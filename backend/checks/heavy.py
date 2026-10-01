@@ -94,9 +94,15 @@ def _script_path(data_dir) -> Path:
     return Path(data_dir).resolve().parent / SCRIPT_REL
 
 
-def _hardcoded(src: str, rx) -> str | None:
+def _hardcoded(src: str, rx, group: str = "p") -> str | None:
+    """从源码里取一个写死的字面量。默认读名为 `p` 的组（B1 那两条正则用这个名）。
+
+    ★ `group` 必须能传：B5 要取的 `CRITERION_VERSION` 是个**数**，组名写成 `p` 就成了
+      「叫 p 的版本号」—— 而组名写错时 `re` 抛的是 `IndexError: no such group`，
+      屏幕上看着像正则没匹配上，真因是**取值这个名字对不上**。
+    """
     m = rx.search(src)
-    return m.group("p") if m else None
+    return m.group(group) if m else None
 
 
 def check_b1(rep: Report, data_dir, name: str, timeout_s: int = 600, **_kw) -> None:
@@ -230,9 +236,48 @@ def _emit(rep: Report, name: str, title: str, text: str, stdout: str,
                       "summary_row": {"error": row["errs"], "warn": row["warns"]}}
 
     if not groups and not clean:
+        # 报告体为空有**两种**成因，都是量具的正常形态 —— 而旧文案把两种都猜成"格式变了"，
+        # 等于把人派去找一个不存在的格式变更：
+        #   ① 本栋一条 finding 都没有 ⇒ 脚本写 `(无 ERROR/WARN)` ⇒ clean=True，不走这里；
+        #   ② finding **只有 INFO 级** ⇒ `fs` 非空 ⇒ 脚本**不写**那一句，而 INFO 写盘时按
+        #      约定滤掉（`if f.severity != "INFO" or verbose_all`）⇒ 剩一个空报告体。
+        # ② 实测存在：c010／c047 的唯一一条是 `[INFO] I9 f0 斜向墙段…(斜墙/切角合法, 登记)`。
+        # 判据不外推，只认两件实物：**脚本自己的汇总行**（`_summary_row`，与上面 xcheck 同源）
+        # ＋**报告自己写的逐层 柱/房 计数**（`_BBOX_RE`）。
+        bbox = [m for m in (_BBOX_RE.match(l) for l in text.splitlines()) if m]
+        row = _summary_row(stdout, name)
+        scope = ("；".join("f%s %d 柱 %d 房" % (m.group("floor"), int(m.group("cols")),
+                                              int(m.group("rooms"))) for m in bbox)
+                 if bbox else "（报告里没解析出逐层行）")
+        ev = {"report": report_p.name, "clean_line": False, "info_only": True,
+              "per_floor": scope, "summary_row": row,
+              "generated_unix": _stamp(report_p), "elapsed_s": elapsed}
+        if row and row.get("errs") == 0 and row.get("warns") == 0:
+            if bbox and all(int(m.group("cols")) == 0 and int(m.group("rooms")) == 0
+                            for m in bbox):
+                # ★ 别把它读成 PASS：柱/房类不变量**没有可检对象**，绿的不是"结构没问题"。
+                # 这与 A1/A6「台账为空」是**同一根因的两端**，所以这里点它的名。
+                rep.add(Finding("B1", title, Status.NOT_APPLICABLE,
+                                "每一层都是 **0 柱 0 房** ⇒ 柱/房类不变量"
+                                "（I1/I2/I3/I7/I8/I10/I18）**没有可检对象**；报告体为空是"
+                                "**结构性的**，不是「格式变了」。脚本自己的汇总行复核："
+                                "ERROR=0 WARN=0 状态=%s。★ 这不代表结构没问题，只代表这几条"
+                                "没对象可量（面积类 I4/I5/I6/I9/I11/I17 确已跑过且干净）；"
+                                "台账为什么是空的，看 A1/A6。逐层：%s" % (row.get("st"), scope),
+                                measure="I1–I18 告警条数", evidence=ev))
+                return
+            rep.add(Finding("B1", title, Status.PASS,
+                            "报告体为空，但**这不是格式变了**：本栋的 finding 只有 INFO 级"
+                            "（写盘时按约定滤掉，而 `fs` 非空 ⇒ 脚本不写 `(无 ERROR/WARN)`）。"
+                            "脚本自己的汇总行复核：ERROR=0 WARN=0 状态=%s。逐层：%s"
+                            % (row.get("st"), scope),
+                            measure="I1–I18 告警条数", evidence=ev))
+            return
         rep.add(unavailable("B1", title,
-                            "报告里既没有告警行、也没有『(无 ERROR/WARN)』一行 —— "
-                            "多半是格式变了，不猜"))
+                            "报告里既没有告警行、也没有『(无 ERROR/WARN)』一行，而脚本的"
+                            "汇总行**也没说本栋 0 错 0 警**（读到的汇总行=%s）—— 不猜。"
+                            "逐层：%s" % (row, scope),
+                            measure="I1–I18 告警条数", evidence=ev))
         return
 
     # 逐层逐不变量 —— 这就是"每修一层就分析"要的粒度
@@ -840,8 +885,14 @@ def check_b3(rep, data_dir, name: str, **_kw) -> None:
         import ezdxf
         msp = ezdxf.readfile(p.dxf, encoding=EX.ENCODING).modelspace()
         role_map = EX.layer_role_map(msp)
-        role_map.update(EX.LAYER_ROLE_OVERRIDE.get(name, {}))
-        labels = EX.read_labels(msp, role_map, EX.PURPOSE_DROP_AREA_LIKE.get(name))
+        # ★ 这两个覆盖必须走 `config/buildings.json`，**不许**直接读 `EX.LAYER_ROLE_OVERRIDE`
+        #   / `EX.PURPOSE_DROP_AREA_LIKE`。理由：抽取器已经改成先读配置、缺键才回落旧表，
+        #   而这里若还盯着旧表，用户一改配置就会「产物按新配置、本检查按旧表」——
+        #   两边分叉而不出声（本仓记过的「一个判断两份实现」）。配置是纯 JSON，
+        #   不依赖 ezdxf，所以走它不会把本条检查踢出 A 层。
+        import config_table as CTBL
+        role_map.update(CTBL.layer_role_override(name))
+        labels = EX.read_labels(msp, role_map, CTBL.purpose_drop_area_like(name))
     except Exception as ex:                       # noqa: BLE001
         rep.add(unavailable("B3", title, "读图失败：%s: %s" % (type(ex).__name__, ex),
                             measure=mz))
@@ -1249,3 +1300,451 @@ def check_b4(rep: Report, data_dir, name: str, **_kw) -> None:
                         "—— 可能是层带多切了，也可能是图纸面积表本身不全，需人看。"
                         % (r["n_model"], r["n_drawing"], labels),
                         measure=mz, evidence=ev))
+
+
+# ── B5：建好后墙级对账（audit_walls）──────────────────────────────────
+# 引擎在**仓根** `audit_walls.py`（不在 backend/ 下 —— 它同时是给人用的命令行工具）。
+# 与 B1/B3 同一条纪律：**只调它、读它的产物**，判据一行都不重写
+# （memory: one-judgement-many-implementations）。
+#
+# ## 为什么必须有一条"建好之后"的检查
+#
+# A/B1–B4 问的都是**台账内部**或**建之前**的事：A1–A9 问台账自洽，B1 问交付几何满足
+# 结构不变量，B2 问轮廓环有效，B3 问图上房号有没有落进台账，B4 问层数。
+# **没有一条拿"图纸"当裁判去问"这一段墙到底建了没有"** —— 这是结构性的：
+# B1 的 I1–I18 全部在**交付模型内部**成立（墙厚对、房间闭合、柱网齐），
+# 于是交付模型可以一整片墙都没建而 B1 全绿；B3 只对房号，不对墙线。
+# ⇒ B5 补的就是这一条：**图纸的墙线采样点 与 交付墙几何逐层对账**，两个方向都问 ——
+#   ① 图纸上有、交付里没有（漏墙）；② 交付里有、图纸任何图层上都找不到（多建/歪建）。
+#
+# ## 为什么每个方向各自还有"两档"，本层却一个都不算
+#
+# 见 `audit_walls.py` 文件头「① 的口径分解」「② 的口径分解」。一句话：参考集把 DXF 的
+# **弧弦化**了，于是**尺子自己**会造出一批假漏、假多（实测 c113 F0 的总账里 67.3% 是
+# 弦化造的）。判定必须看扣掉之后的档（① **真实档** / ② **E 类**），而**总账照样报出来**
+# —— 口径损失也要能被看见。本层**不做**这个分解，照抄引擎写在产物里的档与判定。
+#
+# ## 三件不许含糊的事（与 B1 逐条对应）
+#
+# 1. **产物必须是这一轮新写的**。同名的 `data/_meta/wall_audit/<楼>.json` 很可能是上一轮
+#    留下的，而"整栋崩了"的那条路径**根本不写文件**（`main()` 里 append 之后直接
+#    `continue`，跳过写盘）。只看"文件在不在"就会读到旧产物并给它一个绿灯
+#    （memory: resume-by-filename-stale-frames）。⇒ 比 mtime，没重写 ⇒ UNAVAILABLE。
+#    副作用要说明：本检查会覆写该 JSON（与全库跑同一份产物，内容确定性相同）。
+# 2. **量具指向别处不照跑**。`audit_walls.py` 把 `BASE`/`META` 写死在源码里，从源码读出来
+#    跟本次的 data_dir 比 —— 否则表面在检查 A 库、实际量的是 B 库，两边都不会报错
+#    （CLAUDE.md 铁律 16：量具坏了和被测对象是空的，在屏幕上长得一样）。
+# 3. ★ **产物自带的那把尺子的指纹，要对得上现在这一把**。产物里写了两样：
+#    `engine_sha12`（机械）与 `criterion_version`（手写的语义版本号）。
+#    第 1 条只证明"它是刚才写的"，**不证明"它是用现在这份代码写的"**：跑的时候引擎是
+#    子进程，import 的是**它启动那一刻**盘上的源码，而源码可能在另一条长跑任务开跑之后
+#    被改过（铁律 24：长跑任务锁住的是启动那一刻的源码）。⇒ 两个指纹都对；
+#    对不上就 UNAVAILABLE 并把两个值都打出来 —— **一份说不清是哪把尺子量的数不是结论**。
+
+WALL_SCRIPT_REL = "audit_walls.py"
+# `CRITERION_VERSION = 3` / `META = r"D:\..."`（`BASE` 复用 `_SRC_BASE_RE`）。
+_SRC_CV_RE = re.compile(r'^CRITERION_VERSION\s*=\s*(?P<n>\d+)', re.M)
+_SRC_META_RE = re.compile(r'^META\s*=\s*r?["\'](?P<p>[^"\']+)["\']', re.M)
+
+#: 本检查**自己**的产物目录（`--probe` 的落点）。**不在 `data/` 里**，两条理由：
+#:   ① 门禁不许改写被测对象 —— 引擎默认会把产物写进 `data/_meta/wall_audit/<楼>.json`
+#:      并重写该栋 `data/buildings/<楼>/audit/index.html`。实测（2026-09-24）：本检查在
+#:      c001/c103/c113 上跑过之后，那三栋的视觉页逐层印「未出图」、`<img>` 从 6/6/5 变成
+#:      **0/0/0**，而 PNG 就躺在旁边。**量一次、抹一次**，而它自己毫无察觉。
+#:   ② `data/_meta/` 是 `.gitignore` 的例外（要进 git），而这 95 份是**每跑一次就重写**
+#:      的中间产物 —— 放进 git 只会让每次提交都拖着几 MB 的噪声。
+#: ⇒ `_scratch/probe-out/` 是本仓既有的「一次性探针产物」约定（`.gitignore:40` 明确忽略）。
+B5_PROBE_REL = os.path.join("_scratch", "probe-out", "b5")
+
+# 引擎的档 → 本层的档。**用表，不用 if 链**：表里没有的档一律报 UNAVAILABLE 并点名，
+# 不许静默跳过（跳过一个不认识的档 = 那一层从没被检查过，而屏幕上它与"合格"同形）。
+_ST_B5 = {"PASS": Status.PASS, "WATCH": Status.WATCH, "GAP": Status.GAP,
+          "UNAVAILABLE": Status.UNAVAILABLE, "NOT_APPLICABLE": Status.NOT_APPLICABLE}
+_B5_SEV = {Status.GAP: 3, Status.WATCH: 2, Status.UNAVAILABLE: 1,
+           Status.PASS: 0, Status.NOT_APPLICABLE: 0}
+# 分布池之外的层（src_m 太小，比值没有意义）**照判、但要说出来** —— 引擎自己也是这么分的。
+_B5_POOL_WATCH = 5.0
+
+# 引擎自己的控制台汇总：`=== 结论（11 层，32s）===` 与下一行的 `  GAP 1、PASS 10`。
+_B5_CONCL_RE = re.compile(r"^===\s*结论（(?P<n>\d+)\s*层")
+_B5_DIST_RE = re.compile(r"^\s{2}(?P<body>[A-Z_]+ \d+(?:、[A-Z_]+ \d+)*)\s*$")
+
+
+def _b5_stdout_dist(stdout: str):
+    """从引擎的控制台汇总里读它**自己**算的层数与档位分布 → (dist, n)。
+
+    为什么值得读：产物（JSON）是我们读的那一份，汇总行是引擎自己打印的那一份 ——
+    同一个东西的两个来源。不一致就得说出来（铁律 18：一致证明不了它是对的；
+    而**不一致**一定说明有一边坏了）。读不到就回 `(None, None)`，**不猜**。
+    """
+    n, dist = None, None
+    for line in (stdout or "").splitlines():
+        m = _B5_CONCL_RE.match(line)
+        if m:
+            n = int(m.group("n"))
+            continue
+        if n is None or dist is not None:
+            continue
+        m = _B5_DIST_RE.match(line)
+        if not m:
+            continue
+        d = {}
+        for piece in m.group("body").split("、"):
+            k, _sp, v = piece.rpartition(" ")
+            st = _ST_B5.get(k.upper())
+            if st is None or not v.isdigit():
+                return None, None          # 认不出一个词 ⇒ 整条不采用，不半用
+            d[st.value] = d.get(st.value, 0) + int(v)
+        dist = d
+    return dist, n
+
+
+def check_b5(rep: Report, data_dir, name: str, timeout_s: int = 600, **_kw) -> None:
+    """建好后墙级对账：① 漏墙 ② 多建/歪建 ③ 曲要素（调 `audit_walls.py`，读它的产物）。"""
+    title = "建好后墙级对账（①漏墙 ②多建/歪建 ③曲要素）"
+    mz = ("墙级对账**占比**：① 图纸墙线采样点离交付墙 >0.40m 的**真实档**占比"
+          "（已扣掉参考集把弧弦化造出来的那批）；② 交付墙边线 0.35m 内**任何图层**都无"
+          "对应物的占比；③ 曲要素未建占比。三个都是占比，不是面积。")
+    root = Path(data_dir).resolve().parent
+    script = root / WALL_SCRIPT_REL
+    if not script.is_file():
+        rep.add(unavailable("B5", title, "找不到 %s" % script, measure=mz))
+        return
+
+    # ── ① 先从源码确认它量的是同一棵树（第 2 条）──────────────────
+    try:
+        src = script.read_text(encoding="utf-8", errors="replace")
+    except OSError as ex:
+        rep.add(unavailable("B5", title, "读不到脚本源码：%s" % ex, measure=mz))
+        return
+    hard_base = _hardcoded(src, _SRC_BASE_RE)
+    meta_dir = _hardcoded(src, _SRC_META_RE)
+    cv_src = _hardcoded(src, _SRC_CV_RE, "n")
+    if not (hard_base and meta_dir and cv_src):
+        rep.add(unavailable("B5", title,
+                            "脚本里没找全 BASE / META / CRITERION_VERSION（格式变了）"
+                            "—— 不猜，如实报量不到", measure=mz))
+        return
+    want = str(Path(data_dir).resolve() / "buildings")
+    if os.path.normcase(str(Path(hard_base).resolve())) != os.path.normcase(want):
+        rep.add(unavailable("B5", title,
+                            "量具指向别处：audit_walls.py 的 BASE 写死为 %s，"
+                            "而本次要检查的是 %s —— 照跑就成了「在 A 库上量、报 B 库的数」"
+                            % (hard_base, want), measure=mz))
+        return
+
+    # ── ② 现在这把尺子的指纹（第 3 条的上半）──────────────────────
+    for pth in (root, root / "backend"):
+        if str(pth) not in sys.path:
+            sys.path.insert(0, str(pth))
+    try:
+        from backend.state.roster import sha12 as _sha12   # 指纹规则全仓只有这一份
+        now_sha = _sha12(script.read_bytes())
+    except Exception as ex:                                # noqa: BLE001
+        rep.add(unavailable("B5", title,
+                            "取不到指纹规则 backend.state.roster.sha12：%s: %s"
+                            % (type(ex).__name__, ex), measure=mz))
+        return
+
+    # ── ③ 跑它（**`--probe`**：产物写到本检查自己的目录，被测栋一个字节都不动）──
+    # ★ 为什么不是 `--no-overlay`：那个开关少做的是**图**，数**照样写进被测栋的目录**
+    #   （`data/_meta/wall_audit/<楼>.json` + 该栋 `audit/index.html`）。门禁每栋跑一次
+    #   ⇒ 量一次就把被测栋的视觉页抹一次（实测损坏见 B5_PROBE_REL 那段）。
+    #   名字很像、后果差在最要紧的地方：**量具不许改变被测对象**。
+    probe_dir = root / B5_PROBE_REL
+    try:
+        probe_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as ex:
+        rep.add(unavailable("B5", title, "建不了探针产物目录 %s：%s" % (probe_dir, ex),
+                            measure=mz))
+        return
+    report_p = probe_dir / ("%s.json" % name)
+    before = _stamp(report_p)
+    t0 = time.time()
+    try:
+        p = subprocess.run([sys.executable, "-u", str(script), name, "--probe"],
+                           cwd=str(script.parent), timeout=timeout_s,
+                           capture_output=True, encoding="utf-8", errors="replace",
+                           env=dict(os.environ, PYTHONIOENCODING="utf-8",
+                                    GYM3D_WALL_AUDIT_PROBE_OUT=str(probe_dir)))
+    except subprocess.TimeoutExpired:
+        rep.add(unavailable("B5", title,
+                            "%d 秒没跑完就掐了。**这不等于它有问题**，只是这一轮没量成"
+                            % timeout_s, measure=mz))
+        return
+    except OSError as ex:
+        rep.add(unavailable("B5", title, "起不了子进程：%s: %s" % (type(ex).__name__, ex),
+                            measure=mz))
+        return
+    elapsed = round(time.time() - t0, 1)
+
+    # ── ④ 产物必须是这一轮新写的（第 1 条）────────────────────────
+    # ★ **新鲜度先判、退出码后判**，顺序不能反：`audit_walls` 的退出码是**它自己的
+    #   结论编码**，不是崩溃信号 —— `0` 全过 / `1` 有 GAP / `2` 有 UNAVAILABLE 层或用法错。
+    #   拿"退出码非 0 ⇒ 崩了"去拦，会把**每一次真检出 GAP 都变成"量具崩溃"**
+    #   （第一版就是这么写的，实测 c057 的曲墙 GAP 当场被读成 UNAVAILABLE）。
+    #   而"文件没被重写"是**唯一**能把「跑成了」与「没跑成」分开的实物判据。
+    after = _stamp(report_p)
+    if after is None or after == before:
+        crashed = [ln for ln in (p.stdout or "").splitlines() if "整栋崩了" in ln]
+        why = ("整栋审计崩了：%s；" % _tail(crashed[0], 200)) if crashed else ""
+        rep.add(unavailable("B5", title,
+                            why + "跑完了却没重写 %s（本轮 before=%s after=%s，退出码 %d）"
+                            "%s；不读旧产物，如实报量不到"
+                            % (report_p.name, before, after, p.returncode,
+                               ("；stderr: " + _tail(p.stderr, 200)) if p.stderr else ""),
+                            measure=mz))
+        return
+    # 产物是新的 ⇒ 这一栋真的量过了。退出码 2 还可能是「用法错」，但那种情况**不会**
+    # 走到这里（`main()` 在认不出楼名时 return 2 且一个字节都不写）—— 于是这里剩下的
+    # 只有一种：引擎自己报了 UNAVAILABLE 的层。那批层会按 UNAVAILABLE 逐层上报，
+    # 不在这里再吞一层；只在整栋那条里带上退出码，便于人对账。
+
+    try:
+        d = json.loads(report_p.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError) as ex:
+        rep.add(unavailable("B5", title,
+                            "产物写出来了却读不到/解析不了：%s: %s"
+                            % (type(ex).__name__, ex), measure=mz))
+        return
+    if d.get("name") != name:
+        rep.add(unavailable("B5", title,
+                            "产物里写的是 %s，而本次要查的是 %s —— 读串了，不采用"
+                            % (d.get("name"), name), measure=mz))
+        return
+
+    # ── ⑤⑥⑦ 尺子身份 → 产物 → Findings（**这一半与跑子进程分开，好让刑具能单独驱动它**）──
+    _b5_emit(rep, d, name, title, mz, now_sha, cv_src,
+             artifact=report_p.name, artifact_unix=after, elapsed=elapsed,
+             retcode=p.returncode, eng_stdout=p.stdout)
+
+
+def _b5_emit(rep: Report, d: dict, name: str, title: str, mz: str,
+             now_sha: str, cv_src: str, *, artifact: str, artifact_unix: float | None,
+             elapsed: float, retcode: int, eng_stdout: str) -> None:
+    """已读进来的产物 dict → Findings。**不碰进程、不碰磁盘**（刑具就靠这一层能单独驱动）。
+
+    ★ 为什么要切开：下面三条判据（尺子身份对不上、产物里没有层、档位不认识）在正常
+      跑一次里**基本到不了** —— 同一轮里引擎刚写、刚用现在这份源码写，指纹当然一致。
+      它们防的是**竞态与将来的格式变**（铁律 24：长跑任务锁住的是启动那一刻的源码）。
+      一条"到不了的判据"如果只能靠正常跑验证，就等于永远没验过
+      （memory: vacuous-test-assertions）⇒ 把它切成纯函数，用**造出来的产物**当夹具。
+    """
+    # ── ⑤ 尺子身份（第 3 条的下半）：两个指纹都要对 ─────────────────
+    got_sha, got_cv = d.get("engine_sha12"), d.get("criterion_version")
+    if got_sha != now_sha:
+        rep.add(unavailable("B5", title,
+                            "产物是**另一把尺子**量的：产物写 engine_sha12=%s，"
+                            "而盘上这份 %s 现在是 %s —— 这轮源码与产物对不上"
+                            "（多半是长跑期间改过代码），不把这份数当结论"
+                            % (got_sha, WALL_SCRIPT_REL, now_sha), measure=mz))
+        return
+    if str(got_cv) != str(cv_src):
+        rep.add(unavailable("B5", title,
+                            "判据**语义**版本对不上：产物写 v%s，源码写 v%s —— "
+                            "分组/量纲/阈值/排除规则可能变过，产物是按旧口径量的"
+                            % (got_cv, cv_src), measure=mz))
+        return
+
+    # ── ⑥ 产物 → Findings ─────────────────────────────────────────
+    floors = d.get("floors") or []
+    if not floors:
+        rep.add(unavailable("B5", title,
+                            "产物里一层都没有（%s）—— 这是「没量到」，不是「每层都合格」"
+                            % artifact, measure=mz))
+        return
+
+    bad, unknown, dist = [], [], {}
+    for r in floors:
+        st = _ST_B5.get(str(r.get("status") or "").upper())
+        if st is None:
+            # 不认识的档**照样上报**（点名原样值），按 UNAVAILABLE 处置 —— 不猜它是好是坏。
+            unknown.append("F%s=%s" % (r.get("F"), r.get("status")))
+            st = Status.UNAVAILABLE
+        dist[st.value] = dist.get(st.value, 0) + 1
+        if st in (Status.GAP, Status.WATCH, Status.UNAVAILABLE):
+            bad.append((r, st))
+
+    ev_common = {"artifact": artifact, "criterion_version": got_cv,
+                 "engine_sha12": got_sha, "generated_unix": artifact_unix,
+                 "elapsed_s": elapsed, "engine_exit": retcode,
+                 "dist": dist, "n_floors": len(floors)}
+    pool = [r for r in floors if r.get("in_pool")]
+
+    # ── ⑦ 与引擎自己的控制台汇总对账（两把量具，不一致时说出来，不挑一个信）──
+    # 产物是我们读的，控制台汇总行是引擎自己算的 —— 同一个东西的两份来源。
+    # 不一致就说明"读的那份"或"写的那份"有一边不对，先别信结论
+    # （memory: criterion-invalidated-by-later-change / 铁律 18）。
+    # 对不上（格式变了）**不报 unavailable**：这里只是第二道尺子，量不到它不影响主结论；
+    # 但要把"没对到"写进 evidence，不许让它静默消失。
+    eng_dist, eng_n = _b5_stdout_dist(eng_stdout)
+    xcheck = None
+    if eng_dist is not None:
+        if eng_n != len(floors) or eng_dist != dist:
+            xcheck = {"artifact": dist, "artifact_n": len(floors),
+                      "stdout": eng_dist, "stdout_n": eng_n}
+    ev_common["engine_stdout_dist"] = eng_dist
+
+    # 逐层：需看的层各一条（干净层不逐行刷屏，它仍在产物与整栋计数里）
+    for r, st in bad:
+        rep.add(Finding("B5", title, st, _tail(r.get("why") or "(引擎没写 why)", 400),
+                        floor=r.get("F") if isinstance(r.get("F"), int) and r["F"] >= 0
+                        else None,
+                        measure=mz,
+                        evidence={"miss_real_pct": r.get("miss_real_pct"),
+                                  "miss_pct": r.get("miss_pct"),
+                                  "miss_chord_m": r.get("miss_chord_m"),
+                                  "stray_any_pct": r.get("stray_any_pct"),
+                                  "stray_pct": r.get("stray_pct"),
+                                  # ★ `curve_miss_pct` **只作证据、不进判定** —— 这不是漏了。
+                                  # 2026-09-25 全库普查（95 份产物 / 413 层，脚本
+                                  # `_scratch/_b5_curve_scan.py`）：有 curve 值的 28 层里，
+                                  # 7 层是 GAP（**全部** pair_curved=True，why 里明写
+                                  # 「曲墙 19%（7.9/40.9m）没建」）、21 层是 WATCH（**全部**
+                                  # pair_curved=False ⇒ 引擎按既有约定「不在识别范围内、
+                                  # 不计作漏」）；**status=PASS 且 curve_miss_pct>0 的层数 = 0**。
+                                  # ⇒ 曲要素这一维**引擎自己已经折进 status 了**。在这里再拿它
+                                  #   判一次 = 同一个判断的第二份实现（memory:
+                                  #   one-judgement-many-implementations），而且会在
+                                  #   pair_curved=False 那一档造出 c041/c026/c079 那种 ~千% 的假阳性。
+                                  #   要重开这个念头，先重跑上面那个普查脚本，别凭印象改。
+                                  "curve_miss_pct": r.get("curve_miss_pct"),
+                                  "in_pool": r.get("in_pool"),
+                                  "notes": (r.get("notes") or [])[:_MAX_SAMPLES],
+                                  **ev_common}))
+    # 整栋一条
+    if not bad:
+        rep.add(Finding("B5", title, Status.PASS,
+                        "墙级对账 %d 层全过（分布池 %d 层）" % (len(floors), len(pool)),
+                        measure=mz, evidence=ev_common))
+    else:
+        worst = Status.GAP if dist.get("gap") else (
+            Status.WATCH if dist.get("watch") else Status.UNAVAILABLE)
+        hot = [r for r in pool if (r.get("miss_real_pct") or 0) >= _B5_POOL_WATCH]
+        rep.add(Finding("B5", title, worst,
+                        "%d/%d 层需看（分布池 %d 层里真实档漏墙 ≥%.0f%% 的 %d 层）"
+                        "；最该先看：%s"
+                        % (len(bad), len(floors), len(pool), _B5_POOL_WATCH, len(hot),
+                           _tail(max(bad, key=lambda t: _B5_SEV.get(t[1], 0))[0]
+                                 .get("why") or "", 220)),
+                        measure=mz,
+                        evidence={**ev_common,
+                                  "bad_floors": ["F%s" % r.get("F") for r, _s in bad],
+                                  "pool_n": len(pool),
+                                  "pool_miss_real_ge5": ["F%s=%.1f%%"
+                                                         % (r.get("F"),
+                                                            r.get("miss_real_pct") or 0)
+                                                         for r in hot]}))
+    if unknown:
+        rep.add(Finding("B5", "产物里有不认识的档", Status.UNAVAILABLE,
+                        "引擎报了本层不认识的 status：%s —— 按「没量成」处置，"
+                        "不猜它是好是坏（新档要么补进 _ST_B5，要么当场红）"
+                        % "、".join(unknown), measure=mz, evidence=ev_common))
+    if xcheck:
+        rep.add(Finding("B5", "产物与引擎汇总口径不一致", Status.WATCH,
+                        "产物里 %d 层、档位 %s；而引擎自己打印的是 %d 层、档位 %s —— "
+                        "同一个东西的两个来源对不上，先别信结论"
+                        % (xcheck["artifact_n"], xcheck["artifact"],
+                           xcheck["stdout_n"], xcheck["stdout"]),
+                        measure=mz, evidence={**ev_common, "xcheck": xcheck}))
+
+
+# ── B6：同一个房号被标注了两次（同一层在图上被画了两份）──────────────────
+# 读数与判据在 dupe_labels.py（单一实现，独立脚本 _scratch/_b6_probe.py 也 import 它，
+# 不另抄一份）。与 B4 同一条纪律：这里**只翻译成 Finding**，判据一行都不重写。
+def check_b6(rep: Report, data_dir, name: str, **_kw) -> None:
+    """图上同一层被画了两份，而 `x_range` 把两份都收了进来。
+
+    为什么这条要有：2026-09-29 量 c011（银杏体育馆）—— F0 的平面在图上被画了**两遍**
+    （主图在左列 x≈1356930，右列又单独画了一张首层平面图 x≈1536870，相隔
+    **180000 mm** 整），而 `x_range` 宽 360 m，把两列都收了进来。**四条既有不变量
+    报的是同一个根因的四个后果**：
+
+      · I8  「F1/F2/F3 几何中心距 F0 偏移 180.8 / 181.8 / 180.0 m」
+      · I1/I10 「F0 柱在自身轮廓外 179.7 m」61/61
+      · 缺陷 A：`11-01-22`/`11-01-23` 没用途 —— 那两条错层文本正是**右列独有**
+      · F0 的房号在图上 44 条 = 右列 23 + 左列 21，**逐号同名**
+
+    `B1`/`B3` 量的是**后果**（几何对不上、图上有的台账没有），本条量**成因**。
+    ★ 只量**模型收进来的范围**（`in_floor_x_range`）—— 右列本来就该被排除，
+      排除它正是修法；所以修完本条应转绿。x_range 之外的重复另计一档证据，不判。
+    """
+    from . import dupe_labels as DL
+
+    title = "同一房号被标注两次（同层画了两份）"
+    mz = ("量法：取**模型收进来的范围**（`in_floor_x_range`）内、被抽取器判成房号的"
+          "标注，按归一化后的号分组；**同一个号出现 ≥2 次、落在同一个层带、且同层内两处"
+          "间距 > 该栋的 `offset`（层带高度）** ⇒ GAP（整层画了两份）。"
+          "同层有重号但间距 ≤ `offset` ⇒ WATCH（一间标两遍，或两个房间共用一个号 —— "
+          "房号在一层内必须唯一）。跨层同名是第三件事（房号里嵌层号），只报不判。"
+          "量的是**模型会收进来什么**，不是图上有什么。")
+
+    try:
+        r = DL.diagnose(data_dir, name)
+    except Exception as ex:                      # noqa: BLE001
+        rep.add(unavailable("B6", title, "量具自己崩了：%s: %s" % (type(ex).__name__, ex)))
+        return
+
+    out = r.get("outcome")
+    if out in ("unreadable", "no_labels"):
+        rep.add(unavailable("B6", title, r.get("why") or "量不到", measure=mz))
+        return
+
+    ev = {k: r.get(k) for k in ("dxf", "x_range", "offset", "n_number_labels",
+                                "n_in_frame", "n_out_of_frame", "n_distinct",
+                                "n_dups", "n_dups_same_floor", "n_dups_cross_floor",
+                                "n_dups_same_floor_nonnum", "n_dups_over",
+                                "shapes", "worst", "worst_same_floor", "worst_nonnum")}
+
+    # 「不含数字」的同层重号不是房号式文本（`天台`/`花坛` 那种），归 J-A 管；
+    # 本条不判它们，但**必须让它们出声**，否则「同层重号 3 个」里那 2 个会永远匿名。
+    _nn = r.get("n_dups_same_floor_nonnum") or 0
+    _nn_clause = ("" if not _nn else
+                  "　另有 %d 个同层重号**不含数字**（`%s` 等）—— 那些不是房号式文本，"
+                  "是抽取器把别的东西判成了房号（归 J-A 管，本条不判）。"
+                  % (_nn, (r.get("worst_nonnum") or {}).get("number")))
+    # `floor_of` 给 None 时，「同层」的含义是「同在**未归属**那一桶」—— 必须说出来，
+    # 不能让它读成「某个已知层」（实测 c046 就是这一种）。
+    _fl_clause = ("" if (r.get("worst_same_floor") or {}).get("floor_known", True) else
+                  "　★ 这两条**都不属于任何层带**（`floor_of` 给 `None`）—— 「同层」在这里"
+                  "的意思是「同在未归属的那一桶」，不是同一个已知层。")
+    if out == "ok":
+        # ★ 这句只许说**同层**那一侧的事。先前它印的是 `n_dups`（含跨层同名），却配了
+        #   「同层内间距都不超过层带高度」—— 对 c006 就是**假的**（它那一条跨层的
+        #   130508.8 > 同一句里印出的 offset 130118）。判词挂错量 = 铁律 44/146。
+        rep.add(Finding("B6", title, Status.PASS,
+                        "图幅内 %d 条房号标注、%d 个不同的号 —— **同一层内**没有哪个号被标"
+                        "在不止一处。%s"
+                        % (r["n_in_frame"], r["n_distinct"],
+                           ("（另有 %d 个号跨层同名 —— 房号里嵌层号，不属本条）"
+                            % r["n_dups_cross_floor"]) if r.get("n_dups_cross_floor") else ""),
+                        measure=mz, evidence=ev))
+        return
+
+    if out == "near":
+        w = r.get("worst_same_floor") or {}
+        rep.add(Finding("B6", title, Status.WATCH,
+                        "**同一层里有 %d 个号被标在不止一处**，但同层内最大间距只有层带高度"
+                        "的 %.2f 倍（≤ 1）—— 够不到「整层画了两份」的门槛。最大的是 `%s`，"
+                        "同层内相距 %.0f mm（x 落在 %s）。"
+                        "⇒ 房号在一层内必须唯一，所以这里要么**同一间房被标了两遍**（无害），"
+                        "要么**两个不同房间共用一个号**（台账里房号会重）。"
+                        "本条只把它摆出来，不定性；分档不改 GAP 的判法。%s%s"
+                        % (r["n_dups_same_floor"], w.get("ratio", 0.0), w.get("number"),
+                           w.get("dist", 0.0), w.get("xs"), _nn_clause, _fl_clause),
+                        measure=mz, evidence=ev))
+        return
+
+    w = r.get("worst_same_floor") or r.get("worst") or {}
+    rep.add(Finding("B6", title, Status.GAP,
+                    "**同一层里有 %d 间房被标了两次**（另有 %d 个号同层有重号但没越界）——"
+                    "最大的是 `%s` ×%d，同层内相距 %.0f mm（x 落在 %s），"
+                    "是该栋层带高度 %.0f mm 的 **%.2f 倍**。"
+                    "⇒ 图上这一层被画了两份，而 `x_range` 把两份都收了进来，"
+                    "该层的几何/房间会跨两处（B1 的 I8/I1/I10 报的就是它的后果）。%s%s"
+                    % (r["n_dups_over"],
+                       max(0, r["n_dups_same_floor"] - r["n_dups_over"]),
+                       w.get("number"), w.get("n", 0), w.get("dist", 0.0),
+                       w.get("xs"), r["offset"], w.get("ratio", 0.0),
+                       _nn_clause, _fl_clause),
+                    measure=mz, evidence=ev))

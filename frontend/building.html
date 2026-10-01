@@ -13,6 +13,10 @@
   #bar select:focus { outline: none; border-color: #33ff99; }
   #bar #bname { color: #8fe0a8; font: 600 14px "Microsoft YaHei", sans-serif; margin-left: 6px;
                 text-shadow: 0 0 6px rgba(0,0,0,.6); white-space: nowrap; }
+  /* 生成时间。**推算值必须看起来就不一样** —— 它是从产物 mtime 反推的，不是生成时刻。
+     同字号压暗 + 虚线底边，而不是只换个词，免得"（推算）"两个字被一眼略过去。 */
+  #bar #bname .gen { font-weight: 400; font-size: 12.5px; color: #7d8a99; cursor: help; }
+  #bar #bname .gen-approx { color: #8a7f63; border-bottom: 1px dashed #8a7f63; }
   #hint { position: fixed; left: 14px; top: 44px; color: #9aa0b5; font: 13px/1.7 "Microsoft YaHei", sans-serif;
           pointer-events: none; user-select: none; }
   #hint b { color: #dfe3f0; }
@@ -94,6 +98,7 @@
   <button id="purposeToggle" class="active">用途配色 ✓</button>
   <button id="labelToggle">标注 ✗</button>
   <button id="legendToggle" class="active">图例 ✓</button>
+  <button id="srcToggle" title="交付楼层 = 本页从 data/floors/*.json 现算的这座楼；SU 规格 = SketchUp 里那座楼真实存在的那几件（data/su/&lt;楼&gt;.json）">数据源：交付楼层</button>
 </div>
 <div id="labelLayer"></div>
 <div id="legend"></div>
@@ -133,11 +138,48 @@
     </div>
   </details>
 </div>
+<!--
+  ★ three 走**仓内** `frontend/site/vendor/three/`，不再走 unpkg CDN。
+    本仓记过这笔账（`frontend/site/building.html:8-9`）：「查看器硬依赖 CDN」，
+    而它是**断网/内网直接白屏**。这个页面现在挂在管理进程（8140）的根上，
+    与 `/site/` 同一个进程，所以那份 vendor 直接可用，不必各自一份。
+
+  ★ 路径是**根绝对**（`/site/vendor/...`）而不是相对（`./vendor/...`）：
+    本页挂在**根级** `/building.html`，相对路径会解析成 `/vendor/...` —— 那里没有东西。
+    先例 `frontend/site/building.html` 用的是相对，因为那个页面就服务在 `/site/` 下。
+
+  ★ 用 `.min` 那一对，两个文件**成对**搬：`three.module.min.js` 内部
+    `from"./three.core.min.js"` —— 少一个就是「模块能解析、一 import 就 404」。
+    vendor 里 `build/` 下恰好只有这两个 `.min`，与非压缩版不是同一份。
+
+  ★ 这是一次**跨版本升级**：`0.160.0 → 0.185.1`（与 `node_modules`、与前台同一份）。
+    升级不是"顺手"：旧版已不再从 CDN 取得到同一个行为，而两处各用一版迟早分叉。
+    ★ **升级后画面确实变了，已量过并接受**（改前/改后同视角截图在
+      `_scratch/_p3_before_lihua.png` / `_p3_after_lihua.png`，比对工具
+      `_scratch/_p3_visual_diff.py`）：
+      · 不变的：HUD 文字**逐字符相同**（5694 字，同一栋同一层同样 118 间）、
+        非背景像素面积差 **0.24%**（相机与几何没动，差的是边缘抗锯齿）；
+      · 变了的：差异像素 16.26%、平均色差 13.09/765 —— 观感是**更亮、更平**，
+        每层之间那道阴影分界线明显变淡。
+      · 根因在 `RoomEnvironment.js` 自己身上（r160→r185 的两处改动，方向一致）：
+        ① 主灯 `PointLight` 旧版写 `if (renderer !== null && renderer._useLegacyLights
+           === false) intensity = 900`，而本页调的是 `new RoomEnvironment()` —— **没传
+           renderer** ⇒ 落到 legacy 那档 **5**；新版写死 **900**。
+        ② 面光的材质由 `MeshBasicMaterial` + `color.setScalar(i)` 换成
+           `MeshLambertMaterial({color:0, emissive:白, emissiveIntensity:i})`（源码注 `#31348`）。
+      · **为什么不把旧观感"修回去"**：那个偏暗的样子来自上一条那个**少传的 renderer**
+        （RoomEnvironment 的形参就是给这个用的，旧版查到 renderer 为 null 就退回 legacy 值），
+        属于**偶然落进的代码分支**，不是有人设计过的配色。追着它补一个系数，就是
+        对着 three 的内部实现写死一个魔法数 —— 下次升级还会坏，而坏法不会报错。
+      · 于是这里留的是**一次显式的接受**（数字 + 两张图 + 根因），不是"没注意到"。
+
+  ★ importmap 必须在**任何** module 脚本之前：浏览器解析第一个 module 前就定下表了。
+-->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "/site/vendor/three/build/three.module.min.js",
+    "three/addons/": "/site/vendor/three/examples/jsm/"
   }
 }
 </script>
@@ -167,6 +209,7 @@ let LAYER_HEIGHT = 4.2;       // 层高(m)，由 spec.floor_h 覆盖
 //   ?purpose=0   逐位复现改动前的三分支配色 ★ 这就是回归的 A/B 杠杆（不是调试残留，别删）
 //   ?labels=1    打开标注（默认关：用户定的"点一下才显示"）
 //   ?legend=0    关图例；?label_min=25 改标注最小面积；?building=c054 按名直开某一栋
+//   ?su=1        改画 SU 规格（data/su/<楼>.json，即 SU 建体吃的那份）；没有这份规格的楼会**明说**载入失败，不回退
 // 放在这里而不是靠近使用点：下面 L1181 附近的 ?building= 初始化也要读 QS。
 const QS = new URLSearchParams(location.search);
 const qsFlag = (k, dflt) => {
@@ -184,6 +227,23 @@ let labelMax = 60;
 let geometryBuilding = null;
 let buildToken = 0;           // 每发起一次切楼 +1
 let builtToken = -1;          // 每次 rebuild 落地后 = 当时的 buildToken（两者相等 ⇒ 眼前这栋就是选中的那栋）
+
+// ---------- SU 规格分支（?su=1）----------
+// 默认那条路画的是**本页用 JS 重实现**的建模（读 data/floors/*.json + spec.json 现算墙/窗/门）；
+// 这条路画的是 SketchUp 里那座楼**真实存在的那 N 件**——规格就是 SU 建体时吃的那一份
+// （sha256 与 su_deploy.sh 投递到 SU 的那一份逐位相同，见 data/su/_meta.json），颜色也取自 SU 自己的材质。
+// ⇒ 同一栋楼的**两种数据源**，不是两种画法：SU 侧「每层可解开 + 每间用途可见」在这条路上是原生的。
+//   ?su=0（默认）走原路，?su=1 走这条路；两条路互斥，默认路径的行为一个字节都不动。
+// ★ let 而不是 const：工具条上那个「数据源」按钮要能在两条路之间切（切 = 把这一栋重载一遍）。
+//   切的同时会写回地址栏（?su=1 / 去掉它）—— 让眼前这一屏可分享、可复现，也免得有人以为
+//   "SU 的数据"只存在于某个手输的 URL 里。
+let suMode = qsFlag('su', false);
+let builtSource = null;     // 上一次落地的几何来自哪条路（'su' | 'floors'）；切数据源时"同一栋"也得重载
+let suSpec = null;          // data/su/<楼>.json 的解析结果（meta + parts）
+let suSha = null;           // 规格 sha256 的**前 16 位**；非安全上下文算不出 ⇒ 保持 null，显示 '—'（不许伪造）
+let suBytes = 0;            // 规格字节数（照原样报，不换算）
+const suWallMats = [];      // SU 的墙材质：颜色逐面烘在顶点上 ⇒ 换不掉材质，只能改这一个材质本身
+const suExtraGroups = [];   // 整栋尺度的那组（屋顶/场地）：跟着 roofMeshes 在浏览单层时一起隐藏
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x171a23);
@@ -250,6 +310,20 @@ function roomMaterial(hex) {
   }
   return m;
 }
+
+// ---------- SU 规格件的材质（?su=1；颜色逐面烘在顶点上）----------
+// SU 的件**颜色是逐面上出来的**：外皮立面色、内皮室内色、顶底盖一个色（spec 的 cap / edgeCols）。
+// 用**顶点色**承载它：ExtrudeGeometry 是**非索引**的（每三角自带 3 个顶点），逐面上色 = 给这 3 个顶点
+// 写同一个颜色。比「按 materialIndex 分组 + 材质数组」少一层机关，也顺带避开 r160 Raycaster 交点里
+// 没有 materialIndex 那个坑（见 splitWallFaces 的注释）；材质只有 4 个，件数再多也不涨材质数。
+// cap/edgeCols 是 sRGB 十六进制串：`new THREE.Color(hex)` 在本页的色彩管理下会转成线性工作空间，
+// 正是 color 属性该装的数（不需要再手动换算）。
+const suMatWall = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.85 });
+const suMatOpaque = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9 });
+const suMatFrame = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.45, metalness: 0.25 });
+const suMatGlass = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.06, metalness: 0.05,
+  transparent: true, opacity: 0.6, depthWrite: false, emissive: 0x223a4d, emissiveIntensity: 0.6 });
+suWallMats.push(suMatWall);
 
 // 墙体透明：半透明看穿内部（区别于「墙体 ✓」的完全隐藏）
 let wallsTransparent = false;
@@ -623,7 +697,7 @@ scene.add(shellGroup);
 const shellFloorGroups = [];
 const floorGroups = [];
 const wallMeshes = [];
-const roofMeshes = [];   // 屋面板/女儿墙：浏览单层时隐藏，看进楼内
+const roofMeshes = [];   // 屋面板/女儿墙：浏览单层时隐藏，看进楼内（?su=1 时屋顶/场地那组也收到这里）
 const roomMeshes = [];   // 房间地垫：标注取锚点、图例统计、切配色都从这里找（几何本身不合并，见下）
 
 async function loadSpec(dir) {
@@ -1085,6 +1159,151 @@ function renderFloor(g, F) {
   scene.add(interior);
 }
 
+// ---------- SU 规格渲染（?su=1）----------
+// 装进与 renderFloor **同一份契约**（floorGroups / shellFloorGroups / wallMeshes / roomMeshes / roofMeshes），
+// 于是楼层工具条、墙体显隐、用途图例、中文标注、点击面板全部白拿，一行都不用改。
+// 分组键优先读上游**显式**字段 `group`（SU 里那 7 个顶层组），`floor` 只作兜底 —— 拿派生量当分组键，
+// 一旦出现哨兵值就会长出假楼层（见记忆 sentinel-key-in-derived-grouping）。
+const SU_OUT_GROUPS = ['屋顶', '场地'];                 // 整栋尺度，不是楼层（浏览单层时与屋面板一起隐藏）
+function suFloorOf(p) {
+  const g = String(p.group == null ? '' : p.group);
+  const m = /^F(\d+)$/.exec(g);                         // F0..F4 → 0..4
+  if (m) return parseInt(m[1], 10);
+  if (SU_OUT_GROUPS.indexOf(g) >= 0) return 'out';
+  // 兜底：上游没给 group 时用 floor。★ 但"没见过的组名"和"压根没有组名"是两件事，都要说出来
+  //   （跳过谁就说谁）：不认得的组名哪怕有 floor 也是**替它做了一次归层决定**，得留痕。
+  if (typeof p.floor === 'number' && p.floor >= 0) {
+    if (g) console.warn('SU 规格里出现没见过的 group=%o（按它自己的 floor=%o 归层）', p.group, p.floor);
+    return p.floor;
+  }
+  console.warn('SU 规格里出现没见过的 group=%o，且没有可用的 floor（按整栋尺度处理）', p.group);
+  return 'out';
+}
+// 逐三角写顶点色：**三个顶点的挤出轴 z 全相等 ⇒ 是顶/底盖**（盖是一个平面），用 cap；
+// 侧面必跨两个 z，按**截面重心就近**找它属于哪条边，取那条边的 edgeCols。
+// 边 i = ext[i] → ext[(i+1) % n]（环靠首尾相接闭合：实测 len(edgeCols) == len(ext)，30 点的外墙配 30 个色）；
+// 洞同理，且 holeEdgeCols 是**逐洞**的嵌套数组（不是一张扁平表，实测 [[c,c,c,c]]）。洞边色缺失就回落 cap。
+const _suRGBCache = new Map();
+function suRGB(hex) {
+  let c = _suRGBCache.get(hex);
+  if (!c) { const t = new THREE.Color(hex); c = [t.r, t.g, t.b]; _suRGBCache.set(hex, c); }
+  return c;
+}
+function suPaint(geo, p) {
+  const pos = geo.attributes.position, n = pos.count;
+  const capHex = p.cap || '#cccccc';
+  const cap = suRGB(capHex);
+  const segs = [];
+  const ext = p.ext || [];
+  for (let i = 0; i < ext.length; i++) {
+    const a = ext[i], b = ext[(i + 1) % ext.length];
+    segs.push([a[0], a[1], b[0], b[1], suRGB((p.edgeCols && p.edgeCols[i]) || capHex)]);
+  }
+  (p.holes || []).forEach((h, hi) => {
+    const hc = (p.holeEdgeCols && p.holeEdgeCols[hi]) || null;
+    for (let i = 0; i < h.length; i++) {
+      const a = h[i], b = h[(i + 1) % h.length];
+      segs.push([a[0], a[1], b[0], b[1], suRGB((hc && hc[i]) || capHex)]);
+    }
+  });
+  const col = new Float32Array(n * 3);
+  for (let t = 0; t < n; t += 3) {
+    const z0 = pos.getZ(t), z1 = pos.getZ(t + 1), z2 = pos.getZ(t + 2);
+    let c = cap;
+    if (!(Math.abs(z0 - z1) < 1e-6 && Math.abs(z1 - z2) < 1e-6)) {      // 三个顶点的 z 不等 ⇒ 侧面
+      const mx = (pos.getX(t) + pos.getX(t + 1) + pos.getX(t + 2)) / 3;
+      const my = (pos.getY(t) + pos.getY(t + 1) + pos.getY(t + 2)) / 3;
+      let best = Infinity;
+      for (const s of segs) {
+        const d = pointToSegDist(mx, my, s[0], s[1], s[2], s[3]);
+        if (d < best) { best = d; c = s[4]; }
+      }
+    }
+    for (let k = 0; k < 3; k++) {
+      col[(t + k) * 3] = c[0]; col[(t + k) * 3 + 1] = c[1]; col[(t + k) * 3 + 2] = c[2];
+    }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+// 投影阴影只留给**挡光的那些**（墙/板/屋面/柱/场地）：理化楼 3680 件里 1565 件是窗，
+// 全开等于每帧多 1565 次 shadow pass 的 draw call，而屏幕上看不出区别。
+const SU_CAST = ['墙', '楼板', '屋顶', '柱', '场地'];
+function suMaterialOf(p) {
+  if (p.sub === '玻璃') return suMatGlass;
+  if (p.sub === '窗框') return suMatFrame;
+  if (p.cat === '墙' || p.sub === '女儿墙') return suMatWall;
+  return suMatOpaque;
+}
+function renderSu() {
+  const parts = (suSpec && suSpec.parts) || [];
+  // 楼层容器**按 FLOOR_COUNT 全建出来（空层也建）**：setFloor 是按**下标**翻 visible 的，
+  // 少建一层，后面每一层都错位一格（表现就是"点 3 层少了那层、多了另一层"）。
+  const shellByFloor = [], innerByFloor = [];
+  for (let F = 0; F < FLOOR_COUNT; F++) {
+    const sh = new THREE.Group(), inner = new THREE.Group();
+    inner.name = `su-floor-${F}`;
+    shellGroup.add(sh);
+    scene.add(inner);
+    shellFloorGroups.push(sh);      // 与默认路径一样按「外壳 / 内部」分装（下标与 floorGroups 对齐）
+    floorGroups.push(inner);
+    shellByFloor.push(sh); innerByFloor.push(inner);
+  }
+  const outGroup = new THREE.Group();      // 屋顶/场地：整栋尺度
+  scene.add(outGroup);
+  suExtraGroups.push(outGroup);
+
+  // ★ 兜底灰要**说出来**：cap 缺失时 suPaint 用 #cccccc 顶上（不然这件没有颜色可画），
+  //   但"我替它挑了一个颜色"必须有人看得见 —— 静默替色和"面板说了算、几何没跟上"是同一类错。
+  const noCap = [];
+  parts.forEach((p, i) => { if (!p.cap) noCap.push(i); });
+  if (noCap.length) {
+    console.warn('SU 规格里 %d 件没有 cap，这些件按兜底灰 #cccccc 画（前几个 parts 下标：%s）',
+                 noCap.length, noCap.slice(0, 5).join(', '));
+  }
+  parts.forEach((p, pi) => {
+    const f = suFloorOf(p);
+    const isPad = p.cat === '地垫';
+    // 地垫 = 房间：走**与默认路径逐字相同**的 roomMaterial(roomColor(purpose))，
+    // 于是图例、压暗筛选、切配色（setPurposeColor/applyDim）、?purpose=0 全部零改动可用。
+    // spec 的地垫 cap 就是 SU 的用途色，与页面的 13 个合同色同值（由 check 脚本逐件断言，不假设）。
+    const hex = isPad ? roomColor(p.purpose) : null;
+    const m = addExtrude(makeShape(p.ext), (p.holes && p.holes.length) ? p.holes : null,
+                        p.z1 - p.z0, isPad ? roomMaterial(hex) : suMaterialOf(p), p.z0);
+    if (!isPad) suPaint(m.geometry, p);    // 地垫整块一个色（spec 里地垫的 edgeCols 实测都是空的），不必逐面
+    m.castShadow = SU_CAST.indexOf(p.cat) >= 0;
+    m.receiveShadow = true;
+    if (isPad) {
+      const meta = roomMeta({ poly: p.ext });   // 面积/锚点：复用页内同一套（p.ext 是首≠末的闭合环写法）
+      m.userData = { type: '房间', number: p.roomNo, floor: f, purpose: p.purpose || '',
+                     area: meta.area, ax: meta.ax, ay: meta.ay,
+                     label: `${p.roomNo} ${p.purpose || ''}`.trim(), color: hex, suColor: p.cap,
+                     su: true, pi, cat: p.cat, sub: p.sub, group: p.group, z0: p.z0, z1: p.z1, nf: p.nf };
+      roomMeshes.push(m);
+    } else {
+      m.userData = { type: 'SU件', label: `${p.group} · ${p.sub}`,
+                     floor: (typeof f === 'number') ? f : null,   // 整栋尺度那几件不谎报层号（面板显 '—'）
+                     su: true, pi, cat: p.cat, sub: p.sub, group: p.group,
+                     z0: p.z0, z1: p.z1, nf: p.nf, nholes: (p.holes || []).length, color: p.cap };
+    }
+    pickables.push(m);          // 逐件入册：件件可点、可查"这是 SU 里的哪一件"（默认路径是整场 traverse）
+    // 归仓（与默认路径同一套语义）：
+    //   · 墙 → wallMeshes：「墙体 ✗」整批隐藏（含外墙内皮/外皮逐面色，走的还是同一个材质）
+    //   · 屋顶（含女儿墙）+ 屋顶/场地那组 → roofMeshes：浏览单层时隐藏，看进楼内
+    //   · 其余按层进 shell（外墙/楼板/屋面）/ interior（内墙/地垫/门窗柱梯）
+    if (p.cat === '墙') wallMeshes.push(m);
+    if (p.cat === '屋顶' || f === 'out') { outGroup.add(m); roofMeshes.push(m); }
+    // ★ 层号越界要有话说：`shellByFloor[f]` 是 undefined 时 `.add()` 会抛 TypeError，把整栋 3680 件
+    //   一起带崩（画面停在半栋、控制台只有一句看不懂的报错）。真撞上就归到整栋尺度那组并点名。
+    else if (!shellByFloor[f] || !innerByFloor[f]) {
+      console.warn('SU 规格第 %d 件的层号 %o 超出 0..%d（按整栋尺度处理）：group=%o floor=%o',
+                   pi, f, FLOOR_COUNT - 1, p.group, p.floor);
+      outGroup.add(m); roofMeshes.push(m);
+    }
+    else if ((p.cat === '墙' && p.sub === '外墙') || p.cat === '楼板') shellByFloor[f].add(m);
+    else innerByFloor[f].add(m);
+  });
+}
+
 // ---------- 楼层切换 ----------
 const allBtn = document.querySelector('#floors button[data-f="all"]');
 let floorBtns = [allBtn];
@@ -1139,6 +1358,14 @@ function setWallsTransparent(v) {
     mat.depthWrite = !v;
     mat.needsUpdate = true;
   });
+  // SU 规格件（?su=1）的墙把立面/室内两个色**烘在顶点上**，件与件共用一个材质 —— 所以这里动的是
+  // 材质本身（不是某个 mesh 的材质）。参数与上面两个完全一致，两边的"透明"观感才对得上。
+  suWallMats.forEach((mat) => {
+    mat.transparent = v;
+    mat.opacity = op;
+    mat.depthWrite = !v;
+    mat.needsUpdate = true;
+  });
   wallTransparentBtn.classList.toggle('active', v);
   wallTransparentBtn.textContent = v ? '墙体透明 ✓' : '墙体透明 ✗';
 }
@@ -1147,6 +1374,26 @@ wallTransparentBtn.addEventListener('click', () => setWallsTransparent(!wallsTra
 // ---------- 窗户显隐（合成窗默认关，打开后重新生成外墙开洞+玻璃） ----------
 let windowsVisible = false;
 const winBtn = document.getElementById('winToggle');
+// ?su=1：SU 规格自带窗件（2026-09-26 实测 c006 = 7365 件 = 玻璃 1473 + 窗框 5892，**每窗 1 玻璃 + 4 框**）。
+// ★ 它们**也是合成窗**（`floors/*.json` 里逐条 `synthetic:true`，全库 96 栋同此）—— 只是建体那一刻
+//   已经落成实体件，不再经过页面这四个参数。旧注释写的「1565 件」「真窗」两处都是错的。
+// 页面那套「合成窗 + 四个窗参数」在这条路上没有意义。
+// 禁用而不是留着 —— 留着就是"点了没反应"（点它会 rebuild，画出来一模一样），最容易被当成 bug。
+function lockWindowUI() {
+  [winBtn, pApply].forEach((el) => {
+    if (el) { el.disabled = true; el.title = 'SU 规格自带窗件，合成窗参数在这条路上不适用'; }
+  });
+  winBtn.textContent = '窗户（SU 自带）';
+}
+// ★ 有锁就得有开：换了「数据源」按钮从 SU 规格切回交付楼层时，这个按钮必须**真的**能再用。
+//   只写 lock 不写 unlock，切回去之后按钮还是灰的、还顶着「SU 自带」——面板说了算、几何没跟上。
+function unlockWindowUI() {
+  [winBtn, pApply].forEach((el) => {
+    if (el) { el.disabled = false; el.title = '合成窗：按参数在每层外墙开窗（SU 规格那条路自带真窗，用不到这些参数）'; }
+  });
+  winBtn.classList.toggle('active', windowsVisible);
+  winBtn.textContent = windowsVisible ? '窗户 ✓' : '窗户 ✗';
+}
 function setWindows(v) {
   windowsVisible = v;
   winBtn.classList.toggle('active', v);
@@ -1227,8 +1474,11 @@ function renderLegend() {
 }
 
 // ---------- 房间中文标注（DOM 投影，不引 CSS2DRenderer）----------
-// 为什么不引 CSS2DRenderer：importmap 里只有 three/OrbitControls/RoomEnvironment，加第四个就是多一个
-// unpkg 外部依赖（内网/断网直接白屏）；而投影只用现成的 camera 与渲染循环，零新增依赖。
+// 为什么不引 CSS2DRenderer：投影只用现成的 camera 与渲染循环，零新增依赖；
+// 而引入它就要在 importmap 里多一条 —— 本页的依赖表是**手写的**（不是打包器算的），
+// 每多一条就多一处"写了没人核对"的地方。★ 原先这里写的是「多一个 unpkg 外部依赖
+// （内网/断网直接白屏）」：three 已在 2026-09-25 换成仓内 `frontend/site/vendor/`，
+// "CDN" 这半句不再成立，但**结论没变**（依赖表越短越不容易与实际情况脱节）。
 const labelLayer = document.getElementById('labelLayer');
 let labelItems = [];        // [{el, x, y, z}] 世界坐标；世界 = (ax, F*层高+板厚+垫厚, -ay)
 let labelShown = 0;
@@ -1337,6 +1587,27 @@ purposeBtn.addEventListener('click', () => setPurposeColor(!purposeColorOn));
 labelBtn.addEventListener('click', () => setLabels(!labelsOn));
 legendBtn.addEventListener('click', () => setLegend(!legendOn));
 
+// ---------- 数据源开关（交付楼层 ↔ SU 规格）----------
+// 与上面三个开关不是一类：它换的是**几何的来源**（本页现算的楼 ↔ SU 里那座楼真有的那几件），
+// 所以必须把这一栋**重载一遍**（走 loadBuilding 的完整流程：取数、失败话术、就绪握手、重建）。
+// 「SU 的数据」不必靠手输 ?su=1 —— 按钮直接切，地址栏也跟着改（可分享、可复现）。
+const srcBtn = document.getElementById('srcToggle');
+function syncSrcButton() {
+  srcBtn.classList.toggle('active', suMode);
+  srcBtn.textContent = suMode ? '数据源：SU 规格 ✓' : '数据源：交付楼层';
+}
+syncSrcButton();
+srcBtn.addEventListener('click', () => {
+  suMode = !suMode;
+  const u = new URL(location.href);
+  if (suMode) u.searchParams.set('su', '1'); else u.searchParams.delete('su');
+  history.replaceState(null, '', u);          // 只改地址栏，不触发导航（页面状态自己管）
+  syncSrcButton();
+  // 楼名没变也要重载：loadBuilding 的短路守卫已把 builtSource 一起比（见那里的注释）。
+  const b = buildings.find((x) => x.name === buildingSel.value) || buildings.find((x) => x.name === currentBuilding);
+  if (b) loadBuilding(b).catch((err) => console.error('切数据源失败：', err));
+});
+
 // 面板：标注最小面积 / 单层最多标注
 const pLabelMin = document.getElementById('p_label_min');
 const pLabelMax = document.getElementById('p_label_max');
@@ -1381,11 +1652,54 @@ function isEffectivelyVisible(obj) {
 //         ② 页面里先写 window.GYM3D_API_BASE = 'http://127.0.0.1:<后端端口>'
 const API_BASE = new URLSearchParams(location.search).get('api')
   ?? window.GYM3D_API_BASE ?? '';
+// 房间数据（`roomMap` 供点击查信息、「路径规划」下拉）按**楼**取，两个硬约束都实测过：
+//
+// ① **必须带 building**。`build_path.compute_path` 的文档串写着「building=None 指理化楼基线」，
+//    所以不带 building 时：c006 页面上选 c006 房号 ⇒ `未找到房间 6-A-01-00`；
+//    选 lihua 房号 ⇒ 算出**理化楼的路径画在 c006 的几何上**（静默给错答案）。
+//    实测 `from_id=8&to_id=2` 带不带 building 结果一模一样（10.82 m）—— 它真的会静默回落。
+// ② **一条 URL 只能发一次**。整库这条响应实测 **18.6 MB / 8688 行**，而原先两处各自 fetch 同一
+//    URL（roomMap 与路径下拉）。实测同 URL 并发请求里第二个卡到 **73473 ms**
+//    （`_scratch/_viewer_path_selects_diag.py`，第一个 2409 ms），于是下拉超过一分钟是空的、
+//    且**控制台零 error**（fetch 只是挂着，`.catch` 不触发）。按楼缓存 ⇒ 一栋只拉一次。
+const roomsByBuilding = new Map();
+function roomsOf(building) {
+  if (!building) return Promise.resolve({ data: [] });
+  if (!roomsByBuilding.has(building)) {
+    const p = fetch(API_BASE + '/api/rooms?building=' + encodeURIComponent(building))
+      .then(res => res.json())
+      // ★ HTTP 非 2xx **不会**让 fetch 失败 —— 它照常 resolve，只是 body 成了个错误信封。
+      //   实测（2026-09-25，把 LIHUA_DB_PORT 指到一个死端口）：这一条回 **503**
+      //   `{success:false, data:null, error:{message:"连不上房间库：ConnectionTimeout: …"}}`，
+      //   而下游 `res.data || []` 把 `null` 洗成 `[]` ⇒ 面板上写的是**「本楼没有房间数据」**。
+      //   「读不到」与「真的没有」补救办法完全不同，屏幕上却是同一句话（本仓铁律 18 那一族）。
+      //   更毒的是它**会被按楼缓存住**（`roomsByBuilding` 上面那句注释「失败不缓存，留重试机会」
+      //   根本没轮到）⇒ PG 抖一下，这栋楼在本页余生里就永远读不到房间，即使 PG 立刻恢复。
+      //   ⇒ 所以在这里判成败，让它落进**下面那个已有的 `.catch`**（清缓存 + 重抛），
+      //     由 `loadRoomsFor` 的失败分支给出「加载失败」那句话并清掉重试记号。
+      //     判据用 `Array.isArray(data)`：接口成功时 `data` 恒为数组
+      //     （`routers/rooms.py` 的 `meta={"total": len(data)}` 就要求它是序列），
+      //     所以真·空楼拿到的是 `[]` —— 会走「没有房间」那一支，不会被误判成失败。
+      .then((body) => {
+        // ★ 这一条是防"我自己"的，实测踩过一次：改动前漏掉了上面那步 `.then(res => res.json())`，
+        //   于是 `body` 是 **Response 对象** —— `success`/`data` 全是 `undefined` ⇒ 下面那条判据
+        //   对所有响应**恒真**（连 200 也判失败），而面板上只说「接口没有返回房间列表」，
+        //   读起来像个服务端问题。**200 也走失败分支**这件事本身就该喊出来，而不是伪装成上游的错。
+        if (body && typeof body.json === 'function') {
+          throw new Error('内部错误：房间响应没解析（漏了 res.json()）');
+        }
+        if (!body || body.success === false || !Array.isArray(body.data)) {
+          const m = (body && body.error && (body.error.message || body.error)) || '接口没有返回房间列表';
+          throw new Error(String(m).split('\n')[0]);   // 只留首行：服务端的 psycopg 原文是多行的
+        }
+        return body;
+      })
+      .catch((err) => { roomsByBuilding.delete(building); throw err; });  // 失败不缓存，留重试机会
+    roomsByBuilding.set(building, p);
+  }
+  return roomsByBuilding.get(building);
+}
 const roomMap = {};
-fetch(API_BASE + '/api/rooms')
-  .then(res => res.json())
-  .then(res => { for (const r of (res.data || [])) roomMap[r.id] = r; })
-  .catch(err => console.error('加载房间数据失败：', err));
 
 function setRay(ev) {
   pointer.x = (ev.clientX / innerWidth) * 2 - 1;
@@ -1474,6 +1788,23 @@ function buildingLabel(code) {
   return (b && b.title) ? `${b.title}（${b.name}）` : code;
 }
 
+// 面板里引用的是哪一份规格文件：以**眼前这套几何**为准（geometryBuilding），没置位时退到 currentBuilding
+// ——与 buildInfo 的房间守卫同一个口径（不能用 currentBuilding 当判据，它切楼一开始就被改写）。
+function suSpecLabel() {
+  return `data/su/${geometryBuilding || currentBuilding || '?'}.json`;
+}
+// 「点房间却点到墙」这件事，页面上原先只说了**打中了什么**，没说**怎么进去**。
+// ★ 实测（_scratch/_su_viewer_check.py A18，量的是射线首中）：这只鸟瞰相机看进楼内时，到房间地面的
+//   视线**先撞到本层 4m 高的外墙**（F2 05-03-18：首中 外墙@28.2m，地垫在 33.1m）⇒ 单层视图里不关墙，
+//   27 间房一间都点不到，点哪儿都是墙/窗。这是**几何事实**（SU 里那座楼同样挡着），不是缺陷；
+//   缺的只是入口提示 —— 工具条上那个「墙体」开关（另一个入口是把视角转到接近俯视）。
+//   只在「单层视图 + 命中的不是房间」时给（buildInfo 的房间分支在上面就 return 了，所以走到这里
+//   就是非房间）：整栋视图里墙本来就该挡住，那时也说一句就成噪音了。
+function roomHintTip() {
+  if (currentFloor === 'all') return '';
+  return '<div class="tip">房间在这些墙里面：点工具条上的「墙体 ✗」收起墙体（或把视角转到接近俯视）再点一次</div>';
+}
+
 function buildInfo(u, n, p) {
   // ★ 进 innerHTML 的动态串一律过 escapeHtml（房号/名称/用途/单位/面积标注都来自 /api/rooms 的 DB 行，
   //   buildingLabel 的楼名来自 index.json —— 都不是本页能担保的内容）。标注层早就在转义了，
@@ -1506,17 +1837,34 @@ function buildInfo(u, n, p) {
     }
     // 降级分支：DB 里没有 / 记录对不上这间房 —— 至少把**几何自带**的房号/用途/面积给出来
     // （面积按多边形鞋带公式算，数字孪生要的就是面积与用途这两条）
+    // ?su=1 的房间没有 DB id（规格里就没有 id 这一维），所以**一定**走这一支：说明写清数据来源，
+    // 而不是让上面那句"该房间暂无数据库记录"含糊过去。
+    // ★ 试过按 (楼层, 面积) 去 join meta.rooms_label 拿「使用单位」——**不安全**：实测 118 间里
+    //   87 间在该键下撞车（不同房间面积逐位相同），且 rooms_label.cent 与地垫质心最远差 89m
+    //   （它是图上文字的位置，不是房间中心）⇒ 这个 join 会张冠李戴。宁可不给，也不给错的。
     return `<div class="t">房间 ${esc(u.number || u.label || '')}</div>` +
       `<div><b>建筑</b> ${esc(buildingLabel(geometryBuilding))}</div>` +
       `<div><b>楼层</b> ${u.floor != null ? (u.floor + 1) + '层' : '—'}</div>` +
       (u.purpose ? `<div><b>用途</b> ${esc(u.purpose)}</div>` : '') +
       (u.area ? `<div><b>面积</b> ${u.area.toFixed(2)} m²（按边界多边形计）</div>` : '') +
       face + pos +
-      `<div class="tip">${room ? '数据库里这条记录与几何不是同一间房（房号对不上），上面是几何自带的数据'
-                               : '该房间暂无数据库记录'}</div>`;
+      `<div class="tip">${u.su ? `数据来自 SU 规格件 parts[${u.pi}]（${esc(suSpecLabel())}）：与 SU 里那座楼的这一件逐件对应`
+        : room ? '数据库里这条记录与几何不是同一间房（房号对不上），上面是几何自带的数据'
+               : '该房间暂无数据库记录'}</div>`;
+  }
+  // ?su=1 的其余件（墙/窗/门/柱/楼梯/楼板/屋面/场地…）：面板如实标出**这是 SU 里的哪一件**，
+  // 不给它套用默认路径那套构件字段（那些字段是页面现算出来的，这条路上没有）。
+  if (u.su) {
+    return `<div class="t">${esc(u.cat)}${u.sub && u.sub !== u.cat ? ' · ' + esc(u.sub) : ''}</div>` +
+      `<div><b>层组</b> ${esc(u.group)}（SU 里的顶层组）</div>` +
+      `<div><b>标高</b> ${u.z0.toFixed(2)} – ${u.z1.toFixed(2)} m</div>` +
+      `<div><b>面数</b> ${u.nf}</div>` +
+      (u.nholes ? `<div><b>洞口</b> ${u.nholes} 个</div>` : '') +
+      face + pos + roomHintTip() +
+      `<div class="tip">SU 规格件 parts[${u.pi}]：与 SU 里那座楼的这一件逐件对应（${esc(suSpecLabel())}）</div>`;
   }
   const head = `<div class="t">${esc(u.type)}${u.label ? ' · ' + esc(u.label) : ''}</div>`;
-  let body = `<div><b>楼层</b> ${F}</div>`;
+  let body = `<div><b>楼层</b> ${F}</div>` + roomHintTip();
   if (u.type === '门' || u.type === '电梯门') {
     body += `<div><b>门宽</b> ${u.w != null ? u.w.toFixed(2) + ' m' : '—'}</div>`;
     body += `<div><b>门高</b> ${u.h != null ? u.h.toFixed(2) + ' m' : '—'}</div>`;
@@ -1565,8 +1913,17 @@ const pWinSpacing = document.getElementById('p_win_spacing');
 const pApply = document.getElementById('p_apply');
 
 function clearBuilding() {
+  // ★ 几何要 dispose 归还 GPU：?su=1 一次载入就是 3680 件（每件一个 ExtrudeGeometry + 一个 Float32Array
+  //   顶点色），不归还的话在页面里来回切几栋，上一栋的缓冲一直挂着（three 只在 dispose 时释放）。
+  //   只清**几何**、不清材质：suMatWall / wallOuterMat / roomMatCache 都是跨楼复用的。
+  //   只清"马上要被摘掉的那些组"里的几何 —— 场景里其余 mesh 的几何一根都不碰。
+  [floorGroups, shellFloorGroups, suExtraGroups].forEach((arr) => arr.forEach((g) => {
+    g.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+  }));
   floorGroups.forEach((g) => scene.remove(g));
   shellFloorGroups.forEach((g) => shellGroup.remove(g));
+  suExtraGroups.forEach((g) => scene.remove(g));      // ?su=1 的整栋尺度那组（默认路径下这个数组是空的）
+  suExtraGroups.length = 0;
   floorGroups.length = 0;
   shellFloorGroups.length = 0;
   wallMeshes.length = 0;
@@ -1575,6 +1932,11 @@ function clearBuilding() {
   clearLabels();
   pickables.length = 0;
   clearPath();
+  // ★ 管被清了，面板上那行「105.64 m · 35 折点」也得跟着走：clearPath() 只删几何、不动文字，
+  //   而 rebuild() 每次改参数（切窗户/改窗宽…）都会走到这里 ⇒ 面板会一直声称有一条**已经不在
+  //   场景里**的路径。这正是本次要收口的那一类"面板说了算、几何没跟上"。
+  //   （pathGo 的失败分支是先写文字再 clearPath，所以这里不能把清文字塞进 clearPath 内部。）
+  pathInfo.textContent = '';
 }
 function rebuild() {
   clearBuilding();
@@ -1584,18 +1946,29 @@ function rebuild() {
   //   的提示 —— 唯一出路是挨个试点图例行。切楼即复位，别让上一栋的筛选跟着走。
   dimPurpose = null;
   applyDim();
-  loadedFloors.forEach(renderFloor);
-  scene.traverse((o) => { if (o.isMesh) pickables.push(o); });
+  // ★ 两条路互斥：?su=1 画 spec 的每一件（SU 里真有的那些），默认画本页现实现的那座楼。
+  //   拾取集合也跟着分：SU 那条路在 renderSu 里**逐件入册**（~3680 件），不走整场 traverse
+  //   （traverse 会把之后可能加进来的辅助物件也吸进去，且这里的 3680 件本来就需要各自的 userData）。
+  if (suMode && suSpec) renderSu();
+  else {
+    loadedFloors.forEach(renderFloor);
+    scene.traverse((o) => { if (o.isMesh) pickables.push(o); });
+  }
   setFloor(currentFloor);
   setWalls(wallsVisible);
   // ★ 走到这里几何才**真的**换了 —— 这两个赋值是「标题/选择器」与「场景内容」的对齐点：
   //   builtToken === buildToken ⇒ 眼前这栋就是选中的那栋。切楼中途/失败时它们不相等（见 loadBuilding）。
   geometryBuilding = currentBuilding;
   builtToken = buildToken;
+  builtSource = suMode ? 'su' : 'floors';      // 与上面两个同一刻置位：切数据源也算"几何真换了"
   // 标题里的「载入中…」也是在**这一刻**结束的。它原先只在 loadBuilding 开头设过、没有任何地方清，
   // 于是成功载入后标题会永远停在「载入中…」（实测：?building=zzz 与正常楼都停住了）。
   // 清在这里而不是别处：与 builtToken 一起收尾，两处状态就不会打架。
   setBname(buildings.find((x) => x.name === currentBuilding) || LEGACY_LIHUA, 'ok');
+  // 房间数据（roomMap + 路径起讫下拉）跟着楼走。挂在这里而不是 loadBuilding 里：**这一刻几何才真的
+  // 换了**（geometryBuilding 刚置），下拉里列的就一定是眼前这栋的房间 —— 切楼时上一栋的路径已由
+  // clearBuilding → clearPath 清掉，不会残留。
+  loadRoomsFor(currentBuilding);
   renderLegend();
 }
 function applyParams() {
@@ -1616,19 +1989,37 @@ function syncPanel() {
   pWinW.value = S.win_w; pWinH.value = S.win_h;
   pWinSill.value = S.win_sill; pWinSpacing.value = S.win_spacing;
 }
-function frameCamera() {
-  // 按当前建筑的 footprint 外包盒 + 高度自适应取景（各楼尺寸差异大，固定机位会裁切）
+// 取景外包盒：默认路径量轮廓，?su=1 直接量 spec 每件的 ext 与 z0/z1（**不伪造 loadedFloors** 去喂同一段代码）
+function boundsOfFloors() {
   let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
   for (const f of loadedFloors) for (const [x, y] of f.outline) {
     if (x < minX) minX = x; if (x > maxX) maxX = x;
     if (y < minY) minY = y; if (y > maxY) maxY = y;
   }
-  if (!isFinite(minX)) return;
-  const w = Math.max(maxX - minX, 1), d = Math.max(maxY - minY, 1);
-  const h = FLOOR_COUNT * LAYER_HEIGHT;
+  if (!isFinite(minX)) return null;
+  return { minX, maxX, minY, maxY, h: FLOOR_COUNT * LAYER_HEIGHT };
+}
+function boundsOfSu() {
+  let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, maxZ = 0;
+  for (const p of ((suSpec && suSpec.parts) || [])) {
+    for (const [x, y] of (p.ext || [])) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+    if (p.z1 > maxZ) maxZ = p.z1;
+  }
+  if (!isFinite(minX)) return null;
+  return { minX, maxX, minY, maxY, h: maxZ };
+}
+function frameCamera() {
+  // 按当前建筑的 footprint 外包盒 + 高度自适应取景（各楼尺寸差异大，固定机位会裁切）
+  const bb = boundsOfFloors() || (suMode ? boundsOfSu() : null);
+  if (!bb) return;
+  const w = Math.max(bb.maxX - bb.minX, 1), d = Math.max(bb.maxY - bb.minY, 1);
+  const h = bb.h;
   const r = Math.hypot(w, d) * 0.5;
   const dist = Math.max(r * 1.6, h * 1.3, 30);
-  const cx = (minX + maxX) / 2, cy = h / 2, cz = -(minY + maxY) / 2;
+  const cx = (bb.minX + bb.maxX) / 2, cy = h / 2, cz = -(bb.minY + bb.maxY) / 2;
   camera.position.set(cx + dist * 0.8, cy + dist * 0.65, cz + dist * 0.8);
   controls.target.set(cx, cy, cz);
   controls.update();
@@ -1639,8 +2030,37 @@ function resetView() {
   currentFloor = 'all';
   frameCamera();
 }
+// 生成时间：从 index.json 的 `generated_at` 读（那是**生成方**写进账本里的时刻，
+// 见 backend/gen_stamp.py / build_index.py 的 generated_of）。
+// ★ `mtime-backfill` 是**从产物 mtime 推算的**，不是生成时刻（复制/同步也会改 mtime）——
+//   两者必须在屏幕上分得开，否则推算值会冒充测量值；分不开就是这个字段最坏的用法。
+function fmtGen(b) {
+  // ★ 三种状态必须分得开，否则「没记」会看起来像「这页不管这事」：
+  //     ① 清单里压根没这个字段（老清单 / LEGACY_LIHUA 兜底）→ 不显示，这页不掺和；
+  //     ② 字段在、值是 null（账本里没有这栋的记录）      → 显示「生成时间未记录」；
+  //     ③ 字段在、有值                                    → 显示时刻（并区分精确/推算）。
+  if (!b || !('generated_at' in b)) return null;
+  const at = b.generated_at;
+  if (!at) {
+    return { text: '生成时间未记录', approx: true,
+             tip: '这栋楼的生成时间账本（data/buildings/<楼>/generated.json）里没有记录' };
+  }
+  const exact = b.generated_source === 'generator';
+  const parts = (b && b.generated_parts) || {};
+  const p = (k) => (parts[k] ? String(parts[k]).replace('T', ' ').slice(0, 16) : '—');
+  return {
+    text: `生成 ${String(at).replace('T', ' ').slice(0, 16)}${exact ? '' : '（推算）'}`,
+    // 悬停给出分项与来路，省得一屏上塞三行
+    tip: (exact ? '生成方当场盖章' : '由产物最后写入时间推算，不是生成时刻')
+       + `\n  识别 floors：${p('floors')}\n  GLB：${p('glb')}\n  SU 规格：${p('su')}`,
+    approx: !exact,
+  };
+}
 function setBname(b, state, err) {
-  const label = b.title ? `${b.title}（${b.name}）` : b.name;
+  // 「SU 规格 <sha16>」是**这条路的数据来源指纹**：算出来才写，算不出就是 '—'（绝不拿别的数冒充）。
+  // 它是本页与磁盘上 data/su/<楼>.json 的唯一握手凭据 —— 回归脚本按它比对磁盘实测值。
+  const label = (b.title ? `${b.title}（${b.name}）` : b.name)
+              + (suMode ? ` · SU 规格 ${suSha || '—'}` : '');
   const el = document.getElementById('bname');
   // ★ 诚实显示：标题**秒变**、几何要 13~17 秒才到 —— 不标状态的话，这十几秒里画面是上一栋、
   //   标题是新楼。失败（c009 声明 6 层、floor5 是 404）时必须说"载入失败"，不能顶着新楼的名字
@@ -1649,20 +2069,91 @@ function setBname(b, state, err) {
     el.textContent = state === 'loading' ? `${label} · 载入中…`
       : state === 'failed' ? `${label} · 载入失败${err ? '：' + String(err.message || err).slice(0, 70) : ''}`
       : label;
+    // 生成时间：**与上面并列**而不是拼进字符串 —— 回填值要单独压暗 + 带悬停说明。
+    // 注意 `textContent =` 会清掉子节点，所以这一段必须写在它之后。
+    const g = fmtGen(b);
+    if (g) {
+      const s = document.createElement('span');
+      s.className = g.approx ? 'gen gen-approx' : 'gen';
+      s.textContent = ' · ' + g.text;
+      s.title = g.tip;
+      el.appendChild(s);
+    }
   }
   document.title = `${b.title ? b.title + ' · ' : ''}整栋立体模型`;
 }
+// ---------- SU 规格的加载（?su=1）----------
+// ★ crypto.subtle 只在**安全上下文**可用：http://localhost 算安全，http://172.27.31.117:8123 **不算**
+//   ⇒ 必须带守卫，算不出就返回 null（标题显示 '—'），**不许伪造**。
+async function sha16Hex(buf) {
+  try {
+    if (!(typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest)) return null;
+    const d = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(d)).map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  } catch (e) { console.warn('算 SU 规格 sha256 失败（非安全上下文？）', e); return null; }
+}
+// 楼层数从规格**自己**的 groupOrder 推：只认 `F<数字>` 那批（`屋顶/场地` 是整栋尺度，不是层）。
+// 不用 index.json 的 floors：那是清单的快照，规格才是这条路上真正画出来的东西。
+function suFloorCount(spec) {
+  let mx = -1;
+  for (const g of (((spec.meta || {}).groupOrder) || [])) {
+    const m = /^F(\d+)$/.exec(String(g));
+    if (m) mx = Math.max(mx, parseInt(m[1], 10));
+  }
+  return mx >= 0 ? mx + 1 : 1;
+}
+// ★ 这个函数**只**在成功时返回"这份载荷"的三样东西，一个全局都不写：
+//   写入全局的是 loadBuilding 里**过了作废守卫之后**那一行 —— 否则一次被切楼作废的慢请求
+//   会把它的 suSpec/suSha 留在全局里，接着画的却是另一栋（自查口 suStats 于是拿着 A 的
+//   specParts 报 B 的 specUrl；这种"自己报自己"的错，判据是抓不住的）。
+async function loadSuSpec(name) {
+  const url = `data/su/${name}.json`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(res.status === 404
+      ? `这栋还没有 SU 规格（缺 ${url}）` : `${url} ${res.status}`);
+  }
+  const buf = await res.arrayBuffer();            // 先拿字节：指纹与字节数都取自**这份**载荷
+  return { spec: JSON.parse(new TextDecoder('utf-8').decode(buf)),
+           sha16: await sha16Hex(buf), bytes: buf.byteLength };
+}
+
 async function loadBuilding(b) {
-  // 已经是这一栋、且上一次已经落地 → 什么都不用做（少了 builtToken 这一半，"已选中"和"已画出来"会混为一谈）
-  if (currentBuilding === b.name && builtToken === buildToken) return;
+  // 已经是这一栋、且上一次已经落地 → 什么都不用做（少了 builtToken 这一半，"已选中"和"已画出来"会混为一谈）。
+  // builtSource 也要一起比：点了「数据源」按钮时楼名没变，但几何**必须**重来一遍（交付楼层↔SU 规格）。
+  if (currentBuilding === b.name && builtToken === buildToken
+      && builtSource === (suMode ? 'su' : 'floors')) return;
   const my = ++buildToken;
+  // ★ 载入中那串「SU 规格 <sha16>」必须是**这一栋**的：此刻还没去取，得先把上一栋的清掉 ——
+  //   setBname 是**立刻**改文字的，而指纹要等 fetch 回来才算得出；不清就会出现
+  //   「c006 的标题 + lihua 的指纹」并排挂着（说好的"算出来才写"当场变成假话）。
+  if (suMode) { suSha = null; suBytes = 0; }
   setBname(b, 'loading');
   currentBuilding = b.name;
   try {
+    if (suMode) {
+      // SU 规格分支：几何**不是**本页现实现的，而是 SU 里那座楼真实存在的那 N 件。
+      // 这里**不** loadSpec(b.dir)：规格里没有一处用得到建模参数（它是已成形的体，不是"中线+厚度"）。
+      // 但 S 仍复位成内置常量：标注的高度公式用 S.slab_t（与 SU 规格的板顶标高一致）。
+      S = Object.assign({}, DEFAULT_SPEC);
+      const got = await loadSuSpec(b.name);
+      if (my !== buildToken) return;        // 期间又切了别的楼 → 这次的结果作废（**连全局都不写**，见 loadSuSpec）
+      suSpec = got.spec; suSha = got.sha16; suBytes = got.bytes;
+      LAYER_HEIGHT = (suSpec.meta || {}).floor_h || 4.2;
+      FLOOR_COUNT = suFloorCount(suSpec);
+      loadedFloors = [];                    // 这条路上没有 floors JSON：取景走 boundsOfSu（见 frameCamera）
+      lockWindowUI();                       // 窗参数在这条路上没有意义（SU 规格自带窗件），按钮要知道这件事
+      syncPanel();
+      buildFloorButtons(FLOOR_COUNT);
+      resetView();
+      rebuild();
+      return;
+    }
     S = Object.assign({}, DEFAULT_SPEC);
     await loadSpec(b.dir);
     if (my !== buildToken) return;          // 期间又切了别的楼 → 这次的结果作废（谁最后请求谁赢）
     applyStyle();
+    unlockWindowUI();             // 这条路上合成窗是有意义的（对称于 su 分支的 lockWindowUI）
     LAYER_HEIGHT = S.floor_h || 4.2;
     FLOOR_COUNT = b.floors;
     const floors = await loadFloors(b.dir, b.floors);
@@ -1680,10 +2171,17 @@ async function loadBuilding(b) {
     if (my === buildToken) {
       setBname(b, 'failed', err);
       loadedFloors = [];            // 上一栋的楼层数据也一并丢掉：留着它，任何一次 rebuild 都会把旧楼画回来
+      suSpec = null;                // SU 分支同一个道理：留着它，下一次 rebuild 会把**上一栋的 SU 几何**画回来
+      suSha = null; suBytes = 0;    // 指纹同理：没画出来就不许在标题上留着上一栋的凭据（失败态显示 '—'）
       clearBuilding();
       clearSelect();
       info.style.display = 'none';
       geometryBuilding = null;      // ★ 两个握手量都留在"未就绪"：几何真换了才算数（见 rebuild 末尾）
+      builtSource = null;
+      // ★ 房间数据也得一起收：不收的话下拉里还列着**上一栋**的房间，而场景已经空了 ——
+      //   点「规划路径」就是去算一栋不在场景里的楼。失败态要把"能点什么"一起收掉，
+      //   不只是把几何清干净。（`?building=c009` 今天就会走到这里：index.json 说 6 层、floor5.json 404。）
+      unloadRooms('本楼未载入，路径规划不可用');
       renderLegend();               // 图例立刻转成"本楼无房间用途数据"，不留上一栋的统计
     }
     throw err;
@@ -1734,6 +2232,14 @@ fetch('data/buildings/index.json')
     // 用户要的是那一栋，给他另一栋比给空白更糟。
     if (QS.get('building')) {
       console.error('建筑清单加载失败，且点名了 ?building= —— 不做静默回退：', err);
+      return;
+    }
+    // ?su=1 时同理**不回退**：回退会把默认那条路（本页现实现的几何）端出来冒充 SU 的数据 ——
+    // 而这条路存在的全部意义就是"看 SU 的数据"。清单拿不到就没有 SU 规格可画，直说。
+    if (suMode) {
+      const el = document.getElementById('bname');
+      if (el) el.textContent = '建筑清单加载失败，且 ?su=1 —— 不回退到另一条渲染路径';
+      console.error('建筑清单加载失败（?su=1，不回退）：', err);
       return;
     }
     console.error('加载建筑清单失败，回退基线 data/', err);
@@ -1809,7 +2315,12 @@ function buildRoomSelects(rooms) {
       og.label = `${Number(f) + 1}层`;
       for (const r of byFloor[f]) {
         const o = document.createElement('option');
-        o.value = r.number;
+        // ★ value 用**房间 id**，不用房号：id 实测**全局唯一（0 撞号）**，而房号在部分楼**不唯一**
+        //   （如 '卫' 跨 c046/c080 共 171 行）。服务端注释也是这个口径（`_scratch/_retired_20260925/serve_rooms.py:208`：
+        //   「房间 id 唯一 → 前端走 from_id/to_id」）—— 原先前端发的是房号，没照做。
+        //   data-number 只给人和回归脚本看，不参与请求。
+        o.value = r.id;
+        o.dataset.number = r.number;
         o.textContent = `${r.number}${r.purpose ? ' · ' + r.purpose : ''}`;
         og.appendChild(o);
       }
@@ -1823,11 +2334,27 @@ pathGo.addEventListener('click', async () => {
   const from = pathFrom.value, to = pathTo.value;
   if (!from || !to) { pathInfo.textContent = '请先选择起终点'; return; }
   if (from === to) { pathInfo.textContent = '起终点相同'; clearPath(); return; }
+  // 场景里没有"已载入的楼"时**不发请求**：`geometryBuilding` 为空意味着几何与任何一栋都不对应
+  // （切楼过渡期，或载入失败态）。这时发出去的 building 只能瞎猜，服务端 `building=None` 又恰好
+  // 是"按理化楼算"—— 猜错就等于把理化楼的路径画到别的楼上，正是这一刀要堵的静默错答案。
+  if (!geometryBuilding) { pathInfo.textContent = '当前没有已载入的楼，无法规划'; clearPath(); return; }
   pathInfo.textContent = '计算中…';
   try {
-    const res = await fetch(`${API_BASE}/api/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    // ★ 发的是**房间 id + 当前楼**，不是房号（`from`/`to` 那两个参数是给 CLI 和旧链接的）。
+    //   原先只发房号且不带 building ⇒ 服务端只按理化楼找：其余 47 栋选自己的房号必得
+    //   `未找到房间 …`，选 lihua 房号则把**理化楼的路径画在这栋楼的几何上**（静默给错答案）。
+    //   实测 `from_id=8&to_id=2` 带不带 building 结果一模一样（10.82 m）—— 它真的会静默回落。
+    const bld = geometryBuilding;
+    const res = await fetch(`${API_BASE}/api/path?from_id=${encodeURIComponent(from)}&to_id=${encodeURIComponent(to)}`
+      + `&building=${encodeURIComponent(bld)}`);
     const j = await res.json();
-    if (!j.success) { pathInfo.textContent = '规划失败：' + (j.error || '未知错误'); clearPath(); return; }
+    // ★ `error` 的两种形状都要认：8140 搬过来之后是**对象**（{code,message}，全站统一信封），
+    //   而老 8123 回的是**字符串**。直接拼会把对象渲染成 "[object Object]" ——
+    //   屏幕上看着像"报了个错"，却一个字都读不懂，比不报还坏。
+    if (!j.success) {
+      const em = (j.error && (j.error.message || j.error)) || '未知错误';
+      pathInfo.textContent = '规划失败：' + em; clearPath(); return;
+    }
     drawPath(j.data.path);
     const f0 = j.data.src.floor, f1 = j.data.dst.floor;
     pathInfo.textContent = `${j.data.length_m} m · ${j.data.path.length} 折点` + (f0 === f1 ? '' : `\n${f0 + 1}层 → ${f1 + 1}层`);
@@ -1838,10 +2365,41 @@ pathGo.addEventListener('click', async () => {
 
 pathClear.addEventListener('click', () => { clearPath(); pathInfo.textContent = ''; });
 
-fetch(API_BASE + '/api/rooms')
-  .then(res => res.json())
-  .then(res => buildRoomSelects(res.data || []))
-  .catch(err => console.error('加载房间列表失败：', err));
+// 房间数据的两个消费者：`roomMap`（点房间看信息）与「路径规划」起终点下拉，都按**当前楼**填。
+// ★ 只在楼**真的换了**时才重填：rebuild 会被"改窗参数/切窗户/改层高"反复触发，无条件重填会把
+//   用户已经选好的起讫点冲掉。失败则把记号清掉，下次 rebuild 还能再试一次。
+let roomsLoadedFor = null;
+// 楼没载入 / 载入失败时把房间数据一并收掉（配 `loadBuilding` 的失败分支）：
+// 下拉空了、`roomMap` 空了、面板直说 —— 不留"能点但点在别栋上"的余地。
+function unloadRooms(reason) {
+  roomsLoadedFor = null;
+  for (const k of Object.keys(roomMap)) delete roomMap[k];
+  buildRoomSelects([]);
+  pathInfo.textContent = reason;
+}
+function loadRoomsFor(building) {
+  if (roomsLoadedFor === building) return;
+  roomsLoadedFor = building;
+  roomsOf(building).then((res) => {
+    // ★ 期间切了楼（或那一栋载入失败、被 unloadRooms 收掉）⇒ 这批房间已经过期，直接丢弃。
+    //   不加这一条：切楼中途返回的旧响应会把**上一栋**的房间填进这一栋的下拉。
+    //   与 `loadBuilding` 里 `my !== buildToken` 是同一个套路。
+    if (roomsLoadedFor !== building) return;
+    const rooms = res.data || [];
+    for (const k of Object.keys(roomMap)) delete roomMap[k];   // 清上一栋，别跨楼串数据
+    for (const r of rooms) roomMap[r.id] = r;
+    buildRoomSelects(rooms);
+    if (!rooms.length) pathInfo.textContent = '本楼没有房间数据，路径规划不可用';
+  }).catch((err) => {
+    // ★ 这句与上面那句「本楼没有房间数据」**必须字面不同**：一个是「读不到」，一个是「真的没有」。
+    //   带上服务端原话（`roomsOf` 已把它收成首行，如「连不上房间库：ConnectionTimeout…」），
+    //   屏幕上才分得清 —— 只说「加载失败」，用户还是不知道该去修 PG 还是该换一栋楼。
+    roomsLoadedFor = null;
+    pathInfo.textContent = '房间列表加载失败，路径规划不可用：'
+      + (err && err.message ? err.message : String(err));
+    console.error('加载房间列表失败（building=%s）：', building, err);
+  });
+}
 
 (function animate() {
   requestAnimationFrame(animate);
@@ -1864,7 +2422,30 @@ window.__gym3d = { scene, camera, renderer, controls, wallMeshes, THREE, get inf
   visibleRoomCount: () => visibleRooms().length,       // 当前可见楼层里有多少间（图例口径的唯一依据）
   get buildToken() { return buildToken; },
   get builtToken() { return builtToken; },
-  get geometryBuilding() { return geometryBuilding; } };
+  get geometryBuilding() { return geometryBuilding; },
+  // ---- ?su=1 分支的自查口（判据一律**从场景里数**，不读"我打算画什么"——量意图会得到假绿）----
+  get suMode() { return suMode; },
+  suStats: () => {
+    const byGroup = {}; let meshes = 0, rooms = 0;
+    for (const m of pickables) {
+      const u = m.userData || {};
+      if (!u.su) continue;
+      meshes++;
+      byGroup[u.group] = (byGroup[u.group] || 0) + 1;
+      if (u.type === '房间') rooms++;
+    }
+    return { mode: suMode, meshes, rooms, parts: meshes - rooms, byGroup,
+             sha16: suSha, bytes: suBytes,
+             specParts: suSpec ? (suSpec.parts || []).length : 0,
+             specGroups: suSpec ? ((suSpec.meta || {}).groups || null) : null,
+             specUrl: suSpec ? `data/su/${geometryBuilding}.json` : null,
+             floors: FLOOR_COUNT, layerH: LAYER_HEIGHT };
+  },
+  // 跨源对账口：逐间给出**SU 带过来的用途色**（cap）与本页**自己算的用途配色**（roomColor），
+  // 两者相等才说明"地垫与 SU 里同色"这句话成立（不相等应当报红，不是静默取一个）。
+  suPadColors: () => roomMeshes.filter((m) => m.userData.su).map((m) => ({
+    number: m.userData.number, floor: m.userData.floor, purpose: m.userData.purpose,
+    suColor: m.userData.suColor, pageColor: m.userData.color, area: m.userData.area })) };
 </script>
 </body>
 </html>

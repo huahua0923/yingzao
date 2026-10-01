@@ -47,7 +47,14 @@ def pair_curved_faces(segs, p, angle_tol_deg=12.0, min_overlap=0.3):
 
     rects = [(Polygon, 厚度)]; singles = [[(x,y),(x,y)]] 未配上的单线段。
     判据与轴对齐版对齐: 近似平行、垂距 ∈ [wall_min, wall_max]、投影重叠 > min_overlap。
+
+    **单线段也要过 `single_min_len`**（与 `pair_wall_faces` 同一条铁律）。原先这里不过滤，
+    于是图上「墙端头封口线 / 门垛 / 斜向短符号」被一条条 buffer 成 0.10m 薄墙：全库干跑
+    （`_scratch/_a_dryrun_curve_all.py`）c018 每层 158 → 418 条内墙，**418 正是
+    `single_min_len` 那道修复之前的旧数字**（见 geometry.py:246 的判例），等于把修好的病
+    从斜段这条侧门又放回来。长度用段自身的 L（斜段没有「沿轴投影」这回事）。
     """
+    min_len = getattr(p, "single_min_len", 0.35)
     items = []
     for pts in segs:
         if len(pts) != 2:
@@ -62,20 +69,27 @@ def pair_curved_faces(segs, p, angle_tol_deg=12.0, min_overlap=0.3):
                       "m": ((x0 + x1) / 2.0, (y0 + y1) / 2.0)})
 
     cos_tol = math.cos(math.radians(angle_tol_deg))
-    used = [False] * len(items)
     rects, singles = [], []
 
     def _proj(pt, base, u):
         return (pt[0] - base[0]) * u[0] + (pt[1] - base[1]) * u[1]
 
+    def _ov(a, b):
+        """b 在 a 方向上的投影落在 a 上的长度（沿 a 的局部坐标，再夹到 [0, a.L]）。"""
+        t0 = _proj(b["p0"], a["p0"], a["u"])
+        t1 = _proj(b["p1"], a["p0"], a["u"])
+        lo, hi = (t0, t1) if t0 <= t1 else (t1, t0)
+        return min(a["L"], hi) - max(0.0, lo)
+
+    # ① 收齐合法候选（近似平行 + 垂距∈[wall_min,wall_max] + 投影重叠>min_overlap），
+    #    ② 按「重叠长 > 垂距近」全局贪心取优。
+    #    与 `pair_wall_faces` 同一条铁律（那边 200~229 行写明了判例）：**先比重叠、再比距离**。
+    #    逐段「就近取优」会让贴着墙画的短符号段先挑走真墙皮的 mate，一根墙被劈成两根、
+    #    中间留一条空槽（c018 每层 14 处、六层 168 根）。斜段这边同样是贪心，必须同规矩。
+    cand = []
     for i in range(len(items)):
-        if used[i]:
-            continue
         a = items[i]
-        best = None      # (厚度, j)
-        for j in range(len(items)):
-            if j == i or used[j]:
-                continue
+        for j in range(i + 1, len(items)):
             b = items[j]
             if abs(a["u"][0] * b["u"][0] + a["u"][1] * b["u"][1]) < cos_tol:
                 continue
@@ -84,22 +98,19 @@ def pair_curved_faces(segs, p, angle_tol_deg=12.0, min_overlap=0.3):
                     + (b["m"][1] - a["m"][1]) * a["n"][1])
             if not (p.wall_min <= d <= p.wall_max):
                 continue
-            # 沿 a 的投影重叠
-            t0 = _proj(b["p0"], a["p0"], a["u"])
-            t1 = _proj(b["p1"], a["p0"], a["u"])
-            lo, hi = (t0, t1) if t0 <= t1 else (t1, t0)
-            ov = min(a["L"], hi) - max(0.0, lo)
+            ov = _ov(a, b)
             if ov <= min_overlap:
                 continue
-            if best is None or d < best[0]:
-                best = (d, j)
-        if best is None:
-            used[i] = True
-            singles.append([a["p0"], a["p1"]])
+            cand.append((-ov, d, i, j))
+    cand.sort()
+
+    paired = set()
+    for _, _d, i, j in cand:
+        if i in paired or j in paired:
             continue
-        t, j = best
-        used[i] = used[j] = True
-        b = items[j]
+        paired.add(i)
+        paired.add(j)
+        a, b = items[i], items[j]
         # 重叠区间 → a 上两点, 再投到 b 上得另外两点 → 四边形
         los = max(0.0, _proj(b["p0"], a["p0"], a["u"]))
         his = min(a["L"], max(_proj(b["p1"], a["p0"], a["u"]), los))
@@ -113,9 +124,19 @@ def pair_curved_faces(segs, p, angle_tol_deg=12.0, min_overlap=0.3):
         if not poly.is_valid:
             poly = poly.buffer(0)
         if poly.is_empty or poly.area <= 1e-4:
-            singles.append([a["p0"], a["p1"]])
+            # 配对结果退化（两皮几乎共线/零重叠）：此处两条都已进 `paired`，直接 continue
+            # 就是**连人带己一起丢**（旧写法就是如此）。退回单线段，一条都不许凭空消失。
+            for it in (a, b):
+                if it["L"] >= min_len:
+                    singles.append([it["p0"], it["p1"]])
             continue
-        rects.append((poly, t))
+        rects.append((poly, _d))
+
+    # 剩下没配上的逐条兜底。短于 single_min_len 的不是墙（墙端封口/门垛），直接丢。
+    for i, a in enumerate(items):
+        if i in paired or a["L"] < min_len:
+            continue
+        singles.append([a["p0"], a["p1"]])
     return rects, singles
 
 
@@ -196,4 +217,24 @@ def pair_arc_bands(arcs, p, sag_mm=10.0):
                 bands.append((P, dr / 1000.0))
                 used[i] = used[j] = True
                 break
+        # ★ 单皮兜底（2026-09-14 c006 实测）：图纸上有些层的曲墙**只画一皮**
+        #   （A 翼 F0/F1 的 r=8.30 就没有配对的 r=8.54，B 翼同层却有）。
+        #   旧实现把它静默丢掉 → 那两层的弧形外墙整段没有，楼板在弧线处露空
+        #   （反向量具：F0 楼板外环 9.1% 的点离最近墙 >0.35m，最远 6.26m @(-31.5,-33.1)）。
+        #   按中心线生成环带，厚度用 profile.wall_fallback×2（外墙口径），与单线墙一致。
+        for i in range(len(g)):
+            if used[i]:
+                continue
+            used[i] = True
+            _t = float(getattr(p, "wall_fallback", 0.15)) * 2.0
+            _it = g[i]
+            try:
+                _P = _annular((float(key[0]), float(key[1])),
+                              _it["r"] - _t * 500.0, _it["r"] + _t * 500.0,
+                              _it["a0"], _it["a1"], sag_mm)
+            except Exception:
+                continue
+            if _P is None or _P.area <= 1.0:
+                continue
+            bands.append((_P, _t))
     return bands

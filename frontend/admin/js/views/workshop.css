@@ -1,0 +1,363 @@
+/* 「作业台」视图样式 —— 自足的一套 `ws-`，不借别的视图的类。
+ *
+ * ★ 为什么不去复用「检查」那套 `chk-panic` / `chk-btn`：几何上它是省事，
+ *   代价是一条**看不见的耦合** —— 哪天 checks.css 改了类名，坏掉的正好是
+ *   本视图里最少被走到的那一支（后端没起来、第一次取数就失败），
+ *   而那一支平时没人看，于是没人会发现。本目录的既有约定就是「一个视图一份样式表」。
+ *   共用只到 app.css 那一层为止（`.dim` / `.tag` 这类通用件）。
+ *
+ * ★ 三处颜色不是装饰，是三种**不同的**事实，别合并：
+ *   --green 跑完且成功 / --amber 可疑与待拍板 / --red 确定有问题，
+ *   而「量不到」（无产物、未跑）用**中间那档灰** —— 它既不是好也不是坏，
+ *   把它画成红的会让 95 行里冒出一片假警报（本仓栽过：假红多了就没人当真）。
+ */
+
+.ws-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* ── 顶栏 ──────────────────────────────────────────────────────── */
+.ws-head h1 {
+  margin: 0;
+  font: 600 19px/1.3 var(--sans);
+  color: var(--text);
+}
+.ws-head h1 .sub {
+  font: 400 12.5px/1.3 var(--sans);
+  color: var(--text-faint);
+}
+.ws-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.ws-badges { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.ws-badge {
+  font: 11px/1 var(--mono);
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.ws-badge.on  { color: var(--green); border-color: rgba(70, 167, 88, .35); }
+.ws-badge.off { color: var(--amber); border-color: rgba(232, 163, 61, .35); }
+
+/* 一句话横幅：写权限关掉时、以及接口不可用时。两种都**必须带理由**。 */
+.ws-note {
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--rule);
+  background: var(--panel);
+  font: 12.5px/1.6 var(--sans);
+  color: var(--text-dim);
+}
+.ws-note b { color: var(--text); }
+.ws-note.warn { border-left-color: var(--amber); }
+.ws-note.warn b { color: var(--amber); }
+.ws-note.bad { border-left-color: var(--red); }
+.ws-note.bad b { color: var(--red); }
+
+/* ── 两列：左「动作 + 作业」，右「队列」───────────────────────────── */
+.ws-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .ws-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.ws-colleft { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.ws-card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  padding: var(--sp-3);
+}
+.ws-card > h2:first-child {
+  margin: 0 0 var(--sp-2);
+  font: 600 13px/1.3 var(--sans);
+  color: var(--text);
+}
+
+/* ── 动作 ──────────────────────────────────────────────────────── */
+.ws-acts { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ws-act h2 {
+  margin: 0 0 var(--sp-1);
+  font: 600 13px/1.3 var(--sans);
+  color: var(--text);
+}
+.ws-act p { margin: 0 0 var(--sp-2); }
+.ws-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* 文件选择框：浏览器给的默认按钮太亮，压到和这一屏同一个色阶上。
+   ★ 只做外观，不隐藏 `input` 本体 —— 它要能被 Tab 到、要能被读屏念出来。 */
+.ws-file {
+  max-width: 100%;
+  font: 11.5px/1.5 var(--sans);
+  color: var(--text-dim);
+}
+.ws-file::file-selector-button {
+  font: 12px/1 var(--sans);
+  padding: 5px 10px;
+  margin-right: var(--sp-2);
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  cursor: pointer;
+}
+.ws-file::file-selector-button:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+
+.ws-btn {
+  font: 12px/1 var(--sans);
+  padding: 6px 11px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.ws-btn:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--cyan-dim);
+  color: var(--cyan);
+}
+.ws-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.ws-btn:active:not(:disabled) { transform: translateY(1px); }
+.ws-btn:disabled { opacity: .45; cursor: not-allowed; }
+.ws-btn.primary { border-color: var(--cyan-dim); color: var(--cyan); }
+
+.ws-runrow { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* 刚才上传的：一行一条，失败的整行染红 —— 上传是逐个做的，成败必须逐条可见。 */
+.ws-uplist, .ws-joblist { list-style: none; margin: 0; padding: 0; }
+.ws-uplist { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ws-uplist li {
+  font: 11.5px/1.6 var(--sans);
+  color: var(--text-dim);
+  border-left: 2px solid var(--green);
+  padding-left: var(--sp-2);
+}
+.ws-uplist li.bad { border-left-color: var(--red); }
+.ws-uplist li.bad b { color: var(--red); }
+.ws-uplist li code, .ws-uplist li b { color: var(--text); }
+
+/* ── 作业 ──────────────────────────────────────────────────────── */
+.ws-now {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-2);
+  border: 1px solid var(--rule-soft);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--r-1);
+  background: var(--panel-2);
+  font: 12px/1.5 var(--sans);
+  color: var(--text-dim);
+}
+.ws-now.idle { border-left-color: var(--rule); }
+.ws-now b { color: var(--text); }
+.ws-spin {
+  width: 9px; height: 9px;
+  border: 2px solid var(--cyan-dim);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: ws-spin .8s linear infinite;
+}
+@keyframes ws-spin { to { transform: rotate(360deg); } }
+/* 动了就是「还在跑」的信号，不是装饰 —— 用户开了减弱动效就换成静态的亮灯。 */
+@media (prefers-reduced-motion: reduce) {
+  .ws-spin { animation: none; border-top-color: var(--cyan); }
+}
+
+.ws-joblist { display: flex; flex-direction: column; gap: 1px; margin-top: var(--sp-2); }
+.ws-job {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: 5px var(--sp-2);
+  border-left: 2px solid var(--rule);
+  background: var(--ink);
+  font: 11.5px/1.6 var(--mono);
+  color: var(--text-dim);
+}
+.ws-job.ok   { border-left-color: var(--green); }
+.ws-job.bad  { border-left-color: var(--red); }
+.ws-job.warn { border-left-color: var(--amber); }
+.ws-job.now  { border-left-color: var(--cyan); }
+.ws-job-state { flex: 0 0 auto; font-weight: 600; }
+.ws-job.ok   .ws-job-state { color: var(--green); }
+.ws-job.bad  .ws-job-state { color: var(--red); }
+.ws-job.warn .ws-job-state { color: var(--amber); }
+.ws-job.now  .ws-job-state { color: var(--cyan); }
+.ws-job-label { color: var(--text); }
+.ws-job-meta { color: var(--text-faint); }
+.ws-job-log {
+  color: var(--text-faint);
+  font: 11px/1.5 var(--mono);
+  overflow-wrap: anywhere;
+}
+.ws-job-note { color: var(--amber); }
+
+/* ── 队列 ──────────────────────────────────────────────────────── */
+.ws-q + .ws-q { margin-top: var(--sp-3); }
+.ws-q h3 {
+  margin: 0 0 var(--sp-1);
+  font: 600 12px/1.3 var(--sans);
+  color: var(--text-dim);
+}
+.ws-q p { margin: 0 0 var(--sp-1); }
+.ws-names { font: 11.5px/1.7 var(--sans); color: var(--text-dim); overflow-wrap: anywhere; }
+.ws-names a { color: var(--cyan); text-decoration: none; }
+.ws-names a:hover { text-decoration: underline; }
+
+.ws-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.ws-thumb {
+  margin: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  background: var(--ink);
+  overflow: hidden;
+}
+.ws-thumb img {
+  display: block;
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  background: #05070a;
+}
+.ws-thumb figcaption {
+  padding: 3px 5px;
+  font: 10px/1.35 var(--mono);
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+/* 图裂了：给个红边 + 说明，别让一个空框冒充「这张图就是这样」 */
+.ws-thumb.broken { border-color: var(--red); }
+.ws-thumb.broken figcaption { color: var(--red); }
+
+/* ── 楼栋状态表 ────────────────────────────────────────────────── */
+.ws-tablehead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+}
+.ws-tablehead h2 {
+  margin: 0;
+  font: 600 13px/1.3 var(--sans);
+  color: var(--text);
+}
+.ws-filter {
+  font: 11.5px/1.4 var(--sans);
+  padding: 5px 8px;
+  width: 16ch;
+  color: var(--text);
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+}
+.ws-filter:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.ws-only {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font: 11.5px/1.5 var(--sans);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.ws-count {
+  margin: 0 0 var(--sp-2);
+  font: 11.5px/1.6 var(--sans);
+  color: var(--text-faint);
+}
+
+.ws-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font: 11.5px/1.5 var(--sans);
+}
+.ws-tbl th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font: 600 11px/1.4 var(--sans);
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--rule);
+  padding: 5px 7px;
+  white-space: nowrap;
+}
+.ws-tbl td {
+  padding: 4px 7px;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--text-dim);
+  vertical-align: top;
+}
+.ws-tbl tr:hover td { background: var(--ink); }
+.ws-tbl td a { color: var(--cyan); text-decoration: none; }
+.ws-tbl td a:hover { text-decoration: underline; }
+.ws-tbl td:first-child { font: 600 11.5px/1.5 var(--mono); }
+
+/* 「量不到」与「零」在这一屏必须**字形不同**：这就是那两个类存在的理由。
+   灰色 + 方括号 —— 一眼能看出「这个格子没数」，而不是「这个格子里的数是 0」。 */
+.ws-miss { color: var(--text-faint); font-style: normal; }
+.ws-miss::before { content: "[ "; }
+.ws-miss::after { content: " ]"; }
+.ws-ok { color: var(--green); }
+.ws-bad { color: var(--red); font-weight: 600; }
+
+/* ── 接口不可用（自己的一套，不借 checks 的）─────────────────────── */
+.ws-panic {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--r-2);
+  background: var(--panel);
+  padding: var(--sp-4);
+  max-width: 82ch;
+}
+.ws-panic.down { border-left-color: var(--red); }
+.ws-panic-h { margin: 0 0 var(--sp-2); font: 600 16px/1.3 var(--sans); color: var(--text); }
+.ws-panic-msg { margin: 0 0 var(--sp-3); font: 12.5px/1.6 var(--sans); color: var(--text-dim); }
+.ws-panic p { margin: 0 0 var(--sp-2); font: 12px/1.7 var(--sans); }
+.ws-panic code {
+  font: 11.5px/1 var(--mono);
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1);
+  padding: 1px 4px;
+}
+.ws-pre {
+  max-height: 240px;
+  overflow: auto;
+  font: 11px/1.5 var(--mono);
+  color: var(--text-dim);
+  background: var(--ink);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1);
+  padding: var(--sp-2);
+}
+.ws-toolbar { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+.ws-foot {
+  margin: 0;
+  font: 11.5px/1.65 var(--sans);
+  color: var(--text-faint);
+}

@@ -63,6 +63,17 @@ CHECK_REGISTRY = {
            "★ A1/A2/A3 量的都是**条数**，对『这一列装错了东西』完全无感。"
            "实测：c046 有 168 间的房号就是『卫』字本身，c113 F3 混进了 "
            "`14-*`/`06-*` 两个别的号段。"),
+    "A10": ("CAD 速览图齐备且不陈旧", "A", True,
+            "★ A4 里 CAD 那一件判的是**在不在**（`any(floor*.png)`）：一张不剩才算缺，"
+            "少一张、或是上一版布局渲染的，A4 都是绿的。本条判同一个产物的另一件事。"
+            "实测 c001 的现场：2026-09-23 补了一层、09-24 重切 `floors/`，"
+            "**而出图是带外手工步骤、没人重跑** ⇒ 盘上 5 张图整批错位一格、F5 从没有过图，"
+            "而全库 33/95 栋同病（4 栋尺寸级 + 29 栋墨迹级）。"
+            "★ 层数**只从 `floors/floorN.json` 数**（遇到第一个缺号就停，与出图脚本同口径），"
+            "**绝不读 `profile.json` 的 `floor_ys`** —— 旧审计器 `_plan_png_audit.py` ④ 正是"
+            "读它，而 `floor_plans` 制式的楼那里是 `None` ⇒ 那条腿对它们从不下手。"
+            "两条腿：①张数（线段非空的层 vs 图，另抓孤儿图）②宽高比 vs 该层线段 bbox。"
+            "**故意不判 mtime**：按 mtime 判陈旧在本仓已被实测证伪（见 A5）。"),
     # ── B 层：要建模环境，逐栋子进程 ────────────────────────
     "B1": ("结构不变量 I1–I18（qa_structural）", "B", True,
            "调 qa_structural.py，**不改它**（用户明令：门禁是诚实的裁判，不许挪球门）。"),
@@ -82,6 +93,21 @@ CHECK_REGISTRY = {
            "全库量下来 17 栋图纸层多于模型层，且**成类** —— 层号不是纯数字时"
            "（D1/J11/H）会被静默丢掉（`ROOM_RE` 的层号字段写死 `\\d{1,2}`）。"
            "本条的读数是图纸自带的面积表（外部真值），与 A2 同源但问的是层数。"),
+    "B5": ("建好后墙级对账（①漏墙 ②多建/歪建 ③曲要素）", "B", True,
+           "★ 以上 B1–B4 问的都是**台账内部**或**建之前**的事：B1 的 I1–I18 全部在"
+           "**交付模型内部**成立（墙厚对、房间闭合、柱网齐），于是交付模型可以一整片墙"
+           "都没建而 B1 全绿；B2 问轮廓环、B3 只对房号、B4 只对层数。**没有一条拿图纸当"
+           "裁判去问『这一段墙到底建了没有』**。本条补的就是这一条：图纸墙线采样点与交付墙"
+           "几何逐层对账，两个方向都问（①图纸有交付没有＝漏、②交付有而任何图层都找不到＝"
+           "多建/歪建），外加 ③曲要素单列。判定看引擎扣掉「参考集把弧弦化」之后的档"
+           "（①真实档 / ②E类），总账照样报出来。"),
+    "B6": ("同一房号被标注两次（同层画了两份）", "B", True,
+           "★ B1 的 I8/I1/I10 与 B3 报的都是**后果**（楼层几何中心相距 180 m、柱跑到"
+           "轮廓外 179.7 m、图上有的台账没有），本条报**成因**：图上同一层被画了两份，"
+           "而 `x_range` 把两份都收了进来。实测 c011（2026-09-29）：F0 的平面在左列"
+           "（x≈1356930）与右列（x≈1536870）各一份，相隔 **180000 mm** 整，21 个房号"
+           "**逐号同名**，墙 373/373 条 —— 四处症状一个根因。只量**模型收进来的范围**"
+           "（`in_floor_x_range`）内的标注：右列本来就该被排除，排除它正是修法。"),
     # ── C 层：**系统级**，不逐栋（per_building=False）─────────
     # 与 A/B 的分界只有一条：**A/B 逐栋问，C 整库问**。
     # 有些毛病逐栋检查**结构上就看不见** —— 每一栋单独看都对、合起来对不上；
@@ -103,6 +129,26 @@ CHECK_REGISTRY = {
            "而 A/B 层逐栋看几何、C0–C3 看账本，**没有一条看得见这件事**。"
            "它不自己判，只去跑图谱自己的门禁（`kb/gate.py` ＋ `kb/derive.py`）"
            "再把结论翻译成 Finding —— 一把尺子一个实现。"),
+    "C5": ("影像比对图「框 ↔ 图」对口（清单说的那块地，图上真的是那块地吗）", "C", False,
+           "★ 补的是「一份产物**自己内部**的两半对不对得上」这一格 —— 前四条问的都是"
+           "**产物之间**的关系，而 2026-09-25 那次漏检两半都在同一份清单里。"
+           "校区大图与它的 `bbox` 是**两处各算一个值**，各自自洽、页面一片正常，"
+           "实测沿经度差 **2 块瓦片 = 512 px ≈ 526 m**（11 个点位全偏）。"
+           "它**只依赖 `bbox`** 就能重拼出该显示的那块地再逐像素比 ⇒ **旧清单也能直接红**，"
+           "这既是它值钱的地方，也是它自带的阳性对照。"
+           "跑法：`python -m backend.checks.compare_geo --selftest`。"),
+    "C6": ("冻结载荷的出身（服务器读的那份 `console_meta.json` 是哪一版源码产的）", "C", False,
+           "★ 补的是「**正在送给另一台机器的那份契约**还是不是当前源码产的」这一格。"
+           "`data/_meta/console_meta.json` 是冻结载荷（服务器 venv 不带 trimesh/numpy，"
+           "`compute=0` 那一路的帮助文字/阶段表/选项表全来自它），它会跟源码脱节 ——"
+           "而**脱节之后服务照常 200、页面照常渲染**。实测 2026-09-26：它是 2026-09-11 产的，"
+           "服务器端因此少 3 个阶段、整个 `selfCheck` 块都没有，**没有一条判据看得见**。"
+           "摘要算法取自生产者：在子进程里调 `freeze_meta.source_hash()`，比较写在本判据里"
+           "（与 C3 同形）。"
+           "★ **不用生产者的 `--check`**：它先跑构建期门禁，门禁不过就返回 1、到不了比对分支"
+           "（实测 2026-09-26 rc=1 是「门禁 18 条不过」，输出里 `--check:` 字样 0 处）"
+           "⇒ 那个退出码同时背着两个判断，照抄会把「门禁不过」印成「载荷过期」，"
+           "而刷新载荷也清不掉它。子进程没给出指纹时记 UNAVAILABLE，不是 GAP（铁律 16）。"),
 }
 
 
@@ -149,29 +195,57 @@ def run_building_checks(data_dir, name: str, which: tuple[str, ...] | None = Non
             # 我们不知道是对是错，只有一个坏掉的量具）。
             rep.add(unavailable(cid, _title,
                                 "量具自身崩溃：%s: %s" % (type(ex).__name__, ex)))
-    rep.meta.update({"layer": "A+B" if heavy else "A", "building": name})
+    # 层级标签与全库航拍同规矩：由**真跑过的层**导出（被 UNAVAILABLE 挡住的那层不算跑过）。
+    ran = sorted({CHECK_REGISTRY[f.check][1] for f in rep.findings
+                  if f.check in CHECK_REGISTRY
+                  and f.status != Status.NOT_APPLICABLE
+                  and not (f.status == Status.UNAVAILABLE
+                           and (f.detail or "").startswith("本轮只跑了"))})
+    rep.meta.update({"layer": "".join(ran) or "**一层都没跑**", "building": name,
+                     "tiers_ran": ran})
     return rep
 
 
 def run_fleet_checks(data_dir, names: list[str], heavy: bool = False,
                      timeout_s: int = 600) -> Report:
-    """全库航拍：只跑**不依赖单栋重活**的那些，用来做红绿灯墙。
+    """全库航拍：逐栋跑**登记在册的**判据，再按检查编号压成红绿灯墙。
 
-    逐栋 B 层要 N 次子进程，全库跑请走 runner.py（它会落盘成产物）。
+    `heavy=True` 时 **B 层也在内**（每栋一次子进程/DXF，慢）。
+
+    ★ 这一段以前是假的（2026-09-24 实测）：`heavy` 形参**收了却一次没被读**，
+      `ids` 只挑 `tier == "A"`，而 runner 拿到 `--heavy` 就把 `meta.layer` 写成
+      `"A+B(逐栋) + C(系统级)"` ⇒ **产物在替一次没发生的检查作证**：全库 B 层
+      （＝「建好后墙级对账」那条腿）**一次都没跑过**，而表上写着跑过、
+      退出码也照样给。这正是本仓反复记的那一族（铁律 17「写好的函数不等于被调用的
+      函数」＋铁律 20「形式检查通过、语义没发生」）。
+    ⇒ 两条一起改：**B 层真的跑**；**层级标签一律由"真跑出来的层"导出**，
+      不再由开关猜（`meta["tiers_ran"]`）。
     """
     from . import builtin
+    heavy_mod = None
+    tiers = ("A",)
+    if heavy:
+        # 只有真要跑 B 层才 import 它 —— A 层不该被拖上 ezdxf/shapely 的依赖。
+        from . import heavy as heavy_mod
+        tiers = ("A", "B")
     rep = Report(scope="fleet")
-    ids = [c for c, (_t, tier, per, _w) in CHECK_REGISTRY.items() if tier == "A"]
+    ids = [c for c, (_t, tier, per, _w) in CHECK_REGISTRY.items()
+           if tier in tiers and per]
+    tiers_ran: set[str] = set()
     per_check: dict[str, list[tuple[str, Finding]]] = {}
     wall: dict[str, Finding] = {}
     for name in names:
         sub = Report(scope="building:%s" % name)
         for cid in ids:
-            fn = getattr(builtin, "check_%s" % cid.lower(), None)
+            tier = CHECK_REGISTRY[cid][1]
+            fn = getattr(builtin if tier == "A" else heavy_mod,
+                         "check_%s" % cid.lower(), None)
             if fn is None:
+                # 实现缺失 ⇒ 这个层**没跑**，标签里就不许算上它。
                 continue
+            tiers_ran.add(tier)     # 判据成立了就算"跑过"；崩了/UNAVAILABLE 由行里说
             try:
-                fn(sub, data_dir, name)
+                fn(sub, data_dir, name, timeout_s=timeout_s)
             except Exception as ex:                   # noqa: BLE001
                 sub.add(unavailable(cid, CHECK_REGISTRY[cid][0],
                                     "%s: %s" % (type(ex).__name__, ex)))
@@ -272,7 +346,12 @@ def run_fleet_checks(data_dir, names: list[str], heavy: bool = False,
             for cid, f in wall.items()}
     groups: dict[frozenset, list[str]] = {}
     for cid, s in sets.items():
-        if s and len(s) < len(names) and wall[cid].status in (Status.GAP, Status.WATCH):
+        # ★ `len(s) >= 2` 这道下限也是实测加的：只亮**一栋**时，两条毫不相干的判据
+        #   撞进同一个集合的概率高得离谱（实测两栋的航拍里，B5 的「曲要素盲区」与
+        #   A9 的「房号字段」当场被凑成一对，屏幕上写着「与 A9 亮的是同一批 1 栋」）。
+        #   一栋的巧合不携带任何信息 —— 拿它去提示"先查是不是一个根因"，只会教人
+        #   学会不看这条提示。
+        if len(s) >= 2 and len(s) < len(names) and wall[cid].status in (Status.GAP, Status.WATCH):
             groups.setdefault(s, []).append(cid)
     for s, cids in groups.items():
         if len(cids) < 2:
@@ -282,6 +361,9 @@ def run_fleet_checks(data_dir, names: list[str], heavy: bool = False,
             others = "/".join(c for c in sorted(cids, key=_check_sort_key) if c != cid)
             f.detail += "　⟵ 与 %s 亮的是**同一批 %d 栋**（状态也相同）：先查是不是一个根因，别当两件事修" % (others, len(s))
             f.evidence["same_cause_suspect"] = sorted(c for c in cids if c != cid)
+    # ★ 层级标签的**唯一出处**：真被调用过的层。runner 只许读这个值去写 `meta["layer"]`，
+    #   不许再看 `--heavy` 开关 —— 开关说的是"想跑什么"，这里说的是"真跑了什么"。
+    rep.meta["tiers_ran"] = sorted(tiers_ran)
     return rep
 
 

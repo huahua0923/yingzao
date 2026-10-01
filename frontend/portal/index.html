@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>校园数字孪生平台 · 成都理工大学</title>
+<meta name="description" content="成都理工大学校园数字孪生平台：一张底图看全校，点开一栋看每层功能与使用单位。">
+
+<!--
+  ★ three.js 走**仓内自带**（同 `frontend/site/vendor/three/`，0.185.1，无 CDN、无构建）。
+    这里必须写**绝对路径** `/site/vendor/...`，不能照抄 site 自己那份**相对**的 importmap
+    （`./vendor/three/...`）—— 那份是相对 `/site/` 解析的，搬到 `/portal/` 下会直接 404。
+    本页与 site 共用同一份 vendor，不复制第二份（两份就会漂）。
+  ★ 不引任何 CDN：本平台要放在**校内网**跑，断网必须照常工作。
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "/site/vendor/three/build/three.module.min.js",
+    "three/addons/": "/site/vendor/three/examples/jsm/"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="./portal.css">
+</head>
+<body>
+
+<a class="skip" href="#stage">跳到主区</a>
+
+<!-- 登录闸：未登录时**只有这一块**，主界面一行数据都装配不出来（见 js/session.js）。 -->
+<section id="gate" class="gate" hidden>
+  <div class="gate-card">
+    <p class="gate-brand"><span class="mark" aria-hidden="true"></span>校园数字孪生平台</p>
+    <h1>登录</h1>
+    <p class="gate-sub">成都理工大学 · 校园空间与房屋管理</p>
+    <form id="loginform" autocomplete="on">
+      <label for="u">用户名</label>
+      <input id="u" name="username" autocomplete="username" required>
+      <label for="p">口令</label>
+      <input id="p" name="password" type="password" autocomplete="current-password" required>
+      <button id="loginbtn" type="submit">登 录</button>
+      <p id="loginmsg" class="gate-msg" role="alert"></p>
+    </form>
+    <p class="gate-foot">仅限校内网访问。<br>账号由平台管理员分配。</p>
+  </div>
+</section>
+
+<!-- 主界面骨架：外壳（导航 / 主区 / 详情）三栏。内容全部由 js/app.js 装配。 -->
+<div id="shell" class="shell" hidden>
+
+  <header class="topbar">
+    <p class="brand"><span class="mark" aria-hidden="true"></span>
+      <span class="brand-text">校园数字孪生平台<i>成都理工大学</i></span></p>
+    <div class="topbar-right">
+      <span id="clock" class="clock" aria-hidden="true"></span>
+      <span id="who" class="who"></span>
+      <button id="logout" class="ghost" type="button">退出</button>
+    </div>
+  </header>
+
+  <nav id="rail" class="rail" aria-label="功能模块"></nav>
+
+  <main id="stage" class="stage">
+    <!-- 三维舞台：常驻，只有"页面型"模块会把它藏起来 -->
+    <div id="canvas-wrap" class="canvas-wrap">
+      <canvas id="gl"></canvas>
+      <div id="hint" class="hint"></div>
+      <div id="legend" class="legend"></div>
+      <div id="scene-note" class="scene-note"></div>
+      <div id="stage-bar" class="stage-bar"></div>
+      <div id="overlay" class="overlay" hidden></div>
+    </div>
+    <!-- 模块的表格 / 表单 / 说明，渲染到这里 -->
+    <div id="doc" class="doc" hidden></div>
+  </main>
+
+  <aside id="panel" class="panel" aria-label="详情"></aside>
+
+</div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

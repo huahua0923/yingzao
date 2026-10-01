@@ -32,7 +32,19 @@
 
 * { box-sizing: border-box; }
 
-html, body { margin: 0; height: 100%; }
+/* ★ `body` 必须 `min-height`，不能 `height`。
+   写成 `height: 100%` 时 body 的盒子**只有一屏高**，而 sticky 元素被限制在它的
+   **包含块**里 —— 内容是会长出去，于是滚过一屏之后顶栏被连带着推出视口。
+   `.topbar` 上明明写着 `position: sticky; top: 0`，实测滚 900px 之后它的 top 是
+   **−111**：整条滚没了，导航消失，而页脚照常 —— 屏幕上没有任何东西报错。
+   （量法见 `_scratch/_ui_sticky_probe.py`。这一条不改，下面 `--topbar-h` 算得再准
+   也没意义：顶栏都不在屏幕上了。） */
+html { height: 100%; margin: 0; }
+/* ★ `margin: 0` 必须留在**这一条**上。原文是一行 `html, body { margin: 0; height: 100% }`，
+   拆成两条时漏掉了 body 的 margin ⇒ 浏览器默认的 8px 边距回来了，整页下移 8px、
+   底部多出 8px 溢出（campus 那一屏的"不出滚动条"当场破功）。
+   拆一条 CSS 规则时，**每一条声明都要有去处** —— 漏掉的那条不会报错，它只是生效了。 */
+body { min-height: 100%; margin: 0; }
 
 body {
   background:
@@ -53,16 +65,37 @@ body {
 
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-/* ── 顶栏 ───────────────────────────────────────────────────── */
+/* ── 顶栏 ─────────────────────────────────────────────────────
+   ★ 顶栏的**实测高度**由 js/app.js 的 trackTopbarHeight() 写进 `--topbar-h`。
+     谁来读它：① 下面 `thead th` 的粘性偏移 ② `js/views/campus.css` 的画布算式
+     ③ `js/views/console.css` 的两栏高度。
+     为什么必须是量出来的：这三个地方原本各自**手抄**了一个数（57 / 81 / 128），
+     而导航从 13 条变成 14 条那一行之后，顶栏从 81px 长到 111px —— 三处**同时**
+     过期，且三处都不会报错：表头粘到顶栏底下（被盖住）、画布多算 30px（页脚被顶出
+     折线、多出一条滚动条）、控制台两栏各矮 30px。屏幕上看只是"有点不对"。
+     （本仓铁律 018：两个地方写同一个数，「一致」证明不了它是对的。） */
+/* ★ 两段式，不是一段：**第一段是"我是谁"，第二段是"往哪去"**。
+   之前 14 个入口和品牌、能力、身份全挤在一行里，品牌一被挤就折行、
+   导航一被挤就换行 —— 实测顶栏长到 163px（三行导航），比改之前还高。
+   分成两段之后导航独占一整行的宽度，品牌那一段不再和它抢。
+   （用户明令：要层级、不要堆积 —— 一条横排里塞两件事就是堆积。） */
 .topbar {
-  display: flex; align-items: center; gap: var(--sp-5);
-  padding: var(--sp-3) var(--sp-5);
+  display: flex; align-items: center; flex-wrap: wrap;
+  column-gap: var(--sp-5); row-gap: 0;
+  padding: var(--sp-3) var(--sp-5) 0;
   border-bottom: 1px solid var(--rule);
   background: linear-gradient(180deg, #12171e, #0f141a);
   position: sticky; top: 0; z-index: 20;
 }
 
-.brand { display: flex; align-items: baseline; gap: var(--sp-3); }
+/* ★ `flex: 0 0 auto` + `nowrap`：品牌是整条顶栏上唯一**不该**被挤的东西。
+   不加这两条时它会跟着一起收缩，实测 1440 下「建模后台」被压成两行、
+   1280 下连副标题也一起压成 2.9 行 —— 而它旁边只是一排标签。
+   要挤就挤导航（导航换行只是变高，读得出来）。 */
+.brand {
+  display: flex; align-items: baseline; gap: var(--sp-3);
+  flex: 0 0 auto; white-space: nowrap;
+}
 .brand .mark {
   width: 10px; height: 10px; align-self: center;
   background: var(--cyan);
@@ -72,9 +105,23 @@ body {
 .brand .name { font-size: 17px; font-weight: 650; letter-spacing: .06em; }
 .brand .sub  { color: var(--text-faint); font-size: 12px; letter-spacing: .04em; }
 
-#nav { display: flex; gap: var(--sp-1); margin-left: auto; }
+/* 导航独占第二段（`flex: 1 0 100%` = 至少占满一整行），排在身份那一段之后。 */
+#nav {
+  display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;
+  order: 2; flex: 1 0 100%; margin-left: 0;
+  border-top: 1px solid var(--rule-soft);
+  padding: var(--sp-2) 0 var(--sp-2);
+}
+/* 分组：一条竖线把组隔开，组名在最左边。分组顺序在 js/app.js 的 GROUPS 里定。 */
+.nav-g { display: flex; gap: var(--sp-1); align-items: center;
+         border-left: 1px solid var(--rule); padding-left: var(--sp-3); }
+#nav > .nav-g:first-child { border-left: 0; padding-left: 0; }
+.nav-g-label {
+  font: 10px/1 var(--mono); letter-spacing: .18em; color: var(--text-faint);
+  margin-right: 2px; user-select: none;
+}
 #nav a {
-  color: var(--text-dim); text-decoration: none; padding: 6px 12px;
+  color: var(--text-dim); text-decoration: none; padding: 5px 10px;
   border: 1px solid transparent; border-radius: var(--r-1);
   font-size: 13px; letter-spacing: .03em;
 }
@@ -83,12 +130,47 @@ body {
   color: var(--ink); background: var(--cyan); border-color: var(--cyan); font-weight: 600;
 }
 
+/* ★ 横排，不竖排。竖排四行是 **56px** —— 它是第一段里最高的东西，
+   一旦它自己占一行，顶栏就跟着高 56px。横排之后这一段的行高由字体决定（~14px）。
+   这一块是**只读的后端状态**，横着扫一遍比竖着读四行还快。 */
 .runstate {
-  font: 11px/1 var(--mono); color: var(--text-faint);
+  font: 11px/1.5 var(--mono); color: var(--text-faint);
   border-left: 1px solid var(--rule); padding-left: var(--sp-4);
-  display: flex; flex-direction: column; gap: 4px; min-width: 150px;
+  margin-left: auto;                       /* 推到右边，和 .whoami 作伴 */
+  display: flex; flex-direction: row; flex-wrap: wrap;
+  gap: 4px var(--sp-4); align-items: center;
 }
 .runstate b { color: var(--text-dim); font-weight: 600; }
+
+/* ── 当前身份 ────────────────────────────────────────────────── */
+/* ★ 这一块必须**一直看得见**。局域网下这是"你是哪个账号"的唯一答案，
+   而共用一台机器时，上一个人没退出，下一个人会以为自己就是那个身份。 */
+.whoami {
+  display: flex; align-items: center; gap: var(--sp-3);
+  border-left: 1px solid var(--rule); padding-left: var(--sp-4);
+  white-space: nowrap;
+}
+.whoami:empty { border-left: none; padding-left: 0; }
+.who-name { font: 600 13px/1 var(--mono); color: var(--text); }
+.who-roles { font: 11px/1 var(--mono); color: var(--cyan); }
+.who-scopes {
+  font: 11px/1 var(--mono); color: var(--text-faint);
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+}
+/* 本机免登录不是一个"角色"，是一个**风险**：这个身份不是登录来的。 */
+.who-bg {
+  font: 600 10px/1 var(--mono); letter-spacing: .08em;
+  color: var(--amber);
+  border: 1px solid var(--amber); border-radius: var(--r-1);
+  padding: 3px 5px;
+}
+.who-out {
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--rule); border-radius: var(--r-1);
+  padding: 5px 9px; font: 12px/1 var(--sans);
+  cursor: pointer; transition: color 150ms, border-color 150ms;
+}
+.who-out:hover { color: var(--red); border-color: var(--red); }
 
 /* ── 主体 ───────────────────────────────────────────────────── */
 main { padding: var(--sp-5); max-width: 1680px; margin: 0 auto; }
@@ -141,7 +223,12 @@ thead th {
   text-align: left; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--text-faint); font-weight: 600;
   padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--rule);
-  position: sticky; top: 57px; background: var(--ink); z-index: 5;
+  /* ★ 偏移取顶栏的**实测**高度（app.js 的 trackTopbarHeight()），不是手打的数。
+     原值是 `57px` —— 顶栏只有一行时的身高。顶栏长到 111px 之后，表头会粘在
+     顶栏**底下**：顶栏不透明且 z-index 更高，于是表头整条看不见，行却照样从
+     它下面滚过去（屏幕上看不出来"少了一层"）。
+     兜底 `0px` = "量不到就顶到最上面"，宁可贴边也不藏起来。 */
+  position: sticky; top: var(--topbar-h, 0px); background: var(--ink); z-index: 5;
   white-space: nowrap; cursor: pointer; user-select: none;
 }
 thead th:hover { color: var(--cyan); }
@@ -271,9 +358,12 @@ code, .kbd {
 
 @media (max-width: 860px) {
   .compare { grid-template-columns: 1fr; }
-  .topbar { flex-wrap: wrap; gap: var(--sp-3); }
-  #nav { margin-left: 0; }
-  thead th { top: 0; }
+  .topbar { column-gap: var(--sp-3); }
+  /* ★ 窄屏上表头**不再粘**（top:auto）。原文写的是 `top: 0` —— 那是把表头顶到
+     视口最上面，而顶栏还盖在上面（它 z-index 更高、不透明）⇒ 表头照样看不见，
+     只是从"粘在顶栏底下"变成了"粘在顶栏后面"。窄屏顶栏本来就高（导航会换行），
+     留给表格的地方不多，不粘比粘错好。 */
+  thead th { position: static; }
 }
 
 @media (prefers-reduced-motion: reduce) {

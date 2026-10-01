@@ -1,0 +1,78 @@
+/* 影像比对 —— 只放本视图自己的东西。
+   配对那两栏的并排形制复用 app.css 的 `.compare`（那里原本没人用），
+   这里补的是「叠一层准星」「点位」「失败说明」这三件它没有的。 */
+
+.cmp-head .lede { max-width: 88ch; }
+.cmp-how {
+  color: var(--text-faint); font: 12px var(--mono); max-width: 88ch;
+  margin: 0 0 var(--sp-4); padding-left: var(--sp-3);
+  border-left: 2px solid var(--rule);
+}
+
+/* 一格图槽：加载中、成功、失败都占同样的位置，避免版式在加载完成后跳一下 */
+.cmp-imgslot {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 180px; background: var(--panel-2);
+}
+.cmp-imgslot img { display: block; width: 100%; }
+.cmp-fail {
+  font: 12px var(--mono); color: var(--red); padding: var(--sp-4);
+  text-align: left; line-height: 1.7; word-break: break-word;
+}
+.cmp-fail code { color: var(--amber); }
+
+/* 准星：压在图的正中。服务端就是**以该点为中心**裁的这块（不是整瓦片对齐），
+   所以中心像素就是那个坐标 —— 这层不是装饰，它标的是配对的那一点。 */
+.cmp-overlaywrap { position: relative; }
+.cmp-cross {
+  position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
+  transform: translate(-50%, -50%); pointer-events: none;
+}
+.cmp-cross::before, .cmp-cross::after {
+  content: ''; position: absolute; background: var(--amber);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55);
+}
+.cmp-cross::before { left: 50%; top: 0; width: 1px; height: 100%; }
+.cmp-cross::after  { top: 50%; left: 0; height: 1px; width: 100%; }
+
+/* 每一对 */
+.cmp-list { display: flex; flex-direction: column; gap: var(--sp-5); margin-top: var(--sp-3); }
+.cmp-pair { border: 1px solid var(--rule); border-radius: var(--r-2); overflow: hidden; background: var(--panel); }
+.cmp-pair.cmp-focus { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan-dim); }
+.cmp-pair-h {
+  display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-3); border-bottom: 1px solid var(--rule-soft);
+}
+.cmp-pair-h .spacer { flex: 1; }
+.cmp-key {
+  font: 700 15px var(--mono); color: var(--cyan); text-decoration: none;
+  letter-spacing: .06em;
+}
+.cmp-key:hover { text-decoration: underline; }
+.cmp-title { font-size: 14px; }
+.cmp-coord {
+  font: 11px var(--mono); color: var(--text-dim);
+  padding: var(--sp-2) var(--sp-3); border-top: 1px solid var(--rule-soft);
+}
+.cmp-coord b { color: var(--text-faint); font-weight: 600; letter-spacing: .06em; }
+.cmp-warn { margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-3) var(--sp-5); }
+.cmp-warn li { color: var(--amber); font-size: 12px; }
+
+/* 校区图 + 点位 */
+.cmp-campus { margin: var(--sp-5) 0; }
+.cmp-campus h2, .cmp-h2 { font-size: 16px; margin: 0 0 var(--sp-2); }
+.cmp-hint { font-size: 12px; margin-top: var(--sp-2); }
+.cmp-map { position: relative; border: 1px solid var(--rule); border-radius: var(--r-2); overflow: hidden; }
+.cmp-map .cmp-imgslot { min-height: 240px; }
+.cmp-pins { position: absolute; inset: 0; pointer-events: none; }
+.cmp-pin {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: auto;
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font: 700 10px var(--mono); color: var(--ink); text-decoration: none;
+  background: var(--amber); border: 1px solid rgba(0, 0, 0, .6);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+}
+.cmp-pin:hover, .cmp-pin:focus-visible {
+  background: var(--cyan); transform: translate(-50%, -50%) scale(1.25); z-index: 2;
+}

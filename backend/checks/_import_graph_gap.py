@@ -17,7 +17,12 @@ r"""「已入库的 .py」import 了「存在但没入库的本地模块」—�
   不查：第三方库（不落在本仓路径上）、`_scratch/` 里自己写的一次性探针
       （那本来就故意不入库，见 algorithm-overview 的归档约定）。
 
-只报文字，不改任何东西。退出码：有缺件 = 1，没有 = 0（给门禁用）。
+只报文字，不改任何东西。退出码有**三个**来源，别只看 ✓ 那一行：
+  · 有缺件 ⇒ 1；
+  · 没缺件、但有**没量到**的（解析不了／进了 git 而盘上已删）⇒ **也 1**，
+    且缺件那一栏**不印 ✓**，印的是「本判据此刻判不了」—— 「没量过」与「没问题」
+    在屏幕上长得一样，这是本脚本第一版栽过的假绿；
+  · 全量到、且无缺件 ⇒ 0（只有这一档才印 ✓）。
 用法：python backend/checks/_import_graph_gap.py
       python backend/checks/_import_graph_gap.py --selftest
 
@@ -175,6 +180,49 @@ def scan_imports(rel: str, text: str) -> tuple[list[str], list[str]]:
     return out, []
 
 
+def verdict(gaps, bad, gone) -> int:
+    """出结论 ＋ 定退出码。抽成函数是为了**能单独驱动**（见 `selftest` ⑦–⑩）。
+
+    ★ 原来这段是内联在 `main()` 尾巴上的，于是「真绿那一档」**根本没有刑具**：
+      退出码对不对是**另一个**问题，这次坏的是**屏幕上的字** ——
+      它在 `bad/gone` 非空时照样印 `✓ 没有缺件`，只靠 `return 1` 拦一道，
+      而**同一段代码上方的注释写的是「不许报 ✓」**。注释与代码不一致，
+      且不一致的那一面是**绿**的那一面（人读屏幕看到的是 ✓，退出码只对闸门可见）。
+      抽出来之后两档都能量：⑦ 真绿才准印 ✓；⑧⑨ 没量到 ⇒ 必须说判不了、不许印 ✓。
+    ★ 退出码一个字没改：有缺件 ⇒ 1；无缺件但有没量到的 ⇒ 1；全量到且干净 ⇒ 0。
+    """
+    if gone:
+        print("⚠ git 里有、磁盘上已不在的 .py：%d 份（改了没提交的删除）—— "
+              "它们的 import 不计入：%s"
+              % (len(gone), "、".join(sorted(gone)[:4])))
+        if len(gone) > 4:
+            print("     …另有 %d 份" % (len(gone) - 4))
+    if bad:
+        # ★ 「没量过」不许长得像「没问题」：解析不了的文件要自己报出来。
+        print("⚠ 有 %d 份文件没量到（解析失败/读不了）—— 它们的 import 不计入上面的数："
+              % len(bad))
+        for b in bad[:8]:
+            print("     %s" % b)
+        if len(bad) > 8:
+            print("     …另有 %d 份" % (len(bad) - 8))
+    if gaps:
+        print("✗ 有 %d 个模块：磁盘上有、git 不跟踪，却被已入库的文件 import" % len(gaps))
+        for hit in sorted(gaps):
+            who = sorted(gaps[hit])
+            print("   %s" % hit)
+            for w in who[:6]:
+                print("       ← %s" % w)
+            if len(who) > 6:
+                print("       ← …另有 %d 处" % (len(who) - 6))
+        return 1
+    if bad or gone:
+        print("— 本判据此刻**判不了**：上面 %d 份没量到，缺件这一栏不算数"
+              "（故不打钩、也不退 0）" % (len(bad) + len(gone)))
+        return 1
+    print("✓ 没有「已入库文件 import 未入库模块」的缺件")
+    return 0
+
+
 def main() -> int:
     tr = tracked()
     idx = local_modules()
@@ -212,34 +260,7 @@ def main() -> int:
                 gaps.setdefault(hit, set()).add(f)
 
     print("import 总数 %d 条，其中解析到仓内文件的 %d 条" % (n_imp, n_local))
-    if gone:
-        print("⚠ git 里有、磁盘上已不在的 .py：%d 份（改了没提交的删除）—— "
-              "它们的 import 不计入：%s"
-              % (len(gone), "、".join(sorted(gone)[:4])))
-        if len(gone) > 4:
-            print("     …另有 %d 份" % (len(gone) - 4))
-    if bad:
-        # ★ 「没量过」不许长得像「没问题」：解析不了的文件要自己报出来。
-        print("⚠ 有 %d 份文件没量到（解析失败/读不了）—— 它们的 import 不计入上面的数："
-              % len(bad))
-        for b in bad[:8]:
-            print("     %s" % b)
-        if len(bad) > 8:
-            print("     …另有 %d 份" % (len(bad) - 8))
-    if not gaps:
-        print("✓ 没有「已入库文件 import 未入库模块」的缺件")
-        # ★ 有量不到的文件时**不许报 ✓ 也不许退 0** —— 「没量过」与「没问题」
-        #   在屏幕上长得一样，而这是本脚本第一版栽过的那个坑（假绿）。
-        return 1 if (bad or gone) else 0
-    print("✗ 有 %d 个模块：磁盘上有、git 不跟踪，却被已入库的文件 import" % len(gaps))
-    for hit in sorted(gaps):
-        who = sorted(gaps[hit])
-        print("   %s" % hit)
-        for w in who[:6]:
-            print("       ← %s" % w)
-        if len(who) > 6:
-            print("       ← …另有 %d 处" % (len(who) - 6))
-    return 1
+    return verdict(gaps, bad, gone)
 
 
 def selftest() -> int:
@@ -296,7 +317,39 @@ def selftest() -> int:
                              "得到 %r" % (got,)))
     ok = ok and got == ["shapely.geometry"]
 
-    print("\n--selftest %s ①…⑥" % ("全过" if ok else "★有红：闸门坏了，别信它的绿灯"))
+    # ⑦–⑩ ★ **退出码对了不算这次修好了**：这次坏的是**屏幕上的字**。
+    #   抽 `verdict` 之前「真绿那一档」一条刑具都没有 —— 而**验不到的那一面**
+    #   正是假绿的高发区（铁律 23(b)：待检对象要真的落进判据的作用域）。
+    #   所以这四条断言的是**文字**：✓ 只许在真绿那一档出现；没量到时必须说「判不了」。
+    # ★★ 断言用的是**字符级**的 `✓`（输出里出现这个字符就红），不是那行结论串 ——
+    #   因为闸门和人都可能拿 `grep ✓` 当绿灯，**所以说明文字里也不许提这个字符**。
+    #   第一版说明写成「故不印 ✓、也不退 0」⇒ ⑧⑨ **假红**（代码是对的，红在断言）：
+    #   同族：拿字符当判据，而说明里恰好提到了它。**改源头（换成「不打钩」），别放宽断言。**
+    import contextlib
+    import io as _io
+
+    def _say(gaps, bad, gone):
+        buf = _io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = verdict(gaps, bad, gone)
+        return rc, buf.getvalue()
+
+    vcases = [
+        ("⑦ 全量到、无缺件 ⇒ 才准印 ✓（rc=0）", ({}, [], []), 0, "✓", "判不了"),
+        ("⑧ 有删了没提交的 ⇒ 不许印 ✓，必须说判不了",
+         ({}, [], ["backend/gone.py"]), 1, "判不了", "✓"),
+        ("⑨ 有解析不了的 ⇒ 同上", ({}, ["backend/x.py: SyntaxError"], []), 1, "判不了", "✓"),
+        ("⑩ 真缺件 ⇒ ✗ 且指名（对照组：别把缺件说成判不了）",
+         ({"backend/state/roster.py": {"backend/a.py"}}, [], []), 1, "✗", "判不了"),
+    ]
+    for title, args, want_rc, want_in, want_not in vcases:
+        rc, out = _say(*args)
+        good = rc == want_rc and want_in in out and want_not not in out
+        note = "rc=%d ｜ %s" % (rc, out.strip().replace("\n", " ⏎ "))
+        print("%-4s %-46s %s" % ("OK" if good else "★红", title, note[:78]))
+        ok = ok and good
+
+    print("\n--selftest %s ①…⑩" % ("全过" if ok else "★有红：闸门坏了，别信它的绿灯"))
     return 0 if ok else 1
 
 

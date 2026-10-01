@@ -127,13 +127,42 @@ _FLOOR_CACHE = {}
 
 
 def _floor_png(name, F):
-    """渲染 name 楼 F 层 DXF 平面图为 PNG bytes（进程内缓存，墙黑/门红/柱蓝/梯绿）。"""
+    """name 楼 F 层平面图 PNG bytes（进程内缓存，墙黑/门红/柱蓝/梯绿）。
+
+    ★ 先发**构建期预渲染**的 `plans/recog_floor{F}.png`，仅在缺失或比它的
+      **真输入**（源 DXF / profile.json）旧时才现算。
+      两条路的图是**同一个函数**产出的（`vision.render_floor.render_floor_png`），
+      所以内容一致；区别只在"哪儿渲染"：
+        · 现算要 ezdxf + matplotlib —— 服务器（GYM3D_COMPUTE=0）**刻意不装**，
+          于是请求期现算在那里必然 500（`prerender_floor_png.py` 的模块注释
+          就是为这件事写的）；
+        · 预渲染图是文件，服务器只需要能发文件。
+      旧代码只走现算那条路，等于把这个 30MB 的预渲染产物**完全晾着没人用**。
+    """
     key = (name, F, "png")
     if key in _FLOOR_CACHE:
         return _FLOOR_CACHE[key]
     import run_step
-    from vision.render_floor import render_floor_png
     p = run_step.load_profile(name)
+    pre = os.path.join(os.path.dirname(p.out_dir), "plans", "recog_floor%d.png" % F)
+    # 判据 = 预渲染图不比它的**真输入**旧。图的内容是 f(源 DXF, profile, 层号)
+    # —— `render_floor_png` 全程读 DXF + profile，**不读** floors/*.json，
+    # 所以拿 floor JSON 当判据是错的：floors 天天改，会把本来有效的预渲染图
+    # 一律判成"旧"而退回现算，服务器上就还是 500（那正是这个功能要解决的事）。
+    # 与 `prerender_floor_png.is_fresh()` 是同一套判据，改一处要改两处。
+    deps = [p.dxf, os.path.join(BUILDINGS, name, "profile.json")]
+    try:
+        t_pre = os.path.getmtime(pre)
+        fresh = all((not os.path.exists(d)) or t_pre >= os.path.getmtime(d)
+                    for d in deps)
+    except OSError:
+        fresh = False
+    if fresh:
+        with open(pre, "rb") as fh:
+            data = fh.read()
+        _FLOOR_CACHE[key] = data
+        return data
+    from vision.render_floor import render_floor_png
     png = render_floor_png(p, F)
     _FLOOR_CACHE[key] = png
     return png
@@ -255,6 +284,25 @@ def _floors_mtime(floors_dir):
     return max(ms) if ms else None
 
 
+def upstream_mtime(stage, up_m):
+    """阶段的上游 mtime —— **未登记的 upstream 键必须炸，不许静默返回 None**。
+
+    旧写法是 `up_m.get(stage.get("upstream"))`：键没登记时静默返回 None ⇒
+    `bool(up and m < up)` 恒 False ⇒ `stale` 恒 False ⇒「改了楼层没重出模型」
+    被判成「新鲜」，而屏幕上一切正常（与 NaN 让判据恒不触发同族）。
+    登记表 = `console_meta.UPSTREAM_KEYS`（`self_check()` 启动时会点名未登记的阶段），
+    取值表 = 本函数的 `up_m`（各消费侧自己那张）。**两边都得有**，
+    少哪边都是「判据恒不触发」，所以这里一次查两处。
+    """
+    key = stage.get("upstream")
+    if key not in console_meta.UPSTREAM_KEYS or key not in up_m:
+        raise KeyError(
+            "阶段 %s 的 upstream=%r 没有登记：UPSTREAM_KEYS=%r，取值表=%r。"
+            "过期判据会静默判「不过期」（stale 恒 False），先登记再跑。"
+            % (stage.get("id"), key, console_meta.UPSTREAM_KEYS, tuple(up_m)))
+    return up_m[key]
+
+
 def glb_is_stale(floors_dir, glb_path):
     """GLB 是否早于它自己的上游（最新 floor*.json）—— 即「改过楼层但没重出模型」。
 
@@ -281,6 +329,8 @@ def building_status(name):
       · upstream='floors'  → 产物 mtime 早于最新 floor*.json = 楼层改了但没重出
                              （那批「GLB 过期」正是这一类）
       · upstream=None      → 无产物或只读，不判过期
+      · 其余取值           → **报错**（见 upstream_mtime）。这里曾经是 `up_m.get()`：
+                             未登记的键静默 None ⇒ stale 恒 False ⇒ 假绿。
     inplace 阶段（thin / doorpunch 就地改写楼层）没有独立产物，done/stale 置 None ——
     报「已完成」会是假信号（floor0.json 早在 recognize 时就存在了）。
     """
@@ -292,7 +342,7 @@ def building_status(name):
 
     stages = []
     for s in console_meta.PIPELINE:
-        up = up_m.get(s.get("upstream"))
+        up = upstream_mtime(s, up_m)
         inplace = bool(s.get("inplace"))
         arts = []
         for rel in s.get("produces", []):

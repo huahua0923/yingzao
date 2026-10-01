@@ -7,8 +7,17 @@
 <!--
   刻意**无构建**：原生 ES module，浏览器直接跑。
   理由：后端已经定死在 /api 契约上（见 backend/api/），前端换 React/Vite 只动这个目录，
-  不动后端。现在先用零构建版本把"看得见"这件事做出来，不引入 npm/打包这一层新的失败面。
-  三维预览用 three.js 的 CDN 版（锁 0.160.0，见重构方案·后端前端.md）。
+  不动后端。现在先用零构建版本把「看得见」这件事做出来，不引入 npm/打包这一层新的失败面。
+  ★ 三维**整栋**那一屏不在本页自己画：「整栋三维」是同源 iframe 托管 `/building.html`，
+    那个页面自带 importmap（走仓内 `/site/vendor/three/`，不走公网）。
+  ★ 但本页**现在也需要一张 importmap 了**（见下面那张）：控制台视图的「预览」子页
+    复用 `frontend/site/js/viewer.js` 的 `createViewer()`（刻意的跨目录复用，
+    那个文件**只读不改**），而它 import 的是裸说明符 `three` /
+    `three/addons/controls/OrbitControls.js` / `three/addons/loaders/GLTFLoader.js`。
+    （本行原话是「本目录至今一个 three 说明符都没有，所以这里不需要 importmap」——
+     那句话在加上预览之后就不成立了，它自己的后半句正是本轮的触发条件。）
+    （更早那版注释写的「三维预览用 three.js 的 CDN 版（锁 0.160.0）」也已作废：
+     那正是本轮要消掉的公网依赖，见 `frontend/building.html` 头部那段。）
 -->
 <link rel="stylesheet" href="app.css">
 <!-- 视图自己的样式表：一个视图一份，在 js/app.js 的 VIEWS 里登记时一起加一行 -->
@@ -18,7 +27,40 @@
 <link rel="stylesheet" href="js/views/components.css">
 <link rel="stylesheet" href="js/views/area.css">
 <link rel="stylesheet" href="js/views/checks.css">
+<link rel="stylesheet" href="js/views/compare.css">
+<link rel="stylesheet" href="js/views/workshop.css">
 <link rel="stylesheet" href="js/views/kg.css">
+<link rel="stylesheet" href="js/views/building.css">
+<link rel="stylesheet" href="js/views/console.css">
+<link rel="stylesheet" href="js/views/campus.css">
+<link rel="stylesheet" href="js/views/branches.css">
+<!-- 登录页与账号管理页。★ 这两份**不在 js/views/ 里也要在这里挂** ——
+     上面那句注释说"视图自己的样式表"，而登录页不是视图（它在 VIEWS 之外），
+     账号页是视图。两者都靠这一行才上得了样式。 -->
+<link rel="stylesheet" href="js/login.css">
+<link rel="stylesheet" href="js/views/account.css">
+
+<!--
+  ★ three 的裸说明符映射。三条硬规矩，每条都踩过：
+
+  1) **必须排在所有 module 脚本之前**。浏览器只认**第一个** importmap，后面那张
+     被**静默忽略**（不报错、不警告）—— 症状是页面里所有 three 说明符解析失败，
+     看起来像"路径写错了"，其实是"这张表根本没生效"。
+  2) 路径必须是**根绝对**的（`/site/vendor/...`）。本页的文档 URL **永远是 `/`**
+     （hash 路由，`/admin/` 还会被 307 回 `/`），而 `/site` 是 `main.py` 已有的挂载点。
+     ★ site 自己那份 importmap 是**相对**的（`./vendor/three/...`），在这里解析不到
+     —— "照着隔壁抄一份"会直接坏掉。
+  3) **仓内自带，不走公网**：`frontend/site/vendor/three/` 已进 git、751 KB、0.185.1。
+     旧版 `frontend/building.html` 走 unpkg CDN（内网/断网直接白屏），本轮正在消掉它。
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "/site/vendor/three/build/three.module.min.js",
+    "three/addons/": "/site/vendor/three/examples/jsm/"
+  }
+}
+</script>
 </head>
 <body>
 <a class="skip" href="#main">跳到内容</a>
@@ -29,8 +71,13 @@
     <span class="name">建模后台</span>
     <span class="sub">gym3d · 校园建筑识别与交付</span>
   </div>
+  <!-- ★ 下面两行的属性引号原本写的是「」（中文书名号），不是 ASCII 的 `"`。
+       HTML 把 `aria-label=「主导航」` 读成**未加引号的属性值**，于是属性值是
+       带书名号的那四个字，读屏会把它念出来。这里改成正常的引号。 -->
   <nav id="nav" aria-label="主导航"></nav>
   <div class="runstate" id="runstate" title="后端能力"></div>
+  <!-- 当前身份 + 退出。★ 空着就是"还没登录上"，由 app.js 填。 -->
+  <div class="whoami" id="whoami"></div>
 </header>
 
 <main id="main" tabindex="-1">

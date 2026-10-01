@@ -33,6 +33,8 @@ from shapely.geometry import Polygon, Point, box
 from shapely.ops import unary_union
 
 from run_building import load_profile
+import config_table as CTBL       # ★ 按楼配置（config/buildings.json）—— 下面三张旧表已搬进它
+
 from recognizer.geometry import derive_walls_and_outline, detect_doors
 from recognizer.floor import reference_outline_for, unify_floor_set, outline_for_floor
 from recognizer import outline as OUT
@@ -662,8 +664,8 @@ def relabel(name, dry):
 
     msp = ezdxf.readfile(p.dxf, encoding=ENCODING).modelspace()
     role_map = layer_role_map(msp)
-    role_map.update(LAYER_ROLE_OVERRIDE.get(name, {}))
-    labels = read_labels(msp, role_map, PURPOSE_DROP_AREA_LIKE.get(name))
+    role_map.update(CTBL.layer_role_override(name))
+    labels = read_labels(msp, role_map, CTBL.purpose_drop_area_like(name))
     print("[%s] 标注：用途 %d 条、单位 %d 条（role_map=%s）"
           % (name, len(labels["purpose"]), len(labels["dept"]),
              json.dumps({k: v for k, v in sorted(role_map.items())}, ensure_ascii=False)))
@@ -733,8 +735,8 @@ def run(name, dry):
     # 兜底（老楼 5/6/7/8 布局）。LAYER_ROLE_OVERRIDE 保留手工纠正位；
     # PURPOSE_DROP_AREA_LIKE 是「同一层里混装用途与面积串」的具名口子（见该表上方注释）。
     role_map = layer_role_map(msp)
-    role_map.update(LAYER_ROLE_OVERRIDE.get(name, {}))
-    labels = read_labels(msp, role_map, PURPOSE_DROP_AREA_LIKE.get(name))
+    role_map.update(CTBL.layer_role_override(name))
+    labels = read_labels(msp, role_map, CTBL.purpose_drop_area_like(name))
 
     floors = sorted({floor_of(p, sum(q[0] for q in pts) / len(pts), sum(q[1] for q in pts) / len(pts))
                      for pts in walls})
@@ -873,7 +875,14 @@ def run(name, dry):
         print(f"  [歧义] 标注命中多房间={ambig} 房间吃多标注={room_eat}")
 
     rooms.sort(key=lambda r: (r["floor"], r["number"]))
-    base = ID_BASE.get(name, 1000000)
+    # ★ 段基址缺了不许兜底。旧写法 `ID_BASE.get(name, 1000000)` 里那个 1000000
+    #   已经被 c104 占用 ⇒ 靠它「跑通」的楼，房间 id 会与 c104 相撞，而屏幕上什么都不会报。
+    base = CTBL.room_id_base(name)
+    if base is None:
+        print(f"[{name}] ★ 没有配置房间 id 段基址 ⇒ 不写 rooms.json。"
+              f"在 config/buildings.json 的 buildings.{name}.room_id_base 里给它一段"
+              f"（10 万一段，别用已被占用的）", file=sys.stderr)
+        return None
     for i, r in enumerate(rooms):
         r["id"] = base + i + 1
 
@@ -908,13 +917,20 @@ def main():
     argv = [a for a in sys.argv[1:] if not a.startswith("--")]
     dry = "--dry" in sys.argv
     relabel_mode = "--relabel" in sys.argv
+    # 名单从配置来（config/buildings.json）—— 不再硬编码在 ID_BASE 里。
     if "--all" in sys.argv:
-        names = sorted(ID_BASE)
+        names = CTBL.named_buildings()
     else:
-        names = argv or list(ID_BASE)
+        names = argv or CTBL.named_buildings()
+    # ★ 出声：没有段基址的楼「抽不出房间」与「这栋楼没有房间」在屏幕上必须不是同一行字。
+    nobase = [n for n in names if CTBL.room_id_base(n) is None]
+    if nobase:
+        print(f"★ 有 {len(nobase)} 栋没配房间 id 段基址 ⇒ 跳过（rooms.json 会一直是空的）：{nobase}\n"
+              f"  给它们补 config/buildings.json 的 buildings.<楼>.room_id_base 即可。", file=sys.stderr)
+        names = [n for n in names if CTBL.room_id_base(n) is not None]
     for name in names:
-        if name not in ID_BASE:
-            print(f"未知建筑 {name}（跳过），可用：{sorted(ID_BASE)}")
+        if name not in set(CTBL.named_buildings()):
+            print(f"未知建筑 {name}（跳过）")
             continue
         if relabel_mode:
             relabel(name, dry)

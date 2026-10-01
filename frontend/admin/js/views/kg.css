@@ -7,8 +7,12 @@
  *   · 「有锚点」与「只有人记着」同理：一个是实线实心、一个是虚线点纹。
  *   · 一条命令**会写盘**时，块上要有一条左侧的琥珀竖条 + 明确的字，不能只标个颜色。
  *
- * 布局是**三栏**（左：图里有什么｜中：链｜右：命中的楼栋·层），刻意不画力导向大图：
- * 上千个实例节点糊成一团，回答不了「这个症状的根因是什么」。
+ * 布局是**三栏**（左：图里有什么｜中：链或关系图｜右：命中的楼栋·层）。
+ * ★ 2026-09-25 补：中栏现在有**两个视图**（`链条` / `关系图`），默认仍是链条。
+ *   关系图画的**不是「上千个实例节点」**（那些在右栏，按楼·层列着），
+ *   而是**结构**：症状家族 / 根因 / 处置 / 命令 / 陷阱 / 规范 / 图元 ＋
+ *   那两类**机器数出来的**节点（缺陷码、实测旗）。所以它铺得开 ——
+ *   原先那句「刻意不画力导向大图」针对的是实例，不针对结构；两个视图各回答一个问题。
  * 窄屏塌成一栏 —— 顺序即优先级：横幅与链在最前。
  */
 
@@ -223,3 +227,74 @@
 .kg-card.kg-inst.missing { border-left: 3px dashed var(--amber); }
 .kg-card.kg-inst.unknown { border-left: 3px dotted var(--amber); }
 .kg-card.kg-empty { border-style: dashed; }
+
+/* ── 中栏的视图开关 ─────────────────────────────────────────── */
+.kg-toolbar {
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  margin: 0 0 var(--sp-3);
+}
+.kg-vbtn { font: 11.5px var(--sans); letter-spacing: .02em; }
+/* 当前视图：**形状也变**（实心 + 一条下沿），不只换颜色 ——
+   两个按钮里哪个亮着，在投影和灰度截图里都得看得出来。 */
+.kg-vbtn.on {
+  color: var(--ink); background: var(--cyan); border-color: var(--cyan);
+  box-shadow: inset 0 -2px 0 var(--cyan-dim);
+}
+.kg-vnote { font-size: 11.5px; color: var(--text-faint); line-height: 1.6; margin-left: auto; }
+.kg-vnote .kg-warnline { display: block; margin: var(--sp-1) 0 0; }
+
+/* ── 关系图 ─────────────────────────────────────────────────── */
+/* 画布要一个**确定的高度**：canvas 没有内在尺寸，父元素高度由内容决定 ⇒
+   父高度由 canvas 决定 ⇒ `clientWidth/Height` 在布局那一步拿到 0
+   （图缩成一个点，且不报错）。所以这里给死高度，窄屏再收一档。 */
+.kg-graphwrap {
+  position: relative; height: clamp(420px, 62vh, 760px);
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-2); overflow: hidden;
+}
+.kg-gcv { display: block; width: 100%; height: 100%; cursor: pointer; }
+.kg-gtip {
+  position: absolute; display: none; z-index: 2; max-width: 330px;
+  pointer-events: none; white-space: pre-wrap;
+  background: var(--panel-2); border: 1px solid var(--rule);
+  border-radius: var(--r-1); padding: var(--sp-2) var(--sp-3);
+  font: 11.5px/1.6 var(--sans); color: var(--text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+}
+.kg-glegend {
+  position: absolute; left: var(--sp-2); bottom: var(--sp-2); z-index: 1;
+  display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3);
+  max-width: calc(100% - var(--sp-4));
+  background: rgba(14, 17, 22, .82); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1); padding: var(--sp-1) var(--sp-2);
+  font: 10.5px/1.7 var(--mono); color: var(--text-dim);
+}
+.kg-glegend span { display: inline-flex; align-items: center; gap: 5px; }
+.kg-glegend i { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
+/* ★ 缺口那一格是**虚线圈**：它与「实心的缺陷码」必须形状不同 ——
+   「还没映射」不是颜色深浅，是另一件事。 */
+.kg-glegend i.gap { background: none; border: 1.5px dashed var(--amber); }
+
+/* ── 「跑判据」那一行 ───────────────────────────────────────── */
+.kg-runbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2);
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-radius: var(--r-2); padding: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.kg-runbar .kg-note { margin: 0; flex: 1 1 200px; }
+.kg-runbar .kg-warnline { flex: 1 1 100%; margin: 0; }
+/* ★ 置灰的按钮要**看得出来是"不可以"，不是"没渲染出来"** ——
+   灰字 + 虚线边 + `not-allowed`，三种形状一起给。 */
+.kg-btn:disabled,
+.kg-btn[disabled] {
+  color: var(--text-faint); border-style: dashed; cursor: not-allowed;
+  background: transparent; opacity: .75;
+}
+.kg-btn:disabled:hover { border-color: var(--rule); }
+.kg-runbar .kg-card { flex: 1 1 100%; margin: var(--sp-2) 0 0; }
+
+/* 跑出来那一档：形状分档，颜色只是叠加 */
+.kg-card.kg-run.ok   { border-left: 2px solid var(--green); }
+.kg-card.kg-run.warn { border-left: 2px dashed var(--amber); }
+.kg-card.kg-run.miss { border-left: 3px dotted var(--red); }

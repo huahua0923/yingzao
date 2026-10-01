@@ -12,7 +12,7 @@
 //   而 rooms.json 里就同时躺着两个长得几乎一样的字段：
 //
 //     · `area_m2` = **房间净面积（墙内皮）**。两处独立出处都这么写：
-//         backend/db/serve_rooms.py:10   「房间净面积 = 墙内皮（rooms.area_m2）」
+//         _scratch/_retired_20260925/serve_rooms.py:10   「房间净面积 = 墙内皮（rooms.area_m2）」
 //         backend/db/load_rooms_db.py:121 建表注释「room_net_m2 ... rooms.area_m2 之和」
 //       值本身是房间多边形的面积：backend/extract/extract_rooms_generic.py:779
 //       `"area_m2": round(g.area, 2)`。
@@ -38,7 +38,7 @@ const NET_AREA = {
   field: 'area_m2',
   name: '房间净面积（墙内皮）',
   short: '净面积',
-  source: 'backend/db/serve_rooms.py:10 与 load_rooms_db.py:121',
+  source: '_scratch/_retired_20260925/serve_rooms.py:10 与 load_rooms_db.py:121',
 };
 const LABEL_AREA = {
   field: 'area',
@@ -186,8 +186,12 @@ function emptyPanel(name, art) {
     el('p', { class: 'msg' },
       '后端回的是一份成功的信封，房间数组长度是 0。'),
     el('p', {}, el('b', { text: '这是「真的没有」，不是「取不到」。' }),
-      '接口是通的，只是这栋楼交付了 0 间房（本仓全库 95 栋里有 45 栋是这样，'
-      + '见 backend/checks/builtin.py 的那条判据）。'),
+      '接口是通的，只是这栋楼交付了 0 间房。全库到底有几栋是这样，'
+      + '看 #/ledger 首屏那一行 —— 那里是按当前楼栋清单现算的（判据见 '
+      + 'backend/checks/builtin.py）。'
+      // ★ 这里**不写死数字**：写死的数一旦数据变了就变成假话，而且没有任何东西会去核它。
+      //   全库计数只许有**一个**出处（概览页），在这儿再算一遍就等于同一个数两份实现。
+      ),
     el('p', { class: 'dim', text: why }),
     el('ul', {},
       el('li', {}, '取数地址：', el('code', { text: `/api/buildings/${name}/rooms` })),

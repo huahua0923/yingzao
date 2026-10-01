@@ -120,6 +120,27 @@ def _verdict(delta: float) -> str:
     return "gap"
 
 
+def counts_of(parsed: dict) -> dict:
+    """`rows` / `unauditable` 的汇总。**唯一一份实现。**
+
+    ★ 为什么单独抽出来（2026-10-01 批次 2）：加了范围过滤之后，
+      `GET /api/analysis/area` 会先把 `rows` 滤成"这个账号看得见的几栋"，
+      而 `counts` 还是全库那份 —— 屏幕上于是出现"排名里 3 行、抬头写 92 栋"。
+      两个数一个是"你看得见的"、一个是"全库的"，**都长得像结论**。
+      ⇒ 路由过滤完必须重算，而重算**不能**在路由里再抄一遍这五行 sum：
+        两处写同一个数，一致也证明不了它是对的（铁律 018），
+        而分叉起来没人会知道（改动只会落到其中一处）。
+      ⇒ 抽成函数，`fleet()` 与路由**调同一个**。
+    """
+    return {
+        "audited": len(parsed["rows"]),
+        "reconciled": sum(1 for r in parsed["rows"] if r["verdict"] == "reconciled"),
+        "watch": sum(1 for r in parsed["rows"] if r["verdict"] == "watch"),
+        "gap": sum(1 for r in parsed["rows"] if r["verdict"] == "gap"),
+        "unauditable": len(parsed["unauditable"]),
+    }
+
+
 def fleet(repo_root: Path) -> dict:
     log = find_log(repo_root)
     if log is None:
@@ -130,13 +151,7 @@ def fleet(repo_root: Path) -> dict:
     parsed = parse_fleet(log.read_text(encoding="utf-8", errors="replace"))
     parsed["source"] = {"file": log.name, "mtime": st.st_mtime,
                         "mtime_iso": _iso(st.st_mtime), "bytes": st.st_size}
-    parsed["counts"] = {
-        "audited": len(parsed["rows"]),
-        "reconciled": sum(1 for r in parsed["rows"] if r["verdict"] == "reconciled"),
-        "watch": sum(1 for r in parsed["rows"] if r["verdict"] == "watch"),
-        "gap": sum(1 for r in parsed["rows"] if r["verdict"] == "gap"),
-        "unauditable": len(parsed["unauditable"]),
-    }
+    parsed["counts"] = counts_of(parsed)
     return parsed
 
 

@@ -1,0 +1,423 @@
+/* 校园地形（视图 id 见 js/app.js 的 VIEWS）—— 只放本视图自己的东西。
+   这一屏的形状是：**左边一张占满的 three.js 地形画布 + 右边一份贴着画布的事实清单**。
+   画布负责「看见」，右栏负责「敢不敢信它」：来源、深度、洞在哪、以及哪些数**拿不到**。
+   配色一律取 app.css 的 :root 令牌 —— app.css 的基调是**暗**的（--ink #0e1116 的暗室图纸台，
+   带青/琥珀两色网格），地形画布本身就是深色的，所以这一屏顺理成章地延续暗色，不另立主题。
+
+   ── 为什么每个类都带 `cp-` 前缀 ──────────────────────────────────────────
+   本仓所有视图的样式表都在 index.html 里**一次性全局加载**（不是按视图隔离的）。
+   所以 `.stage` / `.side` / `.kv` / `.btn` 这种名字**一定**会和别的视图撞，而撞了的表现是：
+   不报错、不白屏，只是某一屏的某个方块莫名歪掉或变色，排查时看到的那个视图完全无辜。
+   前缀是这里唯一的隔离手段。（同目录 compare.css 用 `cmp-`、console.css 用 `csl-`，同一约定。）
+
+   ── 这一屏的高度是怎么来的（`--cp-h`）──────────────────────────────────
+   app.css 里 `main { padding: var(--sp-5); }` 且**高度是 auto**（由内容撑），
+   所以「画布能占多大」这件事得由本视图自己按视口算。算式只有一条，写在下面 :root 里：
+       --cp-h = 100vh − 顶栏 − #main 的上下 padding − 页脚 − 一点余量
+   三个减数**都是量出来的**（2026-09-26 在 1600×950 的实测值，逐个的出处见 :root 注释），
+   合计 233px ⇒ 1600×950 下画布区 717px 高、1102px 宽。
+   减掉页脚那一段是为了**页面不出纵向滚动条**：页脚被推到折线以下同样算「有滚动条」，
+   而这一屏的画布正好不需要那几十像素。
+   canvas 的 width/height 由 JS 按 .cp-stage 的实测尺寸设 inline style，本文件不猜像素。
+
+   ── 关于「结构性令牌带兜底、颜色令牌不带」────────────────────────────────
+   间距/圆角写成 `var(--sp-3, 12px)` 这种带原值兜底的形式（console.css 也这么写）；
+   **颜色一律不带兜底** —— 给颜色写兜底等于在本文件里另立一套色值，
+   而本仓的规矩是这一屏的颜色只有 app.css 一个出处。
+*/
+
+:root {
+  /* ── 本视图特有、app.css 里没有的令牌 ───────────────────────────── */
+
+  /* 右栏固定宽。值列里有长 hash 与绝对路径，440px 是「不频繁折行」与「不挤掉画布」的折中。
+     ★ 这个数只有这一处：grid 的列宽、以及两个浮层 right 的减数都引用它。 */
+  --cp-side-w: 440px;
+
+  /* 「洞」= 拿不到的地方。用 app.css 已有的琥珀（它的语义本就是「可疑 / 待拍板」），
+     这里只是给它一个说得出用途的名字；**不新开色值**。 */
+  --cp-hole: var(--amber);
+  /* 画布底色 = 管理台的暗室底色（three 的 scene.background 会盖在它上面）。 */
+  --cp-plate: var(--ink);
+
+  /* ── 高度算式：--cp-h = 100vh − (下列四段之和) ───────────────────────
+     每段都是实测值，不是拍的：
+       --cp-topbar-h ★ **不再写死**：取 app.js 量出来的 `--topbar-h`（顶栏实测高）。
+                      这里原本手抄的是 81px（顶栏只有**一行**导航时的身高，
+                      即 padding 12+12 + .runstate 四行 56 + border 1）。
+                      导航加到第 14 条之后顶栏变成 111px，而这个 81 不会自己变
+                      ⇒ 算式少减 30px ⇒ 页脚被顶到折线以下、多出一条滚动条，
+                      而这一屏的文件头恰恰写着"减掉页脚那一段就是为了不出滚动条"。
+                      兜底 81px：JS 没跑到时退回原值，不会把画布算成 100vh。
+       --cp-main-pad-h #main 的 padding 上下各 28px（app.css `main{padding:var(--sp-5)}`），56。
+       --cp-footer-h  .footer 的 margin-top 44px + 自身高 49.6px
+                      （padding 18+18 + 11px 一行）。取整到 94。
+       --cp-slack     2px：上面两处取整各向上入了 0.2 / 0.4，再留一点防子像素进位
+                      把最后一像素顶出去。它不影响版式，但少了它就会多出一条滚动条。 */
+  --cp-topbar-h: var(--topbar-h, 81px);
+  --cp-main-pad-h: 56px;
+  --cp-footer-h: 94px;
+  --cp-slack: 2px;
+  --cp-h: calc(100vh - var(--cp-topbar-h) - var(--cp-main-pad-h)
+                    - var(--cp-footer-h) - var(--cp-slack));
+}
+
+/* ── 外层：画布 + 右栏 ───────────────────────────────────────────── */
+.cp-wrap {
+  position: relative;          /* 四个浮层（左下按钮排 / 右下罗盘 / 遮罩 / 错误卡）的定位父级 */
+  display: grid;
+  /* ★ minmax(0, 1fr) 而不是 1fr：让左列**可以被压缩**。写 1fr 时这一列的最小尺寸是 auto，
+     canvas 的固有尺寸会把列顶开、把右栏挤出视口 —— 本仓栽过同形的账（值列被顶出屏幕，
+     文本类判据却全绿）。右列是固定宽，所以只有左列需要这条。 */
+  grid-template-columns: minmax(0, 1fr) var(--cp-side-w);
+  height: var(--cp-h);         /* 算式见文件头 */
+  min-height: 560px;           /* 视口很矮时的地板：宁可出滚动条，也不把画布压成一条 */
+  background: var(--cp-plate);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2, 6px);
+  /* 圆角要裁到画布上，否则画布的直角会盖住 wrap 的圆角。
+     （注意：overflow 不裁 position:fixed 的后代，所以下面全屏遮罩不受这一条限制。） */
+  overflow: hidden;
+}
+
+/* ── 左：地形画布 ────────────────────────────────────────────────── */
+.cp-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;              /* grid 子项默认 min-width/height:auto，会被 canvas 顶开 */
+  overflow: hidden;
+  /* 网格底沿用 app.css 那对 --grid 令牌（它的定义就是这张图纸台的网格），
+     不自己写 rgba —— 颜色只许有一个出处。three 起来之后这一层会被完全盖住，
+     它兜的是「画布还没挂上」的那几帧，免得先看到一块纯黑。 */
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 84px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 84px 100%,
+    var(--cp-plate);
+  cursor: grab;               /* 拖拽旋转：光标先把「这块能抓」说出来 */
+}
+/* canvas 的尺寸由 JS 按 .cp-stage 的实测值设 inline style（inline 优先于本表）。
+   这两条是它还没设、或设晚了一帧时的兜底 —— 不写的话 canvas 按**属性**尺寸 300×150 渲染，
+   屏幕上看起来像「地形只有巴掌大」，而完全不报错。 */
+.cp-stage canvas { display: block; width: 100%; height: 100%; }
+
+/* ── 右：事实清单 ────────────────────────────────────────────────── */
+.cp-side {
+  position: relative;
+  z-index: 4;                 /* 抬到两个浮层（z-index 3）之上：按钮不许压到读数上 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2, 8px);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--sp-4, 18px) var(--sp-4, 18px) var(--sp-5, 28px);
+  background: var(--panel);
+  border-left: 1px solid var(--rule);   /* 这一道缝就是「贴着画布」的那条边 */
+  overflow-y: auto;                     /* 清单会很长：面板自己滚，别把画布顶长 */
+  overflow-x: hidden;                   /* ★ 横向**永远**不出滚动条：值该折行，不该横滑 */
+  overscroll-behavior: contain;         /* 滚到头不要把整页也带着滚起来 */
+}
+/* 面板是 flex 列，子项默认 flex-shrink:1 —— 内容一多，标题会被压成一条线。
+   这里逐个钉住；要滚动就交给上面那条 overflow-y，不靠压缩。 */
+.cp-side > * { flex: none; }
+
+/* 面板正题。它是 h2，会继承 app.css 给 h2 的那套（小字、加宽字距、右侧一根细线）——
+   那根 ::after 细线在这里正好当分节线用，所以只改真正要改的：字号与颜色。 */
+.cp-side-h {
+  margin: 0 0 var(--sp-3, 12px);
+  font-size: 15px;            /* app.css 的 h2 是 13px 的全大写小标；这一条是面板正题，抬到 15 */
+  font-weight: 650;
+  letter-spacing: .06em;
+  color: var(--text);
+}
+
+/* 键值行：左键定宽、右值吃掉剩余。 */
+.cp-kvs { display: flex; flex-direction: column; }
+.cp-kv {
+  display: grid;
+  /* ★ minmax(0, 1fr) 是这一行的全部要点：写 1fr 时它的最小尺寸是 auto，
+     一长串不折行的值（hash / 绝对路径）会把这一列顶宽，而右栏是固定宽的 ——
+     于是值被推出面板、画到视口外，而文本类判据（textContent / innerText）全绿。
+     本仓栽过一次（面板 533px、值列 854px、14 行读数全在屏幕外），这里从两头堵：
+     ① 值列 minmax(0,1fr) 允许被压缩；② .cp-v 自己 overflow-wrap:anywhere 允许折行。 */
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: var(--sp-2, 8px);
+  align-items: baseline;
+  padding: var(--sp-1, 4px) 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.cp-kvs .cp-kv:last-child { border-bottom: 0; }
+.cp-k {
+  font: 11px/1.5 var(--mono);
+  color: var(--text-faint);
+  letter-spacing: .04em;
+}
+.cp-v {
+  min-width: 0;                        /* 同 .cp-kv 那条：允许被压缩到比内容窄 */
+  font: 12.5px/1.6 var(--mono);
+  font-variant-numeric: tabular-nums;  /* 这一屏每个数都要逐位对比，等宽数字才对齐 */
+  color: var(--text);
+  overflow-wrap: anywhere;             /* ★ 长值**折行**，不许撑宽面板 */
+  word-break: break-word;              /* 旧内核兜底（overflow-wrap:anywhere 到 Chrome 80 才有） */
+}
+.cp-v b { color: var(--cyan); font-weight: 600; }
+
+/* ★ 「不知道」与「0」在屏幕上必须是两种东西（本仓铁律：不知道 ≠ 0）。
+   这个类就是「不知道」那一半：琥珀色（app.css 里 amber 的语义本就是「可疑 / 待拍板」）
+   再加一条点线，好让不看颜色的人也能分辨。
+   ⚠ 它挂在 <b> 上，而上面那条 `.cp-v b` 的优先级(0,1,1)高于单个类名(0,1,0) ——
+     只写 `.cp-miss` 会被 `.cp-v b` 的青色盖掉，而屏幕上只是「颜色不对」：
+     不报错、不白屏，最容易被当成「设计如此」。所以这里写成 `.cp-v b.cp-miss`(0,2,1)。 */
+.cp-v b.cp-miss,
+.cp-miss {
+  color: var(--cp-hole);
+  font-weight: 600;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+/* 「没有数据的地方（洞）」这个小节的标题。它是 div，拿不到 app.css 给 h2 的那一套，
+   所以这里把同一套语气（小字、加宽字距、暗色）抄过来，并补一条上分隔线。 */
+.cp-sect {
+  margin: var(--sp-4, 18px) 0 0;
+  padding-top: var(--sp-3, 12px);
+  border-top: 1px solid var(--rule-soft);
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: .14em;
+  color: var(--text-dim);
+}
+
+/* 洞清单：一块讲一个洞。 */
+.cp-blks {
+  display: flex; flex-direction: column;
+  gap: var(--sp-2, 8px);
+  margin-top: var(--sp-2, 8px);
+}
+.cp-blk {
+  min-width: 0;
+  padding: var(--sp-2, 8px) var(--sp-3, 12px);
+  background: var(--panel-2);
+  border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--cp-hole);   /* 每一块讲的是一个「洞」，用琥珀边标出来 */
+  border-radius: var(--r-1, 3px);
+}
+.cp-big {
+  display: flex; align-items: baseline; flex-wrap: wrap;
+  gap: var(--sp-2, 8px);
+  font: 600 15px/1.4 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.cp-small {
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+.cp-blk a {
+  display: inline-block;
+  max-width: 100%;             /* 配 overflow-wrap：inline-block 默认 shrink-to-fit，长链会顶出去 */
+  margin-top: var(--sp-1, 4px);
+  font: 11.5px var(--mono);
+  color: var(--cyan);
+  text-decoration: none;
+  border-bottom: 1px solid var(--cyan-dim);
+  overflow-wrap: anywhere;
+}
+.cp-blk a:hover { border-bottom-color: var(--cyan); }
+
+/* 面板末尾的说明。左边那条竖线把它和上面的读数分开 —— 它是注释，不是读数。 */
+.cp-note {
+  margin-top: var(--sp-3, 12px);
+  padding-left: var(--sp-3, 12px);
+  border-left: 2px solid var(--rule);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+/* ── 浮层一：左下角按钮排 ────────────────────────────────────────── */
+/* 两个浮层都用 absolute 挂在 .cp-wrap 上（DOM 里它们是 .cp-stage 的**兄弟**，不是子元素），
+   所以 left/right 是相对**整个 wrap**算的 —— 右栏那 440px 必须从右边减掉，
+   否则罗盘会落在读数面板上，而屏幕上只是「罗盘位置有点怪」，不会报错。 */
+.cp-ctl {
+  position: absolute;
+  left: var(--sp-4, 18px);
+  bottom: var(--sp-4, 18px);
+  z-index: 3;
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--sp-2, 8px);
+  /* 宽度上限 = 画布宽（wrap 宽 − 右栏）再让出左右各一条边距：
+     这样无论按钮有几个、文字有多长，这一排都不会压到右栏的读数上。 */
+  max-width: calc(100% - var(--cp-side-w) - 2 * var(--sp-4, 18px));
+}
+
+/* ★ 按钮浮在画布上，底必须**半透明**，否则会盖掉一块地形。
+   半透明不新开色值：用 color-mix 就地取 app.css 的 --panel 调透明度；
+   前一行是同值的不透明**兜底**，老内核丢掉 color-mix 那一行时按钮仍然可读。 */
+.cp-btn {
+  padding: 6px 12px;
+  font: 12px/1 var(--sans);
+  letter-spacing: .04em;
+  color: var(--text-dim);
+  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1, 3px);
+  cursor: pointer;
+  transition: color .12s, border-color .12s, background-color .12s;
+}
+/* 悬停：提亮文字 + 边框转青。**只动颜色不动填充** —— 填充是下面「选中态」的记号，
+   两个状态共用同一个视觉通道的话，余光扫过去就分不清「鼠标停在这」和「这个模式开着」。 */
+.cp-btn:hover { color: var(--text); border-color: var(--cyan-dim); }
+/* 焦点环：app.css 已有全局 :focus-visible（青色 2px），这里补的只有 offset ——
+   按钮紧贴画布，环贴着边框会被画布的深色吃掉，退开 2px 才看得见。 */
+.cp-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* 选中态：**填充**青色（不是描边）。三个状态里只有它表示「当前生效的模式」。 */
+.cp-btn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--cyan);
+  border-color: var(--cyan);
+  font-weight: 600;
+}
+/* 顺序即优先级：上面的 `:hover` 与这里的 `[aria-pressed]` 都是 (0,2,0)，写在后面才赢 ——
+   所以「选中 + 悬停」时按钮保持青底墨字（而不是被 hover 的暗字盖成看不清）。
+   这条只靠**文件顺序**成立，挪动上面任何一行都会静默改掉它。 */
+.cp-btn[aria-pressed="true"]:hover { color: var(--ink); border-color: var(--cyan); }
+.cp-btn:disabled { cursor: not-allowed; opacity: .45; }
+
+/* 操作提示：同样浮在画布上，所以同一套半透明底；字更小、色更暗 ——
+   它是「怎么用」，不是「结果」，不该和读数抢注意力。
+   nowrap 是刻意的：它是几个「动作 · 动作」的并列短语，折在中间读起来会串行。 */
+.cp-hint {
+  padding: 5px 10px;
+  font: 11px/1.5 var(--mono);
+  color: var(--text-faint);
+  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1, 3px);
+  white-space: nowrap;
+}
+
+/* ── 浮层二：右下角罗盘 ──────────────────────────────────────────── */
+.cp-compass {
+  position: absolute;
+  /* ★ 减掉右栏宽：它相对的是 .cp-wrap 的右边，而画布的右边在 440px 之前。 */
+  right: calc(var(--cp-side-w) + var(--sp-4, 18px));
+  bottom: var(--sp-4, 18px);
+  z-index: 3;
+  /* grid + place-items:center 而不是 flex：flex 会把 54px 宽的 SVG 当**可压缩项**挤到
+     52px（父盒减去左右各 1px 边框），于是针的盒变成 52.4×54 —— 而 JS 是按「50% 50% 就是
+     针的正中心」来转它的，中心差 0.8px 时屏幕上只是「指针有点飘」，查不出来。
+     （实测：flex 下 transform-origin 是 26.2px 27px，期望是 27px 27px。） */
+  display: grid;
+  place-items: center;
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  /* 边框改用**外阴影**画：真的 border 会吃掉 1px 布局空间（上面那条挤压的来源），
+     而阴影不占空间 —— 内容盒因此是完整的 54×54，针的 50% 50% 就是 viewBox 的正中心。 */
+  box-shadow: 0 0 0 1px var(--rule), 0 1px 6px rgba(0, 0, 0, .5);
+}
+/* ★ JS 会把 style.transform 设成 rotate(角度)，旋转中心必须是针自己的中心。
+   不写这条时 SVG 的 transform-origin 默认也是 50% 50%，看着一样 ——
+   但将来一旦给它加了 padding 或 border，中心就会偏，而「针偏了几度」是**看不出来**的。 */
+.cp-compass .cp-needle { display: block; transform-origin: 50% 50%; }
+
+/* ── 遮罩：洞底下盖着什么（原图） ────────────────────────────────── */
+/* 默认隐藏，JS 加上 .cp-on 才显示。两条规则都写全，靠 `.cp-crop.cp-on`(0,2,0)
+   压过 `.cp-crop`(0,1,0) —— 不要用 `!important` 去抢，那会把后来人改动的路堵死。 */
+.cp-crop {
+  display: none;
+  position: fixed;            /* ★ fixed 而不是 absolute：它是**全屏**遮罩，要连顶栏一起盖住；
+                                 absolute 只能盖到 .cp-wrap 的边（顶栏会露在上面）。 */
+  inset: 0;
+  z-index: 50;                /* 高于 .topbar 的 20、右栏的 4、错误卡的 40 */
+  grid-template-rows: minmax(0, 1fr) auto;   /* 大图吃掉剩余高度，说明钉在底部 */
+  justify-items: center;
+  align-items: center;
+  gap: var(--sp-4, 18px);
+  padding: var(--sp-5, 28px);
+  /* 遮罩要能透出一点底下的画布（让人知道自己在看的是同一屏），所以压暗而不是盖死。 */
+  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 93%, transparent);
+  backdrop-filter: blur(3px);
+  cursor: zoom-out;           /* 整块遮罩面就是「点一下关掉」的那块目标 */
+}
+.cp-crop.cp-on { display: grid; }
+.cp-crop-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;           /* 行高由 minmax(0,1fr) 定死，所以这个 100% 有确定的参照 */
+  object-fit: contain;        /* 原图比例和框不一定一致：contain 保证不拉伸、不裁切 */
+  background: var(--panel-2); /* 图还没解码出来时是一块面板色，不是一块洞 */
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2, 6px);
+}
+.cp-crop-cap {
+  max-width: 88ch;
+  font: 12px/1.6 var(--mono);
+  color: var(--text-dim);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* ── 错误卡：地形没能加载 ────────────────────────────────────────── */
+.cp-err {
+  display: none;
+  position: absolute;         /* 只盖画布区、**不**盖顶栏与页脚：出错时人还要能切到别的视图 */
+  inset: 0;
+  z-index: 40;
+  align-content: center;
+  justify-items: center;
+  gap: var(--sp-3, 12px);
+  padding: var(--sp-5, 28px);
+  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(2px);
+}
+.cp-err.cp-on { display: grid; }
+.cp-err-h {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: .04em;
+  color: var(--red);          /* 红只留给「确定错了」（app.css 的既定语义），加载失败正是这一档 */
+}
+/* 消息体是 <pre>：浏览器给它的默认 `white-space: pre` **不折行**，一条长路径会把它
+   连同卡片一起撑出屏幕。所以 pre-wrap（允许在空白处折）与 anywhere（允许在词内折）一起写，
+   少了任何一个，另一种长内容照样会顶出去。 */
+.cp-err-msg {
+  margin: 0;
+  width: 100%;
+  max-width: min(920px, 84vw);
+  max-height: 46vh;
+  overflow: auto;
+  padding: var(--sp-3, 12px) var(--sp-4, 18px);
+  font: 11.5px/1.6 var(--mono);
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--red);   /* 与 app.css 的 .note.bad 同一套记法：左侧色条表示档位 */
+  border-radius: var(--r-2, 6px);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── 窄屏 ───────────────────────────────────────────────────────── */
+/* 只收窄右栏，**不做上下堆叠**。理由：`.cp-ctl` / `.cp-compass` 是相对 .cp-wrap 定位的，
+   「画布右下角」这个锚点是靠 `right: calc(右栏宽 + 边距)` 算出来的；一旦堆叠成上下两段，
+   这两个浮层就没有那个锚点了，得再写一套基于画布高度的 top 算式，
+   而那一套算式每改一次画布高度都要跟着改 —— 本仓在这上面吃过账（一处判断多份实现）。
+   收窄右栏改的是**令牌**，所以 grid 列宽与两个浮层的 right 减数一起跟着变，一个数只有一处出处。 */
+@media (max-width: 1180px) {
+  :root { --cp-side-w: 340px; }
+}
+@media (max-width: 900px) {
+  :root { --cp-side-w: 300px; }
+  .cp-kv { grid-template-columns: 78px minmax(0, 1fr); }
+  .cp-hint { white-space: normal; }   /* 窄到这一步，一行放不下那几个动作了，宁可折行 */
+}

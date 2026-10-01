@@ -1,0 +1,251 @@
+/* 「流程开关」视图的样式。前缀 `br-`（免得与 `csl-` / `ws-` / `chk-` 撞）。
+   配色一律取 app.css 的 :root 令牌，不另立一套 —— 这一屏是管理台里的一屏。
+
+   ★★ 这一屏最要紧的一条样式是 `.br-table { table-layout: fixed }`
+   加上单元格的 `overflow-wrap: anywhere`（在下面 .br-in / .br-consumers 那几处）。
+
+   为什么它不是可选项：本仓栽过一次（memory: value-column-pushed-offscreen）——
+   表写了 `width:100%` 但没写 `table-layout`（默认 `auto`），于是宽度由**最宽那行**决定，
+   某列被撑到 854px、横向溢出视口，**整个读数区被推到屏幕外**，而页面上
+   `textContent.includes('…')` 那类判据**全绿**：字在 DOM 里，人看不见。
+   这一屏的 `why` 列装的是一整句话，必然是最宽的那一列 —— 所以这条是必需的，不是优化。
+
+   另一半同样是必需的：光有 `fixed` 而没有 `anywhere`，`<textarea>` 与长 key 会
+   **撑破自己的格子**（fixed 之下格子不再变宽，内容就直接溢出去压在邻列上）。 */
+
+.br-head { margin-bottom: var(--sp-3, 12px); }
+
+.br-title h2 { margin: 0 0 4px; font-size: 17px; letter-spacing: .04em; color: var(--text); }
+.br-sub { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+.br-sub code, .br-legend code, .br-meta code {
+  font-family: var(--mono); font-size: 11px;
+  padding: 1px 4px; border-radius: var(--r-1, 3px);
+  background: var(--panel-2); border: 1px solid var(--rule-soft);
+  color: var(--text-dim); overflow-wrap: anywhere;
+}
+
+/* ── 四张计数卡 ─────────────────────────────────────────────── */
+.br-cards { display: flex; flex-wrap: wrap; gap: var(--sp-2, 8px); margin: var(--sp-3, 12px) 0; }
+.br-card {
+  flex: 1 1 150px; min-width: 140px;
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 9px 11px;
+  background: var(--panel); border: 1px solid var(--rule);
+  border-radius: var(--r-2, 6px);
+  border-left-width: 3px; border-left-color: var(--rule);
+}
+.br-card-n { font: 600 22px/1.15 var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text); }
+.br-card-l { font-size: 12px; color: var(--text); }
+.br-card-h { font-size: 11px; line-height: 1.5; color: var(--text-faint); }
+/* 三档的颜色**只用于认人**，不承担「好坏」的意思：
+   单独 ≠ 有问题，死键 ≠ 错（它只是没人读）。所以用青 / 琥珀 / 灰，
+   不用红 —— 红在这一屏会让人以为表里有一条待修的错。 */
+.br-card.is-solo { border-left-color: var(--cyan); }
+.br-card.is-pub  { border-left-color: var(--amber); }
+.br-card.is-dead { border-left-color: var(--text-faint); }
+
+/* ── 占比条（成图之一）─────────────────────────────────────── */
+.br-bar {
+  display: flex; height: 22px; overflow: hidden;
+  border: 1px solid var(--rule); border-radius: var(--r-1, 3px);
+  background: var(--panel-2);
+}
+.br-bar-seg {
+  position: relative; min-width: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border-right: 1px solid var(--ink);
+}
+.br-bar-seg:last-child { border-right: 0; }
+.br-bar-seg span { font: 600 11px/1 var(--mono); color: var(--ink); }
+.br-bar-seg.is-solo { background: var(--cyan); }
+.br-bar-seg.is-pub  { background: var(--amber); }
+.br-bar-seg.is-dead { background: var(--text-faint); }
+.br-bar-seg.is-other { background: var(--rule); }
+.br-bar-seg.is-other span { color: var(--text); }
+
+/* 后端那句 note（用户自己写的，`**` 由 rich() 渲染成真 <b>） */
+.br-note {
+  margin: var(--sp-3, 12px) 0 var(--sp-2, 8px);
+  padding: 8px 11px;
+  font-size: 12px; line-height: 1.7; color: var(--text-dim);
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-left: 3px solid var(--cyan-dim); border-radius: var(--r-1, 3px);
+}
+.br-note b { color: var(--text); }
+
+.br-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3, 12px);
+  font-size: 11px; color: var(--text-faint); }
+.br-meta b { color: var(--text-dim); font-weight: 500; }
+
+/* ── 按钮 ───────────────────────────────────────────────────── */
+.br-btn {
+  font: inherit; font-size: 11px; line-height: 1.6;
+  padding: 3px 10px; cursor: pointer;
+  color: var(--text-dim); background: var(--panel-2);
+  border: 1px solid var(--rule); border-radius: var(--r-1, 3px);
+}
+.br-btn:hover:not(:disabled) { color: var(--text); border-color: var(--cyan-dim); }
+.br-btn:focus-visible { outline: 2px solid var(--cyan-dim); outline-offset: 1px; }
+/* 「按不动」必须看得出来 —— 与「没这个按钮」区分开 */
+.br-btn:disabled { opacity: .4; cursor: default; }
+.br-btn-save:not(:disabled) { color: var(--cyan); border-color: var(--cyan-dim); }
+.br-btn-undo:not(:disabled) { color: var(--text-dim); }
+
+/* 未保存横幅。空的时候整块不占位（`markDirty` 会把 class 换掉），
+   所以「0 行未保存」不会在屏幕上留一个空条。 */
+.br-dirty { margin: 0 0 var(--sp-2, 8px); font-size: 12px; }
+.br-dirty.is-on {
+  padding: 5px 10px; border-radius: var(--r-1, 3px);
+  color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid var(--amber);
+}
+.br-dirty.is-ok { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent);
+  border-color: var(--green); }
+
+/* ── 分组 ───────────────────────────────────────────────────── */
+.br-sec { margin-bottom: var(--sp-4, 18px); }
+.br-sec-h {
+  display: flex; align-items: baseline; gap: var(--sp-2, 8px);
+  margin: 0 0 6px; padding-bottom: 4px;
+  font-size: 13px; font-weight: 600;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.br-sec-k { font-family: var(--mono); letter-spacing: .06em; }
+.br-sec-h.is-solo .br-sec-k { color: var(--cyan); }
+.br-sec-h.is-pub  .br-sec-k { color: var(--amber); }
+.br-sec-h.is-dead .br-sec-k { color: var(--text-faint); }
+.br-sec-n { font: 500 11px/1 var(--mono); color: var(--text-faint); }
+.br-sec-d { font-size: 11px; font-weight: 400; color: var(--text-faint); }
+/* 「单独」那一组整块给一点底色 —— 这一屏就是为回答它而做的，
+   但它**只是位置提示**，不许被读成「这一组有问题」。 */
+.br-sec.is-solo { padding-left: 9px; border-left: 3px solid var(--cyan-dim); }
+
+/* ── 表 ─────────────────────────────────────────────────────── */
+.br-table {
+  /* ★★ 见文件头。少了这一行，宽表会把读数推到视口外而判据全绿。 */
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.br-table caption {
+  caption-side: top; text-align: left;
+  font: 500 11px/1.6 var(--mono); color: var(--text-faint);
+  padding: 0 0 3px;
+}
+.br-table th {
+  position: sticky; top: 0; z-index: 1;
+  text-align: left; vertical-align: bottom;
+  padding: 5px 7px;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--rule);
+}
+.br-table td {
+  vertical-align: top;
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--rule-soft);
+  /* ★ 与 table-layout:fixed 成对。没有这一条，内容会溢出格子压在邻列上。 */
+  overflow-wrap: anywhere;
+  white-space: normal;
+  color: var(--text-dim);
+}
+.br-tr:hover td { background: color-mix(in srgb, var(--cyan) 5%, transparent); }
+/* 行左侧的三像素色带 = 这一行的 kind。整行都染会是「报警」的观感，所以只染这一条。 */
+.br-tr td:first-child { box-shadow: inset 3px 0 0 var(--rule); }
+.br-tr.is-solo td:first-child { box-shadow: inset 3px 0 0 var(--cyan); }
+.br-tr.is-pub  td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
+.br-tr.is-dead td:first-child { box-shadow: inset 3px 0 0 var(--text-faint); }
+.br-tr.is-dead td { opacity: .72; }
+
+/* 列宽：fixed 之下由**第一行**的这些宽度定死。合计 100%。
+   `why` 拿最大的一份 —— 它是这一屏唯一「读得出一句话」的列。 */
+.br-th-key     { width: 15%; }
+.br-th-kind    { width: 7%; }
+.br-th-why     { width: 25%; }
+.br-th-n       { width: 13%; }
+.br-th-c006    { width: 7%; }
+.br-th-loaders { width: 11%; }
+.br-th-do      { width: 10%; }
+
+.br-td-key code { font-family: var(--mono); font-size: 11px; color: var(--text);
+  display: block; margin-bottom: 2px; }
+
+/* ── 可改的格子（人写四列）─────────────────────────────────── */
+.br-in {
+  display: block; width: 100%; box-sizing: border-box;
+  font: inherit; font-size: 12px; line-height: 1.5;
+  padding: 3px 5px;
+  color: var(--text); background: transparent;
+  border: 1px solid transparent; border-radius: var(--r-1, 3px);
+  resize: vertical;
+  min-width: 0;  /* 同 .br-sel：别让 app.css 那条全局 input/select 规则从这里漏进来 */
+}
+/* 静止时不画框（免得 54 行变成一片输入框噪声），悬停/聚焦才显形。 */
+.br-in:hover { border-color: var(--rule); background: var(--panel); }
+.br-in:focus { outline: none; background: var(--panel-2);
+  border-color: var(--cyan-dim); color: var(--text); }
+/* 改过但还没保存 ⇒ 琥珀左边框。颜色与顶部横幅同源：看到黄边就往上看。 */
+.br-in.is-dirty { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 8%, transparent); }
+.br-in-wide { min-height: 42px; }
+textarea.br-in { font-family: var(--sans); }
+
+/* ★ `min-width: 0` 是这一屏能不能读的开关，不是装饰（2026-09-26 实测）。
+   app.css 有一条**全局**命中：`input[type=search], select { … min-width: 190px }`
+   —— 那是给工具条搜索框的。而 kind 这一列只有 ~89px，用到的是 max(89, 190) = 190
+   ⇒ **54/54 行都往右溢出 ~100px**，被后画的 why 那格盖住。
+   修前实测：越界 54/216 个控件；6 个 is-dead 行的中心点直接点在了 TD.br-td-why 上。
+   在这里归零；**不动 app.css** —— 别的屏要靠那个 190。 */
+.br-sel {
+  width: 100%; box-sizing: border-box; min-width: 0;
+  font: inherit; font-size: 11px; padding: 3px 4px;
+  color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--rule); border-radius: var(--r-1, 3px);
+}
+.br-sel.is-solo { color: var(--cyan); border-color: var(--cyan-dim); }
+.br-sel.is-pub  { color: var(--amber); border-color: var(--amber); }
+.br-sel.is-dead { color: var(--text-faint); }
+.br-sel:focus-visible { outline: 2px solid var(--cyan-dim); outline-offset: 1px; }
+
+/* ── 只读列 ─────────────────────────────────────────────────── */
+.br-nwrap { display: block; }
+.br-n { font: 600 12px/1.3 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+/* 消费方条数的小横条（成图之二）。分母由 views/branches.js 从数据里取。 */
+.br-mini { display: block; height: 3px; margin: 2px 0 4px; background: var(--rule-soft);
+  border-radius: 2px; overflow: hidden; }
+.br-mini i { display: block; height: 100%; background: var(--cyan-dim); }
+.br-consumers, .br-loaders { font-size: 11px; line-height: 1.5; color: var(--text-faint); }
+.br-v { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+.br-none { color: var(--text-faint); }
+
+/* ── 行尾 ───────────────────────────────────────────────────── */
+.br-do { display: flex; gap: 4px; flex-wrap: wrap; }
+.br-rowmsg { display: block; margin-top: 3px; font-size: 11px; line-height: 1.5;
+  color: var(--text-faint); overflow-wrap: anywhere; }
+.br-rowmsg.is-dirty { color: var(--amber); }
+.br-rowmsg.is-ok    { color: var(--green); }
+.br-rowmsg.is-warn  { color: var(--amber); }
+.br-rowmsg.is-err   { color: var(--red); }
+.br-rowmsg.is-stale { color: var(--amber); }
+.br-rowmsg.is-busy  { color: var(--text-dim); }
+
+/* ── 读不到表 / 空表 ───────────────────────────────────────── */
+.br-panic {
+  padding: 14px 16px;
+  background: var(--panel); border: 1px solid var(--red);
+  border-left-width: 3px; border-radius: var(--r-2, 6px);
+}
+.br-panic h2 { margin: 0 0 6px; font-size: 15px; color: var(--red); }
+.br-panic p { margin: 0 0 6px; font-size: 12px; line-height: 1.7; color: var(--text-dim); }
+.br-panic-hint { color: var(--text-faint); }
+.br-panic code { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+.br-empty { font-size: 12px; line-height: 1.7; color: var(--text-faint); }
+
+.br-legend {
+  margin: var(--sp-4, 18px) 0 0; padding-top: var(--sp-2, 8px);
+  font-size: 11px; line-height: 1.7; color: var(--text-faint);
+  border-top: 1px solid var(--rule-soft);
+}
+.br-legend b { color: var(--text-dim); }

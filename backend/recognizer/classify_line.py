@@ -25,6 +25,16 @@ _COLUMN_BLOCKS = {"_FZHK", "_YZHK"}
 # 窗块：xscale=窗宽、yscale=墙厚(240)。窗户按用户约定合成，不进 doors
 _WINDOW_BLOCKS = {"$DorLib2D$00000130"}
 
+# 图上 `4.2墙体` 图层里的**多段线（>=3 点）也是真实墙线**，必须按原样读进来：
+#   · 45/55 点折线 = 绕建筑半侧的**外墙外皮线**（内皮是 LINE，两皮相距 240 = 轴线 ±120）；
+#   · 31 点闭合折线 = 中段（八角厅）外皮；
+#   · 4 点折线     = 卫生间蹲位隔板/小隔断。
+# 旧版把这些一律丢弃（只认 2 点墙段与 5/6 点台阶）→ **外墙外皮整条不存在**，
+# 外墙只剩内皮那一条线 → 被当「无配对单线」建成 0.10m 薄墙（用户判例：「外墙不对」
+# 「为啥单线也是墙」「不能臆想创造墙」的根因）。
+# 唯一的加工：**去掉闭合重复末点** —— 否则 derive_line_walls_and_outline 会把「>=4 点闭合
+# 折线」当**已成形实心墙**整块采纳，一圈 46m×49m 的外皮会变成一整片楼板。
+
 
 def _door_points(ix, iy, horiz, w):
     """把一扇门编码成 2 点（沿朝向跨度 = 实际门宽 w，毫米），供 floor.py 消费。
@@ -83,6 +93,40 @@ def _step_tread_mask(pairs):
     return [size[find(i)] >= 3 for i in range(n)]
 
 
+def _drop_tread_clusters(pts_list, cell=1500.0, min_n=6, max_len=2000.0):
+    """**短线密集簇 = 踏步线/装饰线组，不是墙**（2026-09-14 c006 实测新增）。
+
+    为什么必须有这条：八角厅四个角是**斜向楼梯**，踏步线画在 `4.2墙体` 图层、而且是 `LINE`
+    （不是 2 点 LWPOLYLINE）—— `_step_tread_mask` 只管 2 点 LWPOLYLINE，于是这些踏步线整片
+    被当墙收下。实测 c006 F1：23 块墙偏离图纸墙 0.5~2.7m，**全部落在中央区**，其中 12 块
+    正出在这些密集短线簇里（左右翼 0 块）。
+
+    判据（可解释、不猜）：长度 < max_len 的线，按 cell 网格分箱；某箱内 >= min_n 条
+    => 整箱判为踏步/装饰线，从 walls 剔除。双线墙每堵只有 2 条平行线、单条长墙 1 条，
+    都远达不到 min_n，不会误删。
+    """
+    import collections as _c
+    import math as _m
+    if len(pts_list) < min_n:
+        return pts_list
+    grid = _c.defaultdict(list)
+    for i, pts in enumerate(pts_list):
+        if len(pts) < 2:
+            continue
+        (x0, y0), (x1, y1) = pts[0], pts[-1]
+        L = _m.hypot(x1 - x0, y1 - y0)
+        if L < 1e-6 or L >= max_len:
+            continue
+        mx, my = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+        grid[(int(_m.floor(mx / cell)), int(_m.floor(my / cell)))].append(i)
+    drop = set()
+    for _k, v in grid.items():
+        if len(v) >= min_n:
+            drop.update(v)
+    if not drop:
+        return pts_list
+    return [pts for i, pts in enumerate(pts_list) if i not in drop]
+
 def classify_line(msp, p):
     walls, doors, stairs, columns_raw = [], [], [], []
     two_pt = []   # 2 点 LWPOLYLINE：短墙段 OR 室外台阶踏步，需聚簇区分后决定去留
@@ -105,9 +149,13 @@ def classify_line(msp, p):
                 two_pt.append(pts)             # 2 点 = 短墙段 OR 台阶踏步（聚簇后区分）
             elif n in (5, 6):
                 stairs.append(pts)             # 台阶：入口坡道/踏步折线
-            # 其余（4 点矩形、>=20 点楼梯井踏步折线）忽略：
-            #   门由 INSERT 承载；室内楼梯井由 detect_stairwells 从 LINE 短水平段聚类得出
-            #   >=20 点折线是楼梯井踏步轮廓，与 detect_stairwells 冗余，且会让 hw 退化为整栋楼宽
+            else:
+                # 多段线（>=3 点）是**真实墙线**：去掉闭合重复末点后整条进 walls，
+                # 由 pair_wall_faces 逐段拆开、共线合并、与内皮配对读真实墙厚。
+                if (len(pts) >= 2 and abs(pts[0][0] - pts[-1][0]) <= 1e-6
+                        and abs(pts[0][1] - pts[-1][1]) <= 1e-6):
+                    pts = pts[:-1]
+                walls.append(pts)
         elif t == "INSERT":
             name = e.dxf.name
             if not name.startswith("$DorLib2D"):
@@ -158,5 +206,9 @@ def classify_line(msp, p):
             hx = abs(e.dxf.xscale) / 2.0    # 柱边长从图读：块定义单位 1×1，scale 编码实际尺寸
             hy = abs(e.dxf.yscale) / 2.0
             columns_raw.append((ix - hx, iy - hy, ix + hx, iy + hy))
+
+    # 注：**短线密集簇过滤不在这里做** —— 踏步线同时是 detect_stairwells 的输入，
+    # 在这个位置剔会把楼梯井一起剔没（c006 实测：井 8 -> 4）。过滤挪到
+    # floor.extract_floor 的 wall_pts 之后（只影响建墙）。函数仍留在本模块供复用。
 
     return walls, doors, stairs, columns_raw

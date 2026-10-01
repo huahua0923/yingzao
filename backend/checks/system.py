@@ -12,11 +12,29 @@
 ⇒ 这四条就是 C0–C3。**C0 是用户那句话的可执行版**：
 「我总体感觉太杂乱，不像一个系统那么完整」（2026-09-24）。
 
-**还有第五条，但它不住在这个文件里**：上面前四条问的都是**本仓产物之间**的关系，
-没有一条问「知识图谱自己的边还指着原处吗」—— 图纸全对、台账全对、名册全对，
-图谱仍然可能全错（`kb/` 里 99 条边指着 `文件:行`／`文件:符号`，源一改就可能指空）。
-它就是 **C4**，实现在 `kg_citation.py`：不自己判，只跑图谱自己的门禁再把结论
-翻译成 Finding（一把尺子一个实现）。
+**还有两条 C4/C5，都不住在这个文件里**（同一个理由：它们的量具在别处）。
+
+  · **C4**：上面前四条问的都是**本仓产物之间**的关系，没有一条问「知识图谱自己的边
+    还指着原处吗」—— 图纸全对、台账全对、名册全对，图谱仍然可能全错
+    （`kb/` 里 99 条边指着 `文件:行`／`文件:符号`，源一改就可能指空）。
+    实现在 `kg_citation.py`：不自己判，只跑图谱自己的门禁再把结论翻译成 Finding。
+  · **C5**：前四条问的都是**产物之间**的关系，没有一条问「一份产物**自己内部**的两半
+    对不对得上」。2026-09-25 实测到的那种缺陷正是这一格：影像比对的校区大图与它的
+    `bbox` 是**两处各算一个值**，各自都自洽、页面上一片正常，而两者沿经度差
+    **2 块瓦片 = 512 px ≈ 526 m**（11 个点位全偏，`in_campus_image` 两个假阳性）。
+    ⇒ 实现在 `compare_geo.py`：它**只依赖 `bbox`** 就能重拼出该显示的那块地并逐像素比，
+    所以**旧清单也能直接红**（这是它值钱的地方，也是它的阳性对照）。
+
+**C6 住在这个文件里**（它的量具在 `freeze_meta.py`，但判据本身是"盘上产物对公司契约"，
+与 C0–C3 同族，所以留在这里）：
+
+  · **C6**：前几条问的都是**本仓产物之间**或**一份产物内部**的关系。这一条问的是
+    「**正在送给另一台机器的那份载荷，是哪一版源码产的**」——
+    `data/_meta/console_meta.json` 是**冻结载荷**（服务器 venv 故意不带 trimesh/numpy，
+    所以 `compute=0` 那一路的帮助文字、阶段表、选项表**全部**来自它），
+    它会跟源码脱节，**而脱节之后服务照常 200、页面照常渲染**。
+    实测 2026-09-26：它是 2026-09-11 产的，而 `backend/web/console_meta.py` 已改过
+    ⇒ 服务器端少 3 个阶段、整个 `selfCheck` 块都没有。**没有一条判据看得见这件事。**
 
 ## 三条纪律（写在这里，改本文件前先读）
 
@@ -39,7 +57,9 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+import subprocess
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .findings import Finding, Report, Status, unavailable
@@ -49,11 +69,21 @@ from .findings import Finding, Report, Status, unavailable
 # ★ 它自带 `--selftest`（四个结局各一条对照），跑法：
 #   `python -m backend.checks.kg_citation --selftest`
 from .kg_citation import check_c4
+# C5 同理独立成文件：它的量具是**上游瓦片**（http + 本地缓存），与本模块这套
+# "拿盘上产物互相比"完全不同族。★ 跑法：`python -m backend.checks.compare_geo --selftest`
+from .compare_geo import check_c5
 
 #: 派生产物 → 它的**上游**。判据是**关系式**，不是阈值：
 #: 「下游的 mtime 不得早于上游的最新产物」。**故意不设"容忍天数"** ——
 #: 容忍天数是个魔法数，而"下游比上游旧"本身就已经是错的（memory:
 #: criterion-key-missing-dimension 那族的教训：拿一个数去近似一个关系）。
+#:
+#: ★ **哪些产物故意不在这张表里**（"加一条产物 = 加一行"说的是该加的，这里是不该加的）：
+#:   `data/_meta/console_meta.json`（服务器 `compute=0` 走的那份冻结载荷）。
+#:   它**自带出身证明**（`_frozen.sourceSha256`），问得出「是哪一版源码产的」；
+#:   而 mtime 只能问「比上游新旧」—— 更弱的尺子，且 `touch` 一下就骗过去了
+#:   （memory: mtime-change-is-not-content-change）。有强尺子时不该退回弱的那把。
+#:   它归 `check_c6` 管。
 DERIVED_PAIRS: tuple[tuple[str, str], ...] = (
     ("data/buildings/index.json", "data/buildings"),
     ("data/_meta/checks/fleet.json", "data/buildings"),
@@ -66,6 +96,15 @@ ROSTER_REL = "data/_meta/criteria_roster.json"
 #: 名册的**量具**。名册自己记着生成时的 `source_sha256_12`，这里拿磁盘现状跟它比
 #: —— 见 `check_c3` 文档串「为什么不能只看 disposition」。
 ROSTER_SRC_REL = "backend/state/roster.py"
+
+#: 冻结载荷（服务器 `compute=0` 走的那一份）与它的**生产者**。见 `check_c6`。
+#: ★ 摘要算法**取自生产者**（在子进程里调 `freeze_meta.source_hash()`），比较由 `check_c6` 写
+#:   —— 与 C3 同形（`sha12` 取自生产者，`recorded != cur` 写在 C3 自己这儿）。
+#: ★ **不用生产者的 `--check`**：`main()` 先跑构建期门禁，门禁不过就在那里返回 1、
+#:   **根本到不了比对分支** ⇒ 那个退出码同时背着两个判断。实测 2026-09-26 它 rc=1 是
+#:   「门禁 18 条不过」，而输出里 `--check:` 字样 **0 处**（见 check_c6 文档串）。
+META_REL = "data/_meta/console_meta.json"
+META_FREEZER_REL = "freeze_meta.py"
 
 
 # ── 小工具 ──────────────────────────────────────────────────────────
@@ -538,16 +577,231 @@ def check_c3(rep: Report, data_dir: Path, state: dict) -> None:
                   "roster_built_at": roster.get("built_at")}))
 
 
+# ── C6 · 冻结载荷的出身 ────────────────────────────────────────────
+
+def _frozen_age_days(raw) -> str:
+    """`_frozen.generatedAt` -> 「15.2 天」。**量不到就返回「—」，不许返回 0** ——
+    0 天与「我不知道它是哪天产的」在屏幕上必须是两行不同的字（铁律 16 同族）。"""
+    if not isinstance(raw, str) or not raw:
+        return "—"
+    try:
+        t = datetime.fromisoformat(raw)
+    except ValueError:
+        return "—"
+    if t.tzinfo is None:                 # 老载荷可能没带时区 —— 按 UTC 读，不抛
+        t = t.replace(tzinfo=timezone.utc)
+    return "%.1f 天" % ((datetime.now(timezone.utc) - t).total_seconds() / 86400.0)
+
+
+def check_c6(rep: Report, data_dir: Path, state: dict) -> None:
+    """**正在送给服务器的那份冻结载荷，是哪一版源码产的。**
+
+    ## 它补的是哪一格
+
+    `data/_meta/console_meta.json` 是**冻结载荷**：服务器 venv 故意不带
+    trimesh/numpy/mapbox_earcut/shapely，所以 `compute=0` 那一路，前端拿到的
+    **全部**帮助文字、阶段表、选项表、自检块都来自这一个文件（`compute=1` 才现算）。
+    ⇒ 它有一个别的产物没有的性质：**它会跟源码脱节，而脱节之后服务照常 200**。
+    `meta_source.load_meta()` 读的就是它，一路上没有任何一步会问「你过期了吗」。
+
+    实测 2026-09-26：`_frozen.sourceSha256` 是 2026-09-11 那份，而
+    `backend/web/console_meta.py` 之后改过 ⇒ 服务器端少 3 个阶段
+    （`gate`/`rooms`/`render`）、且**整个 `selfCheck` 块都没有** —— 页面一切正常。
+    ★ 前端**只**处理了缺 `selfCheck` 的那一半（`console.js` 明写「没带」与
+    「没有告警」必须是两行不同的字），**阶段表少了三个是静默的**。
+
+    ## 摘要算法取自生产者，而**不能用它的 `--check`**（实测：那个退出码答的不是这个问题）
+
+    生产者 `freeze_meta.py` 自带 `--check`（帮助里写着「CI/提交前用」）——
+    而**全仓没有任何 CI 调它**，这就是铁律 17「写好的函数不等于被调用的函数」：
+    判据写好了、有产物、有检查入口，缺的是**没有一个地方会替它喊**。本判据就是那个地方。
+
+    ★ 但**不能拿它的退出码当判词**。实测 2026-09-26：
+
+        python freeze_meta.py --check   =>   rc=1
+        输出只有「门禁未通过，共 18 条：…」；全文 **0 处** `--check:` 字样
+
+    ⇒ 原因在控制流上：`main()` 先 `build_payload()` 再 `gate()`（:196-203），
+      **门禁不过就在那里返回 1**，根本到不了 :217 那个比对分支。
+      于是 `--check` 的退出码**同时背着两个判断**（构建期门禁 + 产物过没过期），
+      而这两个问题今天恰好一红一未知。照抄它，本判据今天会印出「载荷过期」——
+      一个**自信、具体、而且是错的**理由，且**刷新载荷也清不掉它**（因为它压根不是那个原因）。
+      假红比漏检更坏：它会被学会忽略（铁律 49）。
+
+    ⇒ 而且**不只是「歧义」**：门禁红着的时候那个比对分支**永远到不了** ——
+      也就是说 `--check` **恰好在最需要问「它是哪版产的」的时候，答不了这个问题**。
+      同一个门禁还挡着**刷新**：写盘在 :235-238，而 `return 1` 在 :203
+      ⇒ 门禁不过时 `python freeze_meta.py` **一个字节都不写** ⇒ 载荷被卡在旧版本上，
+      而两次运行的屏幕都是同一句「门禁未通过」——「刷不动」与「已经刷好了」同形。
+      ⇒ 所以本判据的 remedy 写的是「先跑一次看它列出的门禁条目」，
+        而**不是**「跑一下就好了」：一句不可执行的补救语比没有补救语更坏。
+
+    ⇒ 所以这里**只借生产者的摘要算法**（子进程里调 `freeze_meta.source_hash()`），
+      比较写在本判据里 —— 与 C3 同一个形状（`sha12` 取自生产者，`recorded != cur`
+      写在 C3 自己那儿）。
+    ⇒ **不 import 它**：`freeze_meta.py` 的模块级会 `sys.path.insert` 四次并
+      `sys.stdout.reconfigure` —— 那是**长期活着的服务进程**里最不该被顺手改掉的两样东西
+      （铁律 59：import 一个脚本付的是它整个模块级的代价）。走子进程，顺带关在里面。
+
+    ## 为什么不登记进 `DERIVED_PAIRS`（C2 的 mtime 表）
+
+    mtime 答的是**另一个问题**，而且更弱：`touch` 一下它就「新」了，
+    手工改过的载荷可以既「新」又**出身不对**。这个文件自带出身证明，
+    有强尺子的时候不该退回弱的那把（memory: mtime-change-is-not-content-change）。
+
+    ## 五种状态，全都进屏幕（缺一条就是「看着防住了」）
+
+      · 载荷不在场              ⇒ UNAVAILABLE（没量到；给出重跑命令）
+      · 读不动 / 顶层形状不对    ⇒ UNAVAILABLE（形状不是预期，属于「没量成」）
+      · 在、但**没有 `_frozen`** ⇒ UNAVAILABLE（**没带出身证明**，连比都没得比）
+      · 现码指纹与载荷自记的**不符** ⇒ **GAP**
+      · 两者逐位相同            ⇒ PASS
+
+    ★ 第三态与第四态是**故意分开**的：生产者对「没有 `_frozen`」也会回 1，
+      照抄那个 1，屏幕上就变成「过期了，重跑一下」—— 而正确处置是
+      「这份载荷根本不是 freeze_meta 产的（或产它的那份还没有指纹机制）」。
+      **要不要把这一态并进「过期」是个决定、不是意外**，所以这里显式分开写。
+    ★ 第四态记 **GAP 而不是 WATCH**（C2 的 mtime 旧了记 WATCH）：C2 判的是
+      「该重跑一下了」，而这一条判的是**一份与源码不符的契约正被送给另一台机器**，
+      且**没有任何一步会因此报错**。它和 C0/C1 同族：不是「慢」，是「这份东西不对」。
+    ★ 取指纹的子进程**没给出指纹**（无 stdout / 有 Traceback）记 **UNAVAILABLE**，不是 GAP：
+      Python 未捕获异常的退出码，与「真的算出来了」在任何码上都可能撞在一起
+      ⇒ 不分开的话，「尺子坏了」会被读成「被测对象坏了」（铁律 16）。
+    """
+    did = "C6.frozen_meta_provenance"
+    measure = ("内容指纹（sha256）：载荷自记的 `_frozen.sourceSha256` vs 现码；"
+               "现码那一份由生产者自己的 `freeze_meta.source_hash()` 在子进程里算；不比时间")
+    path = data_dir.parent / META_REL
+
+    if not path.is_file():
+        rep.add(unavailable(
+            did, "冻结载荷的出身",
+            "没有 %s —— 服务器 compute=0 那一路**没有载荷可读**，这条量不到。"
+            "生成：`python freeze_meta.py`" % META_REL, measure=measure))
+        return
+    try:
+        payload = _read_json(path)
+    except (OSError, ValueError) as ex:
+        rep.add(unavailable(did, "冻结载荷的出身",
+                            "读不动 %s：%s: %s" % (META_REL, type(ex).__name__, ex),
+                            measure=measure))
+        return
+    if not isinstance(payload, dict):
+        rep.add(unavailable(did, "冻结载荷的出身",
+                            "%s 顶层不是对象（是 %s）—— 形状不是预期"
+                            % (META_REL, type(payload).__name__), measure=measure))
+        return
+
+    frozen = payload.get("_frozen")
+    stamp = frozen.get("sourceSha256") if isinstance(frozen, dict) else None
+    if not isinstance(stamp, str) or not stamp:
+        rep.add(unavailable(
+            did, "冻结载荷的出身",
+            "%s 里没有 `_frozen.sourceSha256` ⇒ 这份载荷**没带出身证明**，"
+            "「它是不是当前源码产的」这条量不到（**不是**「过期了」）。顶层键：%s"
+            % (META_REL, "、".join(sorted(payload)[:8])), measure=measure))
+        return
+
+    # 摘要取自**生产者**（子进程里 `freeze_meta.source_hash()`），比较写在这里 ——
+    # 与 C3 同形（`sha12` 取自生产者，`recorded != cur` 写在 C3 自己那儿）。
+    root = data_dir.parent
+    script = root / META_FREEZER_REL
+    if not script.is_file():
+        rep.add(unavailable(did, "冻结载荷的出身",
+                            "找不到生产者 %s —— 现码的指纹无处可取" % META_FREEZER_REL,
+                            measure=measure))
+        return
+    # ★ 只调 `source_hash()`：模块级不跑 `build_payload()`，所以构建期门禁不参与
+    #   （那正是 `--check` 答不了本问题的原因，见文档串）。
+    #   `-c` 的 sys.path[0] 本来就是 cwd，这里再显式插一次 —— 调用方可能改过 cwd。
+    code = ("import sys; sys.path.insert(0, %r);"
+            "import json, freeze_meta;"
+            "print(json.dumps({'sha': freeze_meta.source_hash(),"
+            " 'source': freeze_meta.SOURCE}))" % str(root))
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-c", code], cwd=str(root), capture_output=True,
+            text=True, encoding="utf-8", errors="replace", timeout=120,
+            # ★ 子进程的 stderr 若按本机 GBK 编出来，而我们按 utf-8 解，
+            #   那条「为什么尺子坏了」的诊断就会变成一串糊字 ——
+            #   而 UNAVAILABLE 的**全部价值**就在那句话里（memory: 中文日志须
+            #   PYTHONIOENCODING=utf-8）。钉死它，不赌 locale。
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    except (OSError, subprocess.SubprocessError) as ex:
+        rep.add(unavailable(did, "冻结载荷的出身",
+                            "取现码指纹的子进程跑不起来：%s: %s"
+                            % (type(ex).__name__, ex), measure=measure))
+        return
+
+    err = proc.stderr or ""
+    out_lines = (proc.stdout or "").strip().splitlines()
+    try:
+        cur = json.loads(out_lines[-1])["sha"]
+        if not isinstance(cur, str) or not cur:
+            cur = None
+    except (ValueError, IndexError, KeyError, TypeError):
+        cur = None
+    # ★ 「子进程没给出指纹」与「指纹对不上」必须分开（铁律 16）：不分开的话，
+    #   尺子坏了会被读成被测对象坏了。
+    crashed = (cur is None) or ("Traceback" in err)
+
+    age = _frozen_age_days(frozen.get("generatedAt"))
+    ev = {"artifact": META_REL, "frozen_sourceSha256": stamp,
+          "current_sourceSha256": cur,
+          "frozen_generatedAt": frozen.get("generatedAt"), "frozen_age": age,
+          "artifact_mtime": _ts(path.stat().st_mtime),
+          "producer": META_FREEZER_REL, "producer_rc": proc.returncode,
+          "hash_from": "freeze_meta.source_hash()（子进程）"}
+
+    if crashed:
+        last = err.strip().splitlines()[-1] if err.strip() else "(无 stderr)"
+        rep.add(unavailable(
+            did, "冻结载荷的出身",
+            "★ 取现码指纹的子进程**没给出指纹**（rc=%s）：%s ⇒ 这是**尺子坏了**，"
+            "不是载荷坏了 —— 所以不敢据此说它过期" % (proc.returncode, last),
+            measure=measure, evidence=ev))
+        return
+
+    if cur == stamp:
+        rep.add(Finding(
+            check=did, title="冻结载荷的出身", status=Status.PASS, measure=measure,
+            detail="载荷自记的源码指纹与现码逐位相同（%s…；现码用的是生产者自己的 "
+                   "`source_hash()`），产出于 %s（%s 前）；服务器 compute=0 那一路"
+                   "读到的是当前源码产的那份"
+                   % (stamp[:12], frozen.get("generatedAt") or "?", age),
+            evidence=ev))
+        return
+
+    rep.add(Finding(
+        check=did, title="冻结载荷的出身", status=Status.GAP, measure=measure,
+        detail=("★ 载荷自记的源码指纹 %s 与现码 %s **不符** ⇒ 服务器 compute=0 那一路"
+                "拿到的是**旧源码产的那份载荷**（产出 %s，%s 前），而服务照常 200、"
+                "页面照常渲染，**没有任何一步会因此报错**。"
+                "重跑：`python freeze_meta.py`（重写载荷后本判据应转 PASS）。"
+                "⚠ 但那个命令**现在可能刷不动**：它在 `freeze_meta.py:198-203` 先跑"
+                "构建期门禁，门禁不过就在**写盘之前** `return 1` —— 而「门禁条目」与"
+                "「载荷是哪版产的是」是**两个互不相干的问题**。"
+                "⇒ 先不带 `--check` 跑一次，看它此刻列出的门禁条目"
+                % (stamp[:12], (cur or "?")[:12],
+                   frozen.get("generatedAt") or "?", age)),
+        evidence=ev))
+
+
 #: 编号 → 函数。**注册表那边（`__init__.CHECK_REGISTRY`）只存元信息，实现在这里。**
 CHECKS = {"c0": check_c0, "c1": check_c1, "c2": check_c2, "c3": check_c3,
-          "c4": check_c4}
+          "c4": check_c4, "c5": check_c5, "c6": check_c6}
 
 
 def run_all(data_dir: Path, state: dict | None = None) -> Report:
-    """跑完 C0–C4。`state` 不传就现算一份（census 是唯一口径计算者）。
+    """跑完 `CHECKS` 里登记的每一条（当前 C0–C6）。`state` 不传就现算一份
+    （census 是唯一口径计算者）。
 
-    ★ C4 不看 `state`（它读的是图谱自己的产物），但同样收下这个参数 ——
-    签名一致比"按需裁剪"重要：`run_all` 里的统一调度靠的就是四个参数同形。
+    ★ C4/C5/C6 都不看 `state`（它们读的是图谱产物 / 上游瓦片 / 冻结载荷），
+    但同样收下这个参数 —— 签名一致比「按需裁剪」重要：
+    这里的统一调度靠的就是参数同形。
+
+    ★ 这里**不写死条数**：上一版写的是「跑完 C0–C4」，而 `CHECKS` 早就有 c5 了 ——
+    文档里的范围也是一次带时刻的测量（铁律 50），所以直接指向 `CHECKS`。
     """
     passed_in = state is not None
     from backend.state import census            # C0 与 meta 都要用，无条件导入

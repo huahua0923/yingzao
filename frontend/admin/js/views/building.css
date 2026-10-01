@@ -1,0 +1,139 @@
+/* 「整栋三维」视图样式 —— 一个工具栏 + 一个同源 iframe。
+ *
+ * ★ 高度由 JS 量出来（见 building.js 的 fit()），**不写 `calc(100vh - 某个魔数)`**：
+ *   顶栏是 `flex-wrap` 的（窄屏会折行变高）、页脚高度也不是常量，
+ *   猜一个数就意味着某个窗口尺寸下 iframe 的下沿被页脚切掉一截 —— 而三维画面被切掉
+ *   在截图里看着像"这栋楼本来就这么高"。量一次比猜一次便宜。
+ *
+ * ★ 三种探针状态用**颜色 + 字**双重区分：只靠颜色的话，红绿色觉的人看到的是同一个灰点，
+ *   而"没等到几何"和"三维已就绪"混起来正是这一屏最不能出的错。 */
+
+.bld-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 0;
+}
+
+.bld-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  border-left: 2px solid var(--cyan-dim);
+}
+
+.bld-where {
+  font: 12px/1.4 var(--mono);
+  color: var(--text-dim);
+  letter-spacing: .02em;
+}
+
+/* 顶栏右侧的"把按钮推到边上去"的弹簧 */
+.bld-sp { flex: 1; }
+
+.bld-btn {
+  font: 12px/1 var(--sans);
+  padding: 6px 11px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-1);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.bld-btn:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--cyan-dim);
+  color: var(--cyan);
+}
+.bld-btn:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+.bld-btn:active:not(:disabled) { transform: translateY(1px); }
+.bld-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── 探针徽标 ──────────────────────────────────────────────────
+ * 它是这一屏的**量具读数**，所以走等宽字体、贴一个状态灯。
+ * 三个状态各有各的字，不靠颜色单独承载信息。 */
+.bld-probe {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 62ch;
+  font: 11.5px/1.5 var(--mono);
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--panel-2);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bld-probe::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.bld-probe.wait { color: var(--amber); border-color: rgba(232, 163, 61, .3); }
+.bld-probe.wait::before { animation: bld-pulse 1.4s ease-in-out infinite; }
+.bld-probe.ok   { color: var(--green); border-color: rgba(70, 167, 88, .32); }
+.bld-probe.fail { color: var(--red);   border-color: rgba(229, 72, 77, .35); }
+
+@keyframes bld-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .28; }
+}
+/* 动效是"还在等"的信号，不是装饰 —— 用户开了减弱动效就换成静态的弱灯。 */
+@media (prefers-reduced-motion: reduce) {
+  .bld-probe.wait::before { animation: none; opacity: .55; }
+}
+
+/* ── 画框 ────────────────────────────────────────────────────── */
+.bld-box {
+  flex: 1 1 auto;
+  min-height: 0;                 /* 没有它，flex 子项会被内容顶开、iframe 撑破容器 */
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2);
+  background: #05070a;           /* 三维页面自己的底色深一档；加载间隙露出来的就是它 */
+  overflow: hidden;
+}
+
+.bld-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* 全屏时浏览器把 iframe 铺满屏幕，边框和圆角这时只会变成一圈黑边 */
+.bld-frame:fullscreen {
+  border-radius: 0;
+  background: #05070a;
+}
+
+.bld-note {
+  margin: 0;
+  font: 11.5px/1.65 var(--sans);
+  color: var(--text-faint);
+}
+.bld-note code {
+  font: 11.5px/1 var(--mono);
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-1);
+  padding: 1px 4px;
+}
+
+@media (max-width: 900px) {
+  .bld-where { display: none; }   /* 窄屏优先留给探针徽标和按钮 */
+}

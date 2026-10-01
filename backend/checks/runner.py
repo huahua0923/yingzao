@@ -128,14 +128,24 @@ def main() -> int:
         sys_rep = run_system_checks(DATA_DIR)
         for f in sys_rep.findings:
             rep.add(f)
-        rep.meta["layer"] = ("A+B(逐栋) + C(系统级)" if heavy
-                             else "A(逐栋) + C(系统级)")
+        # ★ 标签由**真跑出来的层**导出（`run_fleet_checks` 写的 `tiers_ran`），
+        #   不看 `--heavy` 开关：开关说"想跑什么"，这个说"真跑了什么"。
+        #   实测过不这么写会怎样（2026-09-24）：`--all --heavy` 只跑 A 层，
+        #   而这里照样写 "A+B(逐栋)" —— 一张表替一次没发生的检查作了证。
+        #   还要**明说 C 在不在**：C 是上面这一段叠的，叠没叠得看它自己。
+        _ran = "".join(sorted(rep.meta.get("tiers_ran") or []))
+        rep.meta["layer"] = "%s(逐栋) + %s" % (
+            _ran or "**一层都没跑**",
+            "C(系统级)" if sys_rep.findings else "**C 层没有判据**")
         rep.meta["system"] = sys_rep.meta
         rep.meta["system_verdict"] = sys_rep.rollup()
         payload = rep.as_dict()
     payload["generated_unix"] = time.time()
     payload["generated_iso"] = time.strftime("%Y-%m-%d %H:%M:%S")
-    payload["heavy"] = heavy
+    payload["heavy"] = heavy            # 这是**意图**（开关）……
+    payload["tiers_ran"] = rep.meta.get("tiers_ran")   # ……这才是**实际跑过的层**。
+    # ★ 两个都写、且分开写：只留 `heavy` 的时候，一张 A 层的表会自称跑过 B 层
+    #   （2026-09-24 实测，全库 B 层一次没跑而表上写着 "A+B(逐栋)"）。读的时候看后者。
     out = DATA_DIR / "_meta" / "checks" / ("%s.json" % scope)
     _atomic_json(out, payload)
 
@@ -686,7 +696,177 @@ def _selftest() -> int:
         print("自检 ⑧ C3 名册对账：%s（五个用例，"%"/".join(_c3_got[t] for t, *_ in _c3_want)
               + "两档能红、量不到不报绿）")
 
-        print("自检通过：这引擎会红（①⑥）、也不会乱红（②③④⑤⑦）、"
+        # ⑨ B5「建好后墙级对账」—— 尺子身份与产物形状那几条闸门。
+        # ★ 为什么非切出来试不可：⑤（产物是别的尺子量的）⑥（产物里没有层）⑦（档不认识）
+        #   在**正常跑一次里到不了** —— 同一轮里引擎刚写、刚用现在这份源码写，指纹当然一致。
+        #   一条"到不了的判据"只能靠正常跑验证 ⇒ 等于永远没验过
+        #   （memory: vacuous-test-assertions）。所以用**造出来的产物**驱动 _b5_emit。
+        # ★ 夹具**照真产物的形状**摆（键名逐一同 `audit_walls.py` 的产物：name /
+        #   engine_sha12 / criterion_version / floors[F,status,why,in_pool,miss_real_pct,…]；
+        #   引擎控制台汇总那两行也照 main() 的原样抄），否则验的是"我想象的产物"
+        #   （memory: fixture-shape-must-copy-real-artifact）。
+        _B5SELF = "deadbeefcafe"          # 假想的"盘上这份源码"的 sha12
+        _B5MZ = "mz-zz_b5"
+
+        def _b5_prod(floors, **top):
+            d = {"name": "zz_b5", "engine_sha12": _B5SELF, "criterion_version": 3,
+                 "floors": floors}
+            d.update(top)
+            return d
+
+        def _b5_case(d, *, eng_stdout="", sha=_B5SELF, cv="3", retcode=0):
+            rep = Report(scope="B5-selftest")
+            _H._b5_emit(rep, d, "zz_b5", "T-B5", _B5MZ, sha, cv,
+                        artifact="zz_b5.json", artifact_unix=1.0, elapsed=1.0,
+                        retcode=retcode, eng_stdout=eng_stdout)
+            return rep.findings
+
+        # ⓐ 正常产物：① 两层需看各一条（带层号）＋ 整栋一条，档位取最坏的那个
+        _b5_ok = [{"F": 0, "status": "PASS", "why": "全过", "in_pool": True,
+                   "miss_real_pct": 0.4},
+                  {"F": 1, "status": "GAP", "why": "漏墙 12.3%（真实档）", "in_pool": True,
+                   "miss_real_pct": 12.3, "miss_chord_m": 0.0, "stray_any_pct": 0.0},
+                  {"F": 2, "status": "WATCH", "why": "多建/歪建 6.0%（E 类）", "in_pool": False,
+                   "miss_real_pct": 0.0, "stray_any_pct": 6.0}]
+        # 引擎自己的汇总行 —— 与产物一致（这一条是阴性对照：一致时**不许**报不一致）
+        _b5_eng_ok = ("=== 结论（3 层，1s）===\n"
+                      "  GAP 1、PASS 1、WATCH 1\n"
+                      "  分布池（src_m≥30m）2 层，池外 1 层（照判、不进分布）\n")
+        _f = _b5_case(_b5_prod(_b5_ok), eng_stdout=_b5_eng_ok)
+        _per = [x for x in _f if x.floor is not None]
+        _bld = [x for x in _f if x.floor is None
+                and x.title == "T-B5" and x.status.value != "unavailable"]
+        if sorted(x.floor for x in _per) != [1, 2]:
+            print("自检失败：B5 该逐层报 F1/F2，实际层号 %s" % [x.floor for x in _per])
+            return 1
+        if [x.status.value for x in _per] != ["gap", "watch"]:
+            print("自检失败：B5 逐层档位错：%s" % [x.status.value for x in _per])
+            return 1
+        if len(_bld) != 1 or _bld[0].status.value != "gap":
+            print("自检失败：B5 整栋那条应在有 GAP 层时报 gap，实际 %s"
+                  % [(x.status.value, x.title) for x in _bld])
+            return 1
+        if "12.3%" not in _bld[0].detail:
+            print("自检失败：B5 整栋那条没指出'最该先看'哪一层：%s" % _bld[0].detail)
+            return 1
+        if len([x for x in _f if x.title == "产物与引擎汇总口径不一致"]) != 0:
+            print("自检失败：B5 产物与引擎汇总**一致**时不该报不一致（假红）")
+            return 1
+        _e0 = _bld[0].evidence
+        if _e0.get("dist") != {"pass": 1, "gap": 1, "watch": 1} or _e0.get("n_floors") != 3:
+            print("自检失败：B5 整栋那条的档位分布/层数不对：%s" % _e0.get("dist"))
+            return 1
+        if _e0.get("pool_n") != 2:
+            print("自检失败：B5 的分布池计数不对（该是 2）：%r" % _e0.get("pool_n"))
+            return 1
+        # ★ 每条结论都要带**尺子指纹**：没有它，下次读到的数分不清是哪把尺子量的（铁律 24）
+        for _x in _f:
+            if _x.evidence.get("engine_sha12") != _B5SELF or \
+                    str(_x.evidence.get("criterion_version")) != "3":
+                print("自检失败：B5 的结论没带尺子指纹（sha=%r cv=%r）"
+                      % (_x.evidence.get("engine_sha12"),
+                         _x.evidence.get("criterion_version")))
+                return 1
+
+        # ⓑ 产物是**另一把尺子**量的 ⇒ 不采用，且两个值都要点名
+        _fb = _b5_case(_b5_prod(_b5_ok), sha="000000000000")
+        if len(_fb) != 1 or _fb[0].status.value != "unavailable":
+            print("自检失败：B5 指纹对不上时应只报一条 unavailable，实际 %s"
+                  % [(x.status.value, x.title) for x in _fb])
+            return 1
+        if _B5SELF not in _fb[0].detail or "000000000000" not in _fb[0].detail:
+            print("自检失败：B5 指纹对不上时没把**两个值都打出来**：%s" % _fb[0].detail)
+            return 1
+
+        # ⓒ 语义版本（手写那个）对不上 ⇒ 同样不采用 —— 机械指纹会漏掉"语义改了但字节没变"的场合
+        _fc = _b5_case(_b5_prod(_b5_ok), cv="4")
+        if len(_fc) != 1 or _fc[0].status.value != "unavailable":
+            print("自检失败：B5 语义版本对不上时应只报一条 unavailable，实际 %s"
+                  % [(x.status.value, x.title) for x in _fc])
+            return 1
+        if "v3" not in _fc[0].detail or "v4" not in _fc[0].detail:
+            print("自检失败：B5 语义版本对不上时没把两个版本都打出来：%s" % _fc[0].detail)
+            return 1
+
+        # ⓓ 产物里一层都没有 ⇒ **这是"没量到"，不是"每层都合格"**（本仓最贵的一类假绿）
+        _fd = _b5_case(_b5_prod([]))
+        if len(_fd) != 1 or _fd[0].status.value != "unavailable":
+            print("自检失败：B5 产物没有层时报了 %s —— 空数组绝不许被读成 PASS"
+                  % [(x.status.value, x.title) for x in _fd])
+            return 1
+        if "没量到" not in _fd[0].detail:
+            print("自检失败：B5 说没说清'没量到'：%s" % _fd[0].detail)
+            return 1
+
+        # ⓔ 引擎报了本层不认识的档 ⇒ 点名按 UNAVAILABLE 处置（不猜它是好是坏），且要单列一条
+        _fe = _b5_case(_b5_prod([{"F": 0, "status": "SORTA_OK", "why": "?", "in_pool": True},
+                                 {"F": 1, "status": "PASS", "why": "全过", "in_pool": True}]))
+        _unk = [x for x in _fe if x.title == "产物里有不认识的档"]
+        if len(_unk) != 1 or _unk[0].status.value != "unavailable" or \
+                "SORTA_OK" not in _unk[0].detail:
+            print("自检失败：B5 遇到不认识的档必须单列一条 unavailable 并点名原样值，实际 %s"
+                  % [(x.status.value, x.title) for x in _fe])
+            return 1
+        if not any(x.floor == 0 and x.status.value == "unavailable" for x in _fe):
+            print("自检失败：B5 把不认识的档静默跳过了（那一层等于从没被检查过）：%s"
+                  % [(x.floor, x.status.value) for x in _fe])
+            return 1
+
+        # ⓕ 两把量具对不上 ⇒ 说出来（不挑一个信）；一致与**读不到**都不许报
+        _fq = _b5_case(_b5_prod(_b5_ok), eng_stdout="=== 结论（2 层，1s）===\n  PASS 2\n")
+        _xc = [x for x in _fq if x.title == "产物与引擎汇总口径不一致"]
+        if len(_xc) != 1 or _xc[0].status.value != "watch":
+            print("自检失败：B5 产物（3 层）与引擎汇总（2 层）对不上时该报一条 watch，实际 %s"
+                  % [(x.status.value, x.title) for x in _fq])
+            return 1
+        if (_xc[0].evidence.get("xcheck") or {}).get("stdout_n") != 2:
+            print("自检失败：B5 对账那条没把引擎自己那个数留下：%s" % _xc[0].evidence.get("xcheck"))
+            return 1
+        # 汇总行**读不到**时：不报 unavailable（它只是第二道尺子），但要在 evidence 里留痕，
+        # 不许静默消失 ——「量不到」和「量到了、一致」在屏幕上必须不是同一行字
+        _fz = _b5_case(_b5_prod(_b5_ok), eng_stdout="（这段日志格式变了，认不出汇总行）\n")
+        if any(x.title == "产物与引擎汇总口径不一致" for x in _fz):
+            print("自检失败：B5 认不出汇总行却报了'不一致'（把量不到说成了不一致）")
+            return 1
+        if [x for x in _fz if x.floor is None][0].evidence.get("engine_stdout_dist") is not None:
+            print("自检失败：B5 认不出汇总行时没把'没对到'写进 evidence")
+            return 1
+
+        # ⓖ 阴性对照：**全过**的产物只出一条 PASS —— 判据不许在干净输入上乱红
+        _fg = _b5_case(_b5_prod([{"F": 0, "status": "PASS", "why": "全过", "in_pool": True,
+                                  "miss_real_pct": 0.2, "stray_any_pct": 0.3}]),
+                       eng_stdout="=== 结论（1 层，0s）===\n  PASS 1\n")
+        if len(_fg) != 1 or _fg[0].status.value != "pass":
+            print("自检失败：B5 在干净产物上该只出一条 pass，实际 %s"
+                  % [(x.status.value, x.title) for x in _fg])
+            return 1
+
+        # ⓗ 汇总行的解析器本身：**认不出一个词 ⇒ 整条不采用，不半用**
+        #   （半用会造出一个"少了一层"的分布，然后拿它去指控产物）
+        if _H._b5_stdout_dist("=== 结论（3 层，1s）===\n  GAP 1、PASS 2\n") != \
+                ({"gap": 1, "pass": 2}, 3):
+            print("自检失败：B5 读不出正常的汇总行：%r"
+                  % (_H._b5_stdout_dist("=== 结论（3 层，1s）===\n  GAP 1、PASS 2\n"),))
+            return 1
+        if _H._b5_stdout_dist("=== 结论（2 层，1s）===\n  GAP 1、FLURB 1\n") != (None, None):
+            print("自检失败：B5 汇总行里有一个不认识的词时应整条不采用（不许半用）")
+            return 1
+        if _H._b5_stdout_dist("") != (None, None):
+            print("自检失败：B5 空日志应回 (None, None)，不许回空分布")
+            return 1
+
+        # ★ **路由判据**：上面全在测纯函数 —— 若 check_b5 哪天不再调 _b5_emit（例如有人
+        #   "顺手"把结果拼回主函数），这些断言会全绿，而线上跑的还是旧路径
+        #   （memory: fixture-line-never-enters-its-branch）。
+        #   它证明的是**路由**（这些话真是从那几个函数出来的），不证明句子本身对（上面那几条管）。
+        if "_b5_emit(" not in inspect.getsource(_H.check_b5):
+            print("自检失败：check_b5 没走 _b5_emit —— 纯函数测绿了，跑的还是另一条路")
+            return 1
+        print("自检 ⑨ B5 墙级对账：正常产物逐层+整栋各就各位；"
+              "指纹对不上/语义版本对不上/产物没层/档不认识 四档都不采用且点名；"
+              "与引擎汇总不一致会 watch、认不出就不报（留痕）；干净产物只出一条 pass")
+
+        print("自检通过：这引擎会红（①⑥）、也不会乱红（②③④⑤⑦⑨）、"
               "分得清「不可比」与「说不通」（⑤）、"
               "还分得清「标定不住」与「标定住了没毛病」（⑦）。")
         return 0

@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>房间台账 · 营造</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --panel: #161b24;
+    --panel2: #1b2230;
+    --panel3: #131922;
+    --border: #273040;
+    --border-soft: rgba(39, 48, 64, .6);
+    --text: #e6edf3;
+    --muted: #8fa0b3;
+    --dim: #6b7c8f;
+    --accent: #4da3ff;
+    --accent2: #2dd4bf;
+    --warn: #d29922;
+    --ok: #3fb950;
+    --err: #f85149;
+    --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', 'Microsoft YaHei', Roboto, sans-serif;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 var(--sans);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  button { font-family: inherit; }
+  h1, h2, h3 { margin: 0; }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    height: 56px;
+    background: linear-gradient(180deg, #141a24, #10141c);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand .mark {
+    font-weight: 700; font-size: 16px; letter-spacing: .5px;
+  }
+  .brand .mark::before {
+    content: '';
+    display: inline-block; width: 8px; height: 8px; margin-right: 9px;
+    border-radius: 2px; background: var(--accent2); vertical-align: middle;
+  }
+  .brand .sub { color: var(--dim); font-size: 12px; letter-spacing: .04em; }
+  .topbar .spacer { flex: 1; }
+  .authorbox { display: flex; align-items: center; gap: 8px; }
+  .authorbox label { color: var(--muted); font-size: 12px; }
+  .authorbox input {
+    width: 120px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .authorbox input:focus { border-color: var(--accent); }
+
+  /* ---------- 概览 ---------- */
+  .overview {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    padding: 16px 20px 4px;
+  }
+  .stat {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px 14px 18px;
+    overflow: hidden;
+  }
+  .stat::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent);
+  }
+  .stat.manual::before { background: var(--accent2); }
+  .stat.deleted::before { background: var(--err); }
+  .stat .k {
+    color: var(--muted); font-size: 12px; letter-spacing: .08em;
+  }
+  .stat .v {
+    font-family: var(--mono); font-size: 30px; font-weight: 700;
+    font-variant-numeric: tabular-nums; line-height: 1.25; margin-top: 2px;
+  }
+  .stat .s { color: var(--dim); font-size: 12px; min-height: 18px; }
+
+  /* ---------- 筛选栏 ---------- */
+  .filters {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 14px;
+    padding: 14px 20px;
+    margin-top: 14px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .fld > span {
+    color: var(--dim); font-size: 11px; letter-spacing: .08em;
+  }
+  .ctl {
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    min-width: 130px;
+  }
+  .ctl:focus { border-color: var(--accent); }
+  .ctl:disabled { opacity: .45; cursor: not-allowed; }
+  select.ctl { cursor: pointer; }
+  input.ctl::placeholder { color: var(--dim); }
+  .fld.search { flex: 1 1 240px; min-width: 200px; }
+  .fld.search .ctl { width: 100%; }
+  .filters .grow { flex: 1; }
+  .filters .actions { display: flex; gap: 8px; }
+
+  .chk {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 34px; padding: 0 4px; cursor: pointer; user-select: none;
+    color: var(--muted); font-size: 13px;
+  }
+  .chk input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+
+  /* ---------- 按钮 ---------- */
+  .btn {
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+    transition: border-color .12s, background .12s, color .12s;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: #2b7df2; }
+  .btn.danger { border-color: #6d2f2f; color: #ffb4ae; }
+  .btn.danger:hover { background: #3a1f1f; border-color: var(--err); }
+  .btn.sm { height: 27px; padding: 0 10px; font-size: 12px; border-radius: 7px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn:disabled:hover { border-color: var(--border); }
+
+  /* ---------- 表格 ---------- */
+  .gridwrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  table.grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+  table.grid th {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--panel3);
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--muted);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  table.grid td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  table.grid tbody tr { cursor: pointer; }
+  table.grid tbody tr:hover { background: rgba(77, 163, 255, .06); }
+  table.grid tbody tr.sel { background: rgba(77, 163, 255, .10); }
+  table.grid tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  table.grid tbody tr.is-deleted { opacity: .5; }
+  table.grid tbody tr.is-deleted .num { text-decoration: line-through; }
+
+  .num { font-family: var(--mono); font-size: 12.5px; color: #cfe3f7; }
+  .floorcell { font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .area { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .area.calc { color: var(--accent2); }
+  .placeholder { color: var(--dim); }
+
+  td.cell-edit { position: relative; cursor: text; min-width: 96px; }
+  td.cell-edit .val { display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+  td.cell-edit .pencil {
+    opacity: 0; margin-left: 6px; color: var(--dim); font-size: 11px;
+    transition: opacity .12s;
+  }
+  td.cell-edit:hover { background: rgba(77, 163, 255, .07); }
+  td.cell-edit:hover .pencil { opacity: 1; }
+  td.cell-edit.is-manual .val { color: var(--accent2); }
+  td.cell-edit.is-manual::after {
+    content: ''; position: absolute; left: 3px; top: 50%;
+    width: 3px; height: 12px; margin-top: -6px;
+    border-radius: 2px; background: var(--accent2); opacity: .8;
+  }
+  td.cell-edit input {
+    width: 100%; min-width: 90px;
+    height: 27px; padding: 0 7px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: #0b1220;
+    color: var(--text);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    outline: none;
+  }
+  td.cell-edit.saving { opacity: .6; }
+
+  .ops { white-space: nowrap; }
+  .ops .btn + .btn { margin-left: 6px; }
+
+  /* ---------- 徽标 ---------- */
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 18px;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .badge.cad { background: #222b3a; color: var(--muted); }
+  .badge.manual { background: rgba(45, 212, 191, .14); color: var(--accent2); border: 1px solid rgba(45, 212, 191, .35); }
+  .badge.both { background: rgba(210, 153, 34, .13); color: var(--warn); border: 1px solid rgba(210, 153, 34, .35); }
+  .badge.gone { background: rgba(248, 81, 73, .13); color: var(--err); border: 1px solid rgba(248, 81, 73, .35); }
+  .badge-fields {
+    display: block; margin-top: 3px; color: var(--dim); font-size: 11px;
+  }
+
+  /* ---------- 分页 ---------- */
+  .pager {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+  }
+  .pager .info { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+
+  /* ---------- 空态 / 加载 ---------- */
+  .empty {
+    padding: 70px 24px;
+    text-align: center;
+  }
+  .empty .icon { font-size: 30px; color: var(--border); }
+  .empty .t { font-size: 15px; margin-top: 10px; }
+  .empty .s { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  /* ---------- 抽屉 ---------- */
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 460px; max-width: 92vw;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    box-shadow: -18px 0 40px rgba(0, 0, 0, .45);
+    display: flex; flex-direction: column;
+    transform: translateX(102%);
+    transition: transform .18s ease;
+    z-index: 40;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head {
+    flex: 0 0 auto;
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #171d28, #141a23);
+  }
+  .drawer-head .h-main { flex: 1; min-width: 0; }
+  .drawer-head .h-num {
+    font-family: var(--mono); font-size: 16px; font-weight: 600;
+    word-break: break-all;
+  }
+  .drawer-head .h-sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 16px 18px 32px; }
+
+  .sec-title {
+    font-size: 11px; letter-spacing: .1em; color: var(--dim);
+    margin: 20px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sec-title:first-child { margin-top: 0; }
+
+  .frow {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 6px 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .frow .fk { color: var(--muted); font-size: 12px; padding-top: 2px; }
+  .frow .fv { min-width: 0; font-size: 13px; word-break: break-word; }
+  .frow .fv .val { display: inline-block; }
+  .frow .fv input {
+    width: 100%; height: 28px; padding: 0 8px;
+    border-radius: 6px; border: 1px solid var(--accent);
+    background: #0b1220; color: var(--text);  /* 深色输入底，与表格内联编辑一致 */
+    font: inherit; font-family: var(--mono); font-size: 12.5px; outline: none;
+  }
+  .frow .fmeta {
+    grid-column: 2 / 3;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .srctag { font-size: 11px; font-family: var(--mono); color: var(--dim); }
+  .srctag.manual { color: var(--accent2); }
+  .linkbtn {
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: var(--accent); font-size: 12px;
+  }
+  .linkbtn:hover { text-decoration: underline; }
+  .linkbtn.danger { color: #ff9d95; }
+  .linkbtn:disabled { color: var(--dim); cursor: not-allowed; text-decoration: none; }
+
+  /* ---------- 时间线 ---------- */
+  .timeline { list-style: none; margin: 0; padding: 0 0 0 16px; position: relative; }
+  .timeline::before {
+    content: ''; position: absolute; left: 3px; top: 6px; bottom: 6px;
+    width: 1px; background: var(--border);
+  }
+  .timeline li { position: relative; padding: 0 0 16px 14px; }
+  .timeline li::before {
+    content: ''; position: absolute; left: -16px; top: 6px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--panel2); border: 1px solid var(--border);
+  }
+  .timeline li.a-set::before { background: var(--warn); border-color: var(--warn); }
+  .timeline li.a-add::before { background: var(--accent2); border-color: var(--accent2); }
+  .timeline li.a-delete::before { background: var(--err); border-color: var(--err); }
+  .timeline li.a-restore::before { background: var(--ok); border-color: var(--ok); }
+  .timeline .tl-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .timeline .tl-act { font-size: 12px; font-weight: 600; }
+  .timeline .tl-field { font-size: 12px; color: var(--muted); }
+  .timeline .tl-time { margin-left: auto; font-size: 11px; color: var(--dim); font-family: var(--mono); }
+  .timeline .tl-diff { margin-top: 4px; font-size: 12.5px; font-family: var(--mono); word-break: break-all; }
+  .timeline .tl-old { color: #ff9d95; text-decoration: line-through; }
+  .timeline .tl-new { color: #8fe0a8; }
+  .timeline .tl-meta { margin-top: 4px; font-size: 11.5px; color: var(--dim); }
+  .timeline .tl-actions { margin-top: 6px; }
+
+  /* ---------- 弹窗 ---------- */
+  .modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; }
+  .modal[hidden] { display: none; }
+  .modal-mask { position: absolute; inset: 0; background: rgba(4, 7, 12, .68); }
+  .modal-card {
+    position: relative;
+    width: 560px; max-width: 94vw; max-height: 88vh; overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  }
+  .modal-card h2 { font-size: 16px; margin-bottom: 8px; }
+  .modal-msg { color: var(--muted); font-size: 13px; margin: 0 0 14px; white-space: pre-wrap; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .modal-grid .wide { grid-column: 1 / -1; }
+  .modal-actions {
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .form-err { color: #ff9d95; font-size: 12.5px; margin-top: 12px; min-height: 18px; }
+
+  /* ---------- 提示 ---------- */
+  .banner {
+    flex: 0 0 auto;
+    display: flex; align-items: flex-start; gap: 12px;
+    margin: 12px 20px 0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(248, 81, 73, .1);
+    border: 1px solid rgba(248, 81, 73, .4);
+    color: #ffb4ae;
+    font-size: 13px;
+  }
+  .banner[hidden] { display: none; }
+  .banner .txt { flex: 1; word-break: break-word; }
+
+  .toasts {
+    position: fixed; right: 20px; bottom: 20px; z-index: 80;
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  }
+  .toast {
+    padding: 9px 14px; border-radius: 8px; font-size: 13px;
+    background: var(--panel2); border: 1px solid var(--border);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+    max-width: 380px;
+  }
+  .toast.ok { border-color: rgba(63, 185, 80, .5); color: #9ae6a8; }
+  .toast.err { border-color: rgba(248, 81, 73, .5); color: #ffb4ae; }
+
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">房间台账</span>
+    <span class="sub">营造 / yingzao · 每间房的可管理真源</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="authorbox">
+    <label for="author">操作人</label>
+    <input id="author" type="text" maxlength="40" autocomplete="off" placeholder="admin">
+  </div>
+</header>
+
+<section class="overview" aria-label="台账概览">
+  <div class="stat">
+    <div class="k">房间总数</div>
+    <div class="v" id="statTotal">—</div>
+    <div class="s" id="statTotalSub">不含已删除</div>
+  </div>
+  <div class="stat manual">
+    <div class="k">人工订正过</div>
+    <div class="v" id="statManual">—</div>
+    <div class="s" id="statManualSub">含人工新建与改值</div>
+  </div>
+  <div class="stat deleted">
+    <div class="k">已标记删除</div>
+    <div class="v" id="statDeleted">—</div>
+    <div class="s" id="statDeletedSub">CAD 重抽不会复活</div>
+  </div>
+</section>
+
+<section class="filters">
+  <label class="fld">
+    <span>楼栋</span>
+    <select class="ctl" id="buildingSel"><option value="">全部楼栋</option></select>
+  </label>
+  <label class="fld">
+    <span>楼层</span>
+    <select class="ctl" id="floorSel" disabled><option value="">全部楼层</option></select>
+  </label>
+  <label class="fld search">
+    <span>关键字</span>
+    <input class="ctl" id="q" type="search" autocomplete="off" placeholder="房号 / 用途 / 使用单位 / 名称">
+  </label>
+  <label class="fld">
+    <span>来源</span>
+    <select class="ctl" id="originSel">
+      <option value="">全部来源</option>
+      <option value="cad">仅 CAD 抽取</option>
+      <option value="manual">仅人工新建</option>
+      <option value="both">人工改过</option>
+    </select>
+  </label>
+  <label class="chk">
+    <input type="checkbox" id="includeDeleted">
+    <span>显示已删除</span>
+  </label>
+  <div class="grow"></div>
+  <div class="actions">
+    <button class="btn" id="btnExport" type="button">导出 CSV</button>
+    <button class="btn primary" id="btnAdd" type="button">＋ 新建房间</button>
+    <button class="btn" id="btnRefresh" type="button">刷新</button>
+  </div>
+</section>
+
+<div class="banner" id="banner" hidden>
+  <span class="txt" id="bannerText"></span>
+  <button class="linkbtn" id="bannerClose" type="button">关闭</button>
+</div>
+
+<section class="gridwrap" id="gridwrap">
+  <div class="empty" id="empty" hidden>
+    <div class="icon">▤</div>
+    <div class="t" id="emptyTitle">暂无数据</div>
+    <div class="s" id="emptySub"></div>
+  </div>
+  <table class="grid" id="grid" hidden>
+    <thead>
+      <tr>
+        <th scope="col">房号</th>
+        <th scope="col">名称</th>
+        <th scope="col">楼层</th>
+        <th scope="col">用途</th>
+        <th scope="col">使用单位</th>
+        <th scope="col">标注面积</th>
+        <th scope="col">计算面积 m²</th>
+        <th scope="col">来源</th>
+        <th scope="col">操作</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</section>
+
+<footer class="pager" id="pager" hidden>
+  <button class="btn sm" id="btnPrev" type="button">上一页</button>
+  <button class="btn sm" id="btnNext" type="button">下一页</button>
+  <span class="info" id="pagerInfo"></span>
+</footer>
+
+<aside class="drawer" id="drawer" aria-label="房间详情" aria-hidden="true">
+  <div class="drawer-head">
+    <div class="h-main">
+      <div class="h-num" id="drawerNum">—</div>
+      <div class="h-sub" id="drawerSub"></div>
+    </div>
+    <button class="btn sm" id="drawerClose" type="button">关闭</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<!-- 新建房间 -->
+<div class="modal" id="addModal" hidden>
+  <div class="modal-mask" data-close="1"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <h2 id="addTitle">新建房间</h2>
+    <p class="modal-msg">人工新建的房间会写进台账库，CAD 重新抽取不会覆盖它。</p>
+    <form id="addForm" novalidate>
+      <div class="modal-grid">
+        <label class="fld">
+          <span>楼栋 *</span>
+          <input class="ctl" id="addBuilding" list="buildingOptions" autocomplete="off" placeholder="例如 c103" required>
+          <datalist id="buildingOptions"></datalist>
+        </label>
+        <label class="fld">
+          <span>楼层 *</span>
+          <input class="ctl" id="addFloor" type="number" step="1" value="0" required>
+        </label>
+        <label class="fld wide">
+          <span>房号 *</span>
+          <input class="ctl" id="addNumber" autocomplete="off" placeholder="例如 103-A-01-05" required>
+        </label>
+        <label class="fld">
+          <span>名称</span>
+          <input class="ctl" id="addName" autocomplete="off">
+        </label>
+        <label class="fld">
+          <span>用途</span>
+          <input class="ctl" id="addPurpose" autocomplete="off" placeholder="例如 办公室">
+        </label>
+        <label class="fld">
+          <span>使用单位</span>
+          <input class="ctl" id="addDept" autocomplete="off" placeholder="例如 后勤服务用房">
+        </label>
+        <label class="fld">
+          <span>标注面积</span>
+          <input class="ctl" id="addAreaLabel" autocomplete="off" placeholder="例如 61.00m">
+        </label>
+        <label class="fld">
+          <span>计算面积 m²</span>
+          <input class="ctl" id="addAreaM2" inputmode="decimal" autocomplete="off" placeholder="例如 61.0">
+        </label>
+        <label class="fld wide">
+          <span>备注</span>
+          <input class="ctl" id="addNote" autocomplete="off" placeholder="记录依据，例如：现场核对">
+        </label>
+      </div>
+      <div class="form-err" id="addError"></div>
+      <div class="modal-actions">
+        <button class="btn" type="button" data-close="1">取消</button>
+        <button class="btn primary" type="submit" id="addSubmit">提交</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 通用确认 -->
+<div class="modal" id="confirmModal" hidden>
+  <div class="modal-mask" data-close="1"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <h2 id="confirmTitle">确认</h2>
+    <p class="modal-msg" id="confirmMsg"></p>
+    <label class="fld wide">
+      <span>备注（可选）</span>
+      <input class="ctl" id="confirmNote" autocomplete="off" placeholder="例如：现场核对后订正">
+    </label>
+    <div class="modal-actions">
+      <button class="btn" type="button" data-close="1">取消</button>
+      <button class="btn danger" type="button" id="confirmOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= 常量 ================= */
+
+  var API = 'api/registry';
+  var PAGE_SIZE = 100;
+  var SEARCH_DEBOUNCE_MS = 300;
+  var TOAST_MS = 3200;
+  var AUTHOR_KEY = 'yingzao.roomsAdmin.author';
+
+  var FIELD_LABELS = {
+    name: '名称',
+    area_label: '标注面积',
+    area_m2: '计算面积 m²',
+    purpose: '用途',
+    dept: '使用单位'
+  };
+  var DRAWER_FIELDS = ['name', 'area_label', 'area_m2', 'purpose', 'dept'];
+  var TEXT_FIELDS = ['number', 'name', 'area_label', 'purpose', 'dept'];
+
+  var ACTION_LABELS = {
+    set: '修改字段',
+    add: '新建房间',
+    delete: '标记删除',
+    restore: '恢复房间',
+    revert: '撤销人工值'
+  };
+  var ORIGIN_LABELS = {
+    cad: '仅 CAD 抽取',
+    manual: '人工新建',
+    both: '人工改过'
+  };
+
+  /* ================= 小工具 ================= */
+
+  function $(id) { return document.getElementById(id); }
+
+  function esc(v) {
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function isBlank(v) { return v === null || v === undefined || String(v).trim() === ''; }
+
+  function showText(v) { return isBlank(v) ? '<span class="placeholder">—</span>' : esc(v); }
+
+  function textOr(v, fallback) { return isBlank(v) ? fallback : String(v).trim(); }
+
+  function fmtArea(v) {
+    if (typeof v !== 'number' || !isFinite(v)) return null;
+    return v.toFixed(2);
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function fmtFloor(v) {
+    return (v === null || v === undefined || v === '') ? '—' : 'F' + v;
+  }
+
+  function buildQuery(params) {
+    var parts = [];
+    Object.keys(params || {}).forEach(function (k) {
+      var v = params[k];
+      if (v === undefined || v === null || v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+    });
+    return parts.join('&');
+  }
+
+  function debounce(fn, ms) {
+    var timer = null;
+    return function () {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(fn, ms);
+    };
+  }
+
+  function sameValue(a, b) {
+    return String(a === null || a === undefined ? '' : a) ===
+      String(b === null || b === undefined ? '' : b);
+  }
+
+  function normalizeValue(field, raw) {
+    var s = raw === null || raw === undefined ? '' : String(raw).trim();
+    if (field === 'area_m2') {
+      if (s === '') return null;
+      var n = Number(s);
+      if (!isFinite(n)) throw new Error('计算面积必须是数字，收到「' + s + '」');
+      return n;
+    }
+    return s === '' ? null : s;
+  }
+
+  function manualFields(room) {
+    var src = room && room.src ? room.src : {};
+    return Object.keys(src).filter(function (k) { return src[k] === 'manual'; });
+  }
+
+  /* ================= 状态 ================= */
+
+  var state = {
+    building: '',
+    floor: '',
+    q: '',
+    origin: '',
+    includeDeleted: false,
+    offset: 0,
+    limit: PAGE_SIZE,
+    total: 0,
+    rows: [],
+    // stats.buildings[].floors —— 后端声明的「该楼实际存在的层号」，楼层下拉的唯一真源
+    buildingFloors: {},
+    // 兜底缓存：当后端没给 floors 时，用列表里实际出现过的层号补
+    floorCache: {},
+    stats: null,
+    drawerKey: '',
+    loadError: ''
+  };
+
+  /* ================= 提示 / 错误 ================= */
+
+  function showToast(message, kind) {
+    var box = $('toasts');
+    var el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = message;
+    box.appendChild(el);
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, TOAST_MS);
+  }
+
+  function showBanner(message) {
+    $('bannerText').textContent = message;
+    $('banner').hidden = false;
+  }
+
+  function hideBanner() { $('banner').hidden = true; }
+
+  function showError(message) {
+    showToast(message, 'err');
+    showBanner(message);
+  }
+
+  /* ================= 后端调用 ================= */
+
+  function parseEnvelope(res) {
+    return res.json().then(function (payload) {
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('服务器返回格式异常（HTTP ' + res.status + '）');
+      }
+      if (payload.success !== true) {
+        throw new Error(payload.error || ('请求失败（HTTP ' + res.status + '）'));
+      }
+      return payload.data;
+    }, function () {
+      throw new Error('服务器返回了无法解析的内容（HTTP ' + res.status + '）');
+    });
+  }
+
+  function apiGet(path, params, label) {
+    var qs = buildQuery(params);
+    var url = API + path + (qs ? '?' + qs : '');
+    return fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(parseEnvelope, function (err) {
+        throw new Error('无法连接后端服务（' + (label || path) + '）：' + (err && err.message ? err.message : '网络错误'));
+      });
+  }
+
+  function apiPost(path, body, label) {
+    return fetch(API + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(parseEnvelope, function (err) {
+      throw new Error('无法连接后端服务（' + (label || path) + '）：' + (err && err.message ? err.message : '网络错误'));
+    });
+  }
+
+  function currentAuthor() {
+    return textOr($('author').value, 'admin');
+  }
+
+  /* ================= 概览 ================= */
+
+  function loadStats() {
+    return apiGet('/stats', {}, '统计').then(function (data) {
+      state.stats = data || {};
+      var buildings = state.stats.buildings || [];
+      var total = state.stats.total;
+      $('statTotal').textContent = (typeof total === 'number') ? total : '—';
+      $('statManual').textContent = (typeof state.stats.manual_n === 'number') ? state.stats.manual_n : '—';
+      $('statDeleted').textContent = (typeof state.stats.deleted_n === 'number') ? state.stats.deleted_n : '—';
+      $('statTotalSub').textContent = buildings.length + ' 栋楼 · 不含已删除';
+      renderBuildingOptions(buildings);
+      cacheBuildingFloors(buildings);
+      renderFloorOptions();
+    }).catch(function (err) {
+      $('statTotal').textContent = '—';
+      $('statManual').textContent = '—';
+      $('statDeleted').textContent = '—';
+      $('statTotalSub').textContent = '统计加载失败';
+      showError('加载统计失败：' + err.message);
+    });
+  }
+
+  function numAsc(a, b) { return a - b; }
+
+  // 楼层下拉的选项一律取 stats 里声明的 floors 数组，绝不用 0..floors_n-1 去推
+  function cacheBuildingFloors(buildings) {
+    var next = {};
+    (buildings || []).forEach(function (b) {
+      if (!b || b.building === null || b.building === undefined) return;
+      if (!Array.isArray(b.floors)) return;
+      next[String(b.building)] = b.floors.slice().sort(numAsc);
+    });
+    state.buildingFloors = next;
+  }
+
+  function floorsFor(building) {
+    if (!building) return [];
+    if (Array.isArray(state.buildingFloors[building])) return state.buildingFloors[building];
+    if (Array.isArray(state.floorCache[building])) return state.floorCache[building];
+    return [];
+  }
+
+  function renderBuildingOptions(buildings) {
+    var sel = $('buildingSel');
+    var opts = ['<option value="">全部楼栋</option>'];
+    var list = buildings || [];
+    list.forEach(function (b) {
+      var name = b.building === null || b.building === undefined ? '' : String(b.building);
+      var rooms = typeof b.rooms_n === 'number' ? b.rooms_n : 0;
+      opts.push('<option value="' + esc(name) + '">' + esc(name) + '（' + rooms + ' 间）</option>');
+    });
+    sel.innerHTML = opts.join('');
+    sel.value = state.building;
+
+    var datalist = $('buildingOptions');
+    datalist.innerHTML = list.map(function (b) {
+      return '<option value="' + esc(b.building) + '"></option>';
+    }).join('');
+  }
+
+  /* ================= 楼层选项 ================= */
+
+  // 仅当后端没有在 stats 里给出该楼的 floors 时，才去列表里探一次实际层号
+  function ensureFloors(building) {
+    if (!building) return Promise.resolve([]);
+    if (Array.isArray(state.buildingFloors[building])) return Promise.resolve(state.buildingFloors[building]);
+    if (Array.isArray(state.floorCache[building])) return Promise.resolve(state.floorCache[building]);
+    return apiGet('/rooms', { building: building, limit: 1000, offset: 0 }, '楼层')
+      .then(function (data) {
+        var floors = collectFloors(data.rows || []);
+        state.floorCache[building] = floors;
+        return floors;
+      })
+      .catch(function (err) {
+        state.floorCache[building] = [];
+        console.error('楼层列表加载失败', err);
+        return [];
+      });
+  }
+
+  function collectFloors(rows) {
+    var seen = {};
+    rows.forEach(function (r) {
+      if (r && r.floor !== null && r.floor !== undefined) seen[r.floor] = true;
+    });
+    return Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
+  }
+
+  function renderFloorOptions() {
+    var sel = $('floorSel');
+    var floors = floorsFor(state.building);
+    var opts = ['<option value="">全部楼层</option>'];
+    floors.forEach(function (f) {
+      opts.push('<option value="' + esc(f) + '">F' + esc(f) + '</option>');
+    });
+    sel.innerHTML = opts.join('');
+    var keep = floors.some(function (f) { return String(f) === String(state.floor); });
+    sel.value = keep ? String(state.floor) : '';
+    if (!keep && state.floor !== '') state.floor = '';
+    sel.disabled = !state.building;
+  }
+
+  /* ================= 列表 ================= */
+
+  function currentFilters() {
+    return {
+      building: state.building,
+      floor: state.floor,
+      q: state.q,
+      origin: state.origin,
+      include_deleted: state.includeDeleted ? 1 : '',
+      limit: state.limit,
+      offset: state.offset
+    };
+  }
+
+  function loadRooms() {
+    setLoadingState();
+    return apiGet('/rooms', currentFilters(), '房间列表').then(function (data) {
+      state.rows = (data && data.rows) || [];
+      state.total = (data && typeof data.total === 'number') ? data.total : state.rows.length;
+      if (data && typeof data.limit === 'number') state.limit = data.limit;
+      if (data && typeof data.offset === 'number') state.offset = data.offset;
+      state.loadError = '';
+      hideBanner();
+      // stats 已声明该楼层号时不再兜底；否则把列表里出现过的层号并入兜底缓存
+      if (state.building && !Array.isArray(state.buildingFloors[state.building])) {
+        var merged = state.floorCache[state.building] || [];
+        collectFloors(state.rows).forEach(function (f) {
+          if (merged.indexOf(f) < 0) merged.push(f);
+        });
+        merged.sort(numAsc);
+        state.floorCache[state.building] = merged;
+        renderFloorOptions();
+      }
+      renderTable();
+    }).catch(function (err) {
+      state.rows = [];
+      state.total = 0;
+      state.loadError = err.message;
+      renderTable();
+      showError('加载房间列表失败：' + err.message);
+    });
+  }
+
+  function setLoadingState() {
+    $('grid').hidden = true;
+    $('pager').hidden = true;
+    var empty = $('empty');
+    empty.hidden = false;
+    $('emptyTitle').textContent = '正在加载…';
+    $('emptySub').textContent = '正在向后端读取房间台账';
+  }
+
+  function renderTable() {
+    var tbody = $('tbody');
+    var grid = $('grid');
+    var empty = $('empty');
+
+    if (!state.rows.length) {
+      tbody.innerHTML = '';
+      grid.hidden = true;
+      empty.hidden = false;
+      if (state.loadError) {
+        $('emptyTitle').textContent = '无法加载房间列表';
+        $('emptySub').textContent = state.loadError;
+      } else if (hasFilters()) {
+        $('emptyTitle').textContent = '没有符合筛选条件的房间';
+        $('emptySub').textContent = '试着放宽楼栋 / 楼层 / 关键字，或勾选「显示已删除」。';
+      } else {
+        $('emptyTitle').textContent = '台账库暂无房间数据';
+        $('emptySub').textContent = '可以先点右上角「新建房间」，或等待 CAD 重新抽取写库。';
+      }
+      renderPager();
+      return;
+    }
+
+    empty.hidden = true;
+    grid.hidden = false;
+    tbody.innerHTML = state.rows.map(rowHtml).join('');
+    renderPager();
+  }
+
+  function hasFilters() {
+    return !!(state.building || state.floor !== '' || state.q || state.origin || state.includeDeleted);
+  }
+
+  function rowHtml(room) {
+    var key = room.room_key;
+    var classes = [];
+    if (room.deleted) classes.push('is-deleted');
+    if (state.drawerKey && state.drawerKey === key) classes.push('sel');
+    var attrs = ' data-key="' + esc(key) + '"' +
+      (classes.length ? ' class="' + classes.join(' ') + '"' : '');
+
+    var ops = '<button class="btn sm" type="button" data-act="detail" data-key="' + esc(key) + '">详情</button>';
+    if (room.deleted) {
+      ops += '<button class="btn sm" type="button" data-act="restore" data-key="' + esc(key) + '">恢复</button>';
+    } else {
+      ops += '<button class="btn sm danger" type="button" data-act="delete" data-key="' + esc(key) + '">删除</button>';
+    }
+
+    return '<tr' + attrs + '>' +
+      '<td><span class="num">' + esc(room.number) + '</span>' + deletedTag(room) + '</td>' +
+      editCell(room, 'name', showText(room.name)) +
+      '<td class="floorcell">' + esc(fmtFloor(room.floor)) + '</td>' +
+      editCell(room, 'purpose', showText(room.purpose)) +
+      editCell(room, 'dept', showText(room.dept)) +
+      editCell(room, 'area_label', showText(room.area_label)) +
+      editCell(room, 'area_m2', areaCalcHtml(room), 'area calc') +
+      '<td>' + originBadge(room) + '</td>' +
+      '<td class="ops">' + ops + '</td>' +
+    '</tr>';
+  }
+
+  function deletedTag(room) {
+    return room.deleted ? '<div><span class="badge gone">已删除</span></div>' : '';
+  }
+
+  function areaCalcHtml(room) {
+    var v = fmtArea(room.area_m2);
+    return v === null ? '<span class="placeholder">—</span>' : esc(v);
+  }
+
+  function editCell(room, field, innerHtml, extraClass) {
+    var isManual = room.src && room.src[field] === 'manual';
+    var cls = 'cell-edit' + (extraClass ? ' ' + extraClass : '') + (isManual ? ' is-manual' : '');
+    return '<td class="' + cls + '" data-field="' + field + '" title="点击编辑' +
+      esc(FIELD_LABELS[field] || field) + (isManual ? '（当前为人工值）' : '') + '">' +
+      '<span class="val">' + innerHtml + '</span><span class="pencil">✎</span></td>';
+  }
+
+  function originBadge(room) {
+    if (room.origin === 'manual') return '<span class="badge manual">人工新建</span>';
+    if (room.origin === 'both') {
+      var fields = manualFields(room);
+      var names = fields.map(function (f) { return FIELD_LABELS[f] || f; });
+      var tip = names.length ? '已改：' + names.join('、') : '';
+      return '<span class="badge both" title="' + esc(tip) + '">人工改过</span>' +
+        (names.length ? '<span class="badge-fields">' + esc(names.join(' / ')) + '</span>' : '');
+    }
+    return '<span class="badge cad">CAD</span>';
+  }
+
+  function renderPager() {
+    var pager = $('pager');
+    var total = state.total;
+    var limit = state.limit || PAGE_SIZE;
+    var offset = state.offset;
+    var from = total === 0 ? 0 : offset + 1;
+    var to = Math.min(offset + (state.rows.length || limit), total);
+    var page = Math.floor(offset / limit) + 1;
+    var pages = Math.max(1, Math.ceil(total / limit));
+
+    $('pagerInfo').textContent = '第 ' + from + '–' + to + ' 条 / 共 ' + total + ' 条 · 第 ' + page + '/' + pages + ' 页';
+    $('btnPrev').disabled = offset <= 0;
+    $('btnNext').disabled = offset + limit >= total;
+
+    var visible = total > 0;
+    pager.hidden = !visible;
+  }
+
+  function replaceRow(room) {
+    var idx = -1;
+    for (var i = 0; i < state.rows.length; i++) {
+      if (state.rows[i].room_key === room.room_key) { idx = i; break; }
+    }
+    if (idx < 0) return false;
+    state.rows[idx] = room;
+
+    var tbody = $('tbody');
+    var trs = tbody.querySelectorAll('tr');
+    for (var j = 0; j < trs.length; j++) {
+      if (trs[j].getAttribute('data-key') === room.room_key) {
+        trs[j].outerHTML = rowHtml(room);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function dropRow(key) {
+    var before = state.rows.length;
+    state.rows = state.rows.filter(function (r) { return r.room_key !== key; });
+    if (state.rows.length < before) state.total = Math.max(0, state.total - 1);
+    var tbody = $('tbody');
+    var trs = tbody.querySelectorAll('tr');
+    for (var j = 0; j < trs.length; j++) {
+      if (trs[j].getAttribute('data-key') === key) {
+        tbody.removeChild(trs[j]);
+        break;
+      }
+    }
+    if (!state.rows.length) renderTable();
+    renderPager();
+  }
+
+  /* ================= 就地编辑 ================= */
+
+  function startCellEdit(td) {
+    if (td.querySelector('input')) return;
+    var key = rowKeyOf(td);
+    var field = td.getAttribute('data-field');
+    var room = findRoom(key);
+    if (!room || !field) return;
+
+    var current = field === 'area_m2'
+      ? (typeof room.area_m2 === 'number' ? String(room.area_m2) : '')
+      : (room[field] === null || room[field] === undefined ? '' : String(room[field]));
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = current;
+    input.setAttribute('aria-label', FIELD_LABELS[field] || field);
+    td.innerHTML = '';
+    td.appendChild(input);
+    input.focus();
+    input.select();
+
+    var done = false;
+    function finish(action) {
+      if (done) return;
+      done = true;
+      if (action === 'save') {
+        submitCellEdit(td, room, field, input.value);
+      } else {
+        replaceRow(room);
+      }
+    }
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish('save'); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish('cancel'); }
+    });
+    input.addEventListener('blur', function () { finish('cancel'); });
+  }
+
+  function submitCellEdit(td, room, field, rawValue) {
+    var value;
+    try {
+      value = normalizeValue(field, rawValue);
+    } catch (err) {
+      showError(err.message);
+      replaceRow(room);
+      return;
+    }
+    if (sameValue(room[field], value)) { replaceRow(room); return; }
+
+    td.classList.add('saving');
+    apiPost('/edit', {
+      key: room.room_key,
+      field: field,
+      value: value,
+      author: currentAuthor(),
+      note: '表格行内编辑'
+    }, '修改字段').then(function (data) {
+      var updated = data && data.room ? data.room : room;
+      applyRoom(updated);
+      var changed = (data && data.changed) || [];
+      var msg = changed.length
+        ? '已保存「' + (FIELD_LABELS[field] || field) + '」'
+        : '已保存（值未发生变化）';
+      showToast(msg, 'ok');
+      hideBanner();
+      loadStats();
+      refreshDrawerIfOpen(updated.room_key);
+    }).catch(function (err) {
+      replaceRow(room);
+      showError('保存失败：' + err.message);
+    });
+  }
+
+  function applyRoom(room) {
+    if (!room || !room.room_key) return;
+    replaceRow(room);
+  }
+
+  function findRoom(key) {
+    for (var i = 0; i < state.rows.length; i++) {
+      if (state.rows[i].room_key === key) return state.rows[i];
+    }
+    return null;
+  }
+
+  function rowKeyOf(el) {
+    var tr = el.closest('tr');
+    return tr ? tr.getAttribute('data-key') : '';
+  }
+
+  /* ================= 行操作 ================= */
+
+  function handleRowAction(btn) {
+    var act = btn.getAttribute('data-act');
+    var key = btn.getAttribute('data-key');
+    if (act === 'detail') { openDrawer(key); return; }
+    if (act === 'delete') { doDelete(key); return; }
+    if (act === 'restore') { doRestore(key); return; }
+  }
+
+  function doDelete(key) {
+    var room = findRoom(key);
+    if (!room) return;
+    var number = textOr(room.number, key);
+    var purpose = textOr(room.purpose, '未填用途');
+    askConfirm({
+      title: '标记删除这间房？',
+      message: '房号：' + number + '\n用途：' + purpose + '\n楼层：' + fmtFloor(room.floor) +
+        '\n\n删除是人工标记，CAD 重新抽取不会把它复活；随时可以恢复。',
+      confirmText: '确认删除',
+      danger: true
+    }).then(function (res) {
+      if (!res.ok) return;
+      apiPost('/delete', { key: key, author: currentAuthor(), note: res.note }, '删除房间')
+        .then(function (data) {
+          var updated = data && data.room ? data.room : null;
+          if (updated) applyRoom(updated);
+          if (!state.includeDeleted) dropRow(key);
+          if (state.drawerKey === key) openDrawer(key, true);
+          showToast('已标记删除：' + number, 'ok');
+          hideBanner();
+          loadStats();
+        })
+        .catch(function (err) { showError('删除失败：' + err.message); });
+    });
+  }
+
+  function doRestore(key) {
+    var room = findRoom(key);
+    var number = room ? textOr(room.number, key) : key;
+    askConfirm({
+      title: '恢复这间房？',
+      message: '房号：' + number + '\n恢复后它会重新出现在正常列表中。',
+      confirmText: '确认恢复',
+      danger: false
+    }).then(function (res) {
+      if (!res.ok) return;
+      apiPost('/restore', { key: key, author: currentAuthor(), note: res.note }, '恢复房间')
+        .then(function (data) {
+          var updated = data && data.room ? data.room : null;
+          if (updated) applyRoom(updated);
+          if (state.drawerKey === key) openDrawer(key, true);
+          showToast('已恢复：' + number, 'ok');
+          hideBanner();
+          loadStats();
+        })
+        .catch(function (err) { showError('恢复失败：' + err.message); });
+    });
+  }
+
+  function doRevert(key, field, fieldLabel) {
+    askConfirm({
+      title: '撤销该字段的人工值？',
+      message: '字段：' + fieldLabel + '\n撤销后这个字段会回到 CAD 抽取的原值，人工写入的值会被丢弃。',
+      confirmText: '确认撤销',
+      danger: true
+    }).then(function (res) {
+      if (!res.ok) return;
+      apiPost('/revert', { key: key, field: field, author: currentAuthor(), note: res.note }, '撤销人工值')
+        .then(function (data) {
+          var updated = data && data.room ? data.room : null;
+          if (updated) applyRoom(updated);
+          showToast('已撤销「' + fieldLabel + '」的人工值', 'ok');
+          hideBanner();
+          if (state.drawerKey === key) openDrawer(key, true);
+          loadStats();
+        })
+        .catch(function (err) { showError('撤销失败：' + err.message); });
+    });
+  }
+
+  /* ================= 抽屉 ================= */
+
+  function openDrawer(key, silent) {
+    state.drawerKey = key;
+    var drawer = $('drawer');
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    if (!silent) {
+      $('drawerNum').textContent = '加载中…';
+      $('drawerSub').textContent = '';
+      $('drawerBody').innerHTML = '<div class="empty"><div class="t">正在加载房间详情…</div></div>';
+    }
+    highlightSelectedRow();
+
+    apiGet('/room', { key: key }, '房间详情').then(function (data) {
+      if (state.drawerKey !== key) return;
+      var room = data && data.room ? data.room : null;
+      if (!room) throw new Error('后端未返回房间数据');
+      renderDrawer(room, (data && data.history) || []);
+      applyRoom(room);
+    }).catch(function (err) {
+      if (state.drawerKey !== key) return;
+      $('drawerNum').textContent = '加载失败';
+      $('drawerSub').textContent = '';
+      $('drawerBody').innerHTML = '<div class="form-err">' + esc(err.message) + '</div>';
+      showError('加载房间详情失败：' + err.message);
+    });
+  }
+
+  function closeDrawer() {
+    state.drawerKey = '';
+    var drawer = $('drawer');
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    highlightSelectedRow();
+  }
+
+  function refreshDrawerIfOpen(key) {
+    if (state.drawerKey && state.drawerKey === key) openDrawer(key, true);
+  }
+
+  function highlightSelectedRow() {
+    var tbody = $('tbody');
+    var trs = tbody.querySelectorAll('tr');
+    for (var i = 0; i < trs.length; i++) {
+      trs[i].classList.toggle('sel', trs[i].getAttribute('data-key') === state.drawerKey);
+    }
+  }
+
+  function renderDrawer(room, history) {
+    $('drawerNum').textContent = textOr(room.number, room.room_key);
+
+    var subParts = [room.building + ' · ' + fmtFloor(room.floor)];
+    if (room.name) subParts.push(textOr(room.name, ''));
+    $('drawerSub').textContent = subParts.join('  ·  ');
+
+    var html = '';
+
+    html += '<div class="sec-title">房间信息</div>';
+    html += infoRow('房号', showText(room.number));
+    html += infoRow('楼栋', showText(room.building));
+    html += infoRow('楼层', esc(fmtFloor(room.floor)));
+    html += infoRow('来源', originBadge(room));
+    html += infoRow('CAD 图纸', room.in_cad
+      ? '<span class="srctag">在图纸中有此房间</span>'
+      : '<span class="srctag manual">仅人工台账中存在</span>');
+    html += infoRow('状态', room.deleted
+      ? '<span class="badge gone">已删除</span>'
+      : '<span class="badge cad">正常</span>');
+    html += infoRow('最后更新', '<span class="srctag">' + esc(fmtTime(room.updated_at)) + '</span>');
+    html += infoRow('全局键', '<span class="srctag">' + esc(room.room_key) + '</span>');
+
+    html += '<div class="sec-title">可订正字段</div>';
+    DRAWER_FIELDS.forEach(function (field) {
+      html += drawerFieldRow(room, field);
+    });
+
+    html += '<div class="sec-title">变更历史</div>';
+    html += historyHtml(room, history);
+
+    $('drawerBody').innerHTML = html;
+  }
+
+  function infoRow(label, valueHtml) {
+    return '<div class="frow"><div class="fk">' + esc(label) + '</div>' +
+      '<div class="fv">' + valueHtml + '</div></div>';
+  }
+
+  function drawerFieldRow(room, field) {
+    var valueHtml;
+    if (field === 'area_m2') {
+      var v = fmtArea(room.area_m2);
+      valueHtml = v === null ? '<span class="placeholder">—</span>' : esc(v);
+    } else {
+      valueHtml = showText(room[field]);
+    }
+    var isManual = room.src && room.src[field] === 'manual';
+
+    var actions = '<button class="linkbtn" type="button" data-act="edit-field" data-field="' + field + '">编辑</button>';
+    if (isManual && !room.deleted) {
+      actions += '<button class="linkbtn danger" type="button" data-act="revert-field" data-field="' + field + '">撤销该字段人工值</button>';
+    }
+    if (room.deleted) {
+      actions = '<span class="srctag">已删除，先恢复再编辑</span>';
+    }
+
+    return '<div class="frow" data-field="' + field + '">' +
+      '<div class="fk">' + esc(FIELD_LABELS[field]) + '</div>' +
+      '<div class="fv"><span class="val">' + valueHtml + '</span></div>' +
+      '<div class="fmeta">' +
+        '<span class="srctag' + (isManual ? ' manual' : '') + '">' +
+          (isManual ? '人工值' : 'CAD 值') + '</span>' + actions +
+      '</div>' +
+    '</div>';
+  }
+
+  function historyHtml(room, history) {
+    var list = history || [];
+    if (!list.length) {
+      return '<div class="srctag">暂无变更记录，这间房目前完全来自 CAD 抽取。</div>';
+    }
+    return '<ol class="timeline">' + list.map(function (h) {
+      return historyItemHtml(room, h);
+    }).join('') + '</ol>';
+  }
+
+  function historyItemHtml(room, h) {
+    var action = h.action || 'set';
+    var label = ACTION_LABELS[action] || action;
+    var fieldLabel = h.field ? (FIELD_LABELS[h.field] || h.field) : '';
+
+    var diff = '';
+    if (action === 'set' || action === 'revert') {
+      diff = '<div class="tl-diff"><span class="tl-old">' + diffVal(h.old_value) + '</span>' +
+        ' → <span class="tl-new">' + diffVal(h.new_value) + '</span></div>';
+    } else if (action === 'add') {
+      diff = '<div class="tl-diff tl-new">新建房间</div>';
+    } else if (action === 'delete') {
+      diff = '<div class="tl-diff">标记为已删除</div>';
+    } else if (action === 'restore') {
+      diff = '<div class="tl-diff">恢复为正常</div>';
+    }
+
+    var meta = [];
+    if (h.author) meta.push('操作人：' + h.author);
+    if (h.note) meta.push('备注：' + h.note);
+
+    var canRevert = h.field && !room.deleted && room.src && room.src[h.field] === 'manual';
+    var revertBtn = canRevert
+      ? '<button class="linkbtn danger" type="button" data-act="revert-field" data-field="' + esc(h.field) + '">撤销该字段人工值</button>'
+      : '';
+
+    return '<li class="a-' + esc(action) + '">' +
+      '<div class="tl-head">' +
+        '<span class="tl-act">' + esc(label) + '</span>' +
+        (fieldLabel ? '<span class="tl-field">' + esc(fieldLabel) + '</span>' : '') +
+        '<span class="tl-time">' + esc(fmtTime(h.at)) + '</span>' +
+      '</div>' + diff +
+      (meta.length ? '<div class="tl-meta">' + esc(meta.join(' · ')) + '</div>' : '') +
+      (revertBtn ? '<div class="tl-actions">' + revertBtn + '</div>' : '') +
+    '</li>';
+  }
+
+  function diffVal(v) {
+    if (v === null || v === undefined || String(v).trim() === '') return '（空）';
+    return esc(v);
+  }
+
+  function startDrawerFieldEdit(rowEl) {
+    var field = rowEl.getAttribute('data-field');
+    var key = state.drawerKey;
+    var room = findRoom(key);
+    if (!field || !key) return;
+    var valEl = rowEl.querySelector('.fv');
+    if (!valEl || valEl.querySelector('input')) return;
+
+    var current = '';
+    if (room) {
+      if (field === 'area_m2') current = typeof room.area_m2 === 'number' ? String(room.area_m2) : '';
+      else current = room[field] === null || room[field] === undefined ? '' : String(room[field]);
+    }
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = current;
+    input.setAttribute('aria-label', FIELD_LABELS[field] || field);
+    valEl.innerHTML = '';
+    valEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    var done = false;
+    function finish(save) {
+      if (done) return;
+      done = true;
+      if (save) commitDrawerField(key, field, input.value);
+      else openDrawer(key, true);
+    }
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', function () { finish(false); });
+  }
+
+  function commitDrawerField(key, field, rawValue) {
+    var value;
+    try {
+      value = normalizeValue(field, rawValue);
+    } catch (err) {
+      showError(err.message);
+      openDrawer(key, true);
+      return;
+    }
+    apiPost('/edit', {
+      key: key,
+      field: field,
+      value: value,
+      author: currentAuthor(),
+      note: '详情面板编辑'
+    }, '修改字段').then(function (data) {
+      var updated = data && data.room ? data.room : null;
+      if (updated) applyRoom(updated);
+      showToast('已保存「' + (FIELD_LABELS[field] || field) + '」', 'ok');
+      hideBanner();
+      loadStats();
+      openDrawer(key, true);
+    }).catch(function (err) {
+      showError('保存失败：' + err.message);
+      openDrawer(key, true);
+    });
+  }
+
+  /* ================= 确认弹窗 ================= */
+
+  function askConfirm(opts) {
+    return new Promise(function (resolve) {
+      var modal = $('confirmModal');
+      var okBtn = $('confirmOk');
+      var note = $('confirmNote');
+      $('confirmTitle').textContent = opts.title || '确认';
+      $('confirmMsg').textContent = opts.message || '';
+      okBtn.textContent = opts.confirmText || '确认';
+      okBtn.classList.toggle('danger', opts.danger !== false);
+      note.value = '';
+      modal.hidden = false;
+      note.focus();
+
+      var settled = false;
+      function finish(result) {
+        if (settled) return;
+        settled = true;
+        modal.hidden = true;
+        okBtn.removeEventListener('click', onOk);
+        modal.removeEventListener('click', onModalClick);
+        document.removeEventListener('keydown', onKey);
+        resolve(result);
+      }
+      function onOk() { finish({ ok: true, note: note.value.trim() }); }
+      function onModalClick(ev) {
+        if (ev.target.getAttribute && ev.target.getAttribute('data-close') === '1') finish({ ok: false });
+      }
+      function onKey(ev) {
+        if (ev.key === 'Escape') { ev.preventDefault(); finish({ ok: false }); }
+        else if (ev.key === 'Enter' && document.activeElement === note) { ev.preventDefault(); onOk(); }
+      }
+      okBtn.addEventListener('click', onOk);
+      modal.addEventListener('click', onModalClick);
+      document.addEventListener('keydown', onKey);
+    });
+  }
+
+  /* ================= 新建房间 ================= */
+
+  function openAddModal() {
+    $('addError').textContent = '';
+    $('addForm').reset();
+    $('addFloor').value = '0';
+    if (state.building) $('addBuilding').value = state.building;
+    $('addModal').hidden = false;
+    $('addBuilding').focus();
+  }
+
+  function closeAddModal() { $('addModal').hidden = true; }
+
+  function submitAddForm(ev) {
+    ev.preventDefault();
+    var errBox = $('addError');
+    errBox.textContent = '';
+
+    var building = textOr($('addBuilding').value, '');
+    var number = textOr($('addNumber').value, '');
+    var floorRaw = textOr($('addFloor').value, '');
+    if (!building) { errBox.textContent = '请填写楼栋'; return; }
+    if (!number) { errBox.textContent = '请填写房号'; return; }
+    var floor = Number(floorRaw);
+    if (!isFinite(floor) || Math.floor(floor) !== floor) { errBox.textContent = '楼层必须是整数'; return; }
+
+    var fields = {};
+    var name = textOr($('addName').value, '');
+    var purpose = textOr($('addPurpose').value, '');
+    var dept = textOr($('addDept').value, '');
+    var areaLabel = textOr($('addAreaLabel').value, '');
+    var areaM2Raw = textOr($('addAreaM2').value, '');
+    if (name) fields.name = name;
+    if (purpose) fields.purpose = purpose;
+    if (dept) fields.dept = dept;
+    if (areaLabel) fields.area_label = areaLabel;
+    if (areaM2Raw !== '') {
+      var n = Number(areaM2Raw);
+      if (!isFinite(n)) { errBox.textContent = '计算面积必须是数字'; return; }
+      fields.area_m2 = n;
+    }
+
+    var submitBtn = $('addSubmit');
+    submitBtn.disabled = true;
+    apiPost('/add', {
+      building: building,
+      floor: floor,
+      number: number,
+      fields: fields,
+      author: currentAuthor(),
+      note: textOr($('addNote').value, '')
+    }, '新建房间').then(function (data) {
+      submitBtn.disabled = false;
+      closeAddModal();
+      var room = data && data.room ? data.room : null;
+      showToast('已新建房间：' + number, 'ok');
+      hideBanner();
+      loadStats().then(function () {
+        // 新层的号如果后端还没声明，补进下拉，否则新建的房间筛不出来
+        var declared = state.buildingFloors[building];
+        var list = Array.isArray(declared)
+          ? declared
+          : (state.floorCache[building] = state.floorCache[building] || []);
+        if (list.indexOf(floor) < 0) {
+          list.push(floor);
+          list.sort(numAsc);
+        }
+        renderFloorOptions();
+      });
+      if (room && !filtersHide(room)) {
+        state.offset = 0;
+        loadRooms().then(function () { highlightSelectedRow(); });
+      } else {
+        loadRooms();
+      }
+    }).catch(function (err) {
+      submitBtn.disabled = false;
+      errBox.textContent = err.message;
+      showError('新建房间失败：' + err.message);
+    });
+  }
+
+  function filtersHide(room) {
+    if (state.building && state.building !== room.building) return true;
+    if (state.floor !== '' && String(state.floor) !== String(room.floor)) return true;
+    if (state.origin && room.origin !== state.origin) return true;
+    if (state.q) {
+      var hay = [room.number, room.name, room.purpose, room.dept].join(' ').toLowerCase();
+      if (hay.indexOf(state.q.toLowerCase()) < 0) return true;
+    }
+    return false;
+  }
+
+  /* ================= 导出 ================= */
+
+  function doExport() {
+    var params = { format: 'csv' };
+    if (state.building) params.building = state.building;
+    var a = document.createElement('a');
+    a.href = API + '/export?' + buildQuery(params);
+    a.download = 'rooms-' + (state.building || 'all') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('已请求导出：' + (state.building || '全部楼栋'), 'ok');
+  }
+
+  /* ================= 事件绑定 ================= */
+
+  function bindEvents() {
+    var author = $('author');
+    author.value = localStorage.getItem(AUTHOR_KEY) || 'admin';
+    author.addEventListener('change', function () {
+      var v = textOr(author.value, 'admin');
+      author.value = v;
+      try { localStorage.setItem(AUTHOR_KEY, v); } catch (e) { /* 隐私模式下忽略 */ }
+    });
+
+    $('buildingSel').addEventListener('change', function (ev) {
+      state.building = ev.target.value;
+      state.floor = '';
+      state.offset = 0;
+      var building = state.building;
+      renderFloorOptions();
+      loadRooms();
+      ensureFloors(building).then(function () {
+        if (state.building === building) renderFloorOptions();
+      });
+    });
+
+    $('floorSel').addEventListener('change', function (ev) {
+      state.floor = ev.target.value;
+      state.offset = 0;
+      loadRooms();
+    });
+
+    $('originSel').addEventListener('change', function (ev) {
+      state.origin = ev.target.value;
+      state.offset = 0;
+      loadRooms();
+    });
+
+    $('includeDeleted').addEventListener('change', function (ev) {
+      state.includeDeleted = ev.target.checked;
+      state.offset = 0;
+      loadRooms();
+    });
+
+    $('q').addEventListener('input', debounce(function () {
+      var v = $('q').value.trim();
+      if (v === state.q) return;
+      state.q = v;
+      state.offset = 0;
+      loadRooms();
+    }, SEARCH_DEBOUNCE_MS));
+
+    $('q').addEventListener('search', function () {
+      if ($('q').value === '' && state.q !== '') {
+        state.q = '';
+        state.offset = 0;
+        loadRooms();
+      }
+    });
+
+    $('btnPrev').addEventListener('click', function () {
+      state.offset = Math.max(0, state.offset - (state.limit || PAGE_SIZE));
+      loadRooms();
+    });
+    $('btnNext').addEventListener('click', function () {
+      state.offset = state.offset + (state.limit || PAGE_SIZE);
+      loadRooms();
+    });
+
+    $('btnRefresh').addEventListener('click', function () {
+      loadStats();
+      loadRooms();
+      showToast('已刷新', 'ok');
+    });
+
+    $('btnExport').addEventListener('click', doExport);
+    $('btnAdd').addEventListener('click', openAddModal);
+    $('bannerClose').addEventListener('click', hideBanner);
+    $('drawerClose').addEventListener('click', closeDrawer);
+
+    var tbody = $('tbody');
+    tbody.addEventListener('click', function (ev) {
+      var actBtn = ev.target.closest('button[data-act]');
+      if (actBtn) { handleRowAction(actBtn); return; }
+      var td = ev.target.closest('td.cell-edit');
+      if (td) { startCellEdit(td); return; }
+      var tr = ev.target.closest('tr[data-key]');
+      if (tr) openDrawer(tr.getAttribute('data-key'));
+    });
+
+    var drawerBody = $('drawerBody');
+    drawerBody.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('button[data-act]');
+      if (!btn || !state.drawerKey) return;
+      var act = btn.getAttribute('data-act');
+      var field = btn.getAttribute('data-field');
+      if (act === 'edit-field') {
+        var rowEl = btn.closest('.frow');
+        if (rowEl) startDrawerFieldEdit(rowEl);
+      } else if (act === 'revert-field' && field) {
+        doRevert(state.drawerKey, field, FIELD_LABELS[field] || field);
+      }
+    });
+
+    var addModal = $('addModal');
+    addModal.addEventListener('click', function (ev) {
+      if (ev.target.getAttribute && ev.target.getAttribute('data-close') === '1') closeAddModal();
+    });
+    $('addForm').addEventListener('submit', submitAddForm);
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape') return;
+      if (!$('addModal').hidden) { closeAddModal(); return; }
+      if (!$('confirmModal').hidden) return;
+      if (state.drawerKey) closeDrawer();
+    });
+  }
+
+  /* ================= 启动 ================= */
+
+  function init() {
+    bindEvents();
+    renderFloorOptions();
+    loadStats();
+    loadRooms();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

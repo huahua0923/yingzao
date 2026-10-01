@@ -1,0 +1,262 @@
+/* 建模控制台视图的样式。前缀 `csl-`（免得和隔壁 `ws-` 撞）。
+   配色一律取 app.css 的 :root 令牌，不另立一套 —— 这一屏是管理台里的一屏，
+   不是一个独立站点。（本轮明确**不承诺**四块界面皮肤统一，但也绝不主动分叉。） */
+
+.csl-wrap {
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr);
+  gap: var(--sp-3, 12px);
+  /* 128 = 顶栏 + 52（#main 的上下 padding 56 减一点余量，原注释就没写它的出处）。
+     ★ 顶栏那一段改成**量出来**的 `--topbar-h`：原值 128 里含的是顶栏只有一行时的
+     81px，顶栏长到 111px 之后这两栏就各矮了 30px。兜底 81px 保持原算式。 */
+  height: calc(100vh - var(--topbar-h, 81px) - 47px);
+  min-height: 480px;
+}
+
+/* ── 左栏：楼列表 ───────────────────────────────────────────── */
+.csl-left {
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 0; padding: 10px 11px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-2, 6px);
+}
+.csl-title { margin: 0 0 2px; font-size: 13px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-dim); }
+.csl-search {
+  width: 100%; padding: 6px 8px; font: inherit; font-size: 12px;
+  color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--rule); border-radius: var(--r-1, 4px);
+}
+.csl-search:focus-visible { outline: 2px solid var(--cyan-dim); outline-offset: 1px; }
+/* 分母：和"筛出来的"必须不是同一行字。 */
+.csl-tally, .csl-regnote {
+  font-size: 11px; line-height: 1.5; color: var(--text-faint);
+}
+.csl-regnote { border-top: 1px solid var(--rule-soft); padding-top: 5px; }
+.csl-regnote.warn { color: var(--amber); }
+.csl-regnote.err { color: var(--red); }
+.csl-warnnote { display: block; margin-top: 3px; font-size: 11px; color: var(--amber);
+  line-height: 1.5; }
+
+.csl-list { flex: 1; min-height: 0; overflow-y: auto; margin-top: 2px;
+  display: flex; flex-direction: column; gap: 3px; }
+.csl-bld {
+  padding: 6px 8px; cursor: pointer;
+  border: 1px solid transparent; border-left: 3px solid var(--rule);
+  border-radius: var(--r-1, 4px); background: var(--panel-2);
+}
+.csl-bld:hover { border-left-color: var(--cyan-dim); background: #1f2731; }
+.csl-bld.active { border-left-color: var(--cyan); background: #223039; }
+.csl-bld:focus-visible { outline: 2px solid var(--cyan-dim); outline-offset: -1px; }
+.csl-bldt { display: flex; align-items: baseline; gap: 6px; }
+.csl-bldt b { font-size: 13px; font-weight: 600; }
+.csl-bldn { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); }
+.csl-bldmeta { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+
+/* 小徽章：颜色只表达**状态**，不表达装饰。 */
+.csl-chip {
+  display: inline-block; padding: 1px 5px; font-size: 10.5px; line-height: 1.5;
+  color: var(--text-dim); background: #202832;
+  border: 1px solid var(--rule-soft); border-radius: 3px;
+}
+.csl-chip.ok   { color: var(--green); border-color: #2a4a33; }
+.csl-chip.warn { color: var(--amber); border-color: #4d3a1c; }
+.csl-chip.err  { color: var(--red);   border-color: #4d2326; }
+
+/* ── 右栏 ───────────────────────────────────────────────────── */
+.csl-right { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.csl-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.csl-h2 { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: .01em; }
+.csl-linkchip {
+  font-size: 11px; color: var(--cyan); text-decoration: none;
+  border-bottom: 1px dotted var(--cyan-dim);
+}
+.csl-linkchip:hover { color: #fff; border-bottom-color: var(--cyan); }
+
+.csl-metainfo { margin: 4px 0 6px; font-size: 11.5px; color: var(--text-dim); }
+.csl-metainfo.warn { color: var(--amber); }
+/* ★ _source 两态：live = 事实，frozen = **回退**（要显眼）。 */
+.csl-source.ok { color: var(--green); }
+.csl-source.warn { color: var(--amber); font-weight: 600; }
+
+.csl-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--rule-soft); }
+.csl-badges .csl-warnnote { margin: 0; flex-basis: 100%; }
+
+/* ── 页签 ───────────────────────────────────────────────────── */
+.csl-tabrow { display: flex; gap: 2px; margin-top: 8px; }
+.csl-tab {
+  padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer;
+  color: var(--text-dim); background: transparent;
+  border: 1px solid transparent; border-bottom: 2px solid transparent;
+  border-top-left-radius: var(--r-1, 4px); border-top-right-radius: var(--r-1, 4px);
+}
+.csl-tab:hover { color: var(--text); background: var(--panel); }
+.csl-tab.active { color: var(--text); background: var(--panel);
+  border-color: var(--rule); border-bottom-color: var(--cyan); }
+.csl-subtabs { margin: 6px 0 8px; }
+.csl-subtabs .csl-tab { font-size: 11.5px; padding: 3px 9px; }
+
+/* ★ 面板本身不重建，只切 display —— 重建会把没保存的改动连同画布一起丢掉。 */
+.csl-panel { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 2px 12px; }
+.csl-subpane { min-height: 0; }
+
+/* ── 表单 ───────────────────────────────────────────────────── */
+.csl-form { max-width: 1020px; }
+.csl-fgroup { margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule-soft); }
+.csl-fgh { margin: 0 0 7px; font-size: 12px; font-weight: 600;
+  color: var(--text-dim); letter-spacing: .04em; }
+.csl-fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 7px 16px; }
+.csl-fgrid-1 { grid-template-columns: 1fr; }
+.csl-field { display: flex; flex-direction: column; gap: 2px; }
+.csl-flabel { font-size: 11px; color: var(--text-dim); }
+.csl-fhelp { font-size: 10.5px; color: var(--text-faint); line-height: 1.45; }
+.csl-in, .csl-json, .csl-cpick, select.csl-in {
+  padding: 4px 7px; font: inherit; font-size: 12px;
+  color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--rule); border-radius: var(--r-1, 4px);
+}
+.csl-in:focus-visible, .csl-json:focus-visible { outline: 2px solid var(--cyan-dim); }
+input[type="number"].csl-in { font-family: var(--mono); }
+.csl-json { width: 100%; min-height: 108px; font-family: var(--mono);
+  font-size: 11.5px; line-height: 1.5; resize: vertical; }
+.csl-json-big { min-height: 52vh; }
+.csl-cb { width: 15px; height: 15px; accent-color: var(--cyan); }
+.csl-colorrow { display: flex; gap: 5px; align-items: center; }
+.csl-cpick { width: 34px; height: 25px; padding: 1px; cursor: pointer; }
+.csl-hex { flex: 1; font-family: var(--mono); }
+
+.csl-saverow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--rule-soft); }
+.csl-btn {
+  padding: 5px 13px; font: inherit; font-size: 12px; cursor: pointer;
+  color: #06222a; background: var(--cyan); border: 1px solid var(--cyan);
+  border-radius: var(--r-1, 4px); font-weight: 600;
+}
+.csl-btn:hover:not(:disabled) { background: #4ad3e0; }
+.csl-btn:disabled { cursor: not-allowed; opacity: .42; }
+.csl-btn.ghost {
+  color: var(--text-dim); background: transparent; border-color: var(--rule);
+  font-weight: 500;
+}
+.csl-btn.ghost:hover:not(:disabled) { color: var(--text); border-color: var(--cyan-dim); }
+/* 会改数据的动作用红色**描边**（不是填充）：它要显眼，但不该像主操作。 */
+.csl-btn.danger { color: var(--red); background: transparent;
+  border-color: var(--red); font-weight: 600; }
+.csl-btn.danger:hover:not(:disabled) { background: #2a1618; }
+
+/* 状态话：五档**必须长得不一样**（不知道 / 失败 / 还在跑 / 说明 / 正常）。 */
+.csl-hint { font-size: 11.5px; line-height: 1.55; color: var(--text-faint); flex: 1; }
+.csl-hint.ok   { color: var(--green); }
+.csl-hint.warn { color: var(--amber); }
+.csl-hint.err  { color: var(--red); }
+.csl-hint.run  { color: var(--cyan); }
+.csl-empty { padding: 18px; font-size: 12px; color: var(--text-faint);
+  border: 1px dashed var(--rule); border-radius: var(--r-1, 4px); }
+
+/* ── 流程 ───────────────────────────────────────────────────── */
+.csl-flowtop { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding-bottom: 9px; border-bottom: 1px solid var(--rule-soft); }
+.csl-winrow { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.csl-sp { flex: 1; }
+.csl-flow { margin-top: 9px; display: flex; flex-direction: column; gap: 5px; }
+.csl-stage {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 9px; align-items: start; padding: 7px 9px;
+  background: var(--panel); border: 1px solid var(--rule-soft);
+  border-left: 3px solid var(--rule); border-radius: var(--r-1, 4px);
+}
+.csl-stage.done  { border-left-color: var(--green); }
+.csl-stage.stale { border-left-color: var(--amber); }
+.csl-no { font-family: var(--mono); font-size: 12px; color: var(--text-faint);
+  text-align: right; padding-top: 1px; }
+.csl-stagebody { min-width: 0; }
+.csl-stagetitle { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 12.5px; }
+.csl-stagedesc { margin-top: 2px; font-size: 11px; color: var(--text-faint);
+  line-height: 1.5; }
+.csl-arts { margin-top: 3px; font-family: var(--mono); font-size: 10.5px;
+  color: var(--text-faint); word-break: break-all; }
+.csl-why { margin-top: 3px; font-size: 11px; color: var(--amber); }
+.csl-acts { display: flex; align-items: center; gap: 5px; }
+.csl-status { font-size: 11px; }
+.csl-status.ok     { color: var(--green); }
+.csl-status.warn   { color: var(--amber); }
+.csl-status.manual { color: var(--text-faint); }
+.csl-status.err    { color: var(--red); }
+.csl-status.run    { color: var(--cyan); }
+
+/* 作业日志：**等宽 + 可滚动**，而且不用 `white-space: pre-wrap` 之外的任何美化
+   —— 日志是我们唯一能拿到的原始证据，别对它做转义或换行重排。 */
+.csl-log {
+  margin: 7px 0 0; padding: 8px 10px; max-height: 34vh; overflow: auto;
+  font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  color: var(--text-dim); background: #0b0f14;
+  border: 1px solid var(--rule); border-radius: var(--r-1, 4px);
+  white-space: pre-wrap; word-break: break-all;
+}
+
+/* ── 预览 ───────────────────────────────────────────────────── */
+.csl-pvbox { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.csl-viewbox {
+  height: 56vh; min-height: 320px; background: #0b0f14;
+  border: 1px solid var(--rule); border-radius: var(--r-1, 4px); overflow: hidden;
+}
+.csl-canvas { display: block; width: 100%; height: 100%; }
+.csl-planbar { display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+  font-size: 12px; }
+.csl-floorsel { padding: 4px 7px; font: inherit; font-size: 12px;
+  color: var(--text); background: var(--panel-2); border: 1px solid var(--rule);
+  border-radius: var(--r-1, 4px); }
+.csl-planbox { display: flex; align-items: center; justify-content: center;
+  min-height: 220px; padding: 8px; background: #0b0f14;
+  border: 1px solid var(--rule); border-radius: var(--r-1, 4px); }
+/* 平面图用 `object-fit: contain` + **白底**：那几张 PNG 是给纸面画的黑白图，
+   放在深色底上会看不见墙线（本仓栽过"几何全对、颜色全错"）。 */
+.csl-plan { max-width: 100%; max-height: 58vh; background: #fff;
+  border-radius: 2px; }
+.csl-note { margin: 9px 0 0; font-size: 11px; line-height: 1.6;
+  color: var(--text-faint); }
+
+/* ── 启动自检：哪些键改了不生效 ────────────────────────────────────
+   左边那条色带就是判词的颜色（红 = 有键改了不生效 / 有栏目没量到；
+   黄 = 只是「只在某条通道上生效」；青 = 0 条告警）。
+   ★ 三态必须看得出差别：这一栏没量到时的样子**不许**和「干净」长得一样。 */
+.csl-selfcheck { margin: 0 0 8px; padding: 7px 9px; font-size: 11.5px;
+  color: var(--text-dim); background: var(--panel-2);
+  border: 1px solid var(--rule); border-left: 3px solid var(--rule);
+  border-radius: var(--r-1, 4px); }
+.csl-selfcheck.err  { border-left-color: var(--red); }
+.csl-selfcheck.warn { border-left-color: var(--amber); }
+.csl-selfcheck.ok   { border-left-color: var(--cyan-dim); }
+.sc-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.sc-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.sc-stamp { font-size: 10.5px; color: var(--text-faint); font-family: var(--mono); }
+.sc-row { margin: 4px 0 0; line-height: 1.55; overflow-wrap: anywhere; }
+.sc-row.err  { color: var(--red); }
+.sc-row.warn { color: var(--amber); }
+.sc-row b { color: var(--text); font-weight: 600; }
+.sc-names { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); }
+.csl-selfcheck details { margin-top: 5px; }
+.csl-selfcheck summary { cursor: pointer; font-size: 11px; color: var(--text-faint); }
+.csl-selfcheck summary:hover { color: var(--text-dim); }
+.csl-selfcheck ul { margin: 5px 0 0; padding-left: 17px; }
+.csl-selfcheck li { margin: 2px 0; font-size: 10.5px; line-height: 1.5;
+  color: var(--text-faint); overflow-wrap: anywhere; }
+
+/* 参数行上那枚徽章：这一行改了到底生不生效。悬停出全文（title）。 */
+.kflag { margin-left: 5px; padding: 0 4px; font-size: 9.5px; font-weight: 600;
+  border: 1px solid; border-radius: 2px; cursor: help; }
+.kflag.err  { color: var(--red);   border-color: #4d2326; }
+.kflag.warn { color: var(--amber); border-color: #4d3a1c; }
+.csl-field.flagged > .csl-flabel { color: var(--red); }
+.csl-field.flagged.warn > .csl-flabel { color: var(--amber); }
+
+@media (max-width: 1080px) {
+  .csl-wrap { grid-template-columns: 1fr; height: auto; }
+  .csl-list { max-height: 240px; }
+  .csl-viewbox { height: 46vh; }
+}

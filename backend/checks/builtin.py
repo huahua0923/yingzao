@@ -24,6 +24,13 @@ from pathlib import Path
 from .findings import Finding, Report, Status, unavailable
 from .layout import building_dir, floor_files
 
+# A10 的实现**独立成一个文件**（本仓规矩：一个功能一个文件，别把 builtin 撑爆）。
+# ★ 在这里 import 进来就等于把它挂到 `builtin` 上 —— `run_building_checks` 是
+#   `getattr(builtin if tier=="A" else heavy, "check_%s" % cid.lower())` 找函数的，
+#   没有这一行就报「A10 找不到实现」。判据、口径、自证都在那个文件的 docstring 里：
+#   `python -m backend.checks.plan_png --selftest`
+from .plan_png import check_a10  # noqa: F401  （是给 getattr 用的，不是没人用）
+
 # ── 原始数据读取（这层不 import 任何建模模块）─────────────────────
 
 
@@ -59,6 +66,127 @@ def _ledger(data_dir, name: str):
     return rooms
 
 
+def _ledger_note(data_dir, name: str):
+    """读「在名单却仍空」这一档的**逐栋留痕**。None = 本栋没有记录。
+
+    ★ 为什么需要这个文件（不是"顺手加个名单"）：台账为空有**三**种成因，
+      而它们在文件系统上**完全同形**（rooms.json 都是 2 字节 `[]`）：
+        ① 图上根本没有房号标注层 —— **结构性**，该判 N/A
+        ② 抽取压根没跑过
+        ③ 跑过、被一道质量门拦下
+      ①② 与 ③ 的处置方向**相反**（③ 要改判据/先修几何，② 要补跑），
+      而抽取器的写盘闸门是 `if not dry and rooms:` —— **抽出 0 间与压根没跑过
+      留下的东西一模一样**，连 mtime 都分不开它们（本文件的成因，见
+      `_qa/ledger-2026-09-25.md` §5 与 §6 洞⑥）。
+      ⇒ 出处是那晚的取舍**根本没留痕**（驱动脚本不在盘上、跳过理由一个字没写）。
+        所以把判据留在盘上：谁、何时、为什么没写，A1 读了把理由原话打出来。
+      别的出路都不可行：A 层只有标准库 —— 调不了抽取器（它 import ezdxf），
+      也读不了 DXF。
+    ★ 铁律 29（名单式判断会往漏的方向漂）：这里的 `kind` 是**闭集**，
+      分派写在 `check_a1` 里，遇到不认识的 kind 会**显形**（不许静默当没有）。
+    """
+    p = Path(data_dir) / "_meta" / "rooms_ledger_notes.json"
+    g = _json(p)
+    if g is _CORRUPT or not isinstance(g, dict):
+        return None
+    ent = (g.get("entries") or {}).get(name)
+    if not isinstance(ent, dict):
+        return None
+    return dict(ent, _src=str(p), _criterion_version=g.get("criterion_version"))
+
+
+def _a1_note_lead(note, name: str) -> str:
+    """把留痕翻成「要说在 A1 那句话前头」的一段 —— **kind 的分派只有这一处**。
+
+    ★ 为什么单独成一函数：A1 有**三处**会发 GAP（没有 rooms.json／它坏了／它是空
+      数组），三处都必须会看留痕 —— 本补丁第一版只在其中一处看，于是 c010/c077
+      正好落在另一处、一个字都不出（探针当场照出来）。三处调**同一个**翻译，
+      就不会再漂（memory: one-judgement-many-implementations）。
+    ★ `no_room_layer` **不在**这里：那一档不是"多说一句"，是**换状态**（GAP→N/A），
+      摆在 `check_a1` 的分支之前，早退。
+    """
+    if not note:
+        return ("（本栋在 `data/_meta/rooms_ledger_notes.json` 里**没有留痕** ⇒ "
+                "「跑过、被一道质量门拦下」这一档**不可排除**。）")
+    kind = note.get("kind")
+    if kind == "written":
+        # ★ 这一档要**吵**：写过又空了 = **回归**，不是「还没跑」。
+        #   ★ 并且**别顺手重跑**：重跑会把 `.orig/` 的留档当现状盖掉。
+        return ("★★ **回归**：留痕（%s，记于 %s）说本栋**写过**台账（%s），"
+                "而现在它又是空的 —— 这不是「还没跑过」，是**写过的又没了**。"
+                "先拿 `data/buildings/%s/.orig/` 的留档比一比、再查这中间谁动过它；"
+                "**别当空台账重跑一遍**（重跑会把留档当现状盖掉）。"
+                % (note.get("_src"), note.get("at"),
+                   note.get("evidence"), name))
+    if kind == "blocked_by_quality_gate":
+        return ("**根因已留痕**：③ **跑过、被一道质量门拦下**（留痕 %s，记于 %s）"
+                "—— 这一档原先与「压根没跑过」**同形**，所以没人知道它卡在哪。"
+                "当初的取舍理由：%s。证据：%s。⇒ 方向是**先修上游**，不是补跑。"
+                % (note.get("_src"), note.get("at"),
+                   note.get("reason"), note.get("evidence")))
+    # 铁律 29：名单式判断只会往漏的方向漂 ⇒ 不认识的 kind 必须**显形**，
+    # 不许静默落回旧文案（那样新的留痕档会被当成"没留痕"）。
+    return _a1_unknown_kind(kind)
+
+
+def _a1_unknown_kind(kind) -> str:
+    """不认识的 `kind` 一律走这一句 —— **两个分支共用**，不许各写一份。"""
+    return ("⚠ 留痕里的 `kind=%r` **是本判据不认识的档** —— 要么补判据、"
+            "要么改留痕，别当没看见。" % (kind,))
+
+
+def _a1_note_vs_list(note) -> str:
+    """「**不在** ID_BASE 名单」那一支该补的一句。
+
+    ★ 为什么不复用 `_a1_note_lead`：那一支的文案假定「抽取跑过」，而本条说的是
+      「压根没跑过」—— 照搬会与本条**互相打架**（同一段话里两句话互相否证，
+      读的人只能猜哪句算）。这里只做两件事：
+      ① 两者真同时出现 ⇒ 点出**名单或留痕有一边已经过期了**（铁律 18 的"不一致"版：
+         两处一致证明不了它是对的，两处**不一致**更得喊）；
+      ② 留痕里是个不认识的 kind ⇒ 显形。
+    ★ 这一档**必须与分支无关地生效**：刑具 T3 就是把 c010 的 kind 改成一个不认识的
+      值，而 c010 恰好不在名单里 ⇒ 补丁第一版的出口全在「在名单」那一支，
+      于是它**一声不响**地按"不在名单"处置了（探针当场照出来）。
+    """
+    if not note:
+        return ""
+    kind = note.get("kind")
+    if kind == "no_room_layer":
+        # 这一档在上面（分支之前）就早退了；能走到这里说明那道闸门被改坏了。
+        return ("。⚠ 留痕说本栋「图上没有房号标注层」，而闸门没在这里拦住它 —— "
+                "**闸门被改坏了**，先查 `check_a1` 的分支顺序")
+    if kind in ("written", "blocked_by_quality_gate"):
+        return ("。⚠ **但留痕与本条说法冲突**：留痕（%s）记着本栋是 `%s`（%s）—— "
+                "不在名单里却「跑过」，说明**名单或留痕有一边已经过期**，"
+                "先对齐再动手" % (note.get("_src"), kind, note.get("reason")))
+    return "。" + _a1_unknown_kind(kind)
+
+
+def _outline_ratio_hi(data_dir, name: str):
+    """本栋**最离谱**的那一层的「模型足迹 ÷ 图纸建筑面积」→ (比值, 层)。无尺时 (None, None)。
+
+    ★ 与 A7 **共用同一份实现**：图纸那列走 `_drawing_area`（裁判的数，来自引擎产物），
+      模型那列走 `_shoelace(outline)`（自己现量），阈值走**同一个** `_AREA_RATIO_HI`
+      —— 判据只许有一个出处（memory: one-judgement-many-implementations）。
+      别在这个函数里另写一个阈值：A7 改了 2.0，这里必须跟着走。
+    """
+    rows = _drawing_area(data_dir, name)
+    if not rows:
+        return None, None
+    best_r, best_f = None, None
+    for F, p in floor_files(data_dir, name):
+        w = rows.get(F)
+        if not w:
+            continue
+        g = _json(p, {})
+        if not isinstance(g, dict) or not g.get("outline"):
+            continue          # 没有足迹就不是"量到 0"，是**没量**（铁律 16）
+        r = _shoelace(g["outline"]) / w
+        if best_r is None or r > best_r:
+            best_r, best_f = r, F
+    return best_r, best_f
+
+
 
 
 def _repo_root(data_dir) -> Path:
@@ -78,6 +206,10 @@ def _repo_root(data_dir) -> Path:
 
 
 _ID_BASE_SRC = Path("backend") / "extract" / "extract_rooms_generic.py"
+# ★ 段基址名单**已经搬进配置**（config/buildings.json）。名单从代码里搬出来是为了让它
+#   成为一个「能改的输入」，而不是只能靠改 .py 才能改的事实。本检查要读**同一份**，
+#   否则用户一改配置，产物与门禁就各按一套算，而两边都不出声。
+_BUILDINGS_CFG = Path("config") / "buildings.json"
 
 
 # ── A1 房间台账非空 ──────────────────────────────────────────────
@@ -108,16 +240,44 @@ def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
                         measure="房间条数", blocked_by="artifact_corrupt"))
         return
     rp = d / "rooms.json"
+    # ── 「图上没有房号标注层」这一档**优先于下面所有分支** ──────────────
+    #   ★ 它与"在不在 ID_BASE 名单里"是**正交**的两件事：c010／c077 之所以
+    #     不在名单里，正因为图上没有房号层（登进去也抽不出对象）—— 所以这一档
+    #     只能在**分支之前**判。本补丁第一版把它写在「在名单却仍空」那一支里，
+    #     探针当场照出这两栋压根没走到那儿（`in_id_base=False`）。
+    #   ★ 文案里那句「该归 N/A，不是缺陷」已经写了很久，而判定一直发 GAP ——
+    #     文案与判定不一致（memory: one-judgement-many-implementations）。
+    #     这里把它落成**真的 NOT_APPLICABLE**：0 间房是**结构性**的，不是缺陷。
+    #     缺这一档的代价是实的：交付列表里会永远挂着一批"修不掉的红灯"，
+    #     而**永远红的灯等于没有灯**（memory: append-only-ledger-whole-table-assertion）。
+    note = _ledger_note(data_dir, name)
+    if note and note.get("kind") == "no_room_layer":
+        rep.add(Finding("A1", "房间台账非空", Status.NOT_APPLICABLE,
+                        "**图上没有房号标注层** ⇒ 交付 0 间房是**结构性的**，"
+                        "不是缺陷（判 N/A，不是 GAP；留痕 %s，记于 %s）。理由：%s"
+                        % (note.get("_src"), note.get("at"), note.get("reason")),
+                        measure="房间条数",
+                        evidence={"rooms": 0,
+                                  "rooms_json_bytes": (rp.stat().st_size
+                                                       if rp.exists() else None),
+                                  "ledger_note": note}))
+        return
     if not rp.exists():
         rep.add(Finding("A1", "房间台账非空", Status.GAP,
-                        "有 profile.json 却**没有 rooms.json** —— 交付 0 间房",
-                        measure="房间条数", evidence={"rooms_json": None}))
+                        "有 profile.json 却**没有 rooms.json** —— 交付 0 间房。"
+                        + _a1_note_lead(note, name),
+                        measure="房间条数",
+                        evidence={"rooms_json": None,
+                                  "ledger_note": note or {"_none": "本栋无留痕"}}))
         return
     rooms = _json(rp)
     if rooms is _CORRUPT:
         rep.add(Finding("A1", "房间台账非空", Status.GAP,
-                        "rooms.json 解析失败（文件在但读不出；常见于非原子写被中断）",
-                        measure="房间条数", evidence={"bytes": rp.stat().st_size}))
+                        "rooms.json 解析失败（文件在但读不出；常见于非原子写被中断）。"
+                        + _a1_note_lead(note, name),
+                        measure="房间条数",
+                        evidence={"bytes": rp.stat().st_size,
+                                  "ledger_note": note or {"_none": "本栋无留痕"}}))
         return
     n = len(rooms) if isinstance(rooms, list) else 0
     if n == 0:
@@ -130,7 +290,7 @@ def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
         why = "先查该楼号是否在 extract_rooms_generic.ID_BASE 里（见 A6）"
         ev = {"rooms": 0, "rooms_json_bytes": rp.stat().st_size}
         try:
-            table = _read_id_base(_repo_root(data_dir) / _ID_BASE_SRC)
+            table = _id_base_table(_repo_root(data_dir))
         except Exception:                                # noqa: BLE001
             table = None
         if table is not None:
@@ -139,6 +299,15 @@ def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
                 why = ("**根因已定位**：%s 不在 ID_BASE 白名单里（A6 同因）—— "
                        "房间抽取整条链一次都没为它跑过，所以台账必是空的。"
                        "修法不是重跑识别，是先把它登进白名单" % name)
+                # ★ 留痕在这一支只做两件事，且**必须与分支无关地生效**：
+                #   ① 与「不在名单」冲突就喊（不在名单 ⇒ 抽取链一次都没跑过，
+                #      那就不可能是「跑过被拦下」）；② 不认识的 kind 显形。
+                #   ★ 为什么不能照搬 `_a1_note_lead`：那一支的话假定"抽取跑过"，
+                #   与本条互相否证。为什么不能干脆不查：刑具 T3 就是拿一栋
+                #   **不在名单**的楼改留痕 —— 只在「在名单」那一支留出口，它就
+                #   一声不响地按"不在名单"处置了（补丁第一版，探针当场照出来）。
+                ev["ledger_note"] = note or {"_none": "本栋无留痕"}
+                why += _a1_note_vs_list(note)
                 # ★ 但「登进白名单」有一个**会害人的前提**：本栋的模型得覆盖整栋。
                 #   2026-09-24 实测 c004f1 —— 它在名单外、台账空，照上面那句"登进去"
                 #   恰好是错的：A7 逐层比下来模型只有图纸足迹的 **0.14**
@@ -172,15 +341,48 @@ def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
                 #   分开，这两者在屏幕上是同一个空台账。
                 why = ("**不在名单问题上**：它**在** ID_BASE 白名单里"
                        "（evidence.in_id_base=true，A6 会报 pass）—— 所以别再往名单上"
-                       "查了。这一档只剩两种可能，而它们**在屏幕上长得一模一样**："
-                       "① 抽取跑过，但图上确实没有房号；② 抽取压根没为它跑过、"
-                       "或跑完没落盘。分开它们只有一把尺（只读，不写盘）："
+                       "查了。台账为空有**三**种可能，而它们**在屏幕上长得一模一样**："
+                       "① 抽取跑过，但图上确实没有房号（该归 N/A，不是缺陷）；"
+                       "② 抽取压根没为它跑过、或跑完没落盘（流程问题、不是识别问题）；"
+                       "③ **跑过、被一道质量门拦下**（方向是先修上游，不是补跑）。"
+                       "留痕（`data/_meta/rooms_ledger_notes.json`）能直接判出 ① 与 ③，"
+                       "读它比下面这把尺快；**没有留痕**时才回到这把（只读，不写盘）："
                        "`python backend/extract/extract_rooms_generic.py <该栋> --dry`"
-                       " —— 它报「共提取 0 间房」就是①（该归 N/A，不是缺陷）；"
-                       "报非 0 而台账仍是空，就是②，那是流程问题、不是识别问题。"
+                       " —— 它报「共提取 0 间房」且逐层都一片空，就是①；"
+                       "报非 0 而台账仍是空，就是②。"
                        "★ 别照这话写第二把尺：看它逐层的『命中 N/M』，"
                        "按层分化（如首层 0/M、其余层满分）是整层塌陷，"
                        "与整栋抽不出来是两码事")
+
+                # ── 洞④：抽出 0 间**单独**说明不了「图上没房号」 ──────────
+                #   c047 的 dry 同一段输出里写着「浪费 26722.3㎡ 房130(散)」，
+                #   而那是**整个轮廓**（A7 F0 比值 4.99）⇒ 真因是轮廓把邻块并了
+                #   进来／填平了内院，不是「图上没有房号」。这两档的处置方向相反
+                #   （一个改几何、一个补跑），而在 rooms.json 上**完全同形**。
+                #   ★ 用**同一把尺**（A7 的比值、同一个 `_AREA_RATIO_HI`）分开，
+                #   不另发明阈值 —— 一个判断只许有一个出处。
+                ratio, rf = _outline_ratio_hi(data_dir, name)
+                if ratio is not None and ratio >= _AREA_RATIO_HI:
+                    ev["outline_ratio_max"] = {"floor": rf,
+                                               "ratio": round(ratio, 3),
+                                               "hi": _AREA_RATIO_HI}
+                    why += ("。★★ **但本栋先别按「图上没房号」读**：A7 量到第 %s 层"
+                            "足迹是图纸建筑面积的 **%.2f 倍**（≥ %.1f）—— 这是"
+                            "**轮廓疑错**（并块吞了邻块／填平了内院），先把几何修掉"
+                            "再谈房间。把这种空台账当「没房号」处理，修的是症状、"
+                            "放过的是根因" % (rf, ratio, _AREA_RATIO_HI))
+
+                # ── 洞⑥：「跑过、被质量门拦下」这一档**没有任何别的痕迹** ──
+                #   抽取器的写盘闸门是 `if not dry and rooms:` ⇒「抽出 0 间」与
+                #   「压根没跑过」在文件系统上**同形**（都是 2 字节 `[]`），连
+                #   mtime 都分不开它们。A1 只有标准库（读不了 DXF、调不了抽取器），
+                #   所以那晚的取舍只能**留痕在盘上**（`rooms_ledger_notes.json`），
+                #   这里读了把理由原话打出来。★ 缺记录**不降级**：照旧退回上面那两档、
+                #   并明说「本栋没有留痕」——「没有记录」和「没问题」不许长成一个样。
+                #   ★ 留痕的翻译**只有一处**（`_a1_note_lead`）：N/A 那一档在上面
+                #   就早退了（它与"在不在名单"正交），这里只处理剩下的档。
+                ev["ledger_note"] = note if note else {"_none": "本栋无留痕"}
+                why = _a1_note_lead(note, name) + why
         rep.add(Finding("A1", "房间台账非空", Status.GAP,
                         "rooms.json = [] —— 交付 0 间房。" + why,
                         measure="房间条数", evidence=ev))
@@ -198,35 +400,64 @@ def check_a1(rep: Report, data_dir, name: str, **_kw) -> None:
 # ── A6 房间号段白名单成员 ────────────────────────────────────────
 
 def check_a6(rep: Report, data_dir, name: str, **_kw) -> None:
-    """该楼号在不在 `ID_BASE` 里 —— 房间抽取整条链的总闸门。
+    """该楼号在不在段基址名单里 —— 房间抽取整条链的总闸门。
 
-    实现：用 `ast` **静态读** `extract_rooms_generic.py` 里的 `ID_BASE` 字面量，
-    不 import 那个模块。理由：它 import ezdxf，一 import 就把本条检查踢出 A 层
-    （服务器上跑不了），而这条恰恰是**最该在服务器上也亮着**的那一条。
-    ast 读的是**真源码**，不是抄来的副本 —— 不存在"两处一致一起错"。
+    实现：读 `config/buildings.json` 的 `room_id_base`（**先配置、后源码**，
+    见 `_id_base_table`）。两条设计约束都在那一处交代：
+      · **不 import `extract_rooms_generic`** —— 它 import ezdxf，一 import 就把本条
+        检查踢出 A 层（服务器上跑不了），而这条恰恰是**最该在服务器上也亮着**的。
+        配置是纯 JSON，天然没有这个毛病；
+      · 名单必须与抽取器读的是**同一份**。抽取器已经改成先读配置、缺键才回落旧表，
+        本检查若还盯着源码字面量，用户一改配置两边就分叉，而且都不出声
+        （memory: one-judgement-many-implementations）。
     """
     d = building_dir(data_dir, name)
     if not (d / "profile.json").is_file():
         rep.add(Finding("A6", "房间号段白名单成员", Status.NOT_APPLICABLE,
                         "没有 profile.json，不是建模楼", measure="名单成员"))
         return
-    src = _repo_root(data_dir) / _ID_BASE_SRC
     try:
-        table = _read_id_base(src)
+        table = _id_base_table(_repo_root(data_dir))
     except Exception as ex:                            # noqa: BLE001
         rep.add(unavailable("A6", "房间号段白名单成员",
-                            "读不到 ID_BASE（%s: %s）" % (type(ex).__name__, ex),
+                            "读不到段基址名单（%s: %s）" % (type(ex).__name__, ex),
                             measure="名单成员"))
         return
     if table is None:
         rep.add(unavailable("A6", "房间号段白名单成员",
-                            "ID_BASE 在源码里找不到（可能改名/挪走了）",
+                            "段基址名单读不到：%s 不在，源码里的 ID_BASE 也找不到"
+                            "（可能改名/挪走了）" % _BUILDINGS_CFG,
                             measure="名单成员"))
         return
     in_table = name in table
+    # ── 「图上没有房号标注层」⇒ 本条与 A1 **一起**判 N/A ────────────────
+    #   ★ 为什么 A6 也要看留痕：它自己的话写着「与 A1 是同一条根因的两端」——
+    #     那它就是**同一个判断**。只把 A1 改成 N/A、留 A6 亮红，等于同一个根因
+    #     在两盏灯上给两个答案（memory: one-judgement-many-implementations）；
+    #     而且这盏红灯**修不掉**：图上没有房号层的楼，登进 ID_BASE 也抽不出东西来
+    #     （这正是它当初没被登进去的原因）。**永远红的灯等于没有灯**
+    #     （memory: append-only-ledger-whole-table-assertion）。
+    note = _ledger_note(data_dir, name)
+    if not in_table and note and note.get("kind") == "no_room_layer":
+        rep.add(Finding("A6", "房间号段白名单成员", Status.NOT_APPLICABLE,
+                        "**图上没有房号标注层** ⇒ 该楼号本就不该在 ID_BASE 里"
+                        "（登进去也抽不出对象）—— 与 A1 一起判 N/A，不是缺陷"
+                        "（留痕 %s）。理由：%s" % (note.get("_src"),
+                                                   note.get("reason")),
+                        measure="名单成员",
+                        evidence={"in_id_base": False,
+                                  "id_base_size": len(table),
+                                  "ledger_note": note}))
+        return
+    # 反过来：**在**表里、留痕却说图上没有房号层 ⇒ 两处不一致，得喊出来
+    # （铁律 18 的不一致版；与 A1 里那处冲突判据同族）。
+    conflict = ("⚠ **留痕与本条冲突**：留痕说本栋「图上没有房号标注层」，"
+                "而它**在** ID_BASE 里（基数=%d）—— 名单或留痕有一边过期了，"
+                "先对齐（留痕 %s）" % (table.get(name, 0), note.get("_src"))) \
+        if (in_table and note and note.get("kind") == "no_room_layer") else ""
     rep.add(Finding("A6", "房间号段白名单成员",
                     Status.PASS if in_table else Status.GAP,
-                    ("在表里，号段 id 基数=%d" % table[name]) if in_table else
+                    (("在表里，号段 id 基数=%d" % table[name]) + conflict) if in_table else
                     "**不在 ID_BASE** ⇒ 房间抽取不会为它跑，交付必是 0 间房"
                     "（与 A1 是同一条根因的两端）",
                     measure="名单成员",
@@ -241,6 +472,36 @@ def _read_id_base(src: Path) -> dict | None:
                 if isinstance(t, ast.Name) and t.id == "ID_BASE":
                     return ast.literal_eval(node.value)
     return None
+
+
+def _id_base_table(root: Path) -> dict | None:
+    """房间号段名单：**先读配置（config/buildings.json），读不到才回落源码字面量**。
+
+    ★ 返回值的语义与旧 `ID_BASE` **逐条相同**：**只有给了段基址的楼才在表里**。
+      `config/buildings.json` 里 95 栋都有条目，其中 18 栋的 `room_id_base` 是 null
+      —— 千万别把那 18 栋也算成"在名单里"。它们正是**抽不出房间**的那 18 栋
+      （实测 18/18 的 rooms.json 是空数组），把 null 也算进来，A1/A6 会当场从红变绿，
+      而缺陷一个都没少 —— 「表里多了一行」与「问题解决了」在屏幕上长得一模一样。
+
+    配置是**纯 JSON、不依赖 ezdxf**，所以走它不会把本条检查踢出 A 层
+    （这是原先坚持 ast 静态读的唯一理由，见 A6 的 docstring）；而它同时比 ast
+    更进一层：抽取器已经改成先读配置，本检查读同一个文件才是**同一份事实**。
+    """
+    cfg = root / _BUILDINGS_CFG
+    if cfg.is_file():
+        try:
+            d = json.loads(cfg.read_text(encoding="utf-8"))
+            b = d.get("buildings") if isinstance(d, dict) else None
+            if isinstance(b, dict):
+                return {n: int((e or {}).get("room_id_base"))
+                        for n, e in b.items()
+                        if (e or {}).get("room_id_base") is not None}
+        except Exception:                              # noqa: BLE001
+            pass          # 配置坏了就回落源码 —— 回落是兜底，不是"就读它"
+    src = root / _ID_BASE_SRC
+    if not src.is_file():
+        return None
+    return _read_id_base(src)
 
 
 # ── A3 交付楼层 rooms 快照与台账一致 ─────────────────────────────

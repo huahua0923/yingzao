@@ -26,8 +26,10 @@
     门禁**（本仓没有「模块白名单」这一层）。所以这里没开新的读取面 —— 要按号
     取名字走 rooms 那条，本路由不额外多带字段。
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from ..authz import (PrincipalDep, require_campus_wide, require_cap, sees,
+                     visible)
 from ..deps import BuildingName, ComputeDep, SettingsDep
 from ..responses import ok
 from ..services import artifacts as A
@@ -41,7 +43,7 @@ router = APIRouter(tags=["checks"])
 #   反过来注册的话，访问 /api/checks/manifest 会被当成「某栋叫 manifest 的楼」，
 #   而且它**不报错**，只是回一句 404「没有这栋楼」，看着像数据问题不是路由问题。
 #   新增任何固定子路径，一律加在这一段里。
-@router.get("/checks/registry")
+@router.get("/checks/registry", dependencies=[Depends(require_cap("view"))])
 def registry(cfg: SettingsDep) -> dict:
     """这台机器能跑哪几条检查：编号 / 标题 / A-B 层 / 是否逐栋 / 为什么有这条。
 
@@ -53,20 +55,37 @@ def registry(cfg: SettingsDep) -> dict:
                           "source": "backend/checks/CHECK_REGISTRY"})
 
 
-@router.get("/checks/manifest")
-def manifest(cfg: SettingsDep) -> dict:
+@router.get("/checks/manifest", dependencies=[Depends(require_cap("view"))])
+def manifest(cfg: SettingsDep, p: PrincipalDep) -> dict:
     """哪几栋楼已经有检查产物。
 
     给调用方一个"该问谁"的清单 —— 逐栋去撞 404 会在浏览器 console 里堆几十条
     红字（本机实测 95 栋只有 7 栋有产物），而红字多了就没人当真了。
     ★ 这里只说"产物在不在"，**一个字都不说检查结论**：结论只在产物里。
+    ★ 权限（批次 2）：`buildings` 按范围逐行过滤，**`count` 跟着重算** ——
+      不回全库的条数。这个清单的全部用途就是"该问谁"，在一个只覆盖 c006 的账号
+      眼里"该问谁"的答案里不该出现 c001。回全库条数等于告诉他"还有 N 栋你看不到
+      但有产物"，那是一句他会当成待办的信息。
+    ★ `unrecognized`（反查不出楼号的文件名）对**非全校区**账号整块不发：
+      那些名字**可能属于任何一栋楼**（正是因为它反查不出来）。要发就得先证明
+      它属于你看得见的范围，而那条信息恰恰就是反查不出来的那个东西 ⇒ fail-closed。
+      代价是这类账号看不到"有个文件认不出来"这条线索，而它只在**本机排查**时有
+      用，本机走 break-glass（全校区），不受影响。
     """
     data = C.manifest(cfg)
+    # ★ 覆盖掉 `C.manifest` 回的那个 `count`（= 盘上共几栋），不是并存两个数 ——
+    #   两个都发，前端一定会显示错的那一个，而两个数在屏幕上长得一样。
+    data["buildings"] = visible(p, data["buildings"], lambda b: b)
+    data["count"] = len(data["buildings"])
+    if not sees(p, "*"):
+        data["unrecognized"] = []
+        data["unrecognized_omitted"] = (
+            "认不出来的文件名可能属于任何一栋楼 ⇒ 只对全校区范围的账号发")
     return ok(data, meta={"count": data["count"],
                           "source": "读产物目录（后台不现场跑检查）"})
 
 
-@router.get("/checks/fleet")
+@router.get("/checks/fleet", dependencies=[Depends(require_campus_wide())])
 def fleet(cfg: SettingsDep) -> dict:
     """**全库级**检查报告（fleet.json）—— 引擎对整个库的那一次结论。
 
@@ -93,7 +112,8 @@ def fleet(cfg: SettingsDep) -> dict:
     })
 
 
-@router.get("/checks/{building}")
+@router.get("/checks/{building}",
+            dependencies=[Depends(require_cap("view", scope_param="building"))])
 def one_building(building: BuildingName, cfg: SettingsDep) -> dict:
     """某栋楼的检查报告。**只读产物**（不现跑：B 层几十分钟，HTTP 等不起）。
 

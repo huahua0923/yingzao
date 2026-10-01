@@ -27,6 +27,16 @@ BUILDINGS: Path = DATA / "buildings"
 NODE_MODULES: Path = ROOT / "node_modules"
 SCRIPTS: Path = ROOT / "_scratch"
 
+#: **冻结楼**：默认不参与批量重建（`--all` 不含它们），要点名 + 显式放行才碰。
+#: 由 `_par_batch.py`（批量执行器守卫）与 `_wall_thin_batch.py`（内墙重建生产线）共用。
+#: ★ 2026-09-14 收敛：这份名单原先在 README、算法与流程总览、上面那两个脚本里
+#:   **各写一份**，而 c006 当天被反复重建后，三处名单还在说它"冻结"——名单只能有一个源。
+# ★ 2026-09-15 **用户决定取消冻结**：c006 当天已解冻重建，c009/c103/c104 也一并回归普通楼
+#   —— 四栋现在都参与 `--all` 批量重建，不再需要 `--allow-frozen`。
+#   取代的纪律（**只增不减**）：动任何楼之前先按 `.orig/before_<用途>_<时间戳>/` 归档
+#   floors + GLB + spec；冻结名单不再是"免改牌"，而是"改动前必须留归档"。
+FROZEN_BUILDINGS = frozenset()
+
 
 def ensure_sys_path(*subdirs: str) -> Path:
     """把 ROOT、BACKEND 以及 BACKEND/<子目录> 挂上 sys.path，返回 ROOT。

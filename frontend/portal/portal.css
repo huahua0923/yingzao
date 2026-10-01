@@ -1,0 +1,961 @@
+/* 校园数字孪生平台 · 门户
+ * ---------------------------------------------------------------------------
+ * 设计方向：**图纸/图集（atlas）**——不是"后台管理台"那一套。
+ *
+ * ★ 与旧建模后台（`frontend/admin/`，深色"蓝图暗房"）**刻意相反**：
+ *   这里是**纸面**底 + 墨色导轨 + 单一点缀色（朱）。理由不是审美偏好 ——
+ *   两套系统共用一台机器、同一个浏览器，如果长得一样，操作的人会分不清
+ *   自己此刻在"建模流水线"里还是在"校园管理"里，而误操作面完全不同。
+ *
+ * 三条硬约束（照 web 规范来）：
+ *   ① 只动 `transform` / `opacity` / `color` / `box-shadow` 这几样做过渡；
+ *   ② 色彩全部走 CSS 变量（设计令牌），组件里不许再出现裸色值；
+ *   ③ 焦点态是设计的一部分，不是浏览器默认那个圈。
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* —— 纸与墨 —— */
+  --paper:        #F6F3ED;
+  --paper-2:      #EFEAE1;
+  --surface:      #FFFFFF;
+  --ink:          #14110E;
+  --ink-2:        #3A342D;
+  --muted:        #7C746A;
+  --rule:         #DFD8CB;
+  --rule-2:       #C6BCA9;
+
+  /* —— 导轨（唯一一块深色）—— */
+  --rail:         #16130F;
+  --rail-2:       #221E18;
+  --rail-ink:     #EDE7DC;
+  --rail-muted:   #8D8577;
+
+  /* —— 语义色：一处一个含义，不许当装饰用 —— */
+  --accent:       #C1440E;   /* 朱：当前选中 / 主要动作 */
+  --accent-soft:  #F7E4DA;
+  --ok:           #3F6B3A;   /* 正常 / 已有数据 */
+  --warn:         #9A6B00;   /* 模拟 / 待核 */
+  --bad:          #A32020;   /* 越权 / 异常 */
+
+  /* —— 字 —— */
+  --serif: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
+  --sans:  "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --mono:  "Cascadia Mono", Consolas, "Courier New", monospace;
+
+  /* —— 节奏：间距不处处相等，标题与正文之间刻意留松 —— */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+
+  --rail-w: 212px;
+  --panel-w: 344px;
+  --top-h: 56px;
+
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --fast: 140ms;
+  --norm: 260ms;
+
+  --shadow-1: 0 1px 2px rgba(20,17,14,.06), 0 1px 1px rgba(20,17,14,.04);
+  --shadow-2: 0 10px 30px -12px rgba(20,17,14,.22), 0 2px 6px rgba(20,17,14,.06);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.62 var(--sans);
+  /* 纸面：极淡的格线 + 一点暖调，让大面积留白不发灰 */
+  background-image:
+    linear-gradient(rgba(20,17,14,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,17,14,.022) 1px, transparent 1px),
+    radial-gradient(120% 90% at 12% -10%, #FFFDF8 0%, transparent 55%);
+  background-size: 24px 24px, 24px 24px, 100% 100%;
+}
+
+.skip {
+  position: absolute; left: -999px;
+  &:focus { left: var(--s4); top: var(--s2); z-index: 99;
+            background: var(--ink); color: var(--paper); padding: var(--s2) var(--s3); }
+}
+
+/* ───────────────────────────────────────────── 登录闸 ─────────── */
+
+.gate {
+  min-height: 100%;
+  display: grid; place-items: center;
+  padding: var(--s6) var(--s4);
+}
+.gate-card {
+  width: min(392px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--ink);
+  padding: var(--s7) var(--s6) var(--s6);
+  box-shadow: var(--shadow-2);
+  position: relative;
+}
+.gate-card::after {                    /* 右上角一枚朱色小方 —— 图集式标记 */
+  content: ""; position: absolute; right: -1px; top: -3px;
+  width: 10px; height: 26px; background: var(--accent);
+}
+.gate-brand {
+  margin: 0 0 var(--s6);
+  font: 600 11px/1 var(--sans);
+  letter-spacing: .22em; text-transform: uppercase;
+  color: var(--muted);
+  display: flex; align-items: center; gap: var(--s2);
+}
+.gate-card h1 {
+  margin: 0; font-family: var(--serif); font-weight: 400;
+  font-size: clamp(34px, 6vw, 46px); line-height: 1; letter-spacing: -.02em;
+}
+.gate-sub { margin: var(--s3) 0 var(--s7); color: var(--muted); font-size: 13px; }
+
+#loginform { display: grid; gap: var(--s2); }
+#loginform label {
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); margin-top: var(--s3);
+}
+#loginform input {
+  font: 15px/1 var(--sans); color: var(--ink);
+  padding: 11px var(--s3);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 0;
+  transition: border-color var(--fast), background var(--fast), box-shadow var(--fast);
+}
+#loginform input:hover { border-color: var(--rule-2); }
+#loginform input:focus {
+  outline: none; background: var(--surface);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(20,17,14,.08);
+}
+#loginbtn {
+  margin-top: var(--s5); padding: 13px; cursor: pointer;
+  font: 600 13px/1 var(--sans); letter-spacing: .3em; text-indent: .3em;
+  color: var(--paper); background: var(--ink);
+  border: 0; border-radius: 0;
+  transition: background var(--fast), transform var(--fast);
+}
+#loginbtn:hover { background: var(--accent); }
+#loginbtn:active { transform: translateY(1px); }
+#loginbtn[disabled] { opacity: .5; cursor: progress; }
+.gate-msg { min-height: 1.4em; margin: var(--s3) 0 0; font-size: 13px; color: var(--bad); }
+.gate-foot {
+  margin: var(--s6) 0 0; padding-top: var(--s4);
+  border-top: 1px dashed var(--rule);
+  font-size: 11.5px; line-height: 1.7; color: var(--muted);
+}
+
+/* ───────────────────────────────────────────── 外壳三栏 ────────── */
+
+.shell {
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--panel-w);
+  grid-template-rows: var(--top-h) minmax(0, 1fr);
+  grid-template-areas: "top top top" "rail stage panel";
+}
+
+/* ★ 文档型 / 驾驶舱型模块**没有「当前选中的那一个」这回事**（那是三维场景才有的），
+   所以右边这条 344px 面板在这类模块上是**空的**。不收起来，屏幕上就是
+   **两条右栏**：外壳那条白着，页面自己那条装着事实 —— 1600 的窗口里
+   平白空掉 344px，驾驶舱的图只剩 900px 里的一半。
+   ⇒ 加一个 `no-panel` 档，交给 `go()` 按模块切。 */
+.shell.no-panel {
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-areas: "top top" "rail stage";
+}
+.shell.no-panel > .panel { display: none; }
+
+/* 顶栏横跨三栏；左端那块**墨色**与导轨连成一体（导轨宽 = 第一栏宽）。 */
+.topbar {
+  grid-area: top;
+  display: flex; align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+.brand {
+  margin: 0; flex: 0 0 var(--rail-w);
+  display: flex; align-items: center; gap: var(--s3);
+  align-self: stretch; padding: 0 var(--s4);
+  background: var(--rail); color: var(--rail-ink);
+  border-right: 1px solid var(--rail-2);
+}
+.mark {
+  width: 16px; height: 16px; flex: none; display: block;
+  background: var(--accent);
+  /* 一枚"体块"：朱色方块切掉一角，与三维里的体块同形 */
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 62% 100%, 0 100%);
+}
+.brand-text { font-size: 13px; letter-spacing: .06em; line-height: 1.25; }
+.brand-text i { display: block; font-style: normal; font-size: 10.5px;
+                letter-spacing: .2em; color: var(--rail-muted); }
+
+.topbar-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: var(--s5);
+  padding: 0 var(--s5);
+}
+.clock { font: 12px/1 var(--mono); color: var(--muted); letter-spacing: .04em; }
+.who { font-size: 12.5px; color: var(--ink-2); }
+.who b { font-weight: 600; }
+.who span { color: var(--muted); }
+button.ghost {
+  font: 12px/1 var(--sans); letter-spacing: .08em;
+  padding: 7px var(--s3); cursor: pointer;
+  color: var(--ink-2); background: transparent;
+  border: 1px solid var(--rule-2); border-radius: 0;
+  transition: color var(--fast), border-color var(--fast), background var(--fast);
+}
+button.ghost:hover { color: var(--bad); border-color: var(--bad); background: #FDF3F3; }
+
+/* ───────────────────────────────────────────── 左侧导轨 ───────── */
+
+.rail {
+  grid-area: rail;
+  background: var(--rail); color: var(--rail-ink);
+  padding: var(--s5) 0 var(--s4);
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rail h2 {
+  margin: var(--s4) var(--s4) var(--s2);
+  font: 600 10px/1 var(--sans); letter-spacing: .22em; text-transform: uppercase;
+  color: var(--rail-muted);
+}
+.rail h2:first-child { margin-top: 0; }
+.rail button {
+  appearance: none; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 18px 1fr auto; align-items: center;
+  gap: var(--s3);
+  padding: 10px var(--s4);
+  font: 13.5px/1.3 var(--sans); color: var(--rail-ink);
+  background: transparent; border: 0; border-left: 2px solid transparent;
+  transition: background var(--fast), border-color var(--fast), color var(--fast);
+}
+.rail button svg { width: 18px; height: 18px; fill: none;
+                   stroke: currentColor; stroke-width: 1.5;
+                   stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.rail button:hover { background: var(--rail-2); }
+.rail button[aria-current="true"] {
+  background: var(--rail-2); border-left-color: var(--accent); color: #fff;
+}
+.rail button[aria-current="true"] svg { opacity: 1; }
+.rail button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rail .tag {
+  font: 600 9.5px/1 var(--sans); letter-spacing: .08em;
+  padding: 3px 5px; color: var(--warn); border: 1px solid #574414;
+}
+.rail .tag.live { color: #7FA97A; border-color: #33502F; }
+.rail footer {
+  margin-top: auto; padding: var(--s4) var(--s4) 0;
+  border-top: 1px solid var(--rail-2);
+  font-size: 10.5px; line-height: 1.7; color: var(--rail-muted);
+}
+
+/* ───────────────────────────────────────────── 主舞台 ─────────── */
+
+.stage {
+  grid-area: stage; position: relative; overflow: hidden;
+  background: var(--paper-2);
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+.canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+#gl { display: block; width: 100%; height: 100%; }
+
+.hint {
+  position: absolute; left: var(--s5); top: var(--s5);
+  max-width: 30ch; pointer-events: none;
+  font-size: 12px; line-height: 1.7; color: var(--ink-2);
+  text-shadow: 0 1px 0 rgba(255,255,255,.8);
+}
+.hint b { display: block; font-family: var(--serif); font-size: 20px;
+          font-weight: 400; letter-spacing: -.01em; margin-bottom: 2px; }
+
+/* ★★ 图例与场景提示是**同一屏里唯一两处直接压在实景影像上的文字**，
+   而它们曾经是全页唯一没做可读性处理的浮层：
+   `#hint` 有 `text-shadow`、`.stage-bar` 有半透明白底 + 模糊 —— 只有这里两样都没有。
+   后果不是"有点淡"：正射影像本身是**中灰偏杂**的（屋顶、树、路都在同一片像素里），
+   11px 的字压上去，读不读得出来取决于**这栋楼底下恰好是什么**，
+   而那是随相机位置变的 —— 换个角度同一行字就糊了。
+   ⇒ 两条都要：白描边让字离开底色，白圈让色块离开底色。
+   判别标准（留给以后往这里加东西的人）：**这块下面是什么像素，你说了不算** ——
+   凡是压在三维画布上的浮层，都必须自带把自身从任意底色里拎出来的手段。 */
+.legend {
+  position: absolute; left: var(--s5); bottom: var(--s5);
+  display: flex; gap: var(--s4); pointer-events: none;
+  font-size: 11px; color: var(--ink-2);
+  text-shadow: 0 1px 0 rgba(255,255,255,.92), 0 0 3px rgba(255,255,255,.75);
+}
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px;
+            vertical-align: -1px; border: 1px solid rgba(20,17,14,.45);
+            box-shadow: 0 0 0 1px rgba(255,255,255,.9); }
+
+/* 场景级的持续提示（此刻：哪几块没落到地面）。
+   ★ 它**不在** `#panel` 里，是**故意**的 —— 这一条属于**三维场景**的状态，
+     而面板的内容会被 `fill(host, …)` 整份替换：原来它靠 `prepend` 挂在面板顶上，
+     于是**点任何一个体块之后它就没了**，而它说的是"有一块根本没画出来"，
+     正好是你点不着的那一块。⇒ 属于场景的，印在场景上。 */
+/* ★★ 这一块**要一个底面**，不能只靠白描边 —— 这是量出来的，不是审美。
+   加完白描边之后逐像素量对比度（见 `_scratch/_portal_verify.py` ⑪）：
+
+       图例     5.48 ~ 8.33     ← 两三个短标签 + **实心色块带白圈**
+       场景提示  4.48 ~ 5.90     ← 三行**全是字**，一个实心块都没有
+
+   场景提示在「顶视」机位 p90 = **4.48**，正压在 4.5 线下 —— 也就是说，
+   换一个机位它就掉到读不清。差别不在字色而在**结构**：短标签可以靠描边离开底色，
+   一行压一行、还带「（那块地是 NoData 洞）」这种括注的散文不行：
+   白描边只把每个字从底色里拎出来一点点，而读者要把**整段**连着读。
+   ⇒ 多行文本压在影像上一律给底面。`.stage-bar` 早就是这么做的，这里跟上。
+   底面用了 `backdrop-filter`，与 `.stage-bar button` 同一套手法，不是一个新发明。 */
+.scene-note {
+  position: absolute; left: var(--s5); bottom: calc(var(--s5) + 22px);
+  max-width: 46ch; pointer-events: none;
+  padding: 7px 11px 7px 10px;
+  font-size: 11px; line-height: 1.6;
+  color: #6E1F14;
+  background: rgba(248,245,240,.92);
+  backdrop-filter: blur(3px);
+  border-left: 2px solid #C0392B;
+  box-shadow: 0 1px 3px rgba(20,17,14,.12);
+}
+
+.stage-bar {
+  position: absolute; right: var(--s5); top: var(--s5);
+  display: flex; gap: var(--s2);
+}
+.stage-bar button {
+  font: 11px/1 var(--sans); letter-spacing: .1em;
+  padding: 7px var(--s3); cursor: pointer;
+  color: var(--ink-2); background: rgba(255,255,255,.86);
+  border: 1px solid var(--rule-2); border-radius: 0;
+  backdrop-filter: blur(4px);
+  transition: color var(--fast), border-color var(--fast),
+              background var(--fast), transform var(--fast);
+}
+.stage-bar button:hover { border-color: var(--ink); color: var(--ink); }
+.stage-bar button[aria-pressed="true"] {
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
+}
+.stage-bar button:active { transform: translateY(1px); }
+
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(246,243,237,.92);
+  font-size: 13px; color: var(--ink-2); text-align: center; padding: var(--s6);
+}
+.overlay > div { max-width: 62ch; }
+.overlay .note { text-align: left; margin-top: var(--s4); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * ★★ `[hidden]` 在**作者样式表里声明了 `display` 的元素上不起作用**。
+ *    浏览器那条 `[hidden] { display: none }` 在 UA 表里，而**作者表不分
+ *    优先级一律盖过 UA 表** —— 所以 `.gate { display:grid }` 一写下去，
+ *    `gate.hidden = true` 就再也不藏它了。
+ *
+ *    这一条必须在这里点名写全，因为它的失效**长得不像失效**：登录屏不消失
+ *    只是"排版有点怪"，三维区不消失只是"两块叠在一起"。少写一个 = 那一块
+ *    永远藏不住，而屏幕上找不到任何一行报错。
+ * ───────────────────────────────────────────────────────────────────────── */
+.gate[hidden], .shell[hidden], .canvas-wrap[hidden], .hint[hidden],
+.legend[hidden], .scene-note[hidden], .stage-bar[hidden], .overlay[hidden],
+.doc[hidden] {
+  display: none;
+}
+
+/* 页面型模块（数据与流程 / 账号与权限）：盖住三维，整块给文档 */
+.doc {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  padding: var(--s7) var(--s8) var(--s8);
+  background: var(--paper);
+}
+.doc > div { max-width: 1180px; }
+
+/* 文档页的头：图集式 —— 眉题（朱）、大标题（衬线）、导语。
+   缩放对比是**主要手段**：26px 的正文标题与 44px 的页标题差得够开，
+   一眼就能看出哪一层是哪一层，而不是全靠粗细。 */
+.doc header { max-width: 64ch; margin-bottom: var(--s7); }
+/* ★★ 这一条**没有** `text-transform: uppercase` —— 是故意去掉的，不是漏写。
+   题头那行里带着**真数据**（`实测 · 盘上 data/buildings/` 这种路径），
+   而 `uppercase` 会把拉丁字母改掉 ⇒ 屏幕上印成 `DATA/BUILDINGS/`。
+   ★ 它比"没生效"更阴的地方在于：**中文一个字母都不变**，所以中文界面里
+   同一份样式看不出任何异常，直到某个路径/单位/字段名从它下面过一遍。
+   ⇒ 判别标准：**这块下面会不会渲染数据？会，就不能挂 uppercase。**
+   本文件其余挂 uppercase 的地方（`.rail h2` / `.panel .kicker` / `.chip` /
+   `.stats small` / `.panel .block > h4` / `.doc h3.sub` / `.gate-brand`）
+   渲染的都是**写死的中文标签**（"设施与运行""模拟""你可见的楼栋"），
+   挂它只是排版手段；要再往那些地方塞数据时，先把这条规则摘掉。 */
+.doc .kicker, .overlay .kicker {
+  margin: 0 0 var(--s4);
+  font: 600 10.5px/1 var(--sans); letter-spacing: .2em;
+  color: var(--accent);
+  display: flex; align-items: center; gap: var(--s3);
+}
+.doc .kicker::after, .overlay .kicker::after {
+  content: ""; flex: 1 1 auto; height: 1px; background: var(--rule-2);
+}
+.doc h2 {
+  margin: 0; font-family: var(--serif); font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 46px); line-height: 1.06; letter-spacing: -.025em;
+}
+.doc .lede2 {
+  margin: var(--s4) 0 0; font-size: 15px; line-height: 1.7; color: var(--ink-2);
+}
+.doc h3.sub {
+  margin: var(--s7) 0 var(--s4);
+  font: 600 11px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.doc .doc-actions { margin: var(--s5) 0 0; }
+
+/* 表格在纸面上不用"卡片"包 —— 直接躺在纸上，靠留白分组。
+   ★ 不给它套 `display:block; overflow-x:auto`（那个常见写法会把 thead 与
+     tbody 拆成**两张独立的表**去各自算列宽 ⇒ 表头与数据列对不齐，
+     而看起来只是"差了几像素"）。这里改成给表一个最小宽度，
+     让**外层 `.doc` 自己**横向滚 —— `.doc` 已经 `overflow-y:auto`，
+     按规范另一边会跟着变成 `auto`，整张表仍然是一张表。 */
+.doc table.data { min-width: 680px; }
+
+/* ───────────────────────────────────────────── 右侧详情 ───────── */
+
+.panel {
+  grid-area: panel; overflow-y: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--rule);
+  padding: var(--s5) var(--s5) var(--s7);
+}
+.panel .empty { color: var(--muted); font-size: 13px; line-height: 1.9; }
+.panel h3 {
+  margin: 0 0 var(--s2);
+  font-family: var(--serif); font-weight: 400; font-size: 26px;
+  line-height: 1.15; letter-spacing: -.015em;
+}
+.panel .kicker {
+  font: 600 10.5px/1 var(--sans); letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 var(--s3);
+}
+.panel .lede { margin: 0 0 var(--s5); font-size: 13px; color: var(--ink-2); }
+
+.panel .block { margin-top: var(--s6); }
+.panel .block > h4 {
+  margin: 0 0 var(--s3); padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--rule);
+  font: 600 11px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-2);
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.panel .block > h4 em { font-style: normal; font-size: 10px; color: var(--muted);
+                        letter-spacing: .04em; text-transform: none; }
+
+/* 键值表：数据一律等宽，右对齐 —— 数字要能上下比较 */
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px var(--s4); margin: 0; }
+.kv dt { color: var(--muted); font-size: 12px; }
+.kv dd { margin: 0; font: 12.5px/1.5 var(--mono); text-align: right;
+         overflow-wrap: anywhere; }
+.kv dd.na { color: var(--muted); font-style: italic; }
+
+/* `rich()` 把反引号渲染成 <code> —— 它标的是**标识符/文件名/字段名**
+   （`campus_terrain.glb`、`fallback_ground`、`height_caliber`），往上一嵌就与
+   周围的句子不是一个东西了。所以给它等宽 + 一层薄底，而不是把裸反引号留在屏幕上
+   （原来真是这样：`_portal_verify.py` 的逐屏扫描⑧抓到的就是这两个反引号）。 */
+.note code, .doc code, .panel code, .kv code {
+  font: 12px/1.45 var(--mono);
+  padding: 0 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule-2);
+}
+
+.chip {
+  display: inline-block; font: 600 10px/1 var(--sans); letter-spacing: .1em;
+  padding: 4px 7px; border: 1px solid currentColor; text-transform: uppercase;
+}
+.chip.live { color: var(--ok); }
+.chip.mock { color: var(--warn); }
+.chip.off  { color: var(--muted); }
+
+/* 楼层构成：横向堆叠条 —— 数据可视化是设计系统的一部分，不是后补的图 */
+.stack { display: flex; height: 14px; border: 1px solid var(--rule-2); overflow: hidden; }
+.stack i { display: block; transition: opacity var(--fast); }
+.stack i:hover { opacity: .72; }
+.stack-key { display: flex; flex-wrap: wrap; gap: 4px var(--s3);
+             margin: var(--s3) 0 0; font-size: 11.5px; color: var(--ink-2); }
+.stack-key b { font-weight: 600; color: var(--ink); font-family: var(--mono); }
+
+.floor-list { margin: 0; padding: 0; list-style: none; }
+.floor-list li {
+  display: grid; grid-template-columns: 46px 1fr; gap: var(--s3);
+  padding: var(--s3) 0; border-bottom: 1px dashed var(--rule);
+}
+.floor-list li:last-child { border-bottom: 0; }
+.floor-list .no { font: 600 12px/1.5 var(--mono); color: var(--accent); }
+.floor-list .use { font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+
+/* 表格 */
+table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+/* ★★ 表头**同样不挂 `uppercase`**，理由与上面 `.doc .kicker` 那条一样，
+   而且这里的受害面更大：`building` 那一页的表头是**原样的 JSON 字段名**
+   （`name` / `title` / `floor_count` / `outline_area_m2` / `has_model`），
+   模拟那几页的表头还带**单位**（`月用电 kWh` ⇒ 会被印成 `KWH`）。
+   字段名印错一个大小写，读的人拿去 grep 代码就一条都搜不到。
+   ⇒ 表头靠**字号/字重/颜色/字距**与数据行分层，不靠改字母。 */
+table.data th {
+  text-align: left; font: 600 10.5px/1 var(--sans); letter-spacing: .13em;
+  color: var(--muted);
+  padding: 0 var(--s3) var(--s2) 0; border-bottom: 1px solid var(--rule-2);
+}
+table.data td { padding: 9px var(--s3) 9px 0; border-bottom: 1px solid var(--rule); }
+table.data td.num { font-family: var(--mono); text-align: right; padding-right: var(--s5); }
+table.data tbody tr { transition: background var(--fast); }
+table.data tbody tr:hover { background: var(--paper); }
+
+/* 统计卡：**不等宽**——第一张大，其余小，避免"均匀卡片网格"那个模板味 */
+.stats { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 1px;
+         background: var(--rule); border: 1px solid var(--rule); margin-bottom: var(--s6); }
+.stats div { background: var(--surface); padding: var(--s5) var(--s4); }
+.stats b {
+  display: block; font-family: var(--serif); font-weight: 400;
+  font-size: 40px; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.stats small { display: block; margin-top: var(--s2);
+               font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+               color: var(--muted); }
+.stats .down b { color: var(--bad); font-size: 22px; }
+
+.note {
+  margin: var(--s4) 0 0; padding: var(--s3) var(--s4);
+  border-left: 3px solid var(--warn); background: #FBF6EA;
+  font-size: 12.5px; line-height: 1.75; color: var(--ink-2);
+}
+.note.err { border-left-color: var(--bad); background: #FCF2F2; }
+.note.ok  { border-left-color: var(--ok);  background: #F1F6F0; }
+
+.busy { color: var(--muted); font-size: 12.5px; }
+
+/* 窄屏：导轨收成图标条，详情挪到下方 */
+@media (max-width: 1180px) {
+  :root { --rail-w: 60px; --panel-w: 300px; }
+  .rail button { grid-template-columns: 18px; justify-items: center; }
+  .rail button span.lbl, .rail .tag, .rail h2, .rail footer { display: none; }
+  .brand { justify-content: center; padding: 0; }
+  .brand-text { display: none; }
+}
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--top-h) auto minmax(0,1fr) auto;
+    grid-template-areas: "top" "rail" "stage" "panel";
+  }
+  .brand { display: none; }
+  .rail { flex-direction: row; overflow-x: auto; padding: var(--s2); }
+  .rail button { display: none; }
+  .stage { min-height: 54vh; }
+  .panel { border-left: 0; border-top: 1px solid var(--rule); max-height: 46vh; }
+  .doc { padding: var(--s5) var(--s4) var(--s7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 纵览驾驶舱：正射影像 + 体块轮廓（2026-10-01）
+ *
+ * 这一屏的排布与文档页**不同**，是有意的：文档页是"读"的（单栏、64ch 行宽），
+ * 这里一半是"看"的（一张要铺开的图）。把图塞进 64ch 那条栏里，影像就只剩
+ * 缩略图大小 —— 那时压在上面的轮廓错没错，眼睛已经分辨不出来了。
+ * 所以这里放宽到 1600px，图与事实并排。
+ * ------------------------------------------------------------------------ */
+/* ★★ 选择器必须写 `.doc > .cockpit`，不能只写 `.cockpit`：
+   上面第 364 行那条 `.doc > div { max-width: 1180px }` 是直接子元素选择器，
+   **特异性**（1 个类 + 1 个类型）**高于** `.cockpit`（1 个类）⇒ 只写 `.cockpit`
+   就被它盖住，`.cockpit` 自己的 `max-width` 计算出来会是 1180px。
+   （这类失效**不报错、不进控制台**，只有量计算值才看得见。）
+
+   ★ 不过要如实记一笔：**那条 1180 从来没真正约束过这一屏的宽度。**
+   `.doc` 有 `padding: 0 var(--s8)`（72px），`#stage` 只有 1044px ⇒ 内容盒
+   1044−144 = **900px**，比 1180 窄。所以真正的约束是**父容器的内容盒**，
+   不是 `max-width`。我一开始按"被 1180 压住了"归因、把验收判据写成
+   「宽度 > 1300px」——**那是恒假的假红**，实测 900 而屏幕上没有任何毛病。
+   ⇒ 判据改成量**真正要看的东西**：这张正射图在 1600 的视口下有多宽（见 ⑩）。
+
+   既然这一屏一半是"看"的（一张要铺开的图），就不要那个 1180 的帽子 —— 但它
+   也**不该**靠负外边距去吃 `.doc` 的留白：我试过那一版（`margin: 0 -72px`），
+   实测 `.cockpit-side` 右沿正好落在视口 x=1600 上 —— **事实那一栏贴在窗边**，
+   一点余量都没有了。
+   ⇒ 真正把这屏撑开的是**右栏那 344px**（见上面 `.shell.no-panel`），不是留白。
+   留住白：图从 556 → **900 px**，而事实栏外面仍然有 72px 的呼吸。
+   ⇒ 验收 ⑩ 量的是**图的宽度**，以及「事实栏离窗边 ≥40px」。 */
+.doc > .cockpit { max-width: none; }
+.cockpit .stats { margin-bottom: var(--s5); }
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--s5);
+  align-items: start;
+}
+@media (max-width: 1180px) { .cockpit-grid { grid-template-columns: 1fr; } }
+
+.cockpit-map {
+  position: relative;
+  height: clamp(420px, 62vh, 760px);
+  border: 1px solid var(--rule-2);
+  background: var(--paper-2);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.cockpit-side .block:first-child { margin-top: 0; }
+.cockpit-side .facts h4 {
+  display: flex; align-items: baseline; gap: var(--s3);
+  margin: 0 0 var(--s3); font: 600 15px/1.3 var(--mono);
+  letter-spacing: .02em;
+}
+.cockpit-side .facts h4 em {
+  font: 400 10px/1 var(--sans); font-style: normal; letter-spacing: .14em;
+  color: var(--warn); border: 1px solid currentColor; padding: 2px 5px;
+}
+
+/* —— 画布 —— */
+.ortho-stage { position: absolute; inset: 0; cursor: grab; }
+.ortho-canvas {
+  display: block; touch-action: none;
+  /* 影像要按像素看 —— 让浏览器别给它插值糊一层（对比度高的屋顶边缘会走样） */
+  image-rendering: auto;
+}
+.ortho-readout {
+  position: absolute; left: var(--s3); bottom: var(--s3);
+  display: flex; gap: var(--s3);
+  padding: 3px var(--s3);
+  font: 11.5px/1.5 var(--mono);
+  color: var(--rail-ink); background: rgba(22,19,15,.82);
+  pointer-events: none;
+}
+.ortho-readout[hidden] { display: none; }
+.ortho-scalebar {
+  position: absolute; right: var(--s3); bottom: var(--s3);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font: 11px/1 var(--mono); color: var(--ink);
+  pointer-events: none;
+}
+.ortho-scalebar i {
+  display: block; height: 7px;
+  border: 1px solid var(--ink-2); border-top: 0;
+  background: rgba(246,243,237,.55);
+}
+.ortho-scalebar b { font-weight: 400; }
+.ortho-north {
+  position: absolute; right: var(--s3); top: var(--s3);
+  width: 26px; height: 26px; display: grid; place-items: center;
+  font: 11px/1 var(--mono); color: var(--rail-ink);
+  background: rgba(22,19,15,.82);
+  pointer-events: none;
+}
+.ortho-north::before {
+  content: ""; position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-bottom-color: rgba(22,19,15,.82);
+}
+.ortho-tools {
+  position: absolute; left: var(--s3); top: var(--s3);
+  display: flex; gap: 1px; background: var(--rule-2); border: 1px solid var(--rule-2);
+}
+.ortho-tools button {
+  min-width: 34px; height: 30px; padding: 0 var(--s3);
+  font: 12px/1 var(--sans); color: var(--ink-2);
+  background: var(--surface); border: 0; cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.ortho-tools button:hover { background: var(--accent-soft); color: var(--accent); }
+.ortho-tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 数据大屏（2026-10-01）
+ *
+ * ★ 它是全站**唯一一块深色正文区**，这是有意的，不是"深色好看"：
+ *   一块挂在墙上的屏，屋里灯是暗的，看的是屏上那张图 —— 于是这一屏只让**一个**
+ *   东西发亮：正射影像。仪器、数、字全退到石墨底上。浅色的文档页里，
+ *   影像只是"一张插图"；这里它是**唯一被照亮的实物**。
+ *   （反面也记一笔：暗色不是默认值。其余每一屏都是纸色的，那是有意的排版方向；
+ *    换深色得为某一屏单独说得出理由 —— 上面就是理由。）
+ *
+ * ★★ 为什么是**三栏**（仪器 / 图 / 仪器），而不是"图上一条、仪器一条"：
+ *   底图是 1392 × 1644 m 的**竖幅**（0.85:1）。横过来铺成一条横带的话，`fit()`
+ *   之后图只占那一带宽度的一半不到，两边全是空底 —— 大屏正中一块空场。
+ *   竖着放，图能把中央那根柱子填到九成以上。
+ *
+ * ★★ 高度是**算出来**的，不是"大概差不多"：
+ *   `.dscreen` = `calc(100vh - 56px)`，负外边距把 `.doc` 的 48/72/72 内边距吃掉
+ *   ⇒ 这一屏正好是窗口高度，不滚。四块横条（抬头 / 口径带 / 主体 / 页脚）里
+ *   主体吃 `minmax(0, 1fr)` —— `minmax(0,…)` 里的那个 0 是必须的：
+ *   写 `1fr` 的话，子项的 `min-height: auto` 会顶破容器，屏幕上就是"整页能滚"。
+ * ───────────────────────────────────────────────────────────────────────── */
+.dscreen {
+  /* 这一屏自己的一组令牌。★ 不去改 :root —— 那几个纸色变量是其余每一屏的基底，
+     在这一页覆盖它们会让别的"页面型模块"跟着变深，而那种变化在别处看起来只是"有点怪"。 */
+  --ds-ground: #0E1116;
+  --ds-panel:  #151A21;
+  --ds-raise:  #1B222B;
+  --ds-rule:   #28313D;
+  --ds-ink:    #D7E0EA;
+  --ds-ink-2:  #A7B4C2;
+  --ds-muted:  #8695A7;      /* 对 --ds-panel 实测对比度 5.7:1 */
+  --ds-amber:  #E8A33D;      /* 大屏上**唯一**的强调色，只给"覆盖边界"那一条用 */
+  /* 三档口径 —— 与地图上真正画出来的墨**同一族色相**（线色本体从
+     ortho-map.js 的 CALIBER_STYLE 现取，这里只给图中的条与标签上色）。 */
+  --cal-roof:   #E07A45;
+  --cal-part:   #B9A24A;
+  --cal-ground: #8A949F;
+
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: calc(100vh - var(--top-h));
+  min-height: 0;
+  padding: var(--s5) var(--s6) var(--s4);
+  background: var(--ds-ground);
+  color: var(--ds-ink);
+  font-variant-numeric: tabular-nums;   /* 数字跳动时列宽不抖 */
+}
+/* ★ 负外边距把 .doc 的 48/72/72 内边距吃掉，让这块墙贴到窗口四边。
+   选择器写 `.doc > .dscreen`（两个类）而不是 `.dscreen`（一个类）——
+   `.doc > div` 那条 1180 的帽子是"一个类 + 一个类型"，特异性比单个类高。
+   （与驾驶舱那条注释同因。区别是驾驶舱**刻意留白**、大屏**刻意吃掉**：墙就是墙。） */
+.doc > .dscreen {
+  max-width: none;
+  margin: calc(-1 * var(--s7)) calc(-1 * var(--s8)) calc(-1 * var(--s8));
+}
+
+/* ── 抬头 ── */
+/* ★ 写 `.dscreen header.ds-top` 而不是 `.ds-top`：`.doc header` 有 `max-width: 64ch`
+   与 `margin-bottom: 48px`，特异性 (0,1,1)；两个类才盖得住 (0,2,0)。
+   盖不住的表现是"标题底下空了一大块、右边留白很宽"，看着像设计，其实是继承来的。 */
+.dscreen header.ds-top {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s5);
+  max-width: none; margin: 0 0 var(--s4);
+  padding-bottom: var(--s2); border-bottom: 1px solid var(--ds-rule);
+}
+.ds-brand .kicker {
+  margin: 0 0 2px; font: 600 11px/1 var(--mono); letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ds-amber);
+}
+.ds-brand .kicker::after { display: none; }        /* 纸色那套的下划线在暗底上是脏的 */
+.ds-brand h2 {
+  margin: 0; font: 600 clamp(22px, 2.1vw, 28px)/1.1 var(--sans);
+  letter-spacing: .02em; color: #F2F6FA;
+}
+.ds-lede { margin: 5px 0 0; max-width: none; font-size: 12px; line-height: 1.55; color: var(--ds-muted); }
+.ds-lede b { color: var(--ds-ink); }
+
+.ds-clock { display: flex; align-items: baseline; gap: var(--s3); flex: 0 0 auto; }
+.ds-net {
+  padding: 2px 8px; border: 1px solid var(--ds-rule); border-radius: 999px;
+  font: 10.5px/1.4 var(--mono); letter-spacing: .12em; color: var(--ds-muted);
+}
+.ds-time { font: 600 clamp(20px, 1.9vw, 26px)/1 var(--mono); letter-spacing: .04em; color: #F2F6FA; }
+.ds-day { font: 11.5px/1 var(--mono); color: var(--ds-muted); }
+
+/* ── 口径带：覆盖边界。全屏**唯一**用强调色的地方。 ── */
+.ds-band {
+  display: flex; align-items: baseline; gap: var(--s4);
+  margin: 0 0 var(--s3); padding: 7px var(--s4);
+  background: rgba(232, 163, 61, .09);
+  border-left: 3px solid var(--ds-amber);
+  font-size: 12px; line-height: 1.6; color: #E3C79C;
+}
+.ds-band > b { flex: 0 0 auto; font: 600 12px/1.6 var(--mono); letter-spacing: .06em; color: var(--ds-amber); }
+.ds-band span b { color: #F6E4C6; }
+.ds-band.bad { background: rgba(224, 122, 69, .12); border-left-color: var(--cal-roof); color: #F0CBB4; }
+.ds-band.bad > b { color: var(--cal-roof); }
+
+/* ── 主体：仪器 / 图 / 仪器 ── */
+.ds-body {
+  display: grid;
+  grid-template-columns: minmax(264px, .92fr) minmax(0, 2.3fr) minmax(292px, 1.02fr);
+  gap: var(--s4);
+  min-height: 0;
+}
+.ds-col { display: flex; flex-direction: column; gap: var(--s3); min-height: 0; }
+/* ★ 左栏是**唯一**允许自己滚的：它装着三段口径说明，矮窗口下可能差几十像素。
+   让它可见地滚，好过让它**安静地被裁掉**（`overflow: hidden` 的裁切在屏幕上
+   与"就这些"长得一模一样）。右栏不滚 —— 它的清单自己有一段滚动区。 */
+.ds-col.left { overflow-y: auto; scrollbar-width: thin; }
+.ds-col.right { overflow: hidden; }
+
+/* ★★ 左栏的卡**不许被压扁**。列高不够时，flex 默认按比例缩它的子项，
+   而 `.ds-card` 上那个 `min-height: 0`（本来是给右栏清单当气室的）会**允许**
+   它缩到内容高度以下 —— 卡还是那张卡，里面的 `dl` 和 `p.note` 直接**溢出卡片自己的
+   盒子**，再被列的滚动条一起吞掉。
+   实测（1600×950，原样）：`凭据` 卡的 rect 高 **311**，而它自己的内容是
+   `h3 24 + dl.kv 290 + p.note 94 = 435` —— 少了 124px，屏幕上只是"最后两行看不见"，
+   与"就这些"长得一模一样（⑩ 同族，但这次发生在卡的**盒子里面**）。
+   ⇒ 左栏的卡取自然高度（`flex: 0 0 auto`），装不下就交给列去滚，
+     **不许**把卡压成一个装不下自己的壳。 */
+.ds-col.left > .ds-card { flex: 0 0 auto; }
+
+.ds-hero { display: flex; flex-direction: column; min-height: 0; }
+.ds-hero-bar {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px var(--s3);
+  padding: 0 0 6px; font-size: 12px; color: var(--ds-muted);
+}
+.ds-hero-k { font: 600 11px/1 var(--mono); letter-spacing: .14em; color: var(--ds-muted); }
+.ds-hero-bar b { font: 600 19px/1 var(--mono); color: #F2F6FA; }
+.ds-hero-u { font-size: 11px; }
+.ds-hero-sep { color: var(--ds-rule); }
+.ds-hero-hint { margin-left: auto; font-size: 11px; color: #6F7C8C; }
+.ds-map {
+  position: relative; flex: 1 1 auto; min-height: 300px;
+  border: 1px solid var(--ds-rule);
+  box-shadow: 0 22px 60px -28px rgba(0, 0, 0, .9);
+  overflow: hidden;
+}
+.ds-hero .note { margin: 0 0 var(--s2); }
+/* 地图自带的那套四角装置在暗底上重新配色，否则白底黑字浮在石墨上像贴错了。 */
+.ds-map .ortho-readout,
+.ds-map .ortho-north { background: rgba(14, 17, 22, .86); color: var(--ds-ink); }
+.ds-map .ortho-north::before { border-bottom-color: rgba(14, 17, 22, .86); }
+.ds-map .ortho-scalebar { color: var(--ds-ink); }
+.ds-map .ortho-scalebar i { border-color: var(--ds-ink-2); background: rgba(14, 17, 22, .5); }
+.ds-map .ortho-tools { background: var(--ds-rule); border-color: var(--ds-rule); }
+.ds-map .ortho-tools button { background: var(--ds-raise); color: var(--ds-ink-2); }
+.ds-map .ortho-tools button:hover { background: #2A3440; color: #F2F6FA; }
+.ds-map .ortho-tools button:focus-visible { outline: 2px solid var(--ds-amber); outline-offset: -2px; }
+
+/* ── 仪器卡 ── */
+.ds-card {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: var(--s3);
+  background: var(--ds-panel); border: 1px solid var(--ds-rule);
+  min-height: 0;
+}
+.ds-card h3 {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2);
+  margin: 0 0 2px; padding-bottom: 6px; border-bottom: 1px solid var(--ds-rule);
+  font: 600 12.5px/1.3 var(--sans); letter-spacing: .04em; color: #E3EAF2;
+}
+.ds-card h3 span::before {
+  content: ''; display: inline-block; width: 3px; height: 11px; margin-right: 7px;
+  vertical-align: -1px; background: var(--ds-amber);
+}
+.ds-card h3 em { font: 400 10.5px/1.3 var(--mono); font-style: normal; color: var(--ds-muted); }
+.ds-card .note { margin: 0; font-size: 11px; line-height: 1.6; color: var(--ds-muted); }
+.ds-card .note b { color: var(--ds-ink-2); }
+
+/* ① 信任阶梯：一层层缩进 —— 缩进本身就是"这一条在上一条里面" */
+.ds-rung { display: flex; align-items: baseline; gap: 10px; }
+.ds-rung.ind { margin-left: var(--s3); }
+.ds-rung.ind b::before { content: '↳'; margin-right: 5px; color: var(--ds-muted); }
+.ds-rung b {
+  flex: 0 0 auto; min-width: 50px; text-align: right;
+  font: 600 19px/1.15 var(--mono); color: var(--ds-ink);
+}
+.ds-rung-t { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.ds-rung-k { font-size: 12px; line-height: 1.35; color: var(--ds-ink-2); }
+.ds-rung-s { font-size: 10.5px; line-height: 1.4; color: var(--ds-muted); }
+.ds-rung.roof b { color: var(--cal-roof); }
+.ds-rung.ground b { color: var(--cal-ground); }
+.ds-rung.roof .ds-rung-k, .ds-rung.ground .ds-rung-k { color: var(--ds-ink); }
+
+/* ② 口径分布：小样 + 条 —— 图例与图在同一行里 */
+.ds-cal { display: flex; align-items: center; gap: 10px; }
+.ds-swatch { flex: 0 0 auto; display: block; border: 1px solid var(--ds-rule); }
+.ds-cal-body { flex: 1 1 auto; min-width: 0; }
+.ds-cal-top { display: flex; align-items: baseline; gap: var(--s2); }
+.ds-cal-top b { font: 600 15px/1.2 var(--mono); color: var(--ds-ink); }
+.ds-cal-top span { font-size: 10.5px; line-height: 1.35; color: var(--ds-muted); }
+.ds-bar { display: block; height: 4px; margin-top: 3px; background: var(--ds-raise); }
+.ds-bar.roof_p50 { background: var(--cal-roof); }
+.ds-bar.fallback_roof { background: var(--cal-part); }
+.ds-bar.fallback_ground { background: var(--cal-ground); }
+/* ★ 条的**分母**在左栏第一行（轮廓总数）—— 一根没有分母的条读起来像"占比 100%"。 */
+
+/* ③ 清单：入口，自己滚。
+   ★★ 右栏两卡的高度是**互相让**的，而且是**单向**让：③ 里面是清单，短一点仍然读得懂；
+     ④ 随选中内容长，**不许裁** —— 它没有内部滚动区，裁掉就是安静地少两行数。
+     所以 ③ 吃 `flex: 1 1 auto`（长得起来也缩得下去）、④ 吃 `flex: 0 0 auto`，
+     清单自己 `min-height: 0` 当那个可以压扁的气室。
+   ★ 为什么不能只写 `max-height: 30vh`：那样 ④ 一有选中，两卡合计 684 > 659，
+     多出来的 25px 被 `.ds-col.right` 的 `overflow: hidden` **安静地裁掉** ——
+     屏幕上与"就这些"长得一模一样。⑩ 就是为这个立的，它抓到的正是这一条。
+     （这是"固定的上限"与"让位的下限"的区别：前者只在别处不动时才对。） */
+.ds-col.right .ds-card.ds-scroll { flex: 1 1 auto; min-height: 0; }
+.ds-col.right .ds-card:last-child { flex: 0 0 auto; }
+.ds-scroll .ds-list {
+  flex: 1 1 auto; min-height: 0;
+  max-height: 30vh; overflow-y: auto; scrollbar-width: thin;
+}
+.ds-list { display: flex; flex-direction: column; gap: 1px; }
+.ds-item {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: var(--s2);
+  width: 100%; padding: 3px 6px; text-align: left; cursor: pointer;
+  background: transparent; border: 0; border-left: 2px solid transparent;
+  font: 11.5px/1.5 var(--mono); color: var(--ds-ink-2);
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.ds-item b { color: var(--ds-ink); }
+.ds-item span { color: var(--ds-muted); }
+.ds-item .ds-item-h { text-align: right; }
+.ds-item:hover { background: var(--ds-raise); border-left-color: var(--ds-amber); }
+.ds-item:focus-visible { outline: 2px solid var(--ds-amber); outline-offset: -2px; }
+
+/* ④ 选中一条 */
+.ds-sel-head { display: flex; align-items: baseline; gap: var(--s2); margin: 0 0 2px; }
+.ds-sel-head b { font: 600 15px/1.2 var(--mono); color: var(--ds-ink); }
+.ds-tag {
+  padding: 1px 6px; border: 1px solid currentColor; border-radius: 2px;
+  font: 10px/1.5 var(--mono); letter-spacing: .06em;
+}
+.ds-tag.roof { color: var(--cal-roof); }
+.ds-tag.ground { color: var(--cal-ground); }
+.ds-card .kv { margin: 0; }
+.ds-card .kv dt { font-size: 10.5px; color: var(--ds-muted); }
+.ds-card .kv dd { font-size: 11.5px; color: var(--ds-ink-2); }
+/* ★ "未填"必须与"空"长得不一样：`kvList` 把 null/'' 印成 `未填` + `.na`。
+   暗底上那个"未填"如果与真值同色，读的人会把缺的数当成读到的数。 */
+.ds-card .kv dd.na { color: #6F7C8C; font-style: italic; }
+
+/* ── 页脚：一行。不折进 <details>、不省略 —— 收起来就等于没有。 ── */
+.ds-foot {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--s4);
+  margin-top: var(--s3); padding-top: var(--s2); border-top: 1px solid var(--ds-rule);
+  font: 10.5px/1.6 var(--mono); color: #6F7C8C;
+}
+.ds-foot-k { color: #5C6875; letter-spacing: .08em; }
+.ds-foot-v { color: var(--ds-ink-2); }
+.ds-foot-sep { color: var(--ds-rule); }
+.ds-foot-v.bad { color: var(--cal-roof); }
+
+/* ── 矮墙：左栏那三张仪器卡，把**行距**收紧一档 ───────────────────────────
+ * ★ 只动"行与行之间的空气"，不动字号：这三张卡是一张**表**，读的是对齐与节奏；
+ *   字小了读不清，而 6px 的行间空白是可以省的。
+ * ★ 实测（`_ds_left_fit.py`，2026-10-01）：
+ *     1920×1080：三卡合计 855，加两处间隔 ⇒ 需 879，而列高只有 808 —— **差 71px**
+ *     1600×950 ：需 928，列高 659 —— **差 269px**
+ *   `凭据` 卡 12 行 × 6px 的行间空白 = 66px，`dd` 行高 1.5→1.3 再省 28px
+ *   ⇒ 1080 当场装下；**950 仍然装不下，那就让它留在滚动区里** ——
+ *     不把字号再压一档去"凑"，凑出来的是一张读不清的表（这一条是决定，不是妥协）。
+ * ★ 阈值取 1100 而不是 860：原先进屏到 1100 这一段是"是墙、却装不下"，
+ *   而 860 以下那条媒体查询已经把它变成可滚的普通页了 —— 中间这一段是空白。
+ * ★ 左栏的卡不许因此被压扁：上面 `.ds-col.left > .ds-card { flex: 0 0 auto }`
+ *   比这里更硬（那是"卡不许装不下自己"），这条只是在它之下省空气。 */
+@media (max-height: 1100px) {
+  .ds-col { gap: 8px; }
+  .ds-col.left > .ds-card { padding: 10px 11px; gap: 4px; }
+  .ds-col.left > .ds-card h3 { padding-bottom: 4px; }
+  .ds-col.left .ds-rung-k { line-height: 1.25; }
+  .ds-col.left .ds-rung-s { line-height: 1.25; }
+  .ds-col.left .ds-card .kv { gap: 2px var(--s4); }
+  .ds-col.left .ds-card .kv dd { line-height: 1.3; }
+  .ds-col.left .ds-card .note { font-size: 10.5px; line-height: 1.5; }
+}
+
+/* 矮屏：不硬撑一屏，改成能滚的普通页（但**不**把大屏的深色底丢掉） */
+@media (max-height: 860px) {
+  .doc > .dscreen { height: auto; }
+  .ds-map { min-height: 460px; }
+  .ds-col.left { overflow: visible; }
+}
+@media (max-width: 1280px) {
+  .ds-body { grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr) minmax(260px, 1fr); }
+  .doc > .dscreen { height: auto; }
+  .ds-map { min-height: 460px; }
+}

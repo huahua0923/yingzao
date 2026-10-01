@@ -8,22 +8,53 @@
 现算（refresh）是写操作：挂 compute 门禁，且走子进程 —— 算它要 ezdxf + shapely，
 只在全功能的本机上有。
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from ..authz import PrincipalDep, require_cap, visible
 from ..deps import BuildingName, ComputeDep, SettingsDep
 from ..responses import not_found, ok
 from ..services import area_audit
 
 router = APIRouter(tags=["analysis"])
 
+# ★ 权限（2026-10-01 批次 2）：这一屏是**面积对账排名**，逐栋一行。
+#   全库那份按范围逐行过滤；单栋那份核那一栋。
+#
+#   ★ 过滤之后 `counts` **必须跟着重算** —— 它是 `rows` 的汇总，不是另一份数据。
+#     回全库的 counts 配过滤后的 rows，屏幕上就是「排名里 3 行，抬头写 92 栋」：
+#     一个数讲你看得见的，另一个讲全库，而**两个都长得像结论**。
+#     重算走 `area_audit.counts_of`（`fleet()` 自己也调它）—— **同一份实现**，
+#     不在这里再写一遍那五条 sum。
+#     （铁律 018：同一个数写在两个地方，两处一致也证明不了它是对的。）
 
-@router.get("/analysis/area")
-def area_fleet(cfg: SettingsDep) -> dict:
-    """全库对账排名 + 无法对账清单 + 数据来源（哪份日志、什么时候跑的）。"""
-    return ok(area_audit.fleet(cfg.root))
+
+@router.get("/analysis/area", dependencies=[Depends(require_cap("view"))])
+def area_fleet(cfg: SettingsDep, p: PrincipalDep) -> dict:
+    """全库对账排名 + 无法对账清单 + 数据来源（哪份日志、什么时候跑的）。
+
+    ★ 权限：三处**都要**过滤，少一处就是一条缝 ——
+      `rows`（逐栋排名）／`unauditable`（对不了账的楼，**同样带楼号**）／
+      `per_floor`（**以楼号为键**的字典）。只过滤 `rows` 的话，
+      「对不了账」那张表会把范围外的楼号原样报出来。
+    ★ `source` / `hint` 不过滤：它们是「这份快照是哪来的」，不含楼号。
+    """
+    data = area_audit.fleet(cfg.root)
+    data["rows"] = visible(p, data["rows"], lambda r: r["name"])
+    data["unauditable"] = visible(p, data["unauditable"], lambda r: r["name"])
+    kept = {r["name"] for r in data["rows"]}
+    data["per_floor"] = {k: v for k, v in (data.get("per_floor") or {}).items()
+                         if k in kept}
+    # ★ 只有**本来就有** `counts` 时才重算。没有日志时 `fleet()` 回的那份
+    #   **刻意不带 `counts`**（只有 `hint`），凭空补一个 `{0,0,0,0,0}` 会把
+    #   「还没有对账日志」读成「对账过，全库 0 栋」—— 那正是本项目反复栽的
+    #   「没量过与全对长得一样」。这一趟的职责是**按范围过滤**，不是顺手改形状。
+    if "counts" in data:
+        data["counts"] = area_audit.counts_of(data)
+    return ok(data)
 
 
-@router.get("/analysis/area/{name}")
+@router.get("/analysis/area/{name}",
+            dependencies=[Depends(require_cap("view", scope_param="name"))])
 def area_one(name: BuildingName, cfg: SettingsDep) -> dict:
     """单栋：从快照里取它的那行 + 逐层明细（若快照里带的话）。
 

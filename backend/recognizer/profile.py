@@ -57,14 +57,55 @@ class BuildingProfile:
     # 桥接再回缩成封闭足迹。0=不闭运算（LWPOLYLINE 楼有填充矩形已闭合）。默认 0 不破坏基线。
     outline_close_r: float = 0.0
 
+    # 可选：房号标注的「最近区域」兜底半径（米）。有些图的房号标注不画在房间内，
+    # 而画在楼外（ny27 的六个房号排成一列落在南墙外），严格包含判据一个都配不上 → 房间全丢。
+    # >0 时：严格包含失败的区域，退到「距离 <= 本值」的最近**未占用**标注（一对一）。
+    # 默认 0 只用严格包含 —— c029 那类图有 422m 外的野标注，
+    # 不封顶的最近归属会把它硬配到真房间上。
+    label_nearest_max: float = 0.0
+
     # 可选：X 隔离区间（毫米）。DXF 里多栋并排/重复复制时，只取主列。
     # None = 不隔离（沿用整幅 X 范围，如理化楼）。
     x_range: tuple = None  # (x_min_mm, x_max_mm)
+
+    # 可选：**一张图描述多层**时，把该图的图元并进哪些楼层。{源图带号: [目标楼层号, ...]}。
+    # 作为键出现的图带**不再是独立楼层**（它描述的内容由目标楼层承载）。
+    #
+    # 为什么需要（c009 第九教学楼，2026-09-12 定案）：图纸里第 0 张图不是「一层」。它图上
+    # 的房号同时有 `-A-01-H1/H2`（学术报告厅/新闻中心，一层）和 `-A-02-H3/H4`（其他仓库/
+    # 泵房，二层）—— 圆厅是**通高二层**的大空间，所以一张图描述了两层。原先按「图带号 =
+    # 楼层号」处理，这张图被当成一个畸形底层（轮廓只有圆厅的 1416㎡），于是用
+    # `skip_floors:[0]` 把它整个剔出模型 —— 结果**把两个圆厅一起剔掉了**（用户实拍图里
+    # 最显眼的西端椭圆大厅与东端弧形大厅）。正确做法：这张图的墙属于 1 层和 2 层。
+    #
+    # 并图**不需要重新对齐**：实测（_scratch/_c009_overlay01.py 叠图）第 0 张与第 1 张的
+    # 局部坐标是同一套建筑坐标 —— 第 0 张的两个椭圆正落在第 1 张 A/C 分区的开间上。所以
+    # 只需按 sheet_shift() 把该图图元平移进目标图带，to_local 得到的局部坐标与源图完全一致。
+    #
+    # **图带号 vs 交付层号（c009 定案时踩过）**：均匀楼的层号是 `f = round((y-cy)/offset)`，
+    # 而 c009 的图带号恰好等于楼层号（第 1 张图 = 一层），于是 floor0 被并走后交付变成
+    # floor1..floor5 —— **层号非 0 基**。只读门禁 `qa_structural.load_floors()` 从 floor0.json
+    # 顺序读、遇缺即停，读到就 break → 本栋判「无楼层」→ 全库汇总崩在 unpack 4 元组。
+    # 修法是把层号口径整体下移一层：`cy += offset`（于是 f = 图带号-1，floor0 = 一层，
+    # 每个交付层的 frame_center 与本地坐标**逐字节不变**：frame_center_new(f) =
+    # frame_center_old(f+1)），并把 sheet_floors 的键一起改成 -1:{0,1}。
+    # 全库 49 栋只有 c009 需要这一步（其余都从 floor0 起）。
+    # None = 一张图只对一层（其余 48 栋逐字节不变）。
+    sheet_floors: dict = None
 
     # 可选：阶梯状楼（塔楼+裙楼）每层平面 Y 中心（毫米），按楼层号索引。
     # 阶梯楼的各层平面在图纸上以「非均匀间距」上下排布（裙楼宽、塔楼窄，两序列交错），
     # 单 offset 无法表示，故直接存每层 Y 中心。None = 均匀楼（楼层 i 在 cy + i*offset）。
     floor_ys: list = None
+
+    # 可选：**每层的 Y 窗口**（CAD 毫米，[[y0,y1], ...]，与 floor_ys 同序）。
+    # 为什么需要（2026-09-17 c020/c037/c044/c001 实测）：一张 DXF 里除了本楼各层平面，
+    # 还常画着**基础平面图、剖面/立面图、另一栋的图、场地总平面** —— 与本楼平面共享
+    # 同一段 X，但落在别的 Y 上。`floor_of` 只按"最近层中心"归属，这些杂项会被并进
+    # 最近那层 → 表现为"一张图两块""首层楼板 3 块""柱多一根"，SU 规格的逐带锚点门禁直接判红。
+    # 给了窗口：**窗口内**按最近中心归属；**窗口外**返回 None（不属于任何层，
+    # 识别/房间提取/渲染三处都是 None 或 `!= F` 判定 → 自然丢弃）。None = 不启用（老楼逐字节不变）。
+    floor_y_bands: list = None
 
     # 可选：阶梯楼「两列」布局（裙楼+塔楼分列 X，X 是唯一能区分两列的判据），如六教 C006。
     # 每层一个 [cx, cy, x_min, x_max]（毫米）：
@@ -72,6 +113,23 @@ class BuildingProfile:
     #   x_min/max= 该层墙体 X 区间（floor_of 用 X 先判列，列内再按 Y 最近取层）
     # None = 单列楼（用 floor_ys 或均匀 offset）。
     floor_plans: list = None
+
+    # 可选：**帧对齐附加平移**（CAD 毫米）：{"层号": [dx, dy]}。`to_local` 减去它；
+    # `floor_of` 判归属**不受影响**（它走 `frame_center`，见那里的 docstring）。
+    # 用途：层带原点（判归属要留在"图纸画在哪"）与局部坐标原点（要的是"建筑上的同一
+    # 基准"）是两个量，图纸把各层画在图纸不同位置时它们差几米到几十米（实测 c027
+    # 14.075m / c103 11.85m / c015 47m）。代数上它就是**逐位还原**：原点取均匀式
+    # f*offset+cy 再减 (floor_ys[f] - (f*offset+cy))，结果恒等于 y - floor_ys[f]。
+    # ★ 2026-09-29 实测交接，写在这里免得下一个人以为它在正常工作：
+    #   这个机制 2026-09-16 自动写过一轮又全撤了（`_scratch/_revert_frame_shift.py`
+    #   的 docstring：异形层会被配出垃圾解）；**今天全库 92 份档案里 0 份在用**；
+    #   而且**两个加载器都没带这个键**（`run_building.load_profile` 与
+    #   `run_step.profile_from_cfg` 实测都 0 命中）⇒ 写进 profile.json 等于没写。
+    #   2026-09-29 给两个加载器各补了一行，并首次真用它：c011 记 D1 = **−1 层**
+    #   （删 floor_ys 后层带原点变均匀式，靠它把各层拉回同一基准）。
+    #   ⚠ 「两个加载器都带了」是**这一刻**的测量，不是性质；新增投递通道要回来核
+    #     `backend/web/console_meta.py:_delivery_channels()`。
+    frame_shift: dict = None
 
     # 可选：构件分类器选择。"lwpolyline" = 理化楼基线（墙/门/台阶共用图层，按 LWPOLYLINE 点数区分）；
     # "line" = 六教 C006（墙 = LINE 双线，门 = INSERT 块，柱 = INSERT 块）。默认 lwpolyline 不破坏基线。
@@ -102,6 +160,28 @@ class BuildingProfile:
     # None = 不启用子集统一。默认 None 不破坏基线。
     outline_unify_floors: list = None
 
+    # 可选：**室外台阶**（逐层给出本地米矩形 [x0, y0, x1, y1]）—— 不建墙、不进楼板。
+    # 用途与判据（2026-09-15，六教 C006 F0 东西两侧的室外大台阶）：
+    #   图上「9.3m 深平台 + 7 级 0.35m 踏步」，外沿只是一条**边线**（没有第二皮），
+    #   但它的两侧挡墙是真墙 → 会在楼板轮廓里围出 U 形里腔（`Polygon(exterior)` 会填实），
+    #   平面轮廓因此虚胖 588㎡。用户判例：「室外的就是室外台阶」。
+    # 为什么不自动判：自动判据（≥3 条等距平行线 + 两端围合）在 c006 会同时命中**室内
+    #   楼梯间与中庭大台阶**（实测每层 2~6 处）→ 把室内楼板挖掉。具名口子不可误伤。
+    # None = 无。默认 None 不破坏其他楼基线。
+    outdoor_steps: dict = None
+
+    # 可选：**屋面补块**（`{层: [房号]}`）—— 下层是该房间、本层图上没有楼板的地方要封顶。
+    # 判例 c006 八角厅：1~4 层是房间（6-C-01-05 … 6-C-04-05），5 层（F4）图上什么都没有，
+    # 但那就是八角厅的屋面。按房号取面并进该层轮廓；GLB/SU 的 `build_slab` 会按
+    # 「上面有没有楼层」把它切成**屋面色**。None = 无。
+    roof_rooms: dict = None
+
+    # 可选：**保留内院/天井内环**（默认 False = 历史口径，轮廓取外环填实）。
+    # 回字形平面（c072/c073/c103/c009）的内院是真实存在的：填实会让楼板凭空多出整片面积，
+    # 而图纸自带面积表里内院**不计面积**（实测 c072/c073 每层 +1200㎡ 正好是内院带）。
+    # True ⇒ `blocks_to_outline(keep_holes=True)` + 交付写 `outline_holes`。
+    keep_courtyard_holes: bool = False
+
     # 可选：line 约定下单线墙（无平行近邻）的可见厚度（米）。双线配对后剩余的孤线
     # （门垛/短段/女儿墙）没有厚度信息，按此最小可见厚度渲染，不冒充有厚度的墙。
     single_wall_t: float = 0.10
@@ -128,16 +208,102 @@ class BuildingProfile:
     # 默认 False: 无斜墙/曲墙的楼一个字节都不变。
     pair_curved: bool = False
 
+    # 可选：True = 房间只读交付的 floors/floorN.json（墙 / 轮廓 / 门洞盒）——「单源墙」。
+    # 背景（2026-09-11 ny27 复盘，见《算法与流程·对标四族·重构.md》§1）：同一栋楼曾有三套
+    # 墙几何 —— recognize 的粗环 blob / _wall_thin_batch 的交付内墙 / 本模块又自推的一套。
+    # 自推那套对「3+ 点、跨度 < 3m 的不闭合折线」按门符号丢弃，交付那套保留 → 单元内的短
+    # 隔墙只存在于交付墙里；谁按交付墙去修房间边界，房间就被切成碎块（56㎡→3 块）。
+    # 默认 False：不改变其余楼基线。**顺序铁律**：必须在内墙重建之后运行。
+    rooms_from_floors: bool = False
+
+    # 可选：单源墙模式下「定连通性」的封缝半径（米），0 = 不封。
+    # 交付墙是**真厚薄墙**，两块墙在接头处往往差零点几米没接上（配对出的矩形只覆盖本段面的
+    # 范围），自由空间就从缝里漏成一整块 —— ny27 F0 实测：不封缝时全层只有 **1 个**房间候选。
+    # ③ 那套「假边」之所以能围出房间，是因为它对每条面线各 buffer 0.15，等于顺手做了闭运算。
+    # 这里**只把膨胀用于判连通分量**，最终边界依旧裁在未膨胀的真墙身上 —— 不新增任何墙。
+    # 取值靠实测的稳定性平台：ny27 F0 在 0.06–0.10 稳定 15 个分量（6 套 + 9 公共空间），
+    # <0.06 欠封、≥0.12 过封（套内卫生间/厨房隔墙被切开，6 个房号会掉到子房间上）。
+    room_seal: float = 0.0
+
+    # 可选：单源墙模式下把房间边界贴回墙内皮的外扩量（米），0 = 不贴。
+    # 房间候选的边界停在「墙区」外沿，而墙区比真墙宽，房间四周被削掉约一个外扩量。
+    # 外扩后裁到「轮廓 − 交付墙身」：只朝墙侧长、被真墙身挡住，不越过图纸墙线、不新增墙。
+    room_grow_to_wall: float = 0.0
+
+    # 可选：房间通路分派（见 extract/room_route.py）。
+    #   "regen"  = 主线，从 DXF 现推墙（不写 = 默认，等同历史行为）；
+    #   "single" = 支线，读交付 floors/floorN.json 的墙（等同 rooms_from_floors=True）；
+    #   "auto"   = **逐层按图择优** —— 两条线都算，用「图纸自己的房号」当裁判，
+    #              谁把更多房号认领到互不相同的房间里就用谁。
+    # 为什么需要（2026-09-14 实测）：两条线各有胜负，写死任何一条都会出事 ——
+    #   c033 主线 F0 从 23 掉到 3、合计 33/143；支线 143/143。
+    #   c006 支线 27/221、c116 支线 35/89；主线分别 205/221、83/89。
+    #   c026/c041/c022/c027/c029 两条线**逐层完全相同**（换线无用，缺口在墙上）。
+    # 未写此键的楼行为**逐字节不变**（老楼零影响）。
+    room_route: str = ""
+
+    # 短线密集簇过滤（斜向楼梯踏步线被当墙，见 classify_line._drop_tread_clusters）
+    tread_cluster_filter: bool = False
+
+    # 中庭开洞：{层号: [房号,...]} —— 通高中庭下面几层的楼板要挖穿（见 recognize 里的注释）
+    atrium_rooms: dict = None
+
+    # 中庭开洞（按几何）：{目标层: 源层} —— 目标层图纸上没登记房号时，借用源层的几何挖洞
+    atrium_from: dict = None
+
 
 # ---- 坐标助手（纯函数，只依赖 profile 的变换参数） ----
 
+def frame_center(p, f):
+    """第 f 层「本地原点」对应的 CAD 毫米坐标 —— 与 to_local 同一套口径。
+
+    单独抽出来的唯一原因：sheet_shift() 要算「把图带 S 的图元挪到图带 F」的平移量，
+    必须和 to_local 用**同一个** y 口径（floor_plans 的 cy / floor_ys[f] / f*offset+cy），
+    否则并图后局部坐标会差一个常量，而这种错只有对着图才看得出来。
+
+    ★ 2026-09-16 **帧对齐另加一层**（`profile.frame_shift`）：层带（判归属）必须留在
+    "图纸画在哪"，而局部坐标要的是"建筑上的同一基准" —— 图纸把各层画在图纸不同位置时，
+    这两个量会差几米到几十米（实测 c027 14.075m、c103 11.85m、c015 47m）。
+    所以：`frame_center` 仍返回**层带原点**（floor_of 判归属照用，不动），
+    `to_local` 再减 `frame_shift`（自动对齐脚本 `_scratch/_align_frames_auto.py` 写）。
+    """
+    if p.floor_plans:
+        return float(p.floor_plans[f][0]), float(p.floor_plans[f][1])
+    fy = p.floor_ys[f] if p.floor_ys else (f * p.offset + p.cy)
+    return float(p.cx), float(fy)
+
+
+def frame_shift(p, f):
+    """该层的**帧对齐附加平移**（毫米）；没配就是 (0,0)。"""
+    d = getattr(p, "frame_shift", None) or {}
+    v = d.get(str(f), d.get(f))
+    if not v:
+        return 0.0, 0.0
+    return float(v[0]), float(v[1])
+
+
 def to_local(p, x, y, f):
     """CAD 毫米坐标 → 本地米坐标（f 为楼层号）。"""
-    if p.floor_plans:
-        cx, cy, _, _ = p.floor_plans[f]
-        return ((x - cx) / 1000.0, (y - cy) / 1000.0)
-    fy = p.floor_ys[f] if p.floor_ys else (f * p.offset + p.cy)
-    return ((x - p.cx) / 1000.0, (y - fy) / 1000.0)
+    fx, fy = frame_center(p, f)
+    sx, sy = frame_shift(p, f)
+    return ((x - fx - sx) / 1000.0, (y - fy - sy) / 1000.0)
+
+
+# X 区间判定容差（CAD 毫米）：真实墙线恰好画在区间边界上时，浮点尾数会超出界
+# （实测 c006 西列东外皮 x=1142175.003 对区间上界 1142175.0）→ 严格比较会把这批
+# 真实线丢掉。1mm 远小于任何设计尺寸，两列间隙 340m，不会串列。
+RANGE_TOL_MM = 1.0
+
+
+def sheet_shift(p, src, dst):
+    """把「图带 src」的 CAD 图元平移到「图带 dst」需要加的 (dx, dy)（毫米）。
+
+    均匀楼就是 (0, (dst-src)*offset)；阶梯楼按两层各自的原点算，所以这里一律走
+    frame_center，不写死 offset。平移后 to_local(..., dst) 与 to_local(..., src) 恒等。
+    """
+    sx, sy = frame_center(p, src)
+    dx_, dy_ = frame_center(p, dst)
+    return dx_ - sx, dy_ - sy
 
 
 def floor_of(p, x, y):
@@ -150,10 +316,19 @@ def floor_of(p, x, y):
     （若只 round(y/offset)，当 cy > offset/2 时整栋楼楼层会整体 +1，如第一教学楼。）
     """
     if p.floor_plans:
-        cands = [(i, plan) for i, plan in enumerate(p.floor_plans) if plan[2] <= x <= plan[3]]
+        cands = [(i, plan) for i, plan in enumerate(p.floor_plans)
+                 if plan[2] - RANGE_TOL_MM <= x <= plan[3] + RANGE_TOL_MM]
         if cands:
             return min(cands, key=lambda t: abs(y - t[1][1]))[0]
         return min(range(len(p.floor_plans)), key=lambda i: abs(y - p.floor_plans[i][1]))
+    # ★ 每层 Y 窗口（profile.floor_y_bands）：窗口外的实体**不属于任何层** → None。
+    #   必须先判窗口再按最近中心归属，顺序反了会把窗口外的杂项归到最近层。
+    _bands = getattr(p, "floor_y_bands", None)
+    if _bands:
+        for _i, _b in enumerate(_bands):
+            if _b[0] <= y <= _b[1]:
+                return _i
+        return None
     if p.floor_ys:
         return min(range(len(p.floor_ys)), key=lambda i: abs(y - p.floor_ys[i]))
     return round((y - p.cy) / p.offset)
@@ -161,11 +336,17 @@ def floor_of(p, x, y):
 
 def in_floor_x_range(p, x):
     """实体 X 中心是否落在楼栋有效 X 区间（供分类器在 floor_plans 两列布局下过滤间隙墙）。
-    floor_plans 优先（各层 X 区间并集），否则用 x_range，均无则全保留。"""
+    floor_plans 优先（各层 X 区间并集），否则用 x_range，均无则全保留。
+
+    ⚠️ 判据带 RANGE_TOL_MM 容差：**真实墙线画在区间边界上时浮点尾数会超出**
+    （实测 c006 西列东外皮 x=1142175.003 vs 区间上界 1142175.0），严格比较会把
+    这一批真实墙线整条丢掉 —— 而两列间隙 340m，1mm 容差不可能串列。
+    """
     if p.floor_plans:
-        return any(plan[2] <= x <= plan[3] for plan in p.floor_plans)
+        return any(plan[2] - RANGE_TOL_MM <= x <= plan[3] + RANGE_TOL_MM
+                   for plan in p.floor_plans)
     if p.x_range:
-        return p.x_range[0] <= x <= p.x_range[1]
+        return p.x_range[0] - RANGE_TOL_MM <= x <= p.x_range[1] + RANGE_TOL_MM
     return True
 
 
