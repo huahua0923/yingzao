@@ -24,12 +24,79 @@ const LABEL_MIN_AREA_PX = 260;   // 标签只在条大到读得清时出现，�
 //   数据大屏的图例小样要画"这条线在影像上长什么样" —— 那个颜色只有从这里取
 //   才与地图上真正画出来的一致。在别处再抄一份 rgb 就是两个来源（铁律 018），
 //   而颜色对不上是**看不出来**的：两个橙摆在不同底色上，谁都像个正常的橙。
+// ★★ **这张表是深底版**（2026-10-02）。
+//
+//   旧值是**为浅底选的**：`rgba(193,68,14,.62)` 那种深赭压在中灰的航拍影像上够看，
+//   转深色之后它压在同一张影像上仍然够看 —— 但**图例小样是画在面板上的**，
+//   而面板已经是 `--surface #151A21`。实测：旧朱 `#C1440E` 压 `--surface` 只有
+//   **3.4:1**（`portal.css` 顶上那段自己写着这个数），而它正是全页最小的字号。
+//   ⇒ 换成 `:root` 里那三支**已经量过对比度**的语义色（accent 6.8 / warn 8.1 / muted 5.7）。
+//
+//   ★ 小样（`datascreen.js:drawSwatch`）与图里的线**读的是同一张表** ——
+//     所以改这里它们一起改，不存在「图例说一个颜色、图上画另一个颜色」。
 export const CALIBER_STYLE = {
-  roof_p50:        { stroke: 'rgba(193,68,14,.62)',  fill: 'rgba(193,68,14,.08)' },
-  fallback_roof:   { stroke: 'rgba(140,118,34,.62)', fill: 'rgba(140,118,34,.08)' },
-  fallback_ground: { stroke: 'rgba(110,110,110,.55)', fill: 'rgba(110,110,110,.06)' },
-  _:               { stroke: 'rgba(120,120,120,.50)', fill: 'rgba(120,120,120,.05)' },
+  // 实测屋顶高（231 条）—— 最"真"的一档，用朱
+  roof_p50:        { stroke: 'rgba(255,122,69,.80)',  fill: 'rgba(255,122,69,.10)' },
+  // 兜底·屋顶（16 条）
+  fallback_roof:   { stroke: 'rgba(232,163,61,.80)',  fill: 'rgba(232,163,61,.10)' },
+  // 兜底·地面（94 条）—— ★ 这一档的 `h` 是**地高不是楼高**，画成和真楼一个色
+  //   等于在屏幕上说"这些也是楼"，所以它必须明显退到后面去
+  fallback_ground: { stroke: 'rgba(134,149,167,.75)', fill: 'rgba(134,149,167,.08)' },
+  _:               { stroke: 'rgba(134,149,167,.55)', fill: 'rgba(134,149,167,.06)' },
 };
+
+/** 世界之外那一圈。**不在这里写死一个数** —— 从 CSS 读 `--void`（唯一定义处）。 */
+const VOID_FALLBACK = [8, 11, 16];   // #080b10
+const VOID_HEX = (() => {
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue('--void').trim();
+  return v || '#080b10';
+})();
+const VOID_RGB = (() => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(VOID_HEX);
+  if (!m) return VOID_FALLBACK;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+})();
+
+// ★★ 正射图**自带三块纯黑的角**，而那不是"暗"，是**没有测绘**。
+//
+//   实测（`campus_ortho.jpg` 2562×2538，取四角与中心）：
+//     TL (0,0,0)   TR (0,0,0)   BL (0,0,0)   BR (183,149,122)   中心 (41,49,36)
+//   ⇒ 测区是一次航飞的**斜置矩形**，而栅格按外接正矩形出图，三个角没东西。
+//   旧版把这图铺在一块**米色板**上（`#E8E3D9`，为浅底画的），于是那三块黑
+//   在米色上是一道刺眼的黑三角；页面转深色之后，米色板本身又成了"纸贴在屏幕上"。
+//   ⇒ 两件事一起改：**板子换成 `--void`**，并把这三块纯黑**归到 `--void`** ——
+//     屏幕上剩下的是"有测绘的那一片"，边界由影像自己的边给出（那才是真信息）。
+//   ★ 阈值取得很紧（三通道都 < 12）：航拍里再暗的树影/水面也在 20 以上，
+//     而 `--void` 是 (8,11,16) —— 归过去之后最深的地方反而**变亮**，不会吃掉内容。
+const BLACK_MAX = 12;
+
+/** 把"没有测绘"的那几块归成 `--void`。**只做一次**，之后 `drawImage` 直接用这张。 */
+function voidedImage(img) {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  let d;
+  try {
+    d = g.getImageData(0, 0, c.width, c.height);
+  } catch (e) {
+    // 同源失败（不该发生，图是自家路由发的）。**退回原图**并让调用方印出来 ——
+    // 悄悄退回会让"黑角还在"看起来像"我压根没打算改它"。
+    return { img, replaced: -1 };
+  }
+  const a = d.data;
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    if (a[i] < BLACK_MAX && a[i + 1] < BLACK_MAX && a[i + 2] < BLACK_MAX) {
+      a[i] = VOID_RGB[0]; a[i + 1] = VOID_RGB[1]; a[i + 2] = VOID_RGB[2];
+      n++;
+    }
+  }
+  g.putImageData(d, 0, 0);
+  return { img: c, replaced: n };
+}
 
 /** 球面上算不出来的东西不在这里算：这是平面校区的 1:1 像素映射。 */
 export function createOrthoMap(host, base, { onPick } = {}) {
@@ -52,6 +119,11 @@ export function createOrthoMap(host, base, { onPick } = {}) {
       + '（要的是 ortho-base.js 顶层那两个数，不是 facts 里的）');
   }
   const view = { cx: W / 2, cy: H / 2, s: 1 };
+  // "没有测绘"那几块归成 --void。**在这里做一次**，不进 render() ——
+  // 那是 650 万像素的逐点扫描，放进每帧会把它变成一台幻灯片。
+  const src = voidedImage(base.img);
+  /** 量出来的替换点数（-1 = getImageData 被拒，退回原图）。调用方要印它。 */
+  const voided = src.replaced;
   let fitS = 1, vw = 1, vh = 1, dpr = 1;
   let hover = null, selected = null, moved = false, down = null, raf = 0;
 
@@ -104,14 +176,17 @@ export function createOrthoMap(host, base, { onPick } = {}) {
     if (!vw || !vh) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, vw, vh);
-    ctx.fillStyle = '#E8E3D9';               // 图外面的底色：让"图有边界"看得见
+    // 图外面的底色 = 世界之外那一圈（`--void`）。**不是米色板** ——
+    // 米色是浅底时代给"图有边界"用的底，转深色后它成了屏幕上唯一一块纸。
+    ctx.fillStyle = VOID_HEX;
     ctx.fillRect(0, 0, vw, vh);
     ctx.setTransform(view.s * dpr, 0, 0, view.s * dpr,
                      (vw / 2 - view.cx * view.s) * dpr, (vh / 2 - view.cy * view.s) * dpr);
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(base.img, 0, 0);
-    // ★ 画布边界：出图范围之外什么都没画，画出来会是底色 —— 这条线是"到此为止"的凭据。
-    ctx.lineWidth = 1.5 / view.s; ctx.strokeStyle = 'rgba(20,17,14,.45)';
+    ctx.drawImage(src.img, 0, 0);
+    // ★ 出图范围边界：这是"到此为止"的凭据。深底上必须是**亮发丝线**，
+    //   原来那条 `rgba(20,17,14,.45)` 是深底画深线 ⇒ 屏幕上什么都没有。
+    ctx.lineWidth = 1.5 / view.s; ctx.strokeStyle = 'rgba(215,224,234,.22)';
     ctx.strokeRect(0, 0, W, H);
 
     const showLabels = view.s >= 0.55;
@@ -128,8 +203,10 @@ export function createOrthoMap(host, base, { onPick } = {}) {
       //   341 条里有 94 条的 `h` 是**地高不是楼高**（源数据层自己的定义），
       //   把它们画成和真楼同一个颜色，等于在屏幕上说"这些也是楼"。
       const st = CALIBER_STYLE[b.height_caliber] ?? CALIBER_STYLE._;
-      ctx.strokeStyle = isSel ? '#C1440E' : isHov ? '#14110E' : st.stroke;
-      ctx.fillStyle = isSel ? 'rgba(193,68,14,.22)' : st.fill;
+      // 选中 / 悬停也要**亮起来**：旧值是 `#C1440E` / `#14110E`（深赭 / 近黑），
+      // 压在深底上等于把那条线**藏掉** —— 而这两个态正是"我点了它"的唯一回执。
+      ctx.strokeStyle = isSel ? '#FF7A45' : isHov ? '#F2F6FA' : st.stroke;
+      ctx.fillStyle = isSel ? 'rgba(255,122,69,.26)' : st.fill;
       ctx.fill();
       ctx.stroke();
       if (showLabels && b.centroid && Number.isFinite(b.area_m2)) {
@@ -147,9 +224,11 @@ export function createOrthoMap(host, base, { onPick } = {}) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.font = '10px "Cascadia Mono", Consolas, monospace';
     const w = ctx.measureText(t).width;
-    ctx.fillStyle = 'rgba(246,243,237,.86)';
+    // 标签片：**深玻璃 + 亮字**（旧版是米底墨字 —— 那是一片一片的小白纸，
+    // 而它们压的正是航拍影像，读起来像图上贴了便利贴）。
+    ctx.fillStyle = 'rgba(8,11,16,.78)';
     ctx.fillRect(sx - w / 2 - 3, sy - 7, w + 6, 13);
-    ctx.fillStyle = '#3A342D';
+    ctx.fillStyle = '#D7E0EA';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(t, sx, sy);
     ctx.setTransform(view.s * dpr, 0, 0, view.s * dpr,
@@ -228,6 +307,8 @@ export function createOrthoMap(host, base, { onPick } = {}) {
     requestRender,
     fit,
     zoomBy,
+    /** "没有测绘"那几块归成 `--void` 的**点数**（-1 = 读像素被拒、退回原图）。 */
+    voidedPx: voided,
     select(b) { selected = b; render(); },
     /** 把某个块摆到屏幕中央（从别的控件点过来时用）。 */
     focus(b, minScale = 1.1) {

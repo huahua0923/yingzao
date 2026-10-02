@@ -109,6 +109,22 @@ export function rich(text) {
  */
 export const note = (text, kind = '') => el('p', { class: `note ${kind}` }, rich(text));
 
+/**
+ * 口径抽屉 —— 「会改变判断、但不该压在画面上」的那几句说明。
+ *
+ * ★ 用户 2026-10-01：「现在每个页面有很多解释，这些没有啥用吧，只要功能」。
+ *   可这些**不是**装饰性解释：比如「轮廓只覆盖图中间那一片」—— 不知道它，
+ *   「图上没有轮廓」会被读成「那里没有房子」，那是**另一个结论**。
+ *   两难的出路是**默认收起**：屏幕上只剩一行可点的小字，点开才是全文。
+ *   ⇒ 验收脚本 `_p2_shots.py` 的 B 腿据此分档：屏上的成段文字必须是**数据读数**，
+ *     说明文字只允许出现在 `<details class="caliber">` 里面。
+ *   ★ 抽屉里的字照样要进「对比度」那一趟（它展开后仍压在世界上）。
+ */
+export function caliber(title, ...body) {
+  return el('details', { class: 'caliber' },
+    el('summary', {}, el('span', { text: title })), ...body);
+}
+
 /** 数字格式化（不许出现 `NaN`／`undefined` 这种字面量上屏）。 */
 export function num(v, digits = 1, unit = '') {
   const n = Number(v);
@@ -121,4 +137,23 @@ export function int(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '—';
   return Math.round(n).toLocaleString('zh-CN');
+}
+
+/**
+ * 一排 KPI 卡。**列数由条数算出来**，不是 CSS 里写死的 —— 写死 4 列时，
+ * 纵览驾驶舱那 6 张会剩两格空着（用户 2026-10-01 一眼看出来的那条）。
+ *
+ * 规则：`n ≤ 4` 排一行；多于 4 张就拆两行，每行 `ceil(n/2)` 张
+ * （6 ⇒ 3×2 排满；5 ⇒ 3+2；8 ⇒ 4×2 排满）。两行以上时列数必须是
+ * 「能整除或只差一格」，否则右下角又会空出来。
+ */
+export function statBox(pairs) {
+  const n = pairs.length;
+  const cols = n <= 4 ? n : Math.ceil(n / 2);
+  const s = el('div', { class: 'stats' });
+  s.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  for (const [v, k] of pairs) {
+    s.appendChild(el('div', {}, el('b', { text: v }), el('small', { text: k })));
+  }
+  return s;
 }

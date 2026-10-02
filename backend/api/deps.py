@@ -21,6 +21,22 @@ from typing import Annotated, NamedTuple
 from fastapi import Depends, Path, Request
 from fastapi.routing import APIRoute
 
+# ★ 直接 `python backend/api/deps.py` 跑末尾那段自检入口时，`__package__` 是空的
+#   ⇒ 下面那句 `from .responses import …` 抛「attempted relative import with no
+#   known parent package」。屏幕上像"这个文件坏了"，而它是好的（铁律 168 同族）。
+#   这里把直接运行**转成** `-m`，两条跑法都通；`-m` 进来时 `__package__` 非空，
+#   这一段不执行。同一个守卫在 `authz.py` / `routers/portal.py` / `routers/tiles.py`
+#   里各有一份。
+if __package__ in (None, ""):
+    import os as _os
+    import subprocess as _sp
+    import sys as _sys
+
+    _root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    _mod = (_os.path.relpath(_os.path.abspath(__file__), _root)[:-3]
+            .replace(_os.sep, ".").replace("/", "."))
+    _sys.exit(_sp.call([_sys.executable, "-m", _mod, *_sys.argv[1:]], cwd=_root))
+
 from .responses import ERR_COMPUTE_DISABLED, ERR_LOCAL_ONLY, ApiError
 from .settings import Settings, get_settings
 

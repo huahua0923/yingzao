@@ -1,0 +1,314 @@
+{
+ "_说明": "公共流程定义。改这个文件就是改流程；不用动 console_meta.py 的代码。",
+ "_版本": 1,
+ "_字段": {
+  "id": "阶段标识（唯一）",
+  "no": "显示序号",
+  "label": "显示名",
+  "scope": "single=单栋 / source=源数据 / all=全仓",
+  "script": "相对仓库根的脚本路径",
+  "args": "参数模板；{name} 会被替换成楼号",
+  "writes": "true=会写盘（data/** 是交付件，写前先留档）",
+  "produces": "产出的相对路径（相对 data/buildings/<name>/，或相对仓库根）",
+  "danger": "high=危险操作（会覆盖 floor json）",
+  "runnable": "false=页面不提供按钮",
+  "why_manual": "为什么必须人工跑。这条不填，页面会显示「为什么」为空"
+ },
+ "stages": [
+  {
+   "id": "dwg2dxf",
+   "no": 0,
+   "label": "DWG → DXF",
+   "scope": "source",
+   "script": "convert_dwg_to_dxf.py",
+   "writes": true,
+   "slow": true,
+   "runnable": false,
+   "produces": [],
+   "upstream": null,
+   "why_manual": "需要 ODA File Converter 桌面程序 + DWG 源目录，属一次性摄入。命令行：python -u convert_dwg_to_dxf.py --filter <名>（audit=1 是铁律，不开会漏实体）",
+   "desc": "二进制 DWG 转成 ezdxf 可读的 DXF，是整个管线的地基"
+  },
+  {
+   "id": "recognize",
+   "no": 1,
+   "label": "识别出图",
+   "scope": "single",
+   "script": "backend/web/run_step.py",
+   "args": [
+    "{name}",
+    "recognize"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": true,
+   "produces": [
+    "floors/floor0.json",
+    "spec.json"
+   ],
+   "upstream": "dxf",
+   "desc": "读 DXF → 分类构件 → 按 22 步逐层组装 → 写 floors/floor*.json + spec.json"
+  },
+  {
+   "id": "gate",
+   "no": 2,
+   "label": "★ 结构 × 源图纸门禁",
+   "scope": "single",
+   "script": "audit_gate.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": true,
+   "produces": [
+    "{name}-audit.json"
+   ],
+   "upstream": "floors",
+   "desc": "把「识别 vs CAD 图纸」提到第一位：逐层量漏墙率（M）/糊块（W）/错位（F）+ 量具自检（G，源墙量不到就报 GATE_BLIND 不许判绿）+ 层身份辨识（D段=地下室 / 内容集中=屋面层嫌疑）。退出码非 0 = 有 ERROR 层。只读 floors，不改一个字节"
+  },
+  {
+   "id": "qa",
+   "no": 3,
+   "label": "结构体检 I1–I10",
+   "scope": "single",
+   "script": "qa_structural.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": false,
+   "slow": false,
+   "runnable": true,
+   "produces": [],
+   "upstream": null,
+   "desc": "不变量门禁，只读存档 JSON 不写任何数据。任何改动后必跑。ERROR 数量是回归的第一指标。★ 它**只查内部自洽、完全不碰源图纸**，所以不能替代 gate（自洽的错几何照样自洽）"
+  },
+  {
+   "id": "cadrender",
+   "no": 4,
+   "label": "出忠实源图纸",
+   "scope": "single",
+   "script": "_dxf_cad_render.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": true,
+   "produces": [
+    "dxf_plan/index.html"
+   ],
+   "upstream": "floors",
+   "desc": "白底黑线、忠实还原 CAD 线稿（真值参照）"
+  },
+  {
+   "id": "recogrender",
+   "no": 5,
+   "label": "出识别叠加图",
+   "scope": "single",
+   "script": "_dxf_png_batch.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": true,
+   "produces": [
+    "dxf_plan_recog/floor0.png"
+   ],
+   "upstream": "floors",
+   "desc": "灰细线源墙垫底 + 彩色识别结果（灰实=墙/红=门/绿=楼梯井/蓝=柱）"
+  },
+  {
+   "id": "compare",
+   "no": 6,
+   "label": "A|B 对比页",
+   "scope": "single",
+   "script": "_dxf_compare_render.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": false,
+   "runnable": true,
+   "produces": [
+    "compare.html"
+   ],
+   "upstream": "floors",
+   "desc": "源图纸(真值) vs 第一轮识别，逐层并排 —— 找识别漏/错的主要视窗"
+  },
+  {
+   "id": "thin",
+   "no": 7,
+   "label": "重建内墙（单栋强制）",
+   "scope": "single",
+   "script": "_wall_thin_force.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": true,
+   "danger": "high",
+   "produces": [
+    "floors/floor0.json"
+   ],
+   "upstream": "dxf",
+   "inplace": true,
+   "why_manual": "批量版 _wall_thin_batch.py 忽略 argv、会遍历全部 48 栋 —— 绝不能在控制台一键跑。此处接的是单栋强制版，逐层 .orig 备份 + 数值验收 + 不通过自动回滚该层",
+   "desc": "⭐ 交付链的真正一环：recognize 产的内墙是粗环 blob（覆盖率>20%）不是交付物，真内墙由这一步从 DXF 双线重配对；门洞也必须在这里再挖一次"
+  },
+  {
+   "id": "doorpunch",
+   "no": 8,
+   "label": "门洞外科打穿（写盘）",
+   "scope": "single",
+   "script": "_door_punch_apply.py",
+   "args": [
+    "{name}",
+    "--apply"
+   ],
+   "writes": true,
+   "slow": false,
+   "runnable": true,
+   "danger": "high",
+   "produces": [
+    "floors/floor0.json"
+   ],
+   "upstream": "dxf",
+   "inplace": true,
+   "why_manual": "两个前提：①`--apply` 才写盘 —— 控制台 args 里带着它，去掉就是只报不写的干跑；②写前逐层备份到 <楼>/.orig/before_doorpunch_<ts>/，任一数值门槛不过的层整层跳过（不写），不是回滚已写的层。★ 前置产物 `_tmp_<名>_door` **本阶段自带**（`_door_tmp_recognize.ensure()`：缺了、或比交付层旧，就地重识别一次；只写临时目录，有 out_dir 断言守着），不再依赖任何不在流程里的手工脚本",
+   "desc": "前置（重识别到临时目录）→ 备份 → 挖门洞 → 数值复验 → 失败该层跳过。门=gap 不是 hole，盒深必须 > 墙厚。★ 按下去就是真写（args 带 --apply），不是干跑"
+  },
+  {
+   "id": "rooms",
+   "no": 9,
+   "label": "房间提取 ⚠ 覆盖交付件",
+   "scope": "single",
+   "script": "backend/extract/extract_rooms_generic.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": false,
+   "danger": "high",
+   "produces": [
+    "rooms.json"
+   ],
+   "upstream": "dxf",
+   "why_manual": "★ 覆盖即不可回滚：rooms.json 是交付件，**不在 git**，脚本就地覆盖、没有 .orig 备份也没有自动回滚 ⇒ 跑之前先把现有的 rooms.json 另存一份。房间口径全库也没统一：room_route='regen' 的楼在同一次 recognize 里就从 DXF 墙推房，'single'/'auto' 的楼才需要 recognize→thin→rooms→backfill 这条链。顺序没理顺前一键推房会覆盖交付件（c006 的 rooms.json 是 35 条整翼汇总行、几何停在平移前，一跑即毁）。命令行：python -u backend/extract/extract_rooms_generic.py <名>（先加 --dry 看数）",
+   "desc": "从 DXF 标注+封闭区推房间 → rooms.json。**排在 thin/doorpunch 之后**，因为它要读的是已修边的交付墙。⚠ 本步**就地覆盖** data/buildings/<楼>/rooms.json 且不可回滚（该目录不在 git）：c006 那份是 35 条整翼汇总行、几何停在平移前，一跑即毁。先另存一份再跑"
+  },
+  {
+   "id": "glb",
+   "no": 10,
+   "label": "生成 GLB",
+   "scope": "single",
+   "script": "backend/web/run_step.py",
+   "args": [
+    "{name}",
+    "glb"
+   ],
+   "writes": true,
+   "slow": false,
+   "runnable": true,
+   "produces": [
+    "{name}-building.glb"
+   ],
+   "upstream": "floors",
+   "desc": "只用现有 floors + spec 重建 GLB（不重跑识别，快）"
+  },
+  {
+   "id": "audit",
+   "no": 11,
+   "label": "覆盖度审计",
+   "scope": "single",
+   "script": "_dxf_audit.py",
+   "args": [
+    "{name}"
+   ],
+   "writes": true,
+   "slow": true,
+   "runnable": true,
+   "produces": [],
+   "upstream": null,
+   "desc": "带洞覆盖 + 门 mask 的墙漏检审计，输出可疑层排名。与 gate 判据同源（都走 qa_defect_census），是明细视图；gate 是进出口门禁"
+  },
+  {
+   "id": "sweep",
+   "no": 12,
+   "label": "全仓缺陷扫描",
+   "scope": "all",
+   "script": "_sweep_modeling.py",
+   "args": [],
+   "writes": false,
+   "slow": true,
+   "runnable": true,
+   "produces": [],
+   "upstream": null,
+   "desc": "只读回归扫描，跑全部楼的几何缺陷统计"
+  },
+  {
+   "id": "index",
+   "no": 13,
+   "label": "刷新索引",
+   "scope": "all",
+   "script": "build_index.py",
+   "args": [],
+   "writes": true,
+   "slow": false,
+   "runnable": true,
+   "produces": [
+    "buildings/index.json"
+   ],
+   "upstream": "floors",
+   "desc": "生成 data/buildings/index.json，供网页选择器消费"
+  }
+ ],
+ "成图": {
+  "_说明": "★ 成图阶段 —— 目前【不在】上面 14 条里，是我在命令行手敲 Blender。放进这里就不再手敲。",
+  "id": "render",
+  "no": 14,
+  "label": "三维成图（GLB 出图）",
+  "scope": "single",
+  "script": "blender/render_views.py",
+  "glb": "{building_dir}/{name}-building.glb",
+  "out_dir": "{building_dir}/renders",
+  "blender": "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe",
+  "res": "1600x1200",
+  "views": [
+   {
+    "id": "front",
+    "label": "南立面",
+    "view": "front",
+    "flat": false
+   },
+   {
+    "id": "side",
+    "label": "侧立面",
+    "view": "side",
+    "flat": false
+   },
+   {
+    "id": "top",
+    "label": "顶视",
+    "view": "top",
+    "flat": false
+   },
+   {
+    "id": "iso",
+    "label": "轴测",
+    "view": "iso",
+    "flat": false
+   },
+   {
+    "id": "flat_front",
+    "label": "南立面·几何验证（无光照）",
+    "view": "front",
+    "flat": true
+   }
+  ],
+  "_为什么要有flat档": "--flat 按顶点色发光、不加光照，是唯一能把「几何缺陷」与「光照假象」分开的档位。看到的细线在 flat 下照样在 => 是几何。"
+ }
+}

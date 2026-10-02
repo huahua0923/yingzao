@@ -374,4 +374,16 @@ def main(argv) -> int:
 
 
 if __name__ == "__main__":
+    # ★★ 这里原来**没有**这一句（2026-10-02 补，铁律 168：同族共有的那一步它没有）。
+    #   本文件 `selftest()` 里印 `✓`（U+2713），而 Windows 控制台/管道默认 GBK ⇒
+    #   `UnicodeEncodeError: 'gbk' codec can't encode character '✓'` 直接**炸在
+    #   自检中途**。屏幕上看到的是一个 traceback，而不是「量具被环境噎住」——
+    #   正是本文件 docstring §编码陷阱 第 28~30 行记的那个形状，只不过那三条是
+    #   `kb/gate.py` 它们，**这一条是它自己**。
+    #   同族每一个印 ✓/✗ 的 CLI 入口都有这一句：`compare_geo.py:698`、`system.py:839`、
+    #   `plan_png.py:553`、`runner.py:85`（`kg_citation_accept.py:46` 连 stderr 一起设）。
+    #   写法照抄最近的那个同形兄弟 `compare_geo.py`（同样的 `main(sys.argv[1:])` 结构），
+    #   放在 `__main__` 里而**不是** `main()` 里 —— 后者会在被 import 时产生全局副作用。
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,2872 @@
+{
+ "_说明": "profile.json 里**每一个会切换流程分支的键**的登记表。`kind=单独` 的就是「单独流程」——必须逐栋决定的那一批（⚠ 别读成「取值因楼而异」：那是另一个量，实测不符 38/54 行，见 `_字段.kind`）。★ **人写的四列（label / kind / step / why）以本文件为准**：`_scratch/_gen_branches.py` 重跑时先从本文件读回它们，缺哪个字段才退回它内置的种子表；要拿种子表整片覆盖得显式 `--reseed`。其余列是**现量**的，每次重跑都会重写（别手改它们）。",
+ "_版本": 1,
+ "_字段": {
+  "key": "profile.json 的键名",
+  "label": "中文名（人写的）",
+  "kind": "这条键**归哪条流程**：公共=公共流程（全库走同一条规则）/ 单独=某条**支线**流程、必须逐栋决定（这一批就是「单独流程」）/ 死键=载入后无人读。★ **人写的语义判断**，且**本文件就是这一列的事实源**（重跑会读回本文件里写的值，不拿代码里的表覆盖它）。⚠ **推不出来**：它**不是**「取值是否因楼而异」—— 实测两者不符 38/54 行。`cx`/`cy` 96 栋里 94/93 个不同值却是**公共**；反方向 `door_min_points` 95 栋**全用同一个值**却是**单独**。⇒ 别拿取值分布去「纠正」这一列；要改就直接改这个文件。",
+  "step": "在哪一步起作用",
+  "why": "它存在的原因 / 不写会怎样（人写的）",
+  "default": "加载器里的默认值（从 AST 现量；取不到就是 null，不猜）",
+  "in_batch_loader": "批量通道 run_building.load_profile 读不读它（实测）",
+  "in_console_loader": "控制台通道 run_step.profile_from_cfg 读不读它（实测）",
+  "loaders": "三个**已知**读取点各自读不读它：批/台/GLB档（实测）。★ 这不是全部读取点 —— 完整的看 readers_fn。「GLB档」= run_step.glb_opts_from_profile，它直接读 profile.json 文件，不属于任何加载器（glb_windows / skip_floors 只被它读）",
+  "console_exposed": "8140 参数页暴露不暴露它（实测）",
+  "c006": "c006 当前的值（现读 profile.json）",
+  "readers": "生产代码里出现该键名当字符串字面量的 .py（AST 实测，不含 _scratch/备份）",
+  "readers_fn": "**提及索引**（不是消费者索引）：全仓**函数级**出现该键名的名单 `文件:函数`（AST 实测），收字典读法与属性读法。★ 它**分不清「读这个键」与「提到这个名字」**，而且**跨数据域** —— 实测 `slab` 的 5 条命中量的全是 SU 的 `kind=\"slab\"` **值**标签（另一个数据域）。要判「改了生不生效」看 `consumers`，不要看这一列。",
+  "consumers": "★ **消费者列**：`readers_fn` − 三个已知加载器 − 已判同名异域（`SAME_NAME_OTHER_DOMAIN`）⇒ 真正会把这个键**读出来用**的函数。**为空 = 载入后无人读**，改 profile.json 不产生任何影响、也不报错。`console_meta.self_check()` 读的就是这一列。",
+  "n_consumers": "`consumers` 的条数（0 = 死键）"
+ },
+ "_怎么读": "先看 kind=单独 的那一批 —— 那就是「单独流程」。⚠ **别用「取值因楼而异」去判定它**：那是另一个量，实测与本列不符 38/54 行（`cx` 94 个不同值仍是公共、`door_min_points` 95 栋同值却是单独）⇒ 「有哪些键会按楼不同」要量 profile.json，「这个键算哪条流程」要人判断，两者都成立但不相等。`loaders` 里三个读取点不一致就是**分叉**（A8 门禁逐栋报这个）；`kind=死键` 的可以删；`consumers` 为空的是**没人读**（`readers_fn` 为空只说明**没人提到这个名字**，比它更弱、且会被同名异域骗）。",
+ "开关": [
+  {
+   "key": "atrium_from",
+   "label": "中庭来源层",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "见 atrium_rooms",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\recognizer\\recognize.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/recognize.py:recognize",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/recognize.py:recognize"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "atrium_rooms",
+   "label": "中庭房间表",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "atrium_from 与之配对",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\recognizer\\recognize.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/recognize.py:recognize",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/recognize.py:recognize"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "classifier",
+   "label": "分类器",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "★唯一分派点，值决定走哪套约定：line = LINE 双线+INSERT（c006），其余 lwpolyline",
+   "default": "lwpolyline",
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "line",
+   "readers": [
+    "audit_walls.py",
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\console.py",
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\probe_floors.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\recognizer\\geometry.py",
+    "backend\\recognizer\\recognize.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\control.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "audit_walls.py:curve_in_scope",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:list_buildings",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/probe_floors.py:wall_points",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:derive_walls_and_outline",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "audit_walls.py:curve_in_scope",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:list_buildings",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/probe_floors.py:wall_points",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:derive_walls_and_outline",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/control.py:list_buildings"
+   ],
+   "n_consumers": 10
+  },
+  {
+   "key": "column_layer",
+   "label": "结构柱图层",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "留空 = 该图无独立柱图层（出 0 柱是忠实结果）",
+   "default": "",
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "4.1结构柱",
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect"
+   ],
+   "n_consumers": 3
+  },
+  {
+   "key": "cx",
+   "label": "中心 X",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "局部坐标原点",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 1077705.0,
+   "readers": [
+    "audit_walls.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\recognizer\\elevator.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "audit_walls.py:overlay_png",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/elevator.py:_cx",
+    "backend/recognizer/elevator.py:group_by_floor",
+    "backend/recognizer/elevator.py:wells_from_legend",
+    "backend/recognizer/floor.py:detect_elevator_shafts",
+    "backend/recognizer/geometry.py:cluster_flights",
+    "backend/recognizer/profile.py:frame_center",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "audit_walls.py:overlay_png",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/elevator.py:_cx",
+    "backend/recognizer/elevator.py:group_by_floor",
+    "backend/recognizer/elevator.py:wells_from_legend",
+    "backend/recognizer/floor.py:detect_elevator_shafts",
+    "backend/recognizer/geometry.py:cluster_flights",
+    "backend/recognizer/profile.py:frame_center"
+   ],
+   "n_consumers": 10
+  },
+  {
+   "key": "cy",
+   "label": "中心 Y",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "局部坐标原点（首层中心）",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 75610,
+   "readers": [
+    "audit_walls.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\recognizer\\elevator.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "audit_walls.py:overlay_png",
+    "audit_walls.py:selftest",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/elevator.py:_cy",
+    "backend/recognizer/elevator.py:group_by_floor",
+    "backend/recognizer/elevator.py:wells_from_legend",
+    "backend/recognizer/floor.py:detect_elevator_shafts",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "audit_walls.py:overlay_png",
+    "audit_walls.py:selftest",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/elevator.py:_cy",
+    "backend/recognizer/elevator.py:group_by_floor",
+    "backend/recognizer/elevator.py:wells_from_legend",
+    "backend/recognizer/floor.py:detect_elevator_shafts",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center"
+   ],
+   "n_consumers": 10
+  },
+  {
+   "key": "door_by_points",
+   "label": "按点数判门",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "另一种判门口径；非该口径的楼门宽改为从图读",
+   "default": false,
+   "in_batch_loader": false,
+   "in_console_loader": true,
+   "loaders": {
+    "批": false,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\recognizer\\classify.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:derive_walls_and_outline",
+    "backend/web/run_step.py:profile_from_cfg"
+   ],
+   "consumers": [
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:derive_walls_and_outline"
+   ],
+   "n_consumers": 3
+  },
+  {
+   "key": "door_depth",
+   "label": "门洞深",
+   "kind": "死键",
+   "step": "—",
+   "why": "★ 接线接到 profile 就断了：默认值表 / 参数页字段 / 两个加载器都读它，但载入后**全仓零个消费者**。参数页上可编辑 ⇒ 改了模型不动、也不报错。门洞实际取 max(外墙厚,内墙厚)+0.05（build_standard_glb 注释）",
+   "default": 0.5,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.5,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [],
+   "n_consumers": 0
+  },
+  {
+   "key": "door_min_points",
+   "label": "门点数阈值",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "仅 door_by_points=True 时生效",
+   "default": 10,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 10,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/classify.py:classify",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/classify.py:classify"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "door_w_double",
+   "label": "双开门宽",
+   "kind": "单独",
+   "step": "recognize+rooms",
+   "why": "同上；另作门宽上限夹取",
+   "default": 2.4,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 1.5,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_c006.py:door_plugs",
+    "backend/extract/extract_rooms_generic.py:door_plugs_insert",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:detect_doors",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_c006.py:door_plugs",
+    "backend/extract/extract_rooms_generic.py:door_plugs_insert",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:detect_doors"
+   ],
+   "n_consumers": 4
+  },
+  {
+   "key": "door_w_single",
+   "label": "单开门宽",
+   "kind": "单独",
+   "step": "recognize+rooms",
+   "why": "recognize 侧仅 door_by_points 生效；rooms 侧无条件",
+   "default": 1.1,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 1.0,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_c006.py:door_plugs",
+    "backend/extract/extract_rooms_generic.py:door_plugs_insert",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_c006.py:door_plugs",
+    "backend/extract/extract_rooms_generic.py:door_plugs_insert",
+    "backend/recognizer/floor.py:extract_floor"
+   ],
+   "n_consumers": 3
+  },
+  {
+   "key": "draw_kind",
+   "label": "体裁登记",
+   "kind": "死键",
+   "step": "—",
+   "why": "★ 生产代码零个消费者 —— 这条是**实测**出来的（除加载器外全仓无人读它），原先我手写成「单独」，被自检打回。只有 _scratch 的脚本读它。登记它是为了让人知道这张图是什么体裁",
+   "default": null,
+   "in_batch_loader": false,
+   "in_console_loader": false,
+   "loaders": {
+    "批": false,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": false,
+   "c006": "site_plan",
+   "readers": [],
+   "readers_fn": [],
+   "consumers": [],
+   "n_consumers": 0
+  },
+  {
+   "key": "dxf",
+   "label": "DXF 路径",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "管线第一步的输入；必填",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "D:\\dxf_output\\C006-第六教学楼（逸夫楼）.dxf",
+   "readers": [
+    "_par_batch.py",
+    "backend\\api\\routers\\buildings.py",
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\checks.py",
+    "backend\\api\\services\\console.py",
+    "backend\\checks\\_area_audit.py",
+    "backend\\checks\\floor_levels.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\control.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "_dxf_audit.py:_dense_pts",
+    "_dxf_audit.py:_source_wall_points",
+    "_dxf_audit.py:audit_building",
+    "_dxf_audit_report.py:classify",
+    "_dxf_cad_render.py:_aci_color",
+    "_dxf_cad_render.py:_entity_floor",
+    "_dxf_cad_render.py:_is_anno_layer",
+    "_dxf_cad_render.py:_is_axis_layer",
+    "_dxf_cad_render.py:_lineweight_pt",
+    "_dxf_cad_render.py:_sampled_pts",
+    "_dxf_cad_render.py:collect_floor",
+    "_dxf_cad_render.py:main",
+    "_dxf_png_batch.py:main",
+    "_par_batch.py:_dxf_mb",
+    "_render_common.py:cn_from_dxf",
+    "_scratch_campus3d/agent-dwg/analyze.py:text_str",
+    "_wall_thin_batch.py:_recompute_stairwells",
+    "_wall_thin_batch.py:process",
+    "_wall_thin_force.py:run",
+    "audit_gate.py:_get_doc",
+    "audit_walls.py:audit_building",
+    "audit_walls.py:bulge_chords",
+    "audit_walls.py:curve_in_scope",
+    "audit_walls.py:curve_segments",
+    "audit_walls.py:layer_geoms",
+    "backend/api/routers/buildings.py:source_dxf",
+    "backend/api/services/artifacts.py:_url",
+    "backend/api/services/artifacts.py:profile_public",
+    "backend/api/services/artifacts.py:resolve_binary",
+    "backend/api/services/checks.py:_inputs",
+    "backend/api/services/console.py:_building_ctx",
+    "backend/api/services/console.py:_entity_points",
+    "backend/api/services/console.py:floor_dxf",
+    "backend/api/services/console.py:floor_png",
+    "backend/api/services/console.py:registry_listed",
+    "backend/api/services/console.py:status",
+    "backend/checks/_area_audit.py:dxf_area_table",
+    "backend/checks/_area_audit.py:main",
+    "backend/checks/floor_levels.py:diagnose",
+    "backend/checks/floor_levels.py:read_area_rows",
+    "backend/checks/heavy.py:check_b3",
+    "backend/extract/extract_rooms_c006.py:main",
+    "backend/extract/extract_rooms_c006.py:read_labels",
+    "backend/extract/extract_rooms_generic.py:layer_role_map",
+    "backend/extract/extract_rooms_generic.py:mtext_center",
+    "backend/extract/extract_rooms_generic.py:read_labels",
+    "backend/extract/extract_rooms_generic.py:relabel",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/classify.py:_ellipse_major_mm",
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/vision/render_floor.py:render_floor_png",
+    "backend/web/control.py:_building_ctx",
+    "backend/web/control.py:_entity_points",
+    "backend/web/control.py:_floor_dxf",
+    "backend/web/control.py:_floor_png",
+    "backend/web/control.py:building_status",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:_recognize_fingerprint",
+    "backend/web/run_step.py:profile_from_cfg",
+    "prerender_floor_png.py:png_deps",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "_dxf_audit.py:_dense_pts",
+    "_dxf_audit.py:_source_wall_points",
+    "_dxf_audit.py:audit_building",
+    "_dxf_audit_report.py:classify",
+    "_dxf_cad_render.py:_aci_color",
+    "_dxf_cad_render.py:_entity_floor",
+    "_dxf_cad_render.py:_is_anno_layer",
+    "_dxf_cad_render.py:_is_axis_layer",
+    "_dxf_cad_render.py:_lineweight_pt",
+    "_dxf_cad_render.py:_sampled_pts",
+    "_dxf_cad_render.py:collect_floor",
+    "_dxf_cad_render.py:main",
+    "_dxf_png_batch.py:main",
+    "_par_batch.py:_dxf_mb",
+    "_render_common.py:cn_from_dxf",
+    "_scratch_campus3d/agent-dwg/analyze.py:text_str",
+    "_wall_thin_batch.py:_recompute_stairwells",
+    "_wall_thin_batch.py:process",
+    "_wall_thin_force.py:run",
+    "audit_gate.py:_get_doc",
+    "audit_walls.py:audit_building",
+    "audit_walls.py:bulge_chords",
+    "audit_walls.py:curve_in_scope",
+    "audit_walls.py:curve_segments",
+    "audit_walls.py:layer_geoms",
+    "backend/api/routers/buildings.py:source_dxf",
+    "backend/api/services/artifacts.py:_url",
+    "backend/api/services/artifacts.py:profile_public",
+    "backend/api/services/artifacts.py:resolve_binary",
+    "backend/api/services/checks.py:_inputs",
+    "backend/api/services/console.py:_building_ctx",
+    "backend/api/services/console.py:_entity_points",
+    "backend/api/services/console.py:floor_dxf",
+    "backend/api/services/console.py:floor_png",
+    "backend/api/services/console.py:registry_listed",
+    "backend/api/services/console.py:status",
+    "backend/checks/_area_audit.py:dxf_area_table",
+    "backend/checks/_area_audit.py:main",
+    "backend/checks/floor_levels.py:diagnose",
+    "backend/checks/floor_levels.py:read_area_rows",
+    "backend/checks/heavy.py:check_b3",
+    "backend/extract/extract_rooms_c006.py:main",
+    "backend/extract/extract_rooms_c006.py:read_labels",
+    "backend/extract/extract_rooms_generic.py:layer_role_map",
+    "backend/extract/extract_rooms_generic.py:mtext_center",
+    "backend/extract/extract_rooms_generic.py:read_labels",
+    "backend/extract/extract_rooms_generic.py:relabel",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/classify.py:_ellipse_major_mm",
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/vision/render_floor.py:render_floor_png",
+    "backend/web/control.py:_building_ctx",
+    "backend/web/control.py:_entity_points",
+    "backend/web/control.py:_floor_dxf",
+    "backend/web/control.py:_floor_png",
+    "backend/web/control.py:building_status",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:_recognize_fingerprint",
+    "prerender_floor_png.py:png_deps"
+   ],
+   "n_consumers": 63
+  },
+  {
+   "key": "floor_plans",
+   "label": "分列布局",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "两列布局（裙楼+塔楼分列 X），如 c006",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": [
+    [
+     1077705,
+     84494,
+     1013235,
+     1142175
+    ],
+    [
+     1077705,
+     219494,
+     1013235,
+     1142175
+    ],
+    [
+     1077705,
+     354494,
+     1013235,
+     1142175
+    ],
+    [
+     1077705,
+     489494,
+     1013235,
+     1142175
+    ],
+    [
+     1077705,
+     624494,
+     1013235,
+     1142175
+    ],
+    [
+     1077705,
+     759494,
+     1013235,
+     1142175
+    ],
+    [
+     1547380,
+     84494,
+     1482910,
+     1611850
+    ],
+    [
+     1547380,
+     219495,
+     1482910,
+     1611850
+    ],
+    [
+     1547380,
+     354495,
+     1482910,
+     1611850
+    ],
+    [
+     1547380,
+     489495,
+     1482910,
+     1611850
+    ],
+    [
+     1547380,
+     624495,
+     1482910,
+     1611850
+    ]
+   ],
+   "readers": [
+    "backend\\checks\\floor_levels.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/recognizer/classify.py:_in_x_range",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center",
+    "backend/recognizer/profile.py:in_floor_x_range",
+    "backend/recognizer/recognize.py:localize_columns",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/recognizer/classify.py:_in_x_range",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center",
+    "backend/recognizer/profile.py:in_floor_x_range",
+    "backend/recognizer/recognize.py:localize_columns"
+   ],
+   "n_consumers": 6
+  },
+  {
+   "key": "floor_y_bands",
+   "label": "Y 窗口过滤",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "★ 只喂给控制台那份加载器；批量通道根本不传 ⇒ 对全库从未生效过",
+   "default": null,
+   "in_batch_loader": false,
+   "in_console_loader": true,
+   "loaders": {
+    "批": false,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": false,
+   "c006": null,
+   "readers": [
+    "backend\\checks\\floor_levels.py",
+    "backend\\recognizer\\profile.py",
+    "backend\\web\\run_step.py"
+   ],
+   "readers_fn": [
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/web/run_step.py:profile_from_cfg"
+   ],
+   "consumers": [
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/recognizer/profile.py:floor_of"
+   ],
+   "n_consumers": 2
+  },
+  {
+   "key": "floor_ys",
+   "label": "各层 Y 坐标",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "阶梯楼各层平面非均匀排布",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\checks\\floor_levels.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center"
+   ],
+   "n_consumers": 3
+  },
+  {
+   "key": "glb_windows",
+   "label": "加合成窗",
+   "kind": "公共",
+   "step": "glb",
+   "why": "只对 glb/full 生效；不写回落 False。run_step 每次覆写模块级全局",
+   "default": null,
+   "in_batch_loader": false,
+   "in_console_loader": false,
+   "loaders": {
+    "批": false,
+    "台": false,
+    "GLB档": true
+   },
+   "console_exposed": true,
+   "c006": true,
+   "readers": [
+    "backend\\modeling\\su_spec_floors_fleet.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "glb_gate.py"
+   ],
+   "readers_fn": [
+    "backend/modeling/su_spec_floors_fleet.py:main",
+    "backend/web/run_step.py:glb_opts_from_profile",
+    "glb_gate.py:_selftest",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge"
+   ],
+   "consumers": [
+    "backend/modeling/su_spec_floors_fleet.py:main",
+    "glb_gate.py:_selftest",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge"
+   ],
+   "n_consumers": 4
+  },
+  {
+   "key": "keep_courtyard_holes",
+   "label": "保留内院洞",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "回字形平面有真实内院/天井的楼",
+   "default": false,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/geometry.py:_derive_buffer_walls_and_outline",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:_floor_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/geometry.py:_derive_buffer_walls_and_outline",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:_floor_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline"
+   ],
+   "n_consumers": 4
+  },
+  {
+   "key": "label_nearest_max",
+   "label": "房号远置阈值",
+   "kind": "单独",
+   "step": "rooms",
+   "why": "房号标注画在楼外（ny27 式）的楼",
+   "default": 0.0,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_generic.py:assign_labels",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_generic.py:assign_labels"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "layer_height",
+   "label": "层高",
+   "kind": "公共",
+   "step": "recognize→spec→glb/render",
+   "why": "覆盖 STANDARD 的 floor_h，wall_h 联动，并写进 spec",
+   "default": 4.2,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 3.5,
+   "readers": [
+    "backend\\api\\services\\artifacts.py",
+    "backend\\nav\\build_path.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\recognizer\\recognize.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "build_index.py",
+    "qa_external_truth.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/artifacts.py:floors_summary",
+    "backend/nav/build_path.py:floor_height",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/run_step.py:profile_from_cfg",
+    "qa_external_truth.py:model_sections",
+    "qa_external_truth.py:selftest",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/artifacts.py:floors_summary",
+    "backend/nav/build_path.py:floor_height",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/recognize.py:recognize",
+    "qa_external_truth.py:model_sections",
+    "qa_external_truth.py:selftest"
+   ],
+   "n_consumers": 7
+  },
+  {
+   "key": "name",
+   "label": "楼号",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "全链路都用它当标识；必填无默认",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": false,
+   "c006": "c006",
+   "readers": [
+    "_par_batch.py",
+    "_sweep_modeling.py",
+    "annotate_defects.py",
+    "backend\\api\\routers\\analysis.py",
+    "backend\\api\\routers\\buildings.py",
+    "backend\\api\\routers\\components.py",
+    "backend\\api\\routers\\console.py",
+    "backend\\api\\routers\\rooms.py",
+    "backend\\api\\services\\area_audit.py",
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\console.py",
+    "backend\\api\\services\\workshop.py",
+    "backend\\checks\\floor_levels.py",
+    "backend\\checks\\heavy.py",
+    "backend\\checks\\plan_png.py",
+    "backend\\checks\\runner.py",
+    "backend\\checks\\sources.py",
+    "backend\\checks\\system.py",
+    "backend\\db\\load_rooms_db.py",
+    "backend\\db\\rooms_registry.py",
+    "backend\\db\\serve_rooms_admin.py",
+    "backend\\extract\\extract_rooms_c006.py",
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\modeling\\su_spec.py",
+    "backend\\modeling\\su_spec_floors_fleet.py",
+    "backend\\nav\\build_graph.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\state\\census.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\control.py",
+    "backend\\web\\run_step.py",
+    "blender\\render_all.py",
+    "build_index.py",
+    "glb_gate.py",
+    "kb\\values.py",
+    "run_building.py",
+    "scan_defects.py"
+   ],
+   "readers_fn": [
+    "_par_batch.py:_report",
+    "_par_batch.py:main",
+    "_par_batch.py:run_one",
+    "_par_batch.py:save_durations",
+    "_wall_thin_batch.py:rebuild_floor",
+    "annotate_defects.py:building_list",
+    "backend/api/routers/analysis.py:area_one",
+    "backend/api/routers/buildings.py:one_building",
+    "backend/api/routers/buildings.py:source_dxf",
+    "backend/api/routers/components.py:components",
+    "backend/api/routers/console.py:console_put_profile",
+    "backend/api/routers/console.py:console_put_spec",
+    "backend/api/routers/health.py:capabilities",
+    "backend/api/routers/rooms.py:_compute_path",
+    "backend/api/routers/rooms.py:_room_rows",
+    "backend/api/services/area_audit.py:fleet",
+    "backend/api/services/area_audit.py:parse_fleet",
+    "backend/api/services/area_audit.py:refresh",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/artifacts.py:_dir_sig",
+    "backend/api/services/artifacts.py:_floor_indices",
+    "backend/api/services/artifacts.py:_sig",
+    "backend/api/services/artifacts.py:list_buildings",
+    "backend/api/services/artifacts.py:profile_public",
+    "backend/api/services/artifacts.py:read_json",
+    "backend/api/services/checks.py:_engine_files",
+    "backend/api/services/checks.py:_inputs",
+    "backend/api/services/checks.py:_load_checked",
+    "backend/api/services/checks.py:_run_locked",
+    "backend/api/services/checks.py:manifest",
+    "backend/api/services/checks.py:staleness",
+    "backend/api/services/console.py:_data_url",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:_write_json",
+    "backend/api/services/console.py:get_profile",
+    "backend/api/services/console.py:get_spec",
+    "backend/api/services/console.py:list_buildings",
+    "backend/api/services/console.py:status",
+    "backend/api/services/jobs.py:_kill_tree",
+    "backend/api/services/jobs.py:_read_persisted",
+    "backend/api/services/jobs.py:listing",
+    "backend/api/services/workshop.py:_row",
+    "backend/api/services/workshop.py:save_upload",
+    "backend/api/services/workshop.py:start_run",
+    "backend/api/services/workshop.py:status",
+    "backend/checks/_import_graph_gap.py:scan_imports",
+    "backend/checks/builtin.py:_function_literals",
+    "backend/checks/floor_levels.py:diagnose",
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/checks/heavy.py:_emit",
+    "backend/checks/heavy.py:_summary_row",
+    "backend/checks/heavy.py:check_b1",
+    "backend/checks/heavy.py:check_b5",
+    "backend/checks/layout.py:floor_files",
+    "backend/checks/plan_png.py:main",
+    "backend/checks/plan_png.py:measure",
+    "backend/checks/plan_png.py:pngs_of",
+    "backend/checks/runner.py:_all_names",
+    "backend/checks/runner.py:_b5_prod",
+    "backend/checks/runner.py:_selftest",
+    "backend/checks/sources.py:parse_detail",
+    "backend/checks/system.py:check_c0",
+    "backend/checks/system.py:check_c1",
+    "backend/db/rooms_registry.py:_row",
+    "backend/db/rooms_registry.py:collect_cad_rows",
+    "backend/db/rooms_registry.py:export_rows",
+    "backend/extract/extract_rooms_c006.py:main",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/modeling/su_spec.py:export_glb",
+    "backend/modeling/su_spec.py:main",
+    "backend/modeling/su_spec_floors_fleet.py:main",
+    "backend/nav/build_graph.py:add_node",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/floor.py:_well_symbol_family_gate",
+    "backend/recognizer/floor.py:detect_elevator_shafts",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/recognizer/profile.py:register",
+    "backend/recognizer/recognize.py:_add_terrace_parapets_impl",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/state/census.py:_building_dirs",
+    "backend/state/census.py:_compare",
+    "backend/state/census.py:_is_floor_json",
+    "backend/state/census.py:_snapshot_dirs",
+    "backend/state/census.py:compute",
+    "backend/state/references.py:import_intents",
+    "backend/state/roster.py:_candidates",
+    "backend/state/roster.py:_ref_index",
+    "backend/state/roster.py:build",
+    "backend/state/roster.py:selftest",
+    "backend/web/console_meta.py:_ctor_kwargs",
+    "backend/web/console_meta.py:_delivery_channels",
+    "backend/web/control.py:_floor_dxf",
+    "backend/web/control.py:building_status",
+    "backend/web/control.py:do_POST",
+    "backend/web/control.py:job_conflict",
+    "backend/web/control.py:list_buildings",
+    "backend/web/control.py:start_job",
+    "backend/web/run_step.py:main",
+    "backend/web/run_step.py:profile_from_cfg",
+    "backend/web/run_step.py:step_glb",
+    "backend/web/run_step.py:step_recognize",
+    "backend/web/run_step.py:step_render",
+    "blender/render_all.py:building_names",
+    "blender/render_all.py:main",
+    "convert_dwg_to_dxf.py:convert_all",
+    "convert_dwg_to_dxf.py:convert_one",
+    "glb_gate.py:add",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge",
+    "kb/gate.py:_names_in",
+    "kb/readonly_probe.py:_enclosing",
+    "kb/values.py:compare",
+    "kb/values.py:main",
+    "run_building.py:load_profile",
+    "scan_defects.py:big_ctx",
+    "scan_defects.py:load_ctx",
+    "scan_defects.py:rec",
+    "scan_defects.py:selftest",
+    "scan_defects.py:synth",
+    "scan_defects.py:synth_led"
+   ],
+   "consumers": [
+    "_par_batch.py:_report",
+    "_par_batch.py:main",
+    "_par_batch.py:run_one",
+    "_par_batch.py:save_durations",
+    "_wall_thin_batch.py:rebuild_floor",
+    "annotate_defects.py:building_list",
+    "backend/api/routers/analysis.py:area_one",
+    "backend/api/routers/buildings.py:one_building",
+    "backend/api/routers/buildings.py:source_dxf",
+    "backend/api/routers/components.py:components",
+    "backend/api/routers/console.py:console_put_profile",
+    "backend/api/routers/console.py:console_put_spec",
+    "backend/api/routers/health.py:capabilities",
+    "backend/api/routers/rooms.py:_compute_path",
+    "backend/api/routers/rooms.py:_room_rows",
+    "backend/api/services/area_audit.py:fleet",
+    "backend/api/services/area_audit.py:parse_fleet",
+    "backend/api/services/area_audit.py:refresh",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/artifacts.py:_dir_sig",
+    "backend/api/services/artifacts.py:_floor_indices",
+    "backend/api/services/artifacts.py:_sig",
+    "backend/api/services/artifacts.py:list_buildings",
+    "backend/api/services/artifacts.py:profile_public",
+    "backend/api/services/artifacts.py:read_json",
+    "backend/api/services/checks.py:_engine_files",
+    "backend/api/services/checks.py:_inputs",
+    "backend/api/services/checks.py:_load_checked",
+    "backend/api/services/checks.py:_run_locked",
+    "backend/api/services/checks.py:manifest",
+    "backend/api/services/checks.py:staleness",
+    "backend/api/services/console.py:_data_url",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:_write_json",
+    "backend/api/services/console.py:get_profile",
+    "backend/api/services/console.py:get_spec",
+    "backend/api/services/console.py:list_buildings",
+    "backend/api/services/console.py:status",
+    "backend/api/services/jobs.py:_kill_tree",
+    "backend/api/services/jobs.py:_read_persisted",
+    "backend/api/services/jobs.py:listing",
+    "backend/api/services/workshop.py:_row",
+    "backend/api/services/workshop.py:save_upload",
+    "backend/api/services/workshop.py:start_run",
+    "backend/api/services/workshop.py:status",
+    "backend/checks/_import_graph_gap.py:scan_imports",
+    "backend/checks/builtin.py:_function_literals",
+    "backend/checks/floor_levels.py:diagnose",
+    "backend/checks/floor_levels.py:model_floors",
+    "backend/checks/heavy.py:_emit",
+    "backend/checks/heavy.py:_summary_row",
+    "backend/checks/heavy.py:check_b1",
+    "backend/checks/heavy.py:check_b5",
+    "backend/checks/layout.py:floor_files",
+    "backend/checks/plan_png.py:main",
+    "backend/checks/plan_png.py:measure",
+    "backend/checks/plan_png.py:pngs_of",
+    "backend/checks/runner.py:_all_names",
+    "backend/checks/runner.py:_b5_prod",
+    "backend/checks/runner.py:_selftest",
+    "backend/checks/sources.py:parse_detail",
+    "backend/checks/system.py:check_c0",
+    "backend/checks/system.py:check_c1",
+    "backend/db/rooms_registry.py:_row",
+    "backend/db/rooms_registry.py:collect_cad_rows",
+    "backend/db/rooms_registry.py:export_rows",
+    "backend/extract/extract_rooms_c006.py:main",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/modeling/su_spec.py:export_glb",
+    "backend/modeling/su_spec.py:main",
+    "backend/modeling/su_spec_floors_fleet.py:main",
+    "backend/nav/build_graph.py:add_node",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/floor.py:_well_symbol_family_gate",
+    "backend/recognizer/floor.py:detect_elevator_shafts",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/recognizer/profile.py:register",
+    "backend/recognizer/recognize.py:_add_terrace_parapets_impl",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/state/census.py:_building_dirs",
+    "backend/state/census.py:_compare",
+    "backend/state/census.py:_is_floor_json",
+    "backend/state/census.py:_snapshot_dirs",
+    "backend/state/census.py:compute",
+    "backend/state/references.py:import_intents",
+    "backend/state/roster.py:_candidates",
+    "backend/state/roster.py:_ref_index",
+    "backend/state/roster.py:build",
+    "backend/state/roster.py:selftest",
+    "backend/web/console_meta.py:_ctor_kwargs",
+    "backend/web/console_meta.py:_delivery_channels",
+    "backend/web/control.py:_floor_dxf",
+    "backend/web/control.py:building_status",
+    "backend/web/control.py:do_POST",
+    "backend/web/control.py:job_conflict",
+    "backend/web/control.py:list_buildings",
+    "backend/web/control.py:start_job",
+    "backend/web/run_step.py:main",
+    "backend/web/run_step.py:step_glb",
+    "backend/web/run_step.py:step_recognize",
+    "backend/web/run_step.py:step_render",
+    "blender/render_all.py:building_names",
+    "blender/render_all.py:main",
+    "convert_dwg_to_dxf.py:convert_all",
+    "convert_dwg_to_dxf.py:convert_one",
+    "glb_gate.py:add",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge",
+    "kb/gate.py:_names_in",
+    "kb/readonly_probe.py:_enclosing",
+    "kb/values.py:compare",
+    "kb/values.py:main",
+    "scan_defects.py:big_ctx",
+    "scan_defects.py:load_ctx",
+    "scan_defects.py:rec",
+    "scan_defects.py:selftest",
+    "scan_defects.py:synth",
+    "scan_defects.py:synth_led"
+   ],
+   "n_consumers": 120
+  },
+  {
+   "key": "offset",
+   "label": "层偏移",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "均匀楼每层沿 Y 的排布间距；floor_ys/floor_plans 存在时被旁路",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 135000,
+   "readers": [
+    "backend\\checks\\builtin.py",
+    "backend\\db\\rooms_registry.py",
+    "backend\\db\\serve_rooms_admin.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/checks/builtin.py:_ledger_floor_witness",
+    "backend/db/rooms_registry.py:list_rooms",
+    "backend/db/serve_rooms_admin.py:do_GET",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/checks/builtin.py:_ledger_floor_witness",
+    "backend/db/rooms_registry.py:list_rooms",
+    "backend/db/serve_rooms_admin.py:do_GET",
+    "backend/probe_floors.py:main",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/profile.py:floor_of",
+    "backend/recognizer/profile.py:frame_center"
+   ],
+   "n_consumers": 7
+  },
+  {
+   "key": "open_r",
+   "label": "洞口半径",
+   "kind": "死键",
+   "step": "—",
+   "why": "★ 接线接到 profile 就断了：默认值表 / 参数页字段 / 两个加载器都读它，但载入后**全仓零个消费者**。参数页上可编辑 ⇒ 改了模型不动、也不报错",
+   "default": 0.35,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.35,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [],
+   "n_consumers": 0
+  },
+  {
+   "key": "out_dir",
+   "label": "楼层输出目录",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "floor*.json 落盘处；GLB 落在其父目录",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "D:\\gym3d\\data\\buildings\\c006\\floors",
+   "readers": [
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\console.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\control.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/api/services/console.py:_building_ctx",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:floor_png",
+    "backend/api/services/console.py:list_buildings",
+    "backend/extract/extract_rooms_generic.py:_load_floor_json",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/console_meta.py:_stage_from_render",
+    "backend/web/control.py:_building_ctx",
+    "backend/web/control.py:_floor_png",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:profile_from_cfg",
+    "backend/web/run_step.py:step_glb",
+    "backend/web/run_step.py:step_recognize",
+    "backend/web/run_step.py:step_render",
+    "prerender_floor_png.py:main",
+    "prerender_floor_png.py:png_deps",
+    "run_building.py:load_profile",
+    "run_building.py:main"
+   ],
+   "consumers": [
+    "backend/api/services/console.py:_building_ctx",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:floor_png",
+    "backend/api/services/console.py:list_buildings",
+    "backend/extract/extract_rooms_generic.py:_load_floor_json",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/console_meta.py:_stage_from_render",
+    "backend/web/control.py:_building_ctx",
+    "backend/web/control.py:_floor_png",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:step_glb",
+    "backend/web/run_step.py:step_recognize",
+    "backend/web/run_step.py:step_render",
+    "prerender_floor_png.py:main",
+    "prerender_floor_png.py:png_deps",
+    "run_building.py:main"
+   ],
+   "n_consumers": 18
+  },
+  {
+   "key": "outdoor_steps",
+   "label": "室外大台阶",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "图上有室外大台阶的楼；作者明确写了为什么不自动判（会命中室内楼梯间）",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": {
+    "0": [
+     [
+      50.67,
+      -2.52,
+      120.0,
+      12.12
+     ],
+     [
+      -120.0,
+      -2.52,
+      -50.67,
+      12.12
+     ]
+    ],
+    "_note": "F0 东西两侧的**室外大台阶**（9.3m 深平台 + 7 级 0.35m 等距踏步，外沿 x=±59.95 只是一条边线、没有第二皮）：不建墙、不进楼板。用户判例 2026-09-15：「室外的就是室外台阶」。矩形 = 「内侧贴建筑外墙皮 x=±50.67」＋「沿向取两侧挡墙外皮 y=-2.52/12.12」＋**向外扩到 x=±120**：向外扩这一刀是必须的 —— 台阶三面被楼板包住，只按台阶自身范围切会在楼板里留一个 135.9㎡ 的**洞**，而交付编码 `outline_fields` 的单环写法不留洞（洞被填回，等于没切，实测 F0 轮廓 6215.8→6351.6）。向外扩到建筑外就切出一个开口，几何上＝台阶本来就没有楼板。"
+   },
+   "readers": [
+    "backend\\recognizer\\floor.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/floor.py:extract_floor"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "outer_wall_t",
+   "label": "外墙厚",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "外墙生成时用的厚度（默认 0.24 m）。与 wall_extend/wall_min/wall_max/wall_layer/wall_fallback 同属「墙厚」这一族，全库同一套规则 ⇒ 公共。★ 依据（2026-09-26 实测）：96 栋 profile.json 里 **0 栋设过它**，全库都走默认 0.24 —— 这也正是它一直没被登记分类的原因（从没人动过它）。",
+   "default": 0.24,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "_probe_doorbox_equiv.py",
+    "backend\\modeling\\build_standard_glb.py",
+    "backend\\modeling\\glb_common.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\recognizer\\geometry.py",
+    "backend\\recognizer\\recognize.py",
+    "backend\\recognizer\\standard.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "_probe_doorbox_equiv.py:old_way",
+    "backend/modeling/build_standard_glb.py:build_doors",
+    "backend/modeling/build_standard_glb.py:load_spec",
+    "backend/modeling/glb_common.py:add_frame",
+    "backend/modeling/glb_common.py:add_glass",
+    "backend/recognizer/floor.py:_door_boxes",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/recognize.py:recognize",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "_probe_doorbox_equiv.py:old_way",
+    "backend/modeling/build_standard_glb.py:build_doors",
+    "backend/modeling/build_standard_glb.py:load_spec",
+    "backend/modeling/glb_common.py:add_frame",
+    "backend/modeling/glb_common.py:add_glass",
+    "backend/recognizer/floor.py:_door_boxes",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/recognize.py:recognize"
+   ],
+   "n_consumers": 9
+  },
+  {
+   "key": "outline_buf",
+   "label": "轮廓缓冲",
+   "kind": "死键",
+   "step": "—",
+   "why": "★ 接线接到 profile 就断了：默认值表 / 参数页字段 / 两个加载器都读它，但载入后**全仓零个消费者**。参数页上可编辑 ⇒ 改了模型不动、也不报错",
+   "default": 0.15,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.15,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [],
+   "n_consumers": 0
+  },
+  {
+   "key": "outline_close_r",
+   "label": "轮廓闭合半径",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "line 约定楼（墙带被门洞断成碎带才需桥接）；其余楼用 0",
+   "default": 0.0,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.6,
+   "readers": [
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/geometry.py:_derive_buffer_walls_and_outline",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/geometry.py:_derive_buffer_walls_and_outline",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline"
+   ],
+   "n_consumers": 3
+  },
+  {
+   "key": "outline_unify",
+   "label": "轮廓统一",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "多翼/阶梯楼低层墙 union 碎片化时",
+   "default": false,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\recognizer\\floor.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/floor.py:unify_floor_set",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/floor.py:unify_floor_set"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "outline_unify_floors",
+   "label": "统一层清单",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "只统一裙楼子集；**优先于 outline_unify**",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": [],
+   "readers": [
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/floor.py:unify_floor_set",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/floor.py:unify_floor_set"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "pair_curved",
+   "label": "弧墙配对",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "允许弧线参与墙皮配对",
+   "default": false,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "_wall_thin_batch.py",
+    "audit_walls.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "_wall_thin_batch.py:rebuild_floor",
+    "audit_walls.py:_curve_state",
+    "audit_walls.py:audit_floor",
+    "audit_walls.py:classify_floor",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "_wall_thin_batch.py:rebuild_floor",
+    "audit_walls.py:_curve_state",
+    "audit_walls.py:audit_floor",
+    "audit_walls.py:classify_floor"
+   ],
+   "n_consumers": 4
+  },
+  {
+   "key": "parapet_margin",
+   "label": "女儿墙退让",
+   "kind": "死键",
+   "step": "—",
+   "why": "★ 接线接到 profile 就断了：默认值表 / 参数页字段 / 两个加载器都读它，但载入后**全仓零个消费者**。参数页上可编辑 ⇒ 改了模型不动、也不报错",
+   "default": 0.5,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.5,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [],
+   "n_consumers": 0
+  },
+  {
+   "key": "roof_rooms",
+   "label": "屋面封顶",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "下层是该房间、本层图上没有楼板的地方要封顶",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": {
+    "4": [
+     "6-C-04-05"
+    ],
+    "_note": "八角厅（1~4 层房间：6-C-01-05/02-05/03-05 多媒体教室、04-05 报告厅）的屋面在 5 层（F4）—— 5 层图上没有这块，但它是八角厅的顶。按 4 层报告厅的房号取面并进 F4 轮廓，GLB/SU 按「上面没楼层」自动出成屋面色。"
+   },
+   "readers": [
+    "backend\\recognizer\\floor.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/floor.py:extract_floor"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "room_grow_to_wall",
+   "label": "房间长到墙",
+   "kind": "单独",
+   "step": "rooms",
+   "why": "只对单源墙路生效",
+   "default": 0.0,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_generic.py:floor_rooms_from_floors",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_generic.py:floor_rooms_from_floors"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "room_route",
+   "label": "房间路由",
+   "kind": "单独",
+   "step": "rooms",
+   "why": "auto=逐层按图纸房号择优 / single=读交付墙；不写 ⇒ 走主线 regen",
+   "default": "",
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "auto",
+   "readers": [
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_generic.py:run",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_generic.py:run"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "room_seal",
+   "label": "房间密封",
+   "kind": "单独",
+   "step": "rooms",
+   "why": "只对 single/auto 路生效",
+   "default": 0.0,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.08,
+   "readers": [
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_generic.py:floor_rooms_from_floors",
+    "backend/extract/extract_rooms_generic.py:run",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_generic.py:floor_rooms_from_floors",
+    "backend/extract/extract_rooms_generic.py:run"
+   ],
+   "n_consumers": 2
+  },
+  {
+   "key": "rooms",
+   "label": "rooms.json 路径",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "房间标注来源；缺文件时自动建空表",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "D:\\gym3d\\data\\buildings\\c006\\rooms.json",
+   "readers": [
+    "_dxf_audit.py",
+    "_dxf_png_batch.py",
+    "_render_common.py",
+    "_sweep_modeling.py",
+    "_wall_thin_batch.py",
+    "audit_gate.py",
+    "audit_walls.py",
+    "backend\\api\\routers\\rooms.py",
+    "backend\\api\\services\\area_audit.py",
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\workshop.py",
+    "backend\\audit_buildings.py",
+    "backend\\checks\\builtin.py",
+    "backend\\checks\\floor_levels.py",
+    "backend\\checks\\heavy.py",
+    "backend\\checks\\plan_png.py",
+    "backend\\checks\\runner.py",
+    "backend\\checks\\sources.py",
+    "backend\\checks\\system.py",
+    "backend\\extract\\backfill_floor_rooms.py",
+    "backend\\modeling\\build_standard_glb.py",
+    "backend\\modeling\\su_spec_floors.py",
+    "backend\\modeling\\su_spec_floors_fleet.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\recognizer\\floor.py",
+    "backend\\recognizer\\recognize.py",
+    "backend\\state\\census.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "build_index.py",
+    "qa_external_truth.py",
+    "qa_structural.py",
+    "run_building.py",
+    "scan_defects.py"
+   ],
+   "readers_fn": [
+    "_dxf_audit.py:_audit_html",
+    "_dxf_audit.py:audit_building",
+    "_dxf_audit.py:main",
+    "_dxf_png_batch.py:render_floor_png",
+    "_render_common.py:caption_counts_html",
+    "_render_common.py:floor_counts",
+    "_wall_thin_batch.py:verify_floor",
+    "audit_gate.py:_layer_kind",
+    "audit_gate.py:_roof_terrace",
+    "audit_gate.py:gate_building",
+    "audit_walls.py:audit_floor",
+    "audit_walls.py:building_html",
+    "backend/api/routers/buildings.py:building_rooms",
+    "backend/api/services/area_audit.py:parse_fleet",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/artifacts.py:floors_summary",
+    "backend/api/services/artifacts.py:inventory",
+    "backend/api/services/workshop.py:_row",
+    "backend/audit_buildings.py:audit",
+    "backend/checks/builtin.py:check_a1",
+    "backend/checks/builtin.py:check_a3",
+    "backend/checks/builtin.py:check_a9",
+    "backend/checks/floor_levels.py:read_area_rows",
+    "backend/checks/heavy.py:_emit",
+    "backend/checks/heavy.py:check_b3",
+    "backend/checks/plan_png.py:segs_of",
+    "backend/checks/runner.py:_mk",
+    "backend/checks/runner.py:_mk9",
+    "backend/checks/runner.py:_selftest",
+    "backend/checks/sources.py:parse_detail",
+    "backend/checks/system.py:check_c0",
+    "backend/extract/backfill_floor_rooms.py:backfill_floors",
+    "backend/extract/extract_rooms_c006.py:main",
+    "backend/extract/extract_rooms_generic.py:relabel",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/modeling/build_standard_glb.py:build_rooms",
+    "backend/modeling/build_standard_glb.py:main",
+    "backend/modeling/su_spec_floors.py:_recolor_rooms",
+    "backend/modeling/su_spec_floors.py:_verify",
+    "backend/modeling/su_spec_floors_fleet.py:_recolor_rooms",
+    "backend/modeling/su_spec_floors_fleet.py:used_purposes",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/state/census.py:_count_rooms_in_floor_files",
+    "backend/web/run_step.py:profile_from_cfg",
+    "backend/web/run_step.py:step_recognize",
+    "qa_external_truth.py:selftest",
+    "qa_structural.py:I3_room_within_outline",
+    "qa_structural.py:I5_empty_dropband",
+    "qa_structural.py:main",
+    "run_building.py:load_profile",
+    "run_building.py:main",
+    "scan_defects.py:_ledger_grain",
+    "scan_defects.py:_push_union_top",
+    "scan_defects.py:big_ctx",
+    "scan_defects.py:check_degenerate",
+    "scan_defects.py:check_duplicates",
+    "scan_defects.py:check_ledger_area_mismatch",
+    "scan_defects.py:check_ledger_vs_floors",
+    "scan_defects.py:check_merged_rooms",
+    "scan_defects.py:check_room_wall_deep",
+    "scan_defects.py:first_room",
+    "scan_defects.py:load_ctx",
+    "scan_defects.py:m_agg",
+    "scan_defects.py:m_agg2",
+    "scan_defects.py:m_diff",
+    "scan_defects.py:m_dup",
+    "scan_defects.py:m_dup_id",
+    "scan_defects.py:m_frame",
+    "scan_defects.py:m_per_room_one_wrong",
+    "scan_defects.py:m_same",
+    "scan_defects.py:m_shift",
+    "scan_defects.py:rooms_bbox",
+    "scan_defects.py:selftest",
+    "scan_defects.py:shots",
+    "scan_defects.py:synth",
+    "scan_defects.py:synth_led"
+   ],
+   "consumers": [
+    "_dxf_audit.py:_audit_html",
+    "_dxf_audit.py:audit_building",
+    "_dxf_audit.py:main",
+    "_dxf_png_batch.py:render_floor_png",
+    "_render_common.py:caption_counts_html",
+    "_render_common.py:floor_counts",
+    "_wall_thin_batch.py:verify_floor",
+    "audit_gate.py:_layer_kind",
+    "audit_gate.py:_roof_terrace",
+    "audit_gate.py:gate_building",
+    "audit_walls.py:audit_floor",
+    "audit_walls.py:building_html",
+    "backend/api/routers/buildings.py:building_rooms",
+    "backend/api/services/area_audit.py:parse_fleet",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/artifacts.py:floors_summary",
+    "backend/api/services/artifacts.py:inventory",
+    "backend/api/services/workshop.py:_row",
+    "backend/audit_buildings.py:audit",
+    "backend/checks/builtin.py:check_a1",
+    "backend/checks/builtin.py:check_a3",
+    "backend/checks/builtin.py:check_a9",
+    "backend/checks/floor_levels.py:read_area_rows",
+    "backend/checks/heavy.py:_emit",
+    "backend/checks/heavy.py:check_b3",
+    "backend/checks/plan_png.py:segs_of",
+    "backend/checks/runner.py:_mk",
+    "backend/checks/runner.py:_mk9",
+    "backend/checks/runner.py:_selftest",
+    "backend/checks/sources.py:parse_detail",
+    "backend/checks/system.py:check_c0",
+    "backend/extract/backfill_floor_rooms.py:backfill_floors",
+    "backend/extract/extract_rooms_c006.py:main",
+    "backend/extract/extract_rooms_generic.py:relabel",
+    "backend/extract/extract_rooms_generic.py:run",
+    "backend/modeling/build_standard_glb.py:build_rooms",
+    "backend/modeling/build_standard_glb.py:main",
+    "backend/modeling/su_spec_floors.py:_recolor_rooms",
+    "backend/modeling/su_spec_floors_fleet.py:_recolor_rooms",
+    "backend/modeling/su_spec_floors_fleet.py:used_purposes",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/floor.py:extract_floor",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/state/census.py:_count_rooms_in_floor_files",
+    "backend/web/run_step.py:step_recognize",
+    "qa_external_truth.py:selftest",
+    "qa_structural.py:I3_room_within_outline",
+    "qa_structural.py:I5_empty_dropband",
+    "qa_structural.py:main",
+    "run_building.py:main",
+    "scan_defects.py:_ledger_grain",
+    "scan_defects.py:_push_union_top",
+    "scan_defects.py:big_ctx",
+    "scan_defects.py:check_degenerate",
+    "scan_defects.py:check_duplicates",
+    "scan_defects.py:check_ledger_area_mismatch",
+    "scan_defects.py:check_ledger_vs_floors",
+    "scan_defects.py:check_merged_rooms",
+    "scan_defects.py:check_room_wall_deep",
+    "scan_defects.py:first_room",
+    "scan_defects.py:load_ctx",
+    "scan_defects.py:m_agg",
+    "scan_defects.py:m_agg2",
+    "scan_defects.py:m_diff",
+    "scan_defects.py:m_dup",
+    "scan_defects.py:m_dup_id",
+    "scan_defects.py:m_frame",
+    "scan_defects.py:m_per_room_one_wrong",
+    "scan_defects.py:m_same",
+    "scan_defects.py:m_shift",
+    "scan_defects.py:rooms_bbox",
+    "scan_defects.py:selftest",
+    "scan_defects.py:shots",
+    "scan_defects.py:synth",
+    "scan_defects.py:synth_led"
+   ],
+   "n_consumers": 75
+  },
+  {
+   "key": "rooms_from_floors",
+   "label": "房间取自 floors",
+   "kind": "单独",
+   "step": "rooms",
+   "why": "单源墙旧写法，已被 room_route 取代",
+   "default": false,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\extract\\extract_rooms_generic.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_generic.py:run",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_generic.py:run"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "sheet_floors",
+   "label": "一图多层",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "一张图描述多层（如通高圆厅）",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/floor.py:_expand_cols",
+    "backend/recognizer/floor.py:_expand_pts",
+    "backend/recognizer/floor.py:expand_shared_sheets",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/floor.py:_expand_cols",
+    "backend/recognizer/floor.py:_expand_pts",
+    "backend/recognizer/floor.py:expand_shared_sheets",
+    "backend/recognizer/recognize.py:recognize"
+   ],
+   "n_consumers": 4
+  },
+  {
+   "key": "single_wall_t",
+   "label": "孤线厚度",
+   "kind": "单独",
+   "step": "recognize+thin",
+   "why": "line 约定下孤线（门垛/短段/女儿墙）的可见厚；thin 步也读",
+   "default": 0.1,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "_wall_thin_batch.py:rebuild_floor",
+    "backend/recognizer/geometry.py:derive_drawing_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "_wall_thin_batch.py:rebuild_floor",
+    "backend/recognizer/geometry.py:derive_drawing_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline"
+   ],
+   "n_consumers": 3
+  },
+  {
+   "key": "skip_floors",
+   "label": "剔除层",
+   "kind": "单独",
+   "step": "glb",
+   "why": "重建 GLB 时要剔掉的层；不能被命令行指定",
+   "default": null,
+   "in_batch_loader": false,
+   "in_console_loader": false,
+   "loaders": {
+    "批": false,
+    "台": false,
+    "GLB档": true
+   },
+   "console_exposed": true,
+   "c006": null,
+   "readers": [
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "build_index.py",
+    "glb_gate.py"
+   ],
+   "readers_fn": [
+    "backend/web/run_step.py:glb_opts_from_profile",
+    "backend/web/run_step.py:main",
+    "build_index.py:exported_floors",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge"
+   ],
+   "consumers": [
+    "backend/web/run_step.py:main",
+    "build_index.py:exported_floors",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge"
+   ],
+   "n_consumers": 4
+  },
+  {
+   "key": "slab",
+   "label": "板厚",
+   "kind": "死键",
+   "step": "—",
+   "why": "★ 接线接到 profile 就断了：默认值表 / 参数页字段 / 两个加载器都读它，但载入后**全仓零个消费者**。参数页上可编辑 ⇒ 改了模型不动、也不报错。★ 这个尤其要命：真值在 `backend/recognizer/standard.py:16` 的 STANDARD[\"slab_t\"]=0.2（全库 95 栋写死在代码里、无一栋能覆盖），而 slab_t 进了几何（`wall_h = floor_h − slab_t`、楼板厚、`z + slab_t` 的标高偏移）；profile 的 slab 只被载入、无人读。全库 95 栋 slab 恰好都=0.2 ⇒ **至今没咬到人**，但第一次把它改成 0.3，模型不会动且不会报错（铁律 17 的参数版）",
+   "default": 0.2,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.2,
+   "readers": [
+    "backend\\modeling\\su_spec.py",
+    "backend\\modeling\\su_spec_floors.py",
+    "backend\\modeling\\su_spec_floors_fleet.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/modeling/su_spec.py:add_slab",
+    "backend/modeling/su_spec_floors.py:_add_site",
+    "backend/modeling/su_spec_floors.py:_verify",
+    "backend/modeling/su_spec_floors_fleet.py:_add_site",
+    "backend/modeling/su_spec_floors_fleet.py:_slab_pieces",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [],
+   "n_consumers": 0
+  },
+  {
+   "key": "stair_points",
+   "label": "台阶点数阈值",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "仅 door_by_points=True 时生效",
+   "default": 5,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 5,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/classify.py:classify",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/classify.py:classify"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "style",
+   "label": "外观整组",
+   "kind": "公共",
+   "step": "recognize→spec→glb/render",
+   "why": "写进 spec 后由 glb 消费；缺省用 STYLE_DEFAULT",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": false,
+   "c006": {
+    "facade": "#a4533d",
+    "inner": "#cfc9bd",
+    "roof": "#6b5a4a",
+    "roofType": "flat",
+    "parapet": "#6a4a40",
+    "parapet_t": 0.24,
+    "_note_parapet_t": "女儿墙厚。图上实测：裙楼屋面（F6）边缘是双线，采样点 (-57.65,26.26) 两条 11.4m 线相距 0.016/0.256m、(50.69,2.83) 两条 14.4m 线相距 0.021/0.261m ⇒ 0.24m（与墙厚档 0.24 同档）。走 style 而非顶层 profile 键：recognize 的 add_terrace_parapets 读 style.parapet_t，并把同值抬进 spec overrides —— 因为 emit_spec 只把 style 合进 data['style']，不覆盖顶层 parapet_t（STANDARD 兜底 0.5），而 GLB 的 add_parapet 读的是顶层键。",
+    "glass": "#789cb8",
+    "door": "#8a5a38"
+   },
+   "readers": [
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\console.py",
+    "backend\\modeling\\build_standard_glb.py",
+    "backend\\modeling\\su_spec.py",
+    "backend\\modeling\\su_spec_floors.py",
+    "backend\\recognizer\\recognize.py",
+    "backend\\recognizer\\standard.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\control.py",
+    "backend\\web\\run_step.py",
+    "freeze_meta.py",
+    "glb_gate.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:list_buildings",
+    "backend/modeling/build_standard_glb.py:main",
+    "backend/modeling/su_spec.py:export_glb",
+    "backend/modeling/su_spec.py:main",
+    "backend/modeling/su_spec_floors.py:_categorize",
+    "backend/recognizer/recognize.py:_add_terrace_parapets_impl",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/recognizer/standard.py:emit_spec",
+    "backend/web/console_meta.py:self_check_report",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:profile_from_cfg",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:list_buildings",
+    "backend/modeling/build_standard_glb.py:main",
+    "backend/modeling/su_spec.py:export_glb",
+    "backend/modeling/su_spec.py:main",
+    "backend/modeling/su_spec_floors.py:_categorize",
+    "backend/recognizer/recognize.py:_add_terrace_parapets_impl",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/recognizer/standard.py:emit_spec",
+    "backend/web/console_meta.py:self_check_report",
+    "backend/web/control.py:list_buildings",
+    "glb_gate.py:collect",
+    "glb_gate.py:judge"
+   ],
+   "n_consumers": 14
+  },
+  {
+   "key": "title",
+   "label": "中文名",
+   "kind": "公共",
+   "step": "—",
+   "why": "只影响显示，不参与几何",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "第六教学楼（逸夫楼）",
+   "readers": [
+    "annotate_defects.py",
+    "backend\\api\\routers\\compare.py",
+    "backend\\api\\services\\artifacts.py",
+    "backend\\api\\services\\checks.py",
+    "backend\\api\\services\\compare.py",
+    "backend\\api\\services\\console.py",
+    "backend\\api\\services\\kg.py",
+    "backend\\api\\services\\workshop.py",
+    "backend\\checks\\__init__.py",
+    "backend\\checks\\findings.py",
+    "backend\\checks\\kg_view_accept.py",
+    "backend\\checks\\runner.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\control.py",
+    "backend\\web\\run_step.py",
+    "build_index.py",
+    "kb\\ask.py",
+    "kb\\build_kb.py",
+    "kb\\gate.py",
+    "run_building.py",
+    "scan_defects.py"
+   ],
+   "readers_fn": [
+    "annotate_defects.py:building_list",
+    "backend/api/routers/compare.py:compare_list",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/checks.py:registry",
+    "backend/api/services/compare.py:brief",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:list_buildings",
+    "backend/api/services/kg.py:graph",
+    "backend/api/services/kg.py:inventory",
+    "backend/api/services/workshop.py:_row",
+    "backend/checks/__init__.py:run_fleet_checks",
+    "backend/checks/compare_geo.py:main",
+    "backend/checks/findings.py:as_dict",
+    "backend/checks/kg_citation.py:main",
+    "backend/checks/kg_view_accept.py:mode_parity",
+    "backend/checks/kg_view_accept.py:mode_walk",
+    "backend/checks/runner.py:_print_report",
+    "backend/checks/runner.py:_selftest",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/web/control.py:list_buildings",
+    "backend/web/run_step.py:profile_from_cfg",
+    "kb/ask.py:answer",
+    "kb/ask.py:list_all",
+    "kb/ask.py:render",
+    "kb/build_kb.py:_diff",
+    "kb/build_kb.py:_index",
+    "kb/build_kb.py:build",
+    "kb/build_kb.py:selftest",
+    "kb/gate.py:_print",
+    "kb/gate.py:collect_playbook_edges",
+    "kb/gate.py:collect_trap_edges",
+    "kb/gate.py:graph_edges",
+    "kb/gate.py:selftest",
+    "run_building.py:load_profile",
+    "scan_defects.py:d0_of",
+    "scan_defects.py:rec",
+    "scan_defects.py:scan",
+    "scan_defects.py:selftest"
+   ],
+   "consumers": [
+    "annotate_defects.py:building_list",
+    "backend/api/routers/compare.py:compare_list",
+    "backend/api/services/artifacts.py:_building_row",
+    "backend/api/services/checks.py:registry",
+    "backend/api/services/compare.py:brief",
+    "backend/api/services/console.py:_registry_row",
+    "backend/api/services/console.py:list_buildings",
+    "backend/api/services/kg.py:graph",
+    "backend/api/services/kg.py:inventory",
+    "backend/api/services/workshop.py:_row",
+    "backend/checks/__init__.py:run_fleet_checks",
+    "backend/checks/compare_geo.py:main",
+    "backend/checks/findings.py:as_dict",
+    "backend/checks/kg_citation.py:main",
+    "backend/checks/kg_view_accept.py:mode_parity",
+    "backend/checks/kg_view_accept.py:mode_walk",
+    "backend/checks/runner.py:_print_report",
+    "backend/checks/runner.py:_selftest",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/web/control.py:list_buildings",
+    "kb/ask.py:answer",
+    "kb/ask.py:list_all",
+    "kb/ask.py:render",
+    "kb/build_kb.py:_diff",
+    "kb/build_kb.py:_index",
+    "kb/build_kb.py:build",
+    "kb/build_kb.py:selftest",
+    "kb/gate.py:_print",
+    "kb/gate.py:collect_playbook_edges",
+    "kb/gate.py:collect_trap_edges",
+    "kb/gate.py:graph_edges",
+    "kb/gate.py:selftest",
+    "scan_defects.py:d0_of",
+    "scan_defects.py:rec",
+    "scan_defects.py:scan",
+    "scan_defects.py:selftest"
+   ],
+   "n_consumers": 36
+  },
+  {
+   "key": "transition",
+   "label": "过渡层",
+   "kind": "单独",
+   "step": "recognize+rooms",
+   "why": "阶梯楼：楼板全宽、墙只占窄条。子键 slab_from/slab_only/slab_full_width/wall_x",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": {
+    "6": {
+     "wall_x": [
+      1524310,
+      1570450
+     ],
+     "keep_near_stairs_m": 2.5,
+     "_note_keep_near_stairs_m": "具名口子：wall_x 弃的是裙楼屋面**女儿墙**，不是出屋面**楼梯间**的围合墙（真构件：F6 6 口裙楼井原 3m 内 0 面墙，同楼 F5 同位置 6~12 面；仓库不变量 I17 报 f6 6/8 口围合不足 最低 0.00）。口径 = 「质心在**踏步盒外** R 内的线保留」＋「这些墙不布合成窗」：盒内是**踏步线**（I17 口径 a) 定义的假墙，仍弃；合成窗是立面补救，屋面构筑物上布窗＝臆造（c006 F6 图纸上出屋面楼梯间是光板双线墙，无窗符号）。标定（_scratch/_c006_f6_keepwell_sweep.py，判据含盒内排除）：R=2.0/2.5/3.0 = 轮廓 1140.8/1142.4/1148.4㎡、均 7 块（平台区，6 个楼梯间彼此独立）；R>=3.5 块数掉到 5、面积涨到 1177~1247㎡（串味）；实测 R=6.0 更差：墙 +18、轮廓字段 5701→5795㎡、而围合率一点没变 ⇒ 取 2.5。6 个踏步盒到围合墙的扩出量实测 1.27~2.17m，女儿墙在 10m 外 ⇒ 只捞楼梯间不捞女儿墙。**已知残项**：四角 4 个楼梯间远端那道墙在踏步盒 5.8~6.0m 外（腰中 2 个四边齐），任何安全 R 都够不到；要补齐须把 6 个围合矩形人工读图后写进 profile。",
+     "slab_full_width": true,
+     "_note_slab_full_width": "**保留**（2026-09-15 曾删掉一天，用户判例「两翼的楼顶也没有了」→ 复回）。理由：楼板标高 = 本层楼面，而**屋面标高 = 上层楼面** —— 6 层（F5）的顶 = 7 层（F6）楼面 = 21.0m，所以裙楼屋面这一块必须由 **F6 那张全宽板**来出（F6 的板 = 塔楼楼板 ∪ 裙楼屋面，同一标高）。删掉它，两翼就只剩 6 层楼板顶面、没有屋面层了。图纸面积表 7 层 912.70㎡ 是**建筑面积口径**（屋面不计面积），与「F6 板上还要铺裙楼屋面」不矛盾。"
+    },
+    "2": {
+     "slab_from": 1,
+     "slab_only": true,
+     "_note": "F2 无 >=7 点完整外沿折线（外沿法退化成 6.4㎡ 碎片）→ 复用同平面的 F1 外沿轮廓。"
+    },
+    "3": {
+     "slab_from": 1,
+     "slab_only": true,
+     "_note": "同 F2：3 层与 2 层同平面。"
+    }
+   },
+   "readers": [
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/extract/extract_rooms_c006.py:floor_rooms",
+    "backend/extract/extract_rooms_generic.py:floor_walls",
+    "backend/recognizer/floor.py:reference_outline_for",
+    "backend/recognizer/recognize.py:localize_columns",
+    "backend/recognizer/recognize.py:recognize",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/extract/extract_rooms_c006.py:floor_rooms",
+    "backend/extract/extract_rooms_generic.py:floor_walls",
+    "backend/recognizer/floor.py:reference_outline_for",
+    "backend/recognizer/recognize.py:localize_columns",
+    "backend/recognizer/recognize.py:recognize"
+   ],
+   "n_consumers": 5
+  },
+  {
+   "key": "tread_cluster_filter",
+   "label": "踏步线过滤",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "斜向楼梯踏步线画在墙体图层上的楼（c006 实测）",
+   "default": false,
+   "in_batch_loader": true,
+   "in_console_loader": false,
+   "loaders": {
+    "批": true,
+    "台": false,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": false,
+   "readers": [
+    "backend\\recognizer\\floor.py",
+    "backend\\web\\console_meta.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/floor.py:extract_floor",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/floor.py:extract_floor"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "wall_extend",
+   "label": "墙线延伸",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "配对时两端各伸出的量",
+   "default": 0.15,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.15,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/geometry.py:pair_rects",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/geometry.py:pair_rects"
+   ],
+   "n_consumers": 1
+  },
+  {
+   "key": "wall_fallback",
+   "label": "配对失败回落",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "配不上时用的替代厚",
+   "default": 0.15,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.15,
+   "readers": [
+    "backend\\recognizer\\curve_walls.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/curve_walls.py:pair_arc_bands",
+    "backend/recognizer/geometry.py:_derive_buffer_walls_and_outline",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_drawing_walls_and_outline",
+    "backend/recognizer/geometry.py:pair_rects",
+    "backend/web/run_step.py:profile_from_cfg",
+    "qa_defect_census.py:defect_of",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/curve_walls.py:pair_arc_bands",
+    "backend/recognizer/geometry.py:_derive_buffer_walls_and_outline",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_drawing_walls_and_outline",
+    "backend/recognizer/geometry.py:pair_rects",
+    "qa_defect_census.py:defect_of"
+   ],
+   "n_consumers": 6
+  },
+  {
+   "key": "wall_layer",
+   "label": "墙/门/台阶图层",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "三者共用同一图层，靠几何形状区分",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": "4.2墙体",
+   "readers": [
+    "_dxf_audit.py",
+    "audit_walls.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "_dxf_audit.py:_source_wall_points",
+    "audit_walls.py:audit_floor",
+    "audit_walls.py:curve_segments",
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "_dxf_audit.py:_source_wall_points",
+    "audit_walls.py:audit_floor",
+    "audit_walls.py:curve_segments",
+    "backend/recognizer/classify.py:classify",
+    "backend/recognizer/classify_line.py:classify_line",
+    "backend/recognizer/detect_params.py:detect"
+   ],
+   "n_consumers": 6
+  },
+  {
+   "key": "wall_max",
+   "label": "墙厚上限",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "墙皮配对的上界",
+   "default": 0.35,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.4,
+   "readers": [
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/curve_walls.py:pair_arc_bands",
+    "backend/recognizer/curve_walls.py:pair_curved_faces",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:_pair",
+    "backend/recognizer/geometry.py:pair_rects",
+    "backend/recognizer/geometry.py:pair_wall_faces",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/curve_walls.py:pair_arc_bands",
+    "backend/recognizer/curve_walls.py:pair_curved_faces",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:_pair",
+    "backend/recognizer/geometry.py:pair_rects",
+    "backend/recognizer/geometry.py:pair_wall_faces"
+   ],
+   "n_consumers": 6
+  },
+  {
+   "key": "wall_min",
+   "label": "墙厚下限",
+   "kind": "公共",
+   "step": "recognize",
+   "why": "墙皮配对的下界",
+   "default": 0.08,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": 0.05,
+   "readers": [
+    "_wall_thin_batch.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "_wall_thin_batch.py:rebuild_floor",
+    "backend/recognizer/curve_walls.py:pair_arc_bands",
+    "backend/recognizer/curve_walls.py:pair_curved_faces",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:_pair",
+    "backend/recognizer/geometry.py:derive_drawing_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/recognizer/geometry.py:pair_rects",
+    "backend/recognizer/geometry.py:pair_wall_faces",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "_wall_thin_batch.py:rebuild_floor",
+    "backend/recognizer/curve_walls.py:pair_arc_bands",
+    "backend/recognizer/curve_walls.py:pair_curved_faces",
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:_pair",
+    "backend/recognizer/geometry.py:derive_drawing_walls_and_outline",
+    "backend/recognizer/geometry.py:derive_line_walls_and_outline",
+    "backend/recognizer/geometry.py:pair_rects",
+    "backend/recognizer/geometry.py:pair_wall_faces"
+   ],
+   "n_consumers": 9
+  },
+  {
+   "key": "wall_thicknesses",
+   "label": "真实墙厚表",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "从图纸双线间距直方图读出过真实墙厚的楼才填；留空=不 snap",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": [
+    0.06,
+    0.12,
+    0.24,
+    0.27,
+    0.35,
+    0.38
+   ],
+   "readers": [
+    "backend\\recognizer\\geometry.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:pair_wall_faces",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/recognizer/geometry.py:_derive_paired_walls_and_outline",
+    "backend/recognizer/geometry.py:pair_wall_faces"
+   ],
+   "n_consumers": 2
+  },
+  {
+   "key": "x_range",
+   "label": "X 隔离窗口",
+   "kind": "单独",
+   "step": "recognize",
+   "why": "多栋并排/重复复制的图；floor_plans 存在时优先级更高",
+   "default": null,
+   "in_batch_loader": true,
+   "in_console_loader": true,
+   "loaders": {
+    "批": true,
+    "台": true,
+    "GLB档": false
+   },
+   "console_exposed": true,
+   "c006": [
+    1013235,
+    1611850
+   ],
+   "readers": [
+    "backend\\checks\\heavy.py",
+    "backend\\recognizer\\detect_params.py",
+    "backend\\web\\console_meta.py",
+    "backend\\web\\run_step.py",
+    "run_building.py"
+   ],
+   "readers_fn": [
+    "backend/checks/heavy.py:check_b3",
+    "backend/recognizer/classify.py:_in_x_range",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/profile.py:in_floor_x_range",
+    "backend/web/run_step.py:profile_from_cfg",
+    "run_building.py:load_profile"
+   ],
+   "consumers": [
+    "backend/checks/heavy.py:check_b3",
+    "backend/recognizer/classify.py:_in_x_range",
+    "backend/recognizer/detect_params.py:detect",
+    "backend/recognizer/detect_params.py:main",
+    "backend/recognizer/profile.py:in_floor_x_range"
+   ],
+   "n_consumers": 5
+  }
+ ],
+ "_生成": {
+  "生成器": "_scratch/_gen_branches.py",
+  "人写四列": {
+   "来路": "人写四列：从 branches.json 读回 54 行",
+   "与种子表不一致的键": [
+    [
+     "outer_wall_t",
+     "?",
+     "公共"
+    ]
+   ],
+   "不一致条数": 1
+  },
+  "c006 读取": {
+   "状态": "已读",
+   "路径": "D:\\gym3d\\data\\buildings\\c006\\profile.json",
+   "键数": 42
+  },
+  "console_meta 读取": {
+   "状态": "已读",
+   "文件": "backend/web/console_meta.py",
+   "分组数": 11,
+   "暴露键数": 50
+  }
+ }
+}

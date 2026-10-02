@@ -11,6 +11,10 @@
 
 import { API, ApiError } from './api.js';
 import { el, fill, kv, block, chip, note, num, int } from './dom.js';
+// ★ `describe()` 在**轮廓那一份**里 —— 实测数与缺失怎么分开写，只有那里知道
+//   （比如"净高 0.43 m"要配一句"这是没量到屋顶，不是楼矮"）。在面板里重写一遍
+//   那句话，两处迟早会漂，而漂了不报错。
+import { describe as outlineFacts } from './world/outlines.js';
 
 // 用途配色的固定表 —— 同一个用途在全校拿同一个颜色。
 // ★ 用**固定表 + 稳定哈希**，不用"按出现顺序分配"：后者会让同一栋楼
@@ -215,6 +219,35 @@ export function createPanel(host, ctx) {
     fill(host, ...body);
   }
 
+  /** 真轮廓、**还没关联名册** —— 这一屏是本轮的主场，所以它必须最诚实。
+   *
+   *  ★★★ 这里有一个**不能含糊**的分界：形状/占地/高程是**实测**（1:500 地形图
+   *      数字化出来的），而**身份是空的** —— 341 条轮廓里没有楼号，盘上也不存在
+   *      能把它们和 93 条名册连起来的变换（我量过四次：平移投票 / 旋转扫描 /
+   *      `cx−offset` / Y 翻转，四次最高票都压在噪声底上、四种都报不出峰）。
+   *      ⇒ 屏幕上**不许**出现一个我没量过就写上去的楼名。宁可写"未关联"。
+   *      （本仓铁律 141：名字不是定义；铁律 089：引用别处的数去推另一个尺度上的
+   *       结论，那个数的"存在性"本身是跟尺度绑的。）
+   */
+  function renderOutline(b) {
+    const d = outlineFacts(b);
+    fill(host,
+      el('p', { class: 'kicker', text: `建筑轮廓 #${b.i}` }),
+      el('h3', { text: '未关联名册' }),
+      el('p', { class: 'lede' },
+        chip('几何实测', 'live'), ' ', chip('身份未定', 'off')),
+      note('形状、占地、高程来自 1:500 实测地形图 —— 是**量出来的**；'
+        + '但它还没和名册里的哪一栋对上，所以**没有楼名、没有房间、没有用途**。'),
+      block('实测几何', 'outlines.json', kv(d.rows)),
+      d.caveat ? note(d.caveat, '') : null,
+    );
+    if (!ctx.caps.has('manage')) {
+      host.appendChild(note('关联到名册需要「搭建方」权限 —— 你现在的账号只能看。'));
+      return;
+    }
+    host.appendChild(renderAnchorTool(b));
+  }
+
   function renderMock(b) {
     fill(host,
       el('p', { class: 'kicker', text: `模拟体块 ${b.id}` }),
@@ -278,7 +311,7 @@ export function createPanel(host, ctx) {
           msg.textContent = e instanceof ApiError ? e.message : String(e);
         } finally { btn.disabled = false; }
       },
-    }, '把这一块锚定到这一栋');
+    }, '把这处轮廓关联到这一栋');
 
     return block('这是哪一栋？', `${roster.length} 栋可选`,
       note('名录已按你的可见范围过滤。'),
@@ -303,7 +336,9 @@ export function createPanel(host, ctx) {
     }
 
     const anchor = ctx.anchors.get(b.id) ?? null;
-    if (!anchor) { renderMock(b); return; }
+    // ★ 真轮廓走 `renderOutline`（身份未定那一屏），旧模拟体块走 `renderMock`。
+    //   判据是 `b.poly`：只有 `outlines.js` 的 `normalise()` 会产出它。
+    if (!anchor) { (b.poly ? renderOutline : renderMock)(b); return; }
 
     // 锚定了 —— 先把名录里的名字拿到（overview 里没有），再画真数据。
     if (b.realTitle === undefined) {

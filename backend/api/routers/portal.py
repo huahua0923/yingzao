@@ -42,6 +42,21 @@ from typing import Any, Iterator, Literal
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
+# ★ 直接 `python backend/api/routers/portal.py` 跑末尾那段自检入口时，`__package__`
+#   是空的 ⇒ 下面那句 `from ..authz import …` 抛「attempted relative import with no
+#   known parent package」。屏幕上像"这个文件坏了"，而它是好的（铁律 168 同族）。
+#   这里把直接运行**转成** `-m`，两条跑法都通。守卫在 `authz.py` / `deps.py` /
+#   `routers/tiles.py` 里各有一份。
+if __package__ in (None, ""):
+    import os as _os
+    import subprocess as _sp
+    import sys as _sys
+
+    _root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    _mod = (_os.path.relpath(_os.path.abspath(__file__), _root)[:-3]
+            .replace(_os.sep, ".").replace("/", "."))
+    _sys.exit(_sp.call([_sys.executable, "-m", _mod, *_sys.argv[1:]], cwd=_root))
+
 from ..authz import PrincipalDep, require_cap, visible
 from ..deps import SettingsDep
 from ..responses import ERR_UPSTREAM, ApiError, bad_request, ok

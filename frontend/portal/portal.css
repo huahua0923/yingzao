@@ -14,28 +14,56 @@
  * ------------------------------------------------------------------------- */
 
 :root {
-  /* —— 纸与墨 —— */
-  --paper:        #F6F3ED;
-  --paper-2:      #EFEAE1;
-  --surface:      #FFFFFF;
-  --ink:          #14110E;
-  --ink-2:        #3A342D;
-  --muted:        #7C746A;
-  --rule:         #DFD8CB;
-  --rule-2:       #C6BCA9;
+  /* —— 深色令牌（2026-10-02 从 `.dscreen` 搬上来，**不是新调的**）——
+   *
+   * ★ 为什么搬它：数据大屏是全平台**唯一一块已经像大厂**的屏，而它好看的那部分
+   *   不是那张正射图，是它自带的一组深色令牌（下面 `.dscreen` 里还留着原份）。
+   *   一组量过对比度的令牌只在那一屏生效，等于每次做新屏都要重调一遍。
+   *   ⇒ 提上来当全站底；`.dscreen` 那份保留（它还多两个专有令牌 `--ds-amber`/`--cal-*`）。
+   *
+   * ★ 极性**整体翻转**，而**用法一处都不用改**：旧版 `--paper` 是底、`--ink` 是字；
+   *   现在 `--ink` 仍然是"亮的那一头"。所以 `background: var(--ink); color: var(--paper)`
+   *   这类写法（跳转链 / 登录钮 / `.stage-bar` 按下态）自动跟着翻，不需要逐个去追。
+   *
+   * ★ `--muted` 对 `--surface` = **5.7:1**（原注释里那个数，出处是大屏那一屏的实测）。
+   *   这一条要紧：整页最小号的字（`.panel .kicker` 10.5px / `table.data th` 10.5px）
+   *   用的就是它。
+   */
+  /* ★★ `--void` 是「世界之外那一圈」的**唯一定义处**。
+     原来这里只有一个 `--paper: #0E1116`，而 `js/world/world.js:80` 的 `VOID_COLOR`
+     写的是 `#080b10`，并且注释声称「与 `portal.css` 的 `--void` 是同一个值」——
+     **那个变量根本不存在**。于是世界画布的底色与网页的底色差着 6 个数，
+     接缝处是一条能看见的横线：世界与页面不是同一张面。
+     现在两头都指这里：world.js 读 `--void`（读不到才退回自己那个常量）。 */
+  --void:         #080b10;   /* 世界之外：Cesium 画布底色 = 网页底色 */
+  --paper:        var(--void);  /* 页底。**同一个值**，不许各写各的 */
+  --paper-2:      #121821;
+  --surface:      #151A21;   /* 浮层面 */
+  --surface-2:    #1B222B;
+  --ink:          #D7E0EA;
+  --ink-2:        #A7B4C2;
+  --muted:        #8695A7;   /* 对 --surface 5.7:1 —— 全页最小号字用的就是它 */
+  --rule:         #28313D;
+  --rule-2:       #38434F;
 
-  /* —— 导轨（唯一一块深色）—— */
-  --rail:         #16130F;
-  --rail-2:       #221E18;
-  --rail-ink:     #EDE7DC;
-  --rail-muted:   #8D8577;
+  /* —— 导轨 / 顶栏 / 面板：**玻璃**，世界从它们底下透出来 ——
+     ★ 这一条是「世界铺满 + HUD 浮在上面」与「三栏切蛋糕」的分界。
+       写成半透明 + `backdrop-filter` 之后，地形会从导轨底下连续地延过去；
+       写成实色就又是三栏了。 */
+  --rail:         rgba(11, 15, 20, .70);
+  --rail-2:       rgba(255, 255, 255, .06);
+  --rail-ink:     #E6EDF5;
+  --rail-muted:   #8B98A8;
 
-  /* —— 语义色：一处一个含义，不许当装饰用 —— */
-  --accent:       #C1440E;   /* 朱：当前选中 / 主要动作 */
-  --accent-soft:  #F7E4DA;
-  --ok:           #3F6B3A;   /* 正常 / 已有数据 */
-  --warn:         #9A6B00;   /* 模拟 / 待核 */
-  --bad:          #A32020;   /* 越权 / 异常 */
+  /* —— 语义色：一处一个含义，不许当装饰用 ——
+     ★ 深底上这几个必须**提亮**，不能照搬纸色版：旧朱 `#C1440E` 压 `--surface`
+       只有 **3.4:1**，而它用在全页最小的字号上（`.panel .kicker`、`.doc .kicker`）。
+       纸色版的那几个值（`#C1440E` / `#3F6B3A` / `#9A6B00` / `#A32020`）是**为浅底选的**。 */
+  --accent:       #FF7A45;   /* 朱：当前选中 / 主要动作（对 --surface 6.8:1） */
+  --accent-soft:  #3A2118;
+  --ok:           #78C46E;   /* 正常 / 已有数据（8.3:1） */
+  --warn:         #E8A33D;   /* 模拟 / 待核（8.1:1） */
+  --bad:          #FF6B6B;   /* 越权 / 异常（6.3:1） */
 
   /* —— 字 —— */
   --serif: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
@@ -46,7 +74,7 @@
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
 
-  --rail-w: 212px;
+  --rail-w: 72px;
   --panel-w: 344px;
   --top-h: 56px;
 
@@ -54,8 +82,13 @@
   --fast: 140ms;
   --norm: 260ms;
 
-  --shadow-1: 0 1px 2px rgba(20,17,14,.06), 0 1px 1px rgba(20,17,14,.04);
-  --shadow-2: 0 10px 30px -12px rgba(20,17,14,.22), 0 2px 6px rgba(20,17,14,.06);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.50), 0 1px 1px rgba(0,0,0,.34);
+  --shadow-2: 0 18px 46px -18px rgba(0,0,0,.86), 0 2px 8px rgba(0,0,0,.50);
+
+  /* 浮层压在**实景影像**上，而影像本身是中灰偏杂的（屋顶/树/路都在同一片像素里）。
+     ⇒ 半透明底必须配一层模糊，否则 11px 的字读不读得出来取决于它底下恰好是什么楼。 */
+  --glass: rgba(11, 15, 20, .70);
+  --glass-blur: blur(14px) saturate(1.15);
 }
 
 * { box-sizing: border-box; }
@@ -67,12 +100,11 @@ body {
   background: var(--paper);
   color: var(--ink);
   font: 14px/1.62 var(--sans);
-  /* 纸面：极淡的格线 + 一点暖调，让大面积留白不发灰 */
+  /* ★ 原来这里铺了一层米色格线 + 左上角一团暖光（"纸面"）。转深色之后它**整块作废**：
+     深底上的浅格线会变成一层脏噪点，而"纸"这个隐喻在新结构里也不成立了 ——
+     现在的底是**世界**，不是纸。⇒ 换成一层极淡的冷调天光，只在左上角有一点层次。 */
   background-image:
-    linear-gradient(rgba(20,17,14,.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20,17,14,.022) 1px, transparent 1px),
-    radial-gradient(120% 90% at 12% -10%, #FFFDF8 0%, transparent 55%);
-  background-size: 24px 24px, 24px 24px, 100% 100%;
+    radial-gradient(120% 80% at 8% -12%, #1A2330 0%, transparent 58%);
 }
 
 .skip {
@@ -150,48 +182,88 @@ body {
 
 /* ───────────────────────────────────────────── 外壳三栏 ────────── */
 
+/* 世界铺满视口，其余全是浮在它上面的层。
+ *
+ * ★★ 这是整轮重做的**结构分界**。旧的 `.shell` 是一个三列 grid
+ *   （212px 导轨 | 舞台 | 344px 面板），世界只在中间那一格里 ——
+ *   于是地球上四边是**硬边**，周围一圈米色：屏幕上像一块斜浮在纸上的展板，
+ *   而不像一个大厂那种"世界"。改成铺满之后，"在哪里"这件事由**相机**说了算，
+ *   不由 CSS 栅格说了算。
+ *
+ * ★ 代价要说清楚：世界铺到顶栏/导轨/面板**底下**去了，所以那三层必须
+ *   自己"透"（半透明 + backdrop-filter），否则等于把世界又剪回三列。
+ */
 .shell {
-  height: 100%;
-  display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--panel-w);
-  grid-template-rows: var(--top-h) minmax(0, 1fr);
-  grid-template-areas: "top top top" "rail stage panel";
+  position: fixed; inset: 0;
+  display: block;                 /* ← 不再是 grid */
+
+  /* ★★ HUD 的四条内边距 —— **它们不是随手定的数，是"哪里被浮层挡住了"**。
+     世界本体铺满整个视口（含导轨底下、顶栏底下），而浮在它上面的文字若还按
+     `left: 24px` 摆，就会**摆到导轨后面去**（屏幕上表现为"这条提示不见了"，
+     而它其实好好地在 DOM 里、只是被 212px 的导轨盖住）。
+     ⇒ 所有压在世界上、又**不该**被挡住的层，边距一律从 `--hud-*` 起。
+
+  ★★ **这四条必须声明在 `.shell` 上，不能声明在 `:root` 上** —— 这一条是量出来的。
+     声明在 `:root` 时，`--hud-r` 的**计算值**在 `html` 那一层就被代入成了
+     `calc(344px + 24px)`（自定义属性在"声明它的那个元素"上就把 `var()` 解掉了），
+     随后这个**已经定死的 token 串**往下继承。于是 `.shell.no-panel` 里
+     `--panel-w: 0px` 改得干干净净，`--hud-r` **纹丝不动**：
+     探针读回来是 `shell_panel_w = 0px` 而 `hud_r_used = 368px` ——
+     面板明明收掉了，浮层右边却仍然空着 344px。
+
+     它的形态值得记下来（铁律 142 同族）：**两个量各自都对、也各自都"生效了"，
+     缝在"谁先代入"上**。所以判据只能是**读计算值**：
+     `getComputedStyle(el).getPropertyValue('--hud-r')` 与 `getComputedStyle(el).right`
+     两条一起看 —— 只看一条都会得出"改对了"。 */
+  --hud-l: calc(var(--rail-w) + var(--s5));
+  --hud-r: calc(var(--panel-w) + var(--s5));
+  --hud-t: calc(var(--top-h) + var(--s5));
+  --hud-b: var(--s5);
 }
 
-/* ★ 文档型 / 驾驶舱型模块**没有「当前选中的那一个」这回事**（那是三维场景才有的），
-   所以右边这条 344px 面板在这类模块上是**空的**。不收起来，屏幕上就是
-   **两条右栏**：外壳那条白着，页面自己那条装着事实 —— 1600 的窗口里
-   平白空掉 344px，驾驶舱的图只剩 900px 里的一半。
-   ⇒ 加一个 `no-panel` 档，交给 `go()` 按模块切。 */
-.shell.no-panel {
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
-  grid-template-areas: "top top" "rail stage";
-}
+/* ★ 面板空着的时候（文档型 / 驾驶舱型模块），右边这条 344px 不收就是一整条空档。
+   ★ 改法：**只把宽度归零**，不去动 grid-template-areas（已经没有 grid 了）——
+     `--hud-r` 是从 `--panel-w` 推出来的，所以 `#stage-bar` / `.doc.hud` 的右边距
+     会跟着一起收，不会留下一条 344px 的空带。 */
+.shell.no-panel { --panel-w: 0px; }
 .shell.no-panel > .panel { display: none; }
 
-/* 顶栏横跨三栏；左端那块**墨色**与导轨连成一体（导轨宽 = 第一栏宽）。 */
+/* 顶栏：玻璃条。★ 它压在实景影像上 —— 影像的上半截通常是天，接近白；
+   纯白顶栏会与天糊成一片，所以这里必须给**深底 + 模糊**，不能靠底色本身区分。 */
 .topbar {
-  grid-area: top;
+  position: absolute; left: 0; right: 0; top: 0; height: var(--top-h);
+  z-index: 40;
   display: flex; align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--rule);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
+/* ★ 品牌块**等于导轨宽**（收窄后是 72px）—— 里面只放那一枚体块标，
+   名字搬到 `#shell` 顶栏的 `.app-title` 上。
+   为什么不再留在块里：块宽跟着 `--rail-w` 走，导轨收到 72px 之后
+   「校园数字孪生平台」八个字会被挤成一列竖排（实测出图拍到过，一个字一行），
+   而那种挤出来的样子**不报错**，只是难看。 */
 .brand {
   margin: 0; flex: 0 0 var(--rail-w);
-  display: flex; align-items: center; gap: var(--s3);
-  align-self: stretch; padding: 0 var(--s4);
+  display: flex; align-items: center; justify-content: center;
+  align-self: stretch; padding: 0;
   background: var(--rail); color: var(--rail-ink);
   border-right: 1px solid var(--rail-2);
 }
 .mark {
-  width: 16px; height: 16px; flex: none; display: block;
+  width: 18px; height: 18px; flex: none; display: block;
   background: var(--accent);
   /* 一枚"体块"：朱色方块切掉一角，与三维里的体块同形 */
   clip-path: polygon(0 0, 100% 0, 100% 62%, 62% 100%, 0 100%);
 }
-.brand-text { font-size: 13px; letter-spacing: .06em; line-height: 1.25; }
-.brand-text i { display: block; font-style: normal; font-size: 10.5px;
-                letter-spacing: .2em; color: var(--rail-muted); }
+.app-title {
+  margin: 0 0 0 var(--s5);
+  display: flex; align-items: baseline; gap: var(--s3);
+  font-size: 14.5px; letter-spacing: .08em; color: var(--ink);
+}
+.app-title em { font-style: normal; font-size: 11px; letter-spacing: .18em;
+                color: var(--rail-muted); }
 
 .topbar-right {
   margin-left: auto;
@@ -209,68 +281,210 @@ button.ghost {
   border: 1px solid var(--rule-2); border-radius: 0;
   transition: color var(--fast), border-color var(--fast), background var(--fast);
 }
-button.ghost:hover { color: var(--bad); border-color: var(--bad); background: #FDF3F3; }
+button.ghost:hover { color: var(--bad); border-color: var(--bad);
+                      background: rgba(255,107,107,.16); }
 
 /* ───────────────────────────────────────────── 左侧导轨 ───────── */
 
 .rail {
-  grid-area: rail;
+  position: absolute; left: 0; top: var(--top-h); bottom: 0; width: var(--rail-w);
+  z-index: 40;
   background: var(--rail); color: var(--rail-ink);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid rgba(255,255,255,.08);
   padding: var(--s5) 0 var(--s4);
-  overflow-y: auto;
+  /* ★ 这里**故意不写 `overflow: auto`** —— 导轨收窄到 72px 之后，模块名改从
+     按钮右侧**飘出来**（`.lbl` 那个 absolute 层）。父元素一旦有 `overflow: auto`，
+     飘出来的那半截会被裁掉，而 `overflow-x: visible` 挡不住它（规范：一个轴是
+     `auto` 时另一个轴的 `visible` 会被算成 `auto`）。
+     `.rail` 上有 `backdrop-filter` ⇒ 它还是 fixed 后代的包含块，所以连
+     `position: fixed` 都救不了 —— 只能把裁剪整个去掉。
+     代价：窗口特别矮时导轨本身不滚动。10 个模块现在每个 44px，连分组线
+     一共约 560px，950 高的目标视口装得下；更矮的窗口由 780 行那条
+     `@media` 管（它在窄屏时另有一套收折规则）。 */
+  overflow: visible;
   display: flex; flex-direction: column; gap: 2px;
 }
+/* 分组标题：72px 里塞不下「设施与运行」四个字，于是**只留一条分隔线**。
+   ★ 文字没有删 —— 用 0 字号藏起来，读屏软件里分组还在（删掉 DOM 才是真丢）。 */
 .rail h2 {
-  margin: var(--s4) var(--s4) var(--s2);
-  font: 600 10px/1 var(--sans); letter-spacing: .22em; text-transform: uppercase;
-  color: var(--rail-muted);
+  margin: var(--s3) var(--s4); height: 1px; background: var(--rail-2);
+  font-size: 0; line-height: 0; color: transparent; overflow: hidden;
 }
 .rail h2:first-child { margin-top: 0; }
 .rail button {
-  appearance: none; text-align: left; cursor: pointer;
-  display: grid; grid-template-columns: 18px 1fr auto; align-items: center;
-  gap: var(--s3);
-  padding: 10px var(--s4);
-  font: 13.5px/1.3 var(--sans); color: var(--rail-ink);
+  position: relative;
+  appearance: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  height: 44px; padding: 0;
+  color: var(--rail-ink);
   background: transparent; border: 0; border-left: 2px solid transparent;
   transition: background var(--fast), border-color var(--fast), color var(--fast);
 }
-.rail button svg { width: 18px; height: 18px; fill: none;
+.rail button svg { width: 20px; height: 20px; fill: none;
                    stroke: currentColor; stroke-width: 1.5;
-                   stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+                   stroke-linecap: round; stroke-linejoin: round; opacity: .78; }
 .rail button:hover { background: var(--rail-2); }
 .rail button[aria-current="true"] {
   background: var(--rail-2); border-left-color: var(--accent); color: #fff;
 }
 .rail button[aria-current="true"] svg { opacity: 1; }
 .rail button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.rail .tag {
-  font: 600 9.5px/1 var(--sans); letter-spacing: .08em;
-  padding: 3px 5px; color: var(--warn); border: 1px solid #574414;
+
+/* 模块名与「模拟 / 实测」徽标 —— 从按钮右侧飘出来。
+   ★ 两个都要在，缺了哪个这个收窄就不成立：图标说不出「管网与回线」，
+   而「模拟」是**这条数据可不可信**，不能只靠一个颜色点让人猜。 */
+.rail button .lbl {
+  position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: var(--s3);
+  white-space: nowrap; padding: 7px 11px;
+  background: rgba(14, 17, 22, .97);
+  border: 1px solid rgba(255,255,255,.13);
+  box-shadow: 0 18px 40px -18px rgba(0,0,0,.9);
+  font: 13px/1 var(--sans); color: var(--rail-ink);
+  opacity: 0; pointer-events: none; z-index: 60;
+  transition: opacity var(--fast);
 }
-.rail .tag.live { color: #7FA97A; border-color: #33502F; }
+.rail button:hover .lbl,
+.rail button:focus-visible .lbl { opacity: 1; }
+/* 徽标在飘出层里恢复成带字的样子 */
+.rail button .lbl .tag {
+  font: 600 9.5px/1 var(--sans); letter-spacing: .08em;
+  padding: 3px 5px; color: var(--warn); border: 1px solid rgba(232,163,61,.45);
+}
+.rail button .lbl .tag.live { color: #8FD184; border-color: rgba(120,196,110,.45); }
+
+/* 按钮上只留一个点：橙 = 模拟、绿 = 实测。★ 它是**第二只探针** ——
+   有它的话，鼠标还没飘上去就能看出这一屏的数据可不可信。 */
+.rail button::after {
+  content: ''; position: absolute; top: 9px; right: 11px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--warn); opacity: .85;
+}
+.rail button.is-live::after { background: #8FD184; }
+
 .rail footer {
-  margin-top: auto; padding: var(--s4) var(--s4) 0;
+  margin-top: auto; padding: var(--s4) 0 0;
   border-top: 1px solid var(--rail-2);
-  font-size: 10.5px; line-height: 1.7; color: var(--rail-muted);
+  font-size: 10px; line-height: 1.6; color: var(--rail-muted);
+  text-align: center;
+}
+
+/* Cesium 的署名区。★ 它为什么需要单独一条规则：
+   默认情况下 Cesium 把署名塞进**自己的**容器（`.cesium-viewer-bottom`，
+   `position:absolute; bottom:0; left:0`），而那个位置正是**导轨的地盘**
+   （`.rail{left:0;width:72px}`）⇒ 1600×950 下 "Cesium ion" 被裁成 "IUM ion"，
+   浮在实景影像上面，跟任何一层都不对齐（`_p3_shots/C01.png` 左下角）。
+   它不是"少画了"，是**画在了别人的地盘上**。修法是把它挂进导轨里当一行署名
+   （`index.html` 预设 `#credit`，`js/world/world.js` 传 `creditContainer: 'credit'`，
+   `js/app.js` 在 `paintRail()` 末尾把它挂回去）。
+
+   ★ Cesium 往这个容器里 append 的是**它自己新建的** `<div class="cesium-widget-credits">`
+     （不是给我们这个元素加 class），所以下面几条要**从里面那层**开始写。
+   ★ 为什么每条都写：`CreditDisplay` 运行时会**自己注入一个 `<style>`**
+     （`.cesium-credit-text{color:…}` / `.cesium-credit-expand-link{text-decoration:underline…}`
+     / `.cesium-credit-logoContainer *{display:inline}`），只有 id 前缀
+     （`#credit` 比 `.cesium-credit-text` 多一个 id，特指度高）压得住它，
+     而且不许用 `!important` —— 那会让以后想改的人无处下手。 */
+#credit {
+  /* ★ 必须写 `position: static`：`creditContainer` 传过去以后，Cesium 有可能
+     仍按 `.cesium-viewer-bottom` 那套去定位它。一个是 absolute(bottom:0)，
+     一个是 flex 列里的普通项，**两者叠起来就是压在页脚上**，而屏幕上只是
+     "字有点糊"，看不出是定位错了。 */
+  position: static; inset: auto;
+  margin-top: var(--s3); padding: var(--s3) var(--s2) 0;
+  border-top: 1px solid var(--rail-2);
+  text-align: center;
+  /* 署名不是内容，是出处：够看清就行，不许跟模块名抢注意力。 */
+  font-size: 9px; line-height: 1.5;
+  color: var(--rail-muted);
+}
+#credit .cesium-widget-credits {
+  /* 覆盖 `Viewer.css` 里 `.cesium-viewer .cesium-widget-credits` 那一套
+     （`color:#fff` + `text-shadow:0 0 2px #000`）。★ 我们这一份**不在**
+     `.cesium-viewer` 里面（它在 `#rail` 里），所以那条**本来就不生效** ——
+     写出来是为了"如果我把它挪回去，它也不会变回白字带黑边"。 */
+  display: block; color: var(--rail-muted);
+  font-size: 9px; text-shadow: none;
+}
+#credit .cesium-credit-text,
+#credit .cesium-credit-text a,
+#credit .cesium-credit-expand-link,
+#credit .cesium-credit-textContainer a {
+  color: var(--rail-muted); text-decoration: none; text-shadow: none;
+}
+#credit .cesium-credit-expand-link:hover,
+#credit .cesium-credit-textContainer a:hover { color: var(--rail-ink); }
+/* 标图缩到导轨宽度以内。★ 只缩、不藏 —— 署名是该留的东西，
+   把它 `display:none` 掉是**另一件事**，要有明确理由才能做。 */
+#credit .cesium-credit-logoContainer { display: block; }
+#credit .cesium-credit-logoContainer img {
+  display: block; margin: 0 auto var(--s1);
+  max-width: 100%; height: auto; opacity: .6;
 }
 
 /* ───────────────────────────────────────────── 主舞台 ─────────── */
 
+/* ★ 舞台 = **整个视口**。注意它不再有 `padding`、不再有内边距把世界推小，
+   也不再 `overflow: hidden`（世界要能铺到边）。`--paper-2` 只是**兜底**：
+   瓦片还没到位的那几百毫秒里，这里显示的是它，而不是一片白。 */
 .stage {
-  grid-area: stage; position: relative; overflow: hidden;
+  position: absolute; inset: 0;
+  z-index: 10;
   background: var(--paper-2);
-  display: flex; flex-direction: column;
-  min-width: 0;
 }
-.canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
-#gl { display: block; width: 100%; height: 100%; }
+
+/* 世界本体。★ `inset: 0` 而不是 `inset: var(--top-h) ...` —— 见 `.shell` 上面那条：
+   世界要从顶栏、导轨、面板**底下**穿过去，那三层自己负责"透"。 */
+.world { position: absolute; inset: 0; }
+.world > .cesium-viewer { width: 100%; height: 100%; }
+
+/* ★★ 世界调色 —— 这一层只干一件事：**把白天拍的实景压成夜色调**。
+ *
+ *   为什么非做不可：我们的 HUD 是**深色玻璃**（`--glass rgba(11,15,20,.70)`），
+ *   而底下的 2024 正射是**正午晴天**。两张图放一起，深色卡片在亮影像上读起来
+ *   不是"玻璃"而是**一个黑洞**（出图看得很清楚：`building` / `energy` 那两张，
+ *   左栏卡片像被挖掉的）。四家大厂的世界层都是近黑的（实测 `#011111` `#000723`
+ *   `#0b1220` `#000b45`）—— 深色 HUD 之所以在那边成立，是因为**底本来就暗**。
+ *
+ *   ★ 做法上的两条取舍：
+ *   ① **不改 Cesium、不写 shader、加 CSS `filter` 到 canvas 上** —— 这台机是
+ *      SwiftShader **软件渲染**（2.5~6.7 fps 已经是上限），给 WebGL canvas 挂
+ *      `filter` 或 `backdrop-filter` 会强制每帧回读+重新合成，等于把帧率再砍一半。
+ *      这里用的是**纯渐变叠色**：一次合成、每帧不变、近乎零成本。
+ *   ② 强度是**量出来调的**，不是拍的 —— 判据是"世界非背景像素仍占比 > 门限，
+ *      且 HUD 卡片与它相邻处的对比度 ≥ 4.5:1"（见 `_scratch/_p3_contrast.py`）。
+ *
+ *   ★ 它**只是显示层**：`data-*`、接口、瓦片一个字节没动，撤掉这条规则就回到白天。
+ *     所以它不会把"实测"变成"不是实测"—— 变的是观感，不是数。
+ */
+.world::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;                 /* ★ 不许挡住拖拽旋转 */
+  z-index: 1;                           /* canvas 之上、HUD 各层（z-index:5~8）之下 */
+  background:
+    /* 四角压暗（晕影）—— 把视线收到中间那一片楼上 */
+    radial-gradient(120% 88% at 50% 46%,
+      rgba(0,0,0,0) 46%, rgba(2,6,14,.16) 80%, rgba(2,6,14,.30) 100%),
+    /* 顶/底压得更狠：顶上托住顶栏，底下托住表带 */
+    linear-gradient(180deg,
+      rgba(3,7,15,.42) 0%, rgba(3,7,15,.10) 14%, rgba(3,7,15,.05) 48%,
+      rgba(3,7,15,.16) 76%, rgba(3,7,15,.50) 100%),
+    /* 统一一层冷色（很轻）—— 只为了统一瓦片之间的接缝与偏黄的白平衡 */
+    rgba(6, 14, 28, .18);
+}
 
 .hint {
-  position: absolute; left: var(--s5); top: var(--s5);
+  position: absolute; z-index: 5;
+  left: var(--hud-l); top: var(--hud-t);
   max-width: 30ch; pointer-events: none;
-  font-size: 12px; line-height: 1.7; color: var(--ink-2);
-  text-shadow: 0 1px 0 rgba(255,255,255,.8);
+  font-size: 12px; line-height: 1.7; color: var(--ink);
+  /* ★ 白描边 → **暗描边**。字色的极性翻了，描边必须跟着翻：
+     浅底时代靠"给字一个白圈"把字从杂色影像里拎出来，深底上要把白圈换成
+     一圈暗影，否则字周围会有一层发光的雾。 */
+  text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.6);
 }
 .hint b { display: block; font-family: var(--serif); font-size: 20px;
           font-weight: 400; letter-spacing: -.01em; margin-bottom: 2px; }
@@ -285,14 +499,32 @@ button.ghost:hover { color: var(--bad); border-color: var(--bad); background: #F
    判别标准（留给以后往这里加东西的人）：**这块下面是什么像素，你说了不算** ——
    凡是压在三维画布上的浮层，都必须自带把自身从任意底色里拎出来的手段。 */
 .legend {
-  position: absolute; left: var(--s5); bottom: var(--s5);
-  display: flex; gap: var(--s4); pointer-events: none;
-  font-size: 11px; color: var(--ink-2);
-  text-shadow: 0 1px 0 rgba(255,255,255,.92), 0 0 3px rgba(255,255,255,.75);
+  position: absolute; z-index: 5;
+  left: var(--hud-l); bottom: var(--hud-b);
+  /* ★★ 图例现在要**接点**（点一下藏掉一档口径），所以 `pointer-events` 从
+     `none` 改成 `auto`。原来它是纯装饰，现在它是控件 —— 而一个长得像装饰的控件
+     比一个明显的控件更容易被漏掉，所以下面把每一项做成有 hover 态的小胶囊。 */
+  display: flex; gap: var(--s2); pointer-events: auto;
+  font-size: 11px; color: var(--ink);
+  text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.55);
 }
-.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px;
-            vertical-align: -1px; border: 1px solid rgba(20,17,14,.45);
-            box-shadow: 0 0 0 1px rgba(255,255,255,.9); }
+.legend > span {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 8px; cursor: pointer; user-select: none;
+  background: var(--glass); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255,255,255,.10);
+  text-shadow: none;
+  transition: border-color var(--fast), opacity var(--fast), background var(--fast);
+}
+.legend > span:hover { border-color: rgba(255,255,255,.34); }
+/* ★ 关掉的那一档**要看得出来是关掉的**：只把色块调暗的话，"这一档没有数据"
+   （0 条）与"我把它关了"在屏幕上长得一样，而两件事处置完全不同。 */
+.legend > span[aria-pressed="false"] { opacity: .40; }
+.legend > span[aria-pressed="false"] i { filter: grayscale(1); }
+.legend i { display: inline-block; width: 10px; height: 10px; flex: none;
+            border: 1px solid rgba(0,0,0,.55);
+            box-shadow: 0 0 0 1px rgba(255,255,255,.42); }
 
 /* 场景级的持续提示（此刻：哪几块没落到地面）。
    ★ 它**不在** `#panel` 里，是**故意**的 —— 这一条属于**三维场景**的状态，
@@ -312,39 +544,58 @@ button.ghost:hover { color: var(--bad); border-color: var(--bad); background: #F
    ⇒ 多行文本压在影像上一律给底面。`.stage-bar` 早就是这么做的，这里跟上。
    底面用了 `backdrop-filter`，与 `.stage-bar button` 同一套手法，不是一个新发明。 */
 .scene-note {
-  position: absolute; left: var(--s5); bottom: calc(var(--s5) + 22px);
+  position: absolute; z-index: 5;
+  left: var(--hud-l); bottom: calc(var(--hud-b) + 34px);
   max-width: 46ch; pointer-events: none;
-  padding: 7px 11px 7px 10px;
+  padding: 8px 12px 8px 10px;
   font-size: 11px; line-height: 1.6;
-  color: #6E1F14;
-  background: rgba(248,245,240,.92);
-  backdrop-filter: blur(3px);
-  border-left: 2px solid #C0392B;
-  box-shadow: 0 1px 3px rgba(20,17,14,.12);
+  /* ★ 极性翻转：原来是"浅底 + 暗红字"，现在是"深底 + 亮红字"。
+     不能只把底色改深、字保留 `#6E1F14` —— 那样是**暗红压暗底**，屏幕上几乎看不见，
+     而它报的是一条真缺陷。 */
+  color: #FFB4A6;
+  background: rgba(30, 13, 13, .86);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-left: 2px solid var(--bad);
+  box-shadow: 0 8px 24px -12px rgba(0,0,0,.9);
 }
 
 .stage-bar {
-  position: absolute; right: var(--s5); top: var(--s5);
+  position: absolute; z-index: 5;
+  right: var(--hud-r); top: var(--hud-t);
   display: flex; gap: var(--s2);
 }
 .stage-bar button {
   font: 11px/1 var(--sans); letter-spacing: .1em;
   padding: 7px var(--s3); cursor: pointer;
-  color: var(--ink-2); background: rgba(255,255,255,.86);
-  border: 1px solid var(--rule-2); border-radius: 0;
-  backdrop-filter: blur(4px);
+  color: var(--ink); background: var(--glass);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: color var(--fast), border-color var(--fast),
               background var(--fast), transform var(--fast);
 }
-.stage-bar button:hover { border-color: var(--ink); color: var(--ink); }
+.stage-bar button:hover { border-color: rgba(255,255,255,.44); }
+/* 按下态：**亮底暗字**。极性翻转后 `var(--ink)` 已经是亮的，所以这条不用改；
+   但它旁边那颗 `--paper` 现在是深色 —— 于是"按下 = 一块亮起来的板"，
+   在深底上比原来（墨底浅字压在米色页上）**更跳**，正好是该有的样子。 */
 .stage-bar button[aria-pressed="true"] {
   background: var(--ink); color: var(--paper); border-color: var(--ink);
 }
 .stage-bar button:active { transform: translateY(1px); }
 
+/* 盖在世界上的整屏提示（三维起不来时）。★ 它现在**只盖世界那一块**，
+   不盖顶栏与导轨 —— 因为那两块还能用，而"整页作废"正是这条提示要否定的说法
+   （见 `app.js` 里那段注释：三维起不来时其余模块照常）。 */
 .overlay {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  background: rgba(246,243,237,.92);
+  position: absolute; z-index: 8;
+  left: var(--hud-l); right: var(--hud-r);
+  top: var(--hud-t); bottom: var(--hud-b);
+  display: grid; place-items: center;
+  background: rgba(9, 12, 16, .82);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255,255,255,.10);
   font-size: 13px; color: var(--ink-2); text-align: center; padding: var(--s6);
 }
 .overlay > div { max-width: 62ch; }
@@ -360,19 +611,157 @@ button.ghost:hover { color: var(--bad); border-color: var(--bad); background: #F
  *    只是"排版有点怪"，三维区不消失只是"两块叠在一起"。少写一个 = 那一块
  *    永远藏不住，而屏幕上找不到任何一行报错。
  * ───────────────────────────────────────────────────────────────────────── */
-.gate[hidden], .shell[hidden], .canvas-wrap[hidden], .hint[hidden],
+.gate[hidden], .shell[hidden], .world[hidden], .hint[hidden],
 .legend[hidden], .scene-note[hidden], .stage-bar[hidden], .overlay[hidden],
 .doc[hidden] {
   display: none;
 }
 
-/* 页面型模块（数据与流程 / 账号与权限）：盖住三维，整块给文档 */
-.doc {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto;
-  padding: var(--s7) var(--s8) var(--s8);
-  background: var(--paper);
+/* ★★ 页面型模块 = 一块**浮在世界上的板**，不是"另一张页面"。
+ *
+ * 旧版这里是 `flex: 1 1 auto` + 不透明 `--paper` 底 ⇒ 它一显示，
+ * 世界就被**从布局里挤掉**（那个装着 WebGL 画布的容器被 `hidden`），
+ * 于是"切到数据与流程"等于离开了三维。那正是「10 个模块 = 10 张互不相干的页面」的成因。
+ * 现在它是绝对定位的浮层：**世界上不来、也走不掉**，模块只是换了一层罩在上面的东西。
+ *
+ * ★ 透明度的取法：`.86` 而不是更高——再高就等于不透明（那白留了 backdrop-filter），
+ *   再低则 12.5px 的表头压在影像上读不出来。这一条要**逐屏量**（见验收第 4 条）。
+ */
+.doc.hud {
+  position: absolute; z-index: 20;
+  left: var(--hud-l); right: var(--hud-r);
+  top: var(--hud-t); bottom: var(--hud-b);
+  overflow-y: auto;
+  padding: var(--s6) var(--s7) var(--s8);
+  background: rgba(14, 17, 22, .88);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 30px 70px -30px rgba(0,0,0,.92);
 }
 .doc > div { max-width: 1180px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * ★★ `dash` 形态：左列卡片条 + 底部表格带 —— **世界从中间露出来**（2026-10-02）
+ *
+ * 病根是量出来的，不是看出来的：1600×950 下，世界画布是 **1600×950 铺满**
+ * （`x=0,y=0`，十页逐页量过），而 `.doc.hud` 这块板占了 **1340×846**（三页）/
+ * **996×846**（六页）。⇒ 世界**没被切小，是被这块板盖住了 84%**。
+ * 图扑那 12 段录屏里**没有一段**这么干：左右两列各占 15~22%，中央 50~70% 永远留给世界。
+ *
+ * ⇒ 这一形态下 `.doc.hud` **自己不再是板**：透明、无边框、无模糊、无内边距，
+ *   它退化成一个**定位容器**，并且 `pointer-events: none` —— 把中间那片让给世界。
+ *   两块真正的板是它的子元素 `.cards`（左列）与 `.strip`（底部带），各自 `auto`。
+ *
+ * ★ `pointer-events` 这一条**不是可选的**：容器若还收事件，世界中间那片就点不着，
+ *   而"点不动"在屏幕上与"这里没有东西"长得一模一样（铁律 046/048 的老形状）。
+ * ★ `display: contents` 那条也是必须的：`.doc > div` 会给 `.paged` 挂上
+ *   `max-width: 1180px` 与"是一个块"的身份；`contents` 让它**不生成盒子**，
+ *   于是 `.cards` / `.strip` 的绝对定位直接落在 `.doc.hud.is-dash` 上，
+ *   既不用跟那条 1180 拼特异性，也不用负外边距去抵。
+ * ---------------------------------------------------------------- */
+.doc.hud.is-dash {
+  background: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 0; box-shadow: none;
+  padding: 0; overflow: visible;
+  pointer-events: none;
+}
+.doc.hud.is-dash > .paged { display: contents; }
+
+/* ★★ 下面这一族**必须用后代选择器（空格）**，不能写 `>` —— 这一条是量出来的。
+ *
+ *   `.cards` / `.strip` 在 DOM 里**不是** `#doc` 的直接子元素，中间隔着一个
+ *   `.paged`（`page()` 里的那个包装）。我第一版全部写成了 `#doc > .cards`，
+ *   于是一族九条规则**一条都没匹配上**，而屏幕上的表现是：
+ *     · `.cards` 还是 996px 宽（不是 396）—— 因为绝对定位没生效，它在正常流里；
+ *     · `.strip` 高 **3631px** —— 92 行的表没被 `max-height: 34vh` 框住；
+ *     · 而 `.doc.hud.is-dash { pointer-events: none }`（**这条没有 `>`，匹配上了**）
+ *       照常生效，`pointer-events` 又是**可继承**属性 ⇒ 两个子元素跟着变成 `none`
+ *       ⇒ 我的量具把它们当成"不挡世界"的层**排除掉了**，屏幕上印出「世界露出 100.0%」。
+ *
+ *   ★ 这一族里三个坏法（宽度没变、高度没变、继承来的 `none`）**都不报错**，
+ *     而"100% 露出"与"改好了"在屏幕上完全一样（铁律 165：两个数不一致时
+ *     第一嫌疑人是量具）。抓住它的是**把每一块的名字与尺寸都印出来** ——
+ *     `cards 996x481 / strip 996x3631` 这两个数对不上设计值，才露的馅。
+ *   ★ `.paged` 上那个 `display: contents` 是**必须的**：它让 `.paged` 不生成盒子，
+ *     于是 `.cards` 的绝对定位落在 `.doc.hud.is-dash` 上（否则会去找 `.paged`，
+ *     而 `.paged` 是 static，最终仍落到 `.doc.hud`，成不成立取决于父链 —— 别赌）。
+ */
+
+.doc.hud.is-dash .cards,
+.doc.hud.is-dash .strip {
+  position: absolute;
+  pointer-events: auto;
+  background: rgba(14, 17, 22, .88);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 30px 70px -30px rgba(0,0,0,.92);
+}
+/* 左列：标题 + KPI + 口径。宽度是**照着最长的那个中文标签量的** —— 396px
+   是 `.statBox` 两列之后每格还有 ~170px 的余量，而再窄就得把"有三维模型"
+   这种 6 字标签断行。 */
+.doc.hud.is-dash .cards {
+  left: 0; top: 0; width: 396px;
+  /* ★ 上限 58% 是算出来的，不是估的：`.strip` 吃 `34vh`，两者要在**任何**
+     视口高度下都不叠。设窗口高 V ⇒ 容器高 V−104；
+     0.34V + 0.58(V−104) ≤ V−104 解出 V ≥ 546。低于这个高度的窗口本来也放不下
+     这块 HUD（顶栏 56 + 底 24 + 两条板），不是这一条要救的场景。 */
+  max-height: 58%; overflow-y: auto;
+  padding: var(--s5) var(--s5) var(--s6);
+}
+/* 底部表格带：**窄表**。全宽减掉导轨与右面板，横着能放下 7 列。 */
+.doc.hud.is-dash .strip {
+  left: 0; right: 0; bottom: 0;
+  max-height: 34vh; overflow: auto;
+  padding: var(--s3) var(--s5) var(--s4);
+}
+.doc.hud.is-dash .cards > header { max-width: none; margin-bottom: var(--s5); }
+.doc.hud.is-dash .cards h2 { font-size: clamp(22px, 1.9vw, 30px); }
+.doc.hud.is-dash .cards .lede2 { font-size: 13px; }
+
+/* ★★ 这两条**必须** `!important`，而这里用它是**有正当理由**的，不是懒：
+ *   `.statBox`（`dom.js:138`）把列数写成了**行内样式**
+ *   `s.style.gridTemplateColumns = repeat(n, 1fr)`，而行内样式**一律**盖过类选择器
+ *   （不分特异性）。四列在 1340px 的板上每格 335px 刚好，塞进 396px 的卡片里
+ *   每格只剩 99px，而 `.stats b` 是 40px 的衬线数 —— 屏幕上表现为"数字断行"，
+ *   看着像字号没调好，其实是列数没跟着卡片宽度走。
+ *   ⇒ 与其在 JS 里加一个"你是 dash 吗"的参数（那会把形态知识渗进画图小件），
+ *     不如在这里用一条 `!important` 就地覆盖，理由写在这段注释里。 */
+.doc.hud.is-dash .cards .stats { grid-template-columns: repeat(2, 1fr) !important; }
+.doc.hud.is-dash .cards .stats b { font-size: 30px; }
+.doc.hud.is-dash .cards .stats div { padding: var(--s4) var(--s3); }
+.doc.hud.is-dash .cards .stats small { letter-spacing: .06em; }
+
+/* 「读取中…」那一句也挂在这块板上。★ 不补这一条的话，加载中的那一两百毫秒里
+   它是一行**裸字**，直接压在世界影像上、还落在导轨后面（容器已 `pointer-events:none`
+   且没有底），而屏幕上看起来像"这一页坏了"。 */
+/* ── `map` 形态：第二块板不是底部通栏，是**右下角的一张插图** ────────
+ *
+ * 用在「纵览驾驶舱」。它那块正射影像是**平面视角**，专门回答"轮廓压得准不准"
+ * —— 这件事三维里的透视和光照看不出来（`cockpit.js` 的文件头写着这条分工）。
+ * 所以它不该被删，但不该占满一屏：520×340 的插图足够看清一栋楼的轮廓贴着
+ * 屋顶边没有。左列与 `dash` 完全一样（同一套 `.cards` 规则，不重复写）。
+ */
+.doc.hud.is-map .cards { max-height: 62%; }
+.doc.hud.is-map .strip {
+  left: auto; right: 0; bottom: 0;
+  width: 520px; height: 340px;
+  max-height: none; overflow: hidden;
+  padding: var(--s3);
+}
+/* 插图里的画布要撑满这块板 —— 正射画布自己带 zoom/pan，别让它在里面留白边 */
+.doc.hud.is-map .strip .cockpit-map { height: 100%; }
+/* ★ 这块是 `dash` 与 `map` **共用**的：`is-map` 的元素身上同时挂着 `is-dash`
+   （见 `app.js` 里那两行 `classList.toggle`），所以这里写一个就够了 ——
+   写成 `.is-map > .busy` 会让 dash 那六页在"读取中"时**没有底**（字直接压在影像上）。 */
+.doc.hud.is-dash > .busy {
+  position: absolute; left: 0; top: 0; width: 396px;
+  pointer-events: auto; margin: 0; padding: var(--s5);
+  background: rgba(14, 17, 22, .88);
+  border: 1px solid rgba(255,255,255,.10);
+}
 
 /* 文档页的头：图集式 —— 眉题（朱）、大标题（衬线）、导语。
    缩放对比是**主要手段**：26px 的正文标题与 44px 的页标题差得够开，
@@ -422,9 +811,13 @@ button.ghost:hover { color: var(--bad); border-color: var(--bad); background: #F
 /* ───────────────────────────────────────────── 右侧详情 ───────── */
 
 .panel {
-  grid-area: panel; overflow-y: auto;
-  background: var(--surface);
-  border-left: 1px solid var(--rule);
+  position: absolute; right: 0; top: var(--top-h); bottom: 0; width: var(--panel-w);
+  z-index: 40;
+  overflow-y: auto;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-left: 1px solid rgba(255,255,255,.08);
   padding: var(--s5) var(--s5) var(--s7);
 }
 .panel .empty { color: var(--muted); font-size: 13px; line-height: 1.9; }
@@ -509,10 +902,15 @@ table.data th {
 table.data td { padding: 9px var(--s3) 9px 0; border-bottom: 1px solid var(--rule); }
 table.data td.num { font-family: var(--mono); text-align: right; padding-right: var(--s5); }
 table.data tbody tr { transition: background var(--fast); }
-table.data tbody tr:hover { background: var(--paper); }
+table.data tbody tr:hover { background: var(--surface-2); }
 
-/* 统计卡：**不等宽**——第一张大，其余小，避免"均匀卡片网格"那个模板味 */
-.stats { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 1px;
+/* 统计卡。
+ * ★ 列数**不写在这里** —— 由 `dom.js:statBox()` 按条数算出来写进行内样式。
+ *   原先写死 `1.6fr 1fr 1fr 1fr`：纵览驾驶舱有 6 张 KPI ⇒ 右下角空两格
+ *   （用户 2026-10-01 一眼看出来的）。写死列数的表格遇到变动的条数，
+ *   必然在某个模块上露出空格 —— 而空格看起来像"这里本来就没内容"。
+ *   下面的 `repeat(4, 1fr)` 只是行内样式没写上时的落点。 */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
          background: var(--rule); border: 1px solid var(--rule); margin-bottom: var(--s6); }
 .stats div { background: var(--surface); padding: var(--s5) var(--s4); }
 .stats b {
@@ -526,11 +924,29 @@ table.data tbody tr:hover { background: var(--paper); }
 
 .note {
   margin: var(--s4) 0 0; padding: var(--s3) var(--s4);
-  border-left: 3px solid var(--warn); background: #FBF6EA;
+  border-left: 3px solid var(--warn); background: rgba(232,163,61,.10);
   font-size: 12.5px; line-height: 1.75; color: var(--ink-2);
 }
-.note.err { border-left-color: var(--bad); background: #FCF2F2; }
-.note.ok  { border-left-color: var(--ok);  background: #F1F6F0; }
+.note.err { border-left-color: var(--bad); background: rgba(255,107,107,.10); }
+.note.ok  { border-left-color: var(--ok);  background: rgba(120,196,110,.10); }
+
+/* ── 口径抽屉：会改变判断的说明，默认收起（屏上只留一行）。见 dom.js 的 `caliber()`。
+ *    ★ 收起不是「藏」—— 判据是屏幕上的**成段文字**只许是数据读数（`_p2_shots.py` B 腿），
+ *      而抽屉那一行小字必须自己说清里面是什么（否则等于没有）。 */
+.caliber {
+  margin: var(--s4) 0 0; padding: 0 var(--s4);
+  border-left: 3px solid var(--warn); background: rgba(232,163,61,.07);
+}
+.caliber > summary {
+  cursor: pointer; list-style: none; padding: 6px 0;
+  font: 600 11px/1.6 var(--mono); letter-spacing: .08em; color: var(--warn);
+}
+.caliber > summary::-webkit-details-marker { display: none; }
+.caliber > summary::before { content: '▸ '; }
+.caliber[open] > summary::before { content: '▾ '; }
+/* 抽屉打开后，里面那几段不再自带边框底色（它已经在这个框里了） */
+.caliber > .note { margin: 0 0 var(--s3); padding: 0; border-left: 0; background: none; }
+.caliber > .note + .note { margin-top: var(--s2); }
 
 .busy { color: var(--muted); font-size: 12.5px; }
 
@@ -542,18 +958,37 @@ table.data tbody tr:hover { background: var(--paper); }
   .brand { justify-content: center; padding: 0; }
   .brand-text { display: none; }
 }
+/* 窄屏：★ 这三条**都要重写**，因为布局不再是 grid。
+   旧版靠改 `grid-template-areas` 把舞台挪到中间一行；现在世界是绝对铺满的，
+   能挪的只有**浮层**：导轨压到顶栏下面变成一条横带，面板落到底部。
+   世界始终铺满 —— 窄屏上它反而更该铺满。 */
 @media (max-width: 860px) {
-  .shell {
-    grid-template-columns: 1fr;
-    grid-template-rows: var(--top-h) auto minmax(0,1fr) auto;
-    grid-template-areas: "top" "rail" "stage" "panel";
-  }
+  :root { --rail-w: 0px; --panel-w: 0px; }
   .brand { display: none; }
-  .rail { flex-direction: row; overflow-x: auto; padding: var(--s2); }
-  .rail button { display: none; }
-  .stage { min-height: 54vh; }
-  .panel { border-left: 0; border-top: 1px solid var(--rule); max-height: 46vh; }
-  .doc { padding: var(--s5) var(--s4) var(--s7); }
+  .rail {
+    left: 0; right: 0; top: var(--top-h); bottom: auto; width: auto;
+    flex-direction: row; overflow-x: auto; overflow-y: hidden;
+    padding: var(--s2); border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .rail h2, .rail footer { display: none; }
+  /* 窄屏没地方摆 10 个图标 + 文字，只留图标；`.lbl` 与徽标收进 `title`。 */
+  .rail button { grid-template-columns: 18px; padding: 8px 10px; }
+  .rail button span.lbl, .rail .tag { display: none; }
+  /* ★ 导轨成了横带 ⇒ HUD 的"左让位"要改成"上让位"：不然图例/提示会被压在那条带子底下。
+     ★ 声明在 `.shell` 上（理由见上面那一段）—— 挂在 `:root` 上会被 `.shell` 自己
+       那条声明盖掉，而"盖掉了"在屏幕上与"这里本来就不需要改"长得一样。 */
+  .shell { --hud-t: calc(var(--top-h) + 52px); }
+  .panel {
+    left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 46vh;
+    border-left: 0; border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .doc.hud { padding: var(--s5) var(--s4) var(--s7); }
+  /* 同上：浮层的负外边距要跟着新的 padding 走 */
+  .doc.hud > .dscreen {
+    margin: calc(-1 * var(--s5)) calc(-1 * var(--s4)) calc(-1 * var(--s7));
+    height: calc(100vh - var(--hud-t) - var(--hud-b) - 2px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -568,35 +1003,20 @@ table.data tbody tr:hover { background: var(--paper); }
  * 缩略图大小 —— 那时压在上面的轮廓错没错，眼睛已经分辨不出来了。
  * 所以这里放宽到 1600px，图与事实并排。
  * ------------------------------------------------------------------------ */
-/* ★★ 选择器必须写 `.doc > .cockpit`，不能只写 `.cockpit`：
-   上面第 364 行那条 `.doc > div { max-width: 1180px }` 是直接子元素选择器，
-   **特异性**（1 个类 + 1 个类型）**高于** `.cockpit`（1 个类）⇒ 只写 `.cockpit`
-   就被它盖住，`.cockpit` 自己的 `max-width` 计算出来会是 1180px。
-   （这类失效**不报错、不进控制台**，只有量计算值才看得见。）
-
-   ★ 不过要如实记一笔：**那条 1180 从来没真正约束过这一屏的宽度。**
-   `.doc` 有 `padding: 0 var(--s8)`（72px），`#stage` 只有 1044px ⇒ 内容盒
-   1044−144 = **900px**，比 1180 窄。所以真正的约束是**父容器的内容盒**，
-   不是 `max-width`。我一开始按"被 1180 压住了"归因、把验收判据写成
-   「宽度 > 1300px」——**那是恒假的假红**，实测 900 而屏幕上没有任何毛病。
-   ⇒ 判据改成量**真正要看的东西**：这张正射图在 1600 的视口下有多宽（见 ⑩）。
-
-   既然这一屏一半是"看"的（一张要铺开的图），就不要那个 1180 的帽子 —— 但它
-   也**不该**靠负外边距去吃 `.doc` 的留白：我试过那一版（`margin: 0 -72px`），
-   实测 `.cockpit-side` 右沿正好落在视口 x=1600 上 —— **事实那一栏贴在窗边**，
-   一点余量都没有了。
-   ⇒ 真正把这屏撑开的是**右栏那 344px**（见上面 `.shell.no-panel`），不是留白。
-   留住白：图从 556 → **900 px**，而事实栏外面仍然有 72px 的呼吸。
-   ⇒ 验收 ⑩ 量的是**图的宽度**，以及「事实栏离窗边 ≥40px」。 */
-.doc > .cockpit { max-width: none; }
-.cockpit .stats { margin-bottom: var(--s5); }
-.cockpit-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--s5);
-  align-items: start;
-}
-@media (max-width: 1180px) { .cockpit-grid { grid-template-columns: 1fr; } }
+/* ★★ `.cockpit` / `.cockpit-grid` 这一族**已经删掉**（2026-10-02）。
+ *   原来纵览驾驶舱是「一整幅 `.cockpit` 面板 + 里面两列网格（图 | 事实）」，
+ *   那一版有两条代价，出图之后才看清：
+ *     ① 它是 `sheet` 形态 ⇒ `.doc` 铺 1480×846，**压掉 82.4% 的世界**，
+ *        而它盖住的正好是同一片校园的三维（两块互相挡）；
+ *     ② 那条 1180 的 `max-width` 从来没真正约束过这一屏 —— 真正的约束是父容器
+ *        内容盒（实测 900px）。我当初把它当成"被 1180 压住了"，据此写下的验收判据
+ *        （宽度 > 1300px）是**恒假的假红**，屏幕上其实没有任何毛病。
+ *        ★ 教训留下：判据要量**真正要看的东西**（那张图此刻有多宽），不是量一个
+ *          我以为在起作用、其实没起作用的属性。
+ *   现在这屏走 `map` 形态：左列卡（KPI + 口径 + 选中那一条）+ 右下角 520×340 的
+ *   正射插图。规则在 `.doc.hud.is-map` 那一块（本文件上方），`cockpit.js` 自己拼
+ *   `.paged > .cards + .strip` 两块板 —— 与 `page()` 同一套契约。
+ */
 
 .cockpit-map {
   position: relative;
@@ -624,37 +1044,46 @@ table.data tbody tr:hover { background: var(--paper); }
   /* 影像要按像素看 —— 让浏览器别给它插值糊一层（对比度高的屋顶边缘会走样） */
   image-rendering: auto;
 }
+/* ★ 这三块小件（读数 / 比例尺 / 指北）都**压在航拍影像上**，而影像本身是
+ *   中灰偏杂的 —— 浅色底压在它上面读不出来。统一走 `--glass`（半透明深底 + 模糊），
+ *   与顶栏 / 导轨 / 面板同一套；旧值 `rgba(22,19,15,.82)` 是为米色纸配的实色深棕。 */
 .ortho-readout {
   position: absolute; left: var(--s3); bottom: var(--s3);
   display: flex; gap: var(--s3);
   padding: 3px var(--s3);
   font: 11.5px/1.5 var(--mono);
-  color: var(--rail-ink); background: rgba(22,19,15,.82);
+  color: var(--rail-ink); background: var(--glass);
+  backdrop-filter: var(--glass-blur);
   pointer-events: none;
 }
 .ortho-readout[hidden] { display: none; }
 .ortho-scalebar {
   position: absolute; right: var(--s3); bottom: var(--s3);
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font: 11px/1 var(--mono); color: var(--ink);
+  padding: 2px var(--s2);
+  font: 11px/1 var(--mono); color: var(--rail-ink); background: var(--glass);
+  backdrop-filter: var(--glass-blur);
   pointer-events: none;
 }
+/* 比例尺的条：**深底亮边**。旧版是浅底（`rgba(246,243,237,.55)`）——
+   压在航拍影像上（屋顶就是浅的）等于没画。 */
 .ortho-scalebar i {
   display: block; height: 7px;
-  border: 1px solid var(--ink-2); border-top: 0;
-  background: rgba(246,243,237,.55);
+  border: 1px solid var(--ink); border-top: 0;
+  background: rgba(215,224,234,.18);
 }
 .ortho-scalebar b { font-weight: 400; }
 .ortho-north {
   position: absolute; right: var(--s3); top: var(--s3);
   width: 26px; height: 26px; display: grid; place-items: center;
   font: 11px/1 var(--mono); color: var(--rail-ink);
-  background: rgba(22,19,15,.82);
+  background: var(--glass); backdrop-filter: var(--glass-blur);
   pointer-events: none;
 }
 .ortho-north::before {
   content: ""; position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
-  border: 4px solid transparent; border-bottom-color: rgba(22,19,15,.82);
+  border: 4px solid transparent;
+  border-bottom-color: rgba(11,15,20,.70);   /* = --glass，箭头与方块连成一体 */
 }
 .ortho-tools {
   position: absolute; left: var(--s3); top: var(--s3);
@@ -725,6 +1154,21 @@ table.data tbody tr:hover { background: var(--paper); }
   margin: calc(-1 * var(--s7)) calc(-1 * var(--s8)) calc(-1 * var(--s8));
 }
 
+/* ★★ 进了浮层之后这两条要**重算**，不能靠上面那条 .doc > .dscreen 兜着。
+ *
+ * ① 负外边距必须**逐边等于**它要吃掉的那个 padding —— `.doc.hud` 是
+ *    `s6/s7/s8`，上面那条写的是 `s7/s8/s8`，差的那 16px 不会报错，
+ *    只会在浮层顶部露出一条不属于任何内容的深色带。
+ * ② 高度是**算出来的**：`.dscreen` 要正好填满浮层内高。浮层上下各让出
+ *    `--hud-t` / `--hud-b`，再加自身 1px 上下边框。
+ *    ★ 这一条尤其不能靠"看着差不多"——多出的部分会让整页**能滚**，
+ *      而"这一屏不该滚"是它设计的全部意义（四块横条各吃各的高度）。
+ */
+.doc.hud > .dscreen {
+  margin: calc(-1 * var(--s6)) calc(-1 * var(--s7)) calc(-1 * var(--s8));
+  height: calc(100vh - var(--top-h) - 2 * var(--s5) - 2px);
+}
+
 /* ── 抬头 ── */
 /* ★ 写 `.dscreen header.ds-top` 而不是 `.ds-top`：`.doc header` 有 `max-width: 64ch`
    与 `margin-bottom: 48px`，特异性 (0,1,1)；两个类才盖得住 (0,2,0)。
@@ -757,6 +1201,9 @@ table.data tbody tr:hover { background: var(--paper); }
 /* ── 口径带：覆盖边界。全屏**唯一**用强调色的地方。 ── */
 .ds-band {
   display: flex; align-items: baseline; gap: var(--s4);
+  /* ★ `wrap` 是给右端那个口径抽屉用的：它展开时整段要能落到第二行**带内**，
+     而不是把带撑宽或被裁掉。（带本身仍在网格的第 2 行，不新增行。） */
+  flex-wrap: wrap;
   margin: 0 0 var(--s3); padding: 7px var(--s4);
   background: rgba(232, 163, 61, .09);
   border-left: 3px solid var(--ds-amber);
@@ -766,6 +1213,13 @@ table.data tbody tr:hover { background: var(--paper); }
 .ds-band span b { color: #F6E4C6; }
 .ds-band.bad { background: rgba(224, 122, 69, .12); border-left-color: var(--cal-roof); color: #F0CBB4; }
 .ds-band.bad > b { color: var(--cal-roof); }
+/* 带里那个口径抽屉：**同一行右端**，自己不带边框底色（它已经在带里了）。
+   ★ `margin-left:auto` 把它推到右端，展开后 `flex-wrap` 让正文落到第二行、仍在这一带内。 */
+.ds-band > .caliber {
+  margin: 0 0 0 auto; padding: 0; border-left: 0; background: none;
+}
+.ds-band > .caliber > summary { padding: 0; color: var(--ds-amber); }
+.ds-band > .caliber > .note { color: #E3C79C; margin: var(--s2) 0 0; }
 
 /* ── 主体：仪器 / 图 / 仪器 ── */
 .ds-body {

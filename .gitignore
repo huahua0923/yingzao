@@ -44,6 +44,37 @@ _scratch/_glb_baseline/
 _scratch/_glb_out/
 _scratch/_glb_tmp/
 
+# ── _scratch 里的大件（第二批，2026-10-02 实测补上）─────────────────
+# ★ 上面那批是按"谁提过"逐个加的，于是漏掉了两个最大的 —— 实测：
+#     _scratch/_fly2024_tiles/   13 GB（2024 实景 3D Tiles：tileset.json + 124 个 Tile_* 目录）
+#     _scratch/_campus3d/       418 MB（地形/正射/轮廓等 campus 产物）
+#   两条都 `git check-ignore` **退 1（没被忽略）**，而 `git status` 里它们只以
+#   `?? _scratch/...` 一行露面 —— 一次 `git add -A` 就会把 13 GB 往库里塞，
+#   而屏幕上只是一行 `??`（铁律 046：这件事在不看的时候，长得像"没什么"）。
+#   ⇒ 加路径，不是加 `_scratch/`：那底下 244 个 .py 是验证工具链，必须留。
+_scratch/_fly2024_tiles/
+_scratch/_campus3d/
+# ★ 服务器那份在 `/opt/gym3d/campus-terrain/`、本地那份在 `_scratch/_campus3d/campus-terrain/`
+#   —— **同一个东西两个路径**（`settings.py:160` 的 `resolved_campus_dir` 是一处、
+#   部署记录里是另一处）。两处都写，免得以后只看名字就以为已经挡住了。
+campus-terrain/
+# 兄弟目录：一次误落在仓根旁的产物（铁律 126 那类"草稿落错地方"）
+_scratch_campus3d/
+
+# ── 门户的 Cesium 离线包（13 MB / 368 个文件）─────────────────────
+# ★ 这是一条**待定**的决定，不是定论 —— 写在这里是为了让它是「一行」的事。
+#   计划 §四 写的是「不进 git，走部署数据，与 `campus-terrain/` 同法」。
+#   而实测两件事与那个前提对不上：
+#     · 仓 `.git` 只有 19 MB ／ 兄弟目录 `frontend/site/vendor`（1.1 MB）**是进 git 的**
+#       ⇒ 「前端 vendor 不进 git」在本仓不是既有惯例，写它反而是例外。
+#     · 部署是 **push-only**（memory `deploy-workflow-push-only`）⇒ 不进 git 的后果是
+#       **新 clone 直接没有它**、门户 `/portal/` 起不来 —— 与计划里点名的那个真缺陷
+#       （`config/branches.json` 从没进过 git ⇒ `/api/console/branches` 503）**同一类**。
+#   ⇒ 我**没有**把它塞进 git：13 MB 二进制一旦落进历史，事后删除**也不会让仓变小**，
+#     这个方向不可逆，所以留给用户拍板；反过来只要删掉下面两行就生效，是廉价的那一侧。
+#   ★ 报给用户时要说清：现在的状态是「服务器与本机都有、git 里没有」。
+frontend/portal/vendor/
+
 # ── 依赖与构建产物 ────────────────────────────────────────────────
 node_modules/
 venv/

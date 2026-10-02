@@ -24,15 +24,20 @@ ExecStart=/opt/gym3d/.venv/bin/python -u /opt/gym3d/backend/api/run_api.py
 Restart=always
 RestartSec=3
 
-# 只监听 127.0.0.1（由 .env 的 GYM3D_HOST 决定），nginx 反代过来。
-# 这里再加一层内核级的限制：即使 .env 被改错写成 0.0.0.0，非回环的包也进不来。
-# ★ 这两行管的是**进出两个方向**。数据库就在本机（LIHUA_DB_HOST=localhost）时它是对的；
-#   若哪天把 PG 挪到别的机器，必须把那个地址加进 IPAddressAllow，否则症状是
-#   「服务在跑、健康检查也过，但所有要读库的路由全部超时」—— 一个很难归因的半死状态。
-IPAddressAllow=localhost
-IPAddressDeny=any
+# ── 对外形态：用户 2026-10-01 定「不要域名，用 8141」⇒ 直挂 0.0.0.0:8141 ──
+#
+# ★ 这里**故意没有** IPAddressAllow / IPAddressDeny 两行 —— 它们原本是按
+#   「nginx 反代到 127.0.0.1:8140」写的（IPAddressAllow=localhost + IPAddressDeny=any）。
+#   形态改成直连之后，那两行会把**所有非回环的包**在内核里挡掉：服务 systemd 报 active、
+#   本机 curl 健康检查也过，而**外面一台都连不上** —— 一个「看起来全绿」的半死状态。
+#   直连形态下，进来的口子由两处把守：
+#     ① firewall-cmd 只放行 8141/tcp（见部署记录）
+#     ② 应用自己的 AuthGate（GYM3D_LOOPBACK_BREAKGLASS=0 + GYM3D_COMPUTE=0）
+#   ★ 若哪天改回 nginx 反代，把这两行加回来（那时它们才是对的）：
+#       IPAddressAllow=localhost
+#       IPAddressDeny=any
 
-# 加固：本服务只需要读 /opt/gym3d，写它的 data/_jobs
+# 加固：本服务只需要读 /opt/gym3d，写它的 data/
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full

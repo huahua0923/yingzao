@@ -44,7 +44,8 @@ from .deps import AssetFileName, GlbFileName, assert_writes_gated
 from .responses import (ERR_FORBIDDEN, ERR_INTERNAL, ERR_UPSTREAM, ApiError,
                         envelope, error_json, not_found)
 from .routers import (analysis, auth, buildings, campus, checks, compare,
-                      components, console, health, kg, portal, rooms, workshop)
+                      components, console, health, kg, portal, rooms,
+                      sitecheck, tiles, workshop)
 from .services import meta_source
 from .settings import get_settings
 
@@ -181,6 +182,23 @@ def create_app() -> FastAPI:
     #   套了就要重新序列化一遍，浮点写法会变（`4.800000000000001`），
     #   于是发出去的字节就不再是盘上那份交付件了（理由在 routers/campus.py 文件头）。
     app.include_router(campus.router, prefix=cfg.api_prefix)
+    # 外业校核域（`/api/site/*` ＋ `/api/annotations*`）：把「建好的模型」贴回
+    # 「真实的正射影像」上看外形，外加上人工圈问题的写口。
+    # ★ 与 campus 域的关系：campus 发的是**校区整体**那几份交付件，这一域发的是
+    #   **逐栋**的正射裁切 ⊕ 模型足迹 —— 同一张大图（`理工DOM.tif`，EPSG:4544）
+    #   的两种用法。正射**只读**：本域一个字节都不往 `D:\理工数据\` 写。
+    # ★ 权限按域分派：读 `view`；写锚点/写标注**两条叠加**
+    #   （`ComputeDep` 答"这台进程许不许跑" ＋ `require_cap("manage")` 答"这个人许不许"）。
+    #   ★ 后果写下来：`GYM3D_COMPUTE=0` 的只读服务器上写口一律 403 `compute_disabled`
+    #   —— 那是对的（服务器按设计只读，锚点由本机控制台写），但页面上要原样显示这句话。
+    # ★ 出图那条**先 JSON 后 PNG** 分成两条：页面拿 JSON 判三态，
+    #   `state !== "ok"` 时**根本不会去设 `<img src>`** ⇒ 「无锚点」结构上不可能
+    #   被画成一张空图。（同族记在 admin/views/compare.js 的文件头：
+    #   404 与 409 在 `onerror` 下分不开。）
+    # ★ 模块文件叫 `routers/sitecheck.py`，**不叫 `routers/site.py`** ——
+    #   本函数里有一行局部变量 `site = cfg.root / "frontend" / "site"`，
+    #   同名会让这一句报 `UnboundLocalError`（2026-10-02 实测，建 app 时当场炸）。
+    app.include_router(sitecheck.router, prefix=cfg.api_prefix)
 
     # 校园数字孪生平台 · 门户域（`/api/portal/*`）。★ 这是**新系统**（门户页 `/portal/`）
     # 自己的数据面：总览 + 管理模块清单 + 体块↔楼栋锚点（身份层）。
@@ -190,6 +208,15 @@ def create_app() -> FastAPI:
     #   portal 的**全是派生小 JSON**，套统一信封（`ok(...)`）—— 两处的取舍不同，
     #   因为一处是"交付件原样"，一处是"接口答案"。
     app.include_router(portal.router, prefix=cfg.api_prefix)
+
+    # 2024 实景 3D Tiles（`/api/tiles/*`）—— 门户页那块"世界底"。
+    # ★ 只有它可以不套信封（走 FileResponse 直发字节），理由同 campus 域：
+    #   10.4 MB 的 tileset.json 与 48,701 个 .glb 都是**交付件原件**，
+    #   重新序列化一遍就不是盘上那一份了。
+    # ★ 规模是个风险，不是个细节：单人浏览一遍校区会拉起成百上千个小请求，
+    #   而 `gym3d-api` 是 **single worker 的 uvicorn**。§五 第 5 关要求先量
+    #   P50/P95 再决定它要不要走 nginx —— 在那之前，这条路由就是那条待量路径。
+    app.include_router(tiles.router, prefix=cfg.api_prefix)
 
     # ── 产物静态目录（GLB 走这里；生产交给 nginx）──────────────
     bdir = _buildings_dir(cfg)
@@ -209,28 +236,48 @@ def create_app() -> FastAPI:
     # ── 前端（最后挂）────────────────────────────────────────────
     # ★ 两条线分挂两个前缀，别把「管理」和「呈现」塞进同一个挂载点：
     #   · /site  = **前台**（frontend/site/）只读呈现 —— 给人看这栋楼长什么样
-    #   · /      = **后台**（frontend/admin/）管理面 —— 改参数、跑阶段、核检查
-    #   （生产期 nginx 里让 / 指前台、/admin 指后台，见重构方案；本机先各挂一个前缀，
-    #    因为 `/` 已经指着 admin，临时改根会把正在验后台的页面全打断。）
+    #   · /admin = **后台**（frontend/admin/）管理面 —— 改参数、跑阶段、核检查
+    #   · /      = **首页**（frontend/home/）—— 一屏一栋：原图 ⇄ 模型
+    #   （2026-10-02 落地了原注释里那句「生产期 nginx 里让 / 指前台、/admin 指后台」；
+    #    本机没有 nginx，这两件事由下面的挂载次序直接实现。）
+    #
+    # ★ `/site` 这个**挂载点必须留着**，即使 `/` 与 `/admin/` 已经各归各位：
+    #   首页的 `/site/site.css`、`/site/js/dom.js`、`/site/js/api.js`、
+    #   `/site/js/viewer.js`、`/site/vendor/three/**` 全从这里取。
+    #   拆了它 = 首页样式和三维一起没，而屏幕上只是「没样式」+ 一块空白，不报错。
     site = cfg.root / "frontend" / "site"
     if site.is_dir():
         # ★ 裸 `/site`（不带尾斜杠）**进不了**下面这个挂载点，会一路落到最后那个
-        #   `/`（admin）挂载上，被它当成相对路径去找名为 `site` 的文件 ⇒
+        #   `/` 挂载上，被它当成相对路径去找名为 `site` 的文件 ⇒
         #   `{"detail":"Not Found"}`（FastAPI 的 404 形状）。而 `/site` 正是文档与
         #   README 里写的**前台地址** —— 手敲进来、或从别处点过来，第一眼就是这个 404。
         #   （挂载自己的 `html=True` 确实会补尾斜杠，但**前提是请求先到它手上**；
         #    这里的问题恰恰是请求没到它手上。）
         #   ⇒ 登记一条**只做跳转**的路由，注册次序排在 `/` 挂载之前，先命中本尊。
         #   2026-09-24 实测：改前 `GET /site` = 404，改后 307 → `/site/` = 200。
+        # ★ 2026-10-02：靶子从 `/site/` 换成 `/` —— 前台的「门」已经并进首页，
+        #   老地址不许 404，但也不该再把访客送回那份旧目录页。
+        #   注意**只换裸 `/site` 这一条**：`/site/` 与 `/site/**` 一个字节不动
+        #   —— 首页的样式与三维脚本就挂在它们上面（见上）。
         @app.get("/site", include_in_schema=False)
         def _site_slash() -> RedirectResponse:
-            return RedirectResponse(url="/site/", status_code=307)
+            return RedirectResponse(url="/", status_code=307)
 
         app.mount("/site", FreshStatic(directory=str(site), html=True), name="site")
 
-    # ── 校园数字孪生平台门户（新系统）──────────────────────────────
-    # ★ 这是用户在 2026-10-01 要的那个"新做的系统"，与 `/`（旧建模后台）
-    #   和 `/site`（营造·建筑数字档案）**三足鼎立**，互不改动。
+    # ── 校园数字孪生平台门户（另一个系统）──────────────────────────
+    # ★ 这是用户在 2026-10-01 要的那个"新做的系统"，**由另一个 claude 负责**，
+    #   与建模侧（`/`首页 + `/admin/`后台 + `/site`素材）**各改各的、互不越界**。
+    #   2026-10-02 只重排了建模侧的根挂载，这里**一行没碰** —— 证法是对
+    #   `main.py.bak-20261002` 逐行 diff，全部差异只有三处 hunk（`/site` 的 307 靶子、
+    #   `/admin` 与 `/` 两个挂载点、启动那条流程漂移自检），门户这几条路由一字未动。
+    #   ★ 同一天 `frontend/portal/**` 确实在动 —— 那是**数字孪生那个会话**改的
+    #   （它们正在做「退役 three 展板、世界改走 Cesium 实景」），与这里无关；
+    #   「那一侧在动」与「我动了那一侧」是两件事，别把前者的 mtime 读成后者的证据。
+    #   **这里故意不写「变了 N 个文件」** —— 那是个会过期的计数：10:02 量是 3 个，
+    #   10:24 就已经是 4 个（多出 `portal.css`）。手打的数只在清单变长那一刻才出声，
+    #   而在那之前它读起来像「已经查清了」。要比就现场比：
+    #     cd /d/gym3d && sha256sum -c _scratch/_portal_baseline_20261002.sha256 | grep -v ': OK$'
     # ★ 裸 `/portal`（不带尾斜杠）进不了下面那个挂载点，会一路落到最后的 `/` 挂载上、
     #   被当成相对路径去找名为 `portal` 的文件 ⇒ 404。这与 `/site` 是同一个坑，
     #   修法也同一条：登记一条**只做跳转**的路由，注册次序排在 `/` 挂载之前。
@@ -426,23 +473,46 @@ def create_app() -> FastAPI:
             raise not_found("根级没有这个文件", name=fname)
         return FileResponse(str(path), media_type="model/gltf-binary")
 
-    front = cfg.root / "frontend" / "admin"
-    if front.is_dir():
-        # ★ 前台顶部那个「后台」链接指向 `/admin/`，而管理面**挂在 `/`**，
-        #   `/admin/` 没人认 ⇒ 404 —— 两个半边之间**唯一的那条链接是死的**。
-        #   ⇒ 跳回 `/`。**不能**把 admin 也挂到 `/admin`：那页的样式与脚本全是
-        #   相对路径（`app.css`、`js/app.js`），换到 `/admin/` 下会连带全 404；
-        #   而 307 之后浏览器地址栏是 `/`，相对路径仍旧落在根上，一个都不用改。
+    # ── 建模后台：挪到 /admin/（2026-10-02 根挂载重排）───────────────
+    # 改前是反过来的：admin 挂在 `/`，而 `/admin` 与 `/admin/` 两条都 307 回 `/`。
+    # 于是「首页」这个位置被后台占着，访客打开网址第一眼看到的是管理面。
+    # 现在把两个位置**各归各位**：`/` 给首页，`/admin/` 给后台。
+    #
+    # ★ 旧注释里那句话是错的，别再照着它推理：「不能把 admin 挂到 /admin，
+    #   那页的样式与脚本全是相对路径，换到 /admin/ 下会连带全 404」——
+    #   相对路径（`app.css`、`js/app.js`）只在**文档 URL 不带尾斜杠**时才会
+    #   解析错。下面那条 307 正是保证文档 URL 永远是 `/admin/`，于是
+    #   `app.css` → `/admin/app.css`、`./views/x.js` → `/admin/views/x.js`，
+    #   两条都落在本挂载点里，一个文件都不用改。
+    #   （`console.js` 里唯一的跨根引用是 `await import('/site/js/viewer.js')`，
+    #    写的是**根绝对**，本来就不受影响。）
+    admin = cfg.root / "frontend" / "admin"
+    if admin.is_dir():
+        # ★ 这条 307 是**承重的**：省了它，`/admin`（不带尾斜杠）就成了文档 URL，
+        #   上面说的那批相对路径会全部解析到根上 ⇒ 全 404 且不报错。
         @app.get("/admin", include_in_schema=False)
-        @app.get("/admin/", include_in_schema=False)
         def _admin_slash() -> RedirectResponse:
-            return RedirectResponse(url="/", status_code=307)
+            return RedirectResponse(url="/admin/", status_code=307)
 
-        app.mount("/", FreshStatic(directory=str(front), html=True), name="admin")
+        # ★ **必须在最后那个 `/` 挂载之前注册**：Starlette 按注册次序匹配，
+        #   晚注册的 `/` 会把 `/admin/**` 静默吃掉（首页的静态目录里找不到
+        #   `admin/app.css`，回 404，而屏幕上只是「样式没了」）。
+        app.mount("/admin", FreshStatic(directory=str(admin), html=True), name="admin")
+
+    # ── 首页（最后一挂，否则它抢走 /api 与 /data）────────────────────
+    # ★ 必须是**最后**一个挂载点：`/` 会匹配一切尚未命中的路径。
+    #   放在 `/site`、`/portal`、`/admin`、`/building.html`、`/data/**` 之前，
+    #   上面这些全都进不来 —— 而失败的样子是「接口 404」，不是「挂载顺序错了」。
+    home = cfg.root / "frontend" / "home"
+    if home.is_dir():
+        app.mount("/", FreshStatic(directory=str(home), html=True), name="home")
+    elif admin.is_dir():
+        # 首页目录还没做出来时，`/` 不许变成 404 —— 退回后台（改前的行为）。
+        app.mount("/", FreshStatic(directory=str(admin), html=True), name="admin")
     else:
         @app.get("/")
         def _no_front() -> dict:
-            return envelope(data={"hint": "前端目录 frontend/admin 不存在"},
+            return envelope(data={"hint": "前端目录 frontend/home 与 frontend/admin 都不存在"},
                             error=None)
 
     # ── 启动期断言（最后做，此时路由已全）───────────────────────────
@@ -473,6 +543,33 @@ def create_app() -> FastAPI:
     #     （部署到服务器前，你要能一眼看到自己确实关上了）。
     #   用 print 与紧邻上面的清册同一个通道，两处都保证可见。
     print(describe(cfg))
+
+    # ── 流程定义漂移（`config/pipeline.json` ⇄ `PIPELINE_FALLBACK`）───────────
+    # 判据在 `console_meta.pipeline_drift()`，这里只负责**印出来** ——
+    # 一个没人印的自检等于没有自检：判词写在一个没有出口的通道上，与"没有这条
+    # 判据"在屏幕上完全一样（本仓记过这个形状）。
+    # ★ 用 print 与上一行 `describe(cfg)` 同一个通道：`log.info` 在这条链路上
+    #   没有 handler，会被静默丢弃（紧上面那两段注释就是为这个从 log 改成 print 的）。
+    # ★ `console_meta` 是 `backend/web/` 下的**顶层模块**（那个目录没有
+    #   `__init__.py`），import 它得先把 backend/web 挂上 sys.path —— 复用本仓
+    #   已有的那一步（`services/console.py:_ensure_console_paths`），
+    #   不在这里再写第二份路径魔法。
+    # ★ **「没量到」与「量到是干净的」必须分开印**：后者只印一行 ✓ 不多说话，
+    #   前者必须自己出声。否则「我没查」会安静地读成「查过了、没有」。
+    try:
+        from .services.console import _ensure_console_paths
+
+        _ensure_console_paths(cfg)
+        import console_meta                                      # noqa: PLC0415
+        drift = console_meta.pipeline_drift()
+    except Exception as e:                                       # noqa: BLE001
+        print("  [流程漂移] ★ 没量到（import 或求值失败）：%s: %s" % (type(e).__name__, e))
+    else:
+        if drift:
+            for _w in drift:
+                print("  [流程漂移] " + _w)
+        else:
+            print("  [流程漂移] ✓ 回落与 config/pipeline.json 的阶段 id 逐条相同")
 
     return app
 

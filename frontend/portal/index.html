@@ -7,20 +7,20 @@
 <meta name="description" content="成都理工大学校园数字孪生平台：一张底图看全校，点开一栋看每层功能与使用单位。">
 
 <!--
-  ★ three.js 走**仓内自带**（同 `frontend/site/vendor/three/`，0.185.1，无 CDN、无构建）。
-    这里必须写**绝对路径** `/site/vendor/...`，不能照抄 site 自己那份**相对**的 importmap
-    （`./vendor/three/...`）—— 那份是相对 `/site/` 解析的，搬到 `/portal/` 下会直接 404。
-    本页与 site 共用同一份 vendor，不复制第二份（两份就会漂）。
-  ★ 不引任何 CDN：本平台要放在**校内网**跑，断网必须照常工作。
+  ★★ 这一页**没有 importmap**，因为一条裸模块名都不用了。
+
+    原来这里有一份 three.js 的 importmap，指向 `/site/vendor/three/`（0.185.1，无 CDN）。
+    它服务的是 `js/scene.js` —— 那块"贴在纸面上的 three 展板"，已随 2026-10-02
+    的「一个世界」重做退役（世界改由 Cesium 实景 3D Tiles 铺满，见 `js/world/`）。
+    scene.js **一个引用方都没有**才是它退场的依据，不是"我认为没人用"。
+
+    现在唯一的外部库是 Cesium（`./vendor/cesium/`，离线包，**不进 git**）。
+    ★ 它必须走**经典 `<script src>`**，不能走 `await import()` —— 实测过：
+      动态 import 进来会丢 WebGL 上下文，而且报出来的是
+      「Fragment shader failed to compile. Compile log: null」这种与真因无关的话。
+      （详见 `js/world/world.js` 顶上那段。）
+  ★ 仍然不引任何 CDN：本平台要放在**校内网**跑，断网必须照常工作。
 -->
-<script type="importmap">
-{
-  "imports": {
-    "three": "/site/vendor/three/build/three.module.min.js",
-    "three/addons/": "/site/vendor/three/examples/jsm/"
-  }
-}
-</script>
 
 <link rel="stylesheet" href="./portal.css">
 </head>
@@ -50,8 +50,8 @@
 <div id="shell" class="shell" hidden>
 
   <header class="topbar">
-    <p class="brand"><span class="mark" aria-hidden="true"></span>
-      <span class="brand-text">校园数字孪生平台<i>成都理工大学</i></span></p>
+    <p class="brand"><span class="mark" aria-hidden="true"></span></p>
+    <p class="app-title">校园数字孪生平台<em>成都理工大学</em></p>
     <div class="topbar-right">
       <span id="clock" class="clock" aria-hidden="true"></span>
       <span id="who" class="who"></span>
@@ -59,20 +59,31 @@
     </div>
   </header>
 
-  <nav id="rail" class="rail" aria-label="功能模块"></nav>
+  <!-- ★★ 导轨里**预设**一个署名容器（Cesium 的 credit 往这里挂）。
+       为什么它必须写在这里、而不是由 `paintRail()` 建：
+         · `paintRail()` 里第一句是 `fill(rail)`（清空再画）⇒ 由它建就得每次重建，
+           而 Cesium 只认**建 viewer 那一刻**拿到的那个元素；
+         · 而 `S.scene.boot()`（`app.js:411`）跑在 `paintRail()`（`:427`）**之前**
+           ⇒ 由 paintRail 建的话，viewer 建起来的时候这个元素**还不存在**。
+       写在这儿两个问题一起没了：`fill()` 只是把它摘下来，`paintRail()` 末尾再挂回去，
+       对象始终是同一个。 -->
+  <nav id="rail" class="rail" aria-label="功能模块">
+    <div id="credit" class="credit"></div>
+  </nav>
 
   <main id="stage" class="stage">
-    <!-- 三维舞台：常驻，只有"页面型"模块会把它藏起来 -->
-    <div id="canvas-wrap" class="canvas-wrap">
-      <canvas id="gl"></canvas>
+    <!-- ★★ 世界：2024 实景 3D Tiles **铺满整块视口**，它不再是一块"展板"。
+         下面那五块都是**浮在它上面的 HUD 图层**（`position:absolute`），
+         不是与它并列的兄弟。 -->
+    <div id="world" class="world">
       <div id="hint" class="hint"></div>
       <div id="legend" class="legend"></div>
       <div id="scene-note" class="scene-note"></div>
       <div id="stage-bar" class="stage-bar"></div>
       <div id="overlay" class="overlay" hidden></div>
     </div>
-    <!-- 模块的表格 / 表单 / 说明，渲染到这里 -->
-    <div id="doc" class="doc" hidden></div>
+    <!-- 模块的表格 / 表单 / 说明。★ 它现在也是**浮层**（HUD），不再把世界挤走。 -->
+    <div id="doc" class="doc hud" hidden></div>
   </main>
 
   <aside id="panel" class="panel" aria-label="详情"></aside>

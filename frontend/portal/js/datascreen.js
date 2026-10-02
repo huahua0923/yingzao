@@ -32,7 +32,7 @@
 //     口径标签同步压短（见 CAL_SHORT）—— 判据里不许再依赖长标签文案。
 
 import { API } from './api.js';
-import { el, fill, note, rich, int, num } from './dom.js';
+import { el, fill, note, int, num, caliber } from './dom.js';
 import { loadOrthoBase } from './ortho-base.js';
 import { createOrthoMap, CALIBER_STYLE } from './ortho-map.js';
 import { kvList } from './cockpit.js';
@@ -254,14 +254,25 @@ export async function renderDatascreen(mod) {
   dsTimer = setInterval(tickClock, 1000);
 
   // ── 口径带（①：覆盖边界 —— 数字留、散文删） ─────────────────────────
+  // ★ 2026-10-02：这一带原来把**整句口径**铺在屏上（含「图上没有线 ≠ 那里没有房子」），
+  //   而那正是一句**成段说明文字** —— 第②条验收明令屏上不许有（`_p2_shots.py` B 腿）。
+  //   ⇒ 会改变读图判断的**那两个范围数**留在带上（那是读数），图名与读法收进抽屉。
   const bb = f.olBbox;
   fill(band,
-    el('b', { text: '覆盖只有图中间那一片' }),
-    el('span', {}, rich(bb
-      ? `E ${bb.e0.toFixed(0)}~${bb.e1.toFixed(0)}、N ${bb.n0.toFixed(0)}~${bb.n1.toFixed(0)}`
-        + '（渠东 1:500 图）。**图上没有线 ≠ 那里没有房子**。'
-      : '读不到覆盖范围 —— 先别拿它当下判断。')));
+    el('b', { text: bb ? '覆盖只有图中间那一片' : '读不到覆盖范围' }),
+    el('span', {}, bb
+      ? `E ${bb.e0.toFixed(0)}~${bb.e1.toFixed(0)} · N ${bb.n0.toFixed(0)}~${bb.n1.toFixed(0)}`
+      : '先别拿它当下判断。'));
   if (!bb) band.classList.add('bad');
+  // ★ 抽屉**放进带里**（右端），不是插在 `.dscreen` 的网格里：那一屏是
+  //   `grid-template-rows: auto auto minmax(0,1fr) auto` 的**四行**定高布局
+  //   （CSS 里写着「多出的部分会让整页能滚，而这一屏不该滚是它设计的全部意义」），
+  //   多一个子节点就会多一条隐式行、把地图挤矮并让整页可滚 —— 而那不会报错。
+  band.appendChild(caliber('口径 · 覆盖范围与读法', note(bb
+    ? '这两个范围是**渠东 1:500 图**的幅面。**图上没有线 ≠ 那里没有房子** ——'
+      + '这份轮廓只覆盖图中间那一片，图外的大房子（六教 / 理工宾馆 / 八教 / 综合实验楼'
+      + '实测都在它之外）在这张图上**没有轮廓**。'
+    : '读不到轮廓的覆盖范围 —— 先别拿它当下判断。', bb ? '' : 'err')));
 
   // ── 英雄区：全校区一张图 + 全部轮廓 ─────────────────────────────────
   const readout = el('div', { class: 'ds-hero-bar' });

@@ -16,7 +16,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 
 from ..authz import require_cap
-from ..responses import ok
+from ..responses import ApiError, ERR_UPSTREAM, ok
 
 # ★ 权限（2026-10-01 批次 2）：**全校区口径** —— 挂 `view` 但**不做范围过滤**。
 #   这两条回的是"识别器按什么规则认构件"（11 个构件签名 + 3 件外部量具），
@@ -37,6 +37,48 @@ if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
 
+def _lib():
+    """懒导入构件库；缺依赖 ⇒ **503 并点名缺谁**，不许 500。
+
+    ★★ 这一条是补的，补的是一个**注释与行为不符**的真缺陷（2026-10-02 实测）。
+
+    原先三个入口（本函数、`components()`、`selfcheck()`）各自裸写
+    `from recognizer import component_library as C`。而 `component_library`
+    模块级 `import ezdxf`（`backend/recognizer/` 下真在用），`ezdxf` 被
+    `deploy/requirements-server.txt` **刻意排除**（那份文件里写着理由）。
+    于是服务器上这个 import 抛 `ModuleNotFoundError`，FastAPI 没有对应的
+    异常处理器 ⇒ **裸 500**。
+
+    而两份东西都说的是 503：
+      · `deploy/requirements-server.txt` 的注释声称「缺依赖回 503」；
+      · 本仓既有的处置（`portal.py:63` 的注释、`console.py:181`、
+        `rooms.py:18`）**一模一样**：ImportError 在服务层是"这台机器没装"，
+        不是"我们的错"，所以是 503 + `ERR_UPSTREAM`，且**要点名缺的是谁**。
+    500 与 503 指向**相反的查错方向** —— 500 让人去读代码，503 让人去装依赖。
+    屏幕上只有一个状态码，而两句话的后半句完全不同。
+
+    ★ 返回模块本身，不是它的某个属性：调用方要 `COMPONENTS` / `GAUGES` /
+      各常量，一次导入服务全体，别为每个名字各写一次 try。
+
+    ★ 三件事都**量过**（`_scratch/_p3_components_503.py`，2026-10-02）：
+      ① 正常侧 `/api/components` 200、11 个构件（回归：我只改了写法，没改行为）；
+      ② 挡掉 ezdxf ⇒ 503 + `upstream_error` + 消息里点名 `ezdxf`；
+      ③ 挡板确实上膛 —— 同一条件下去 import 会真的抛，
+         且抛点在 `__init__.py:12`（不是我在上面按回忆写的 `:11`，实测更正）。
+      ★ ③ 不能省：对照没接上时"还是 200"与"这条判据没分辨力"完全同形，
+        而两者处置方向相反（铁律 028/180）。
+    """
+    try:
+        from recognizer import component_library as C      # noqa: PLC0415
+    except ImportError as e:
+        raise ApiError(503, ERR_UPSTREAM,
+                       "构件分析不可用：未安装 %s（%s）。"
+                       "服务器上这一项按 deploy/requirements-server.txt 是**故意不装**的。"
+                       % (getattr(e, "name", "recognizer"), type(e).__name__)
+                       ) from None
+    return C
+
+
 def _consts() -> dict:
     """命名常量：识别代码从这里取值，改一处全楼生效。
 
@@ -44,7 +86,7 @@ def _consts() -> dict:
     `math` 也一起回出去，而且以后新增的模块级变量会**悄悄**出现在 API 里。
     要暴露新常量就得来这加一行，这是特意的。
     """
-    from recognizer import component_library as C
+    C = _lib()
     names = ("SLAB_RATIO", "DOOR_LEAF_MIN", "DOOR_LEAF_MAX", "DOOR_SPAN_MAX",
              "JAMB_LEN", "JAMB_W", "WALL_T_OUTER", "WALL_T_INNER",
              "INNER_WALL_CENTROID_FACTOR", "FLOOR_CLUSTER_GAP")
@@ -53,7 +95,7 @@ def _consts() -> dict:
 
 @router.get("/components")
 def components() -> dict:
-    from recognizer import component_library as C
+    C = _lib()
     comps = C.COMPONENTS
     # 只回可 JSON 化的那几栏，并按签名表自己的顺序排列（Python 3.7+ 保序）。
     items = [{"name": k, "signature": v.get("signature"),
@@ -91,7 +133,7 @@ def selfcheck() -> dict:
                 时这一条会报 unavailable，**verdict 就不是 pass**。
                 "没量过"和"全过"必须长得不一样（memory: gauge-coverage-invisible-in-summary）。
     """
-    from recognizer import component_library as C
+    C = _lib()
 
     def seg(L, n=3):
         """一条长 L 的开口折线（n>=3 才进 is_door 的分支）。"""

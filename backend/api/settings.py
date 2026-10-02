@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     #   不要复制文件 —— 8 MB 的 GLB 有两份，「哪份是新的」立刻就无解了。
     campus_dir: Path | None = None
 
+    # 2024 实景 3D Tiles 产物目录（`tileset.json` + 124 个 `Tile_+NNN_+NNN/`）。
+    # ★ 与 `campus_dir` 是同一套道理，但规模差三个量级：12.0 GB / 48,701 个 `.glb`。
+    #   所以它**绝不进 git**（`.gitignore` 挡着），本机落在 `_scratch/` 下，
+    #   服务器上按 §五 第 5 关走 `GYM3D_TILES_DIR=/opt/gym3d/fly2024-tiles`。
+    # ★ 留空即"这个部署没有实景底" —— `routers/tiles.py` 会回 404 并明说找的是哪个目录。
+    #   门户页据此把世界降级成"无底"（点线画在上面），而不是白屏。
+    tiles_dir: Path | None = None
+
     # ── 能力开关：本进程是全功能控制台，还是只读服务器 ──────────────
     # True  = 本机（可跑管道 / 可改参数 / 可下 DXF）
     # False = 服务器（写接口一律 403 compute_disabled）
@@ -150,6 +158,11 @@ class Settings(BaseSettings):
     @property
     def resolved_campus_dir(self) -> Path:
         return self.campus_dir or (self.root / "_scratch" / "_campus3d" / "campus-terrain")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def resolved_tiles_dir(self) -> Path:
+        return self.tiles_dir or (self.root / "_scratch" / "_fly2024_tiles")
 
     @computed_field  # type: ignore[prop-decorator]
     @property
