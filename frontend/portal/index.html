@@ -23,6 +23,17 @@
 -->
 
 <link rel="stylesheet" href="./portal.css">
+
+<!--
+  ★ 图标走 **data URI**，不是放一个 /favicon.ico 文件。两个理由：
+    ① 不放文件 ⇒ 那条请求根本不存在，也就没有"没放到"这一种坏法；
+    ② 浏览器在页里找不到 `<link rel=icon>` 时会去要 `/favicon.ico`，
+       而本平台没有这个文件 ⇒ 控制台**每次**都多一条 404（实测：服务端日志里
+       `GET /favicon.ico 404` 出现十几次，就是门户页自己在要）。
+  ★ 形状照抄顶栏那枚 `.mark`（`portal.css:254`）：朱色方块切掉右下角，
+    与三维里的体块同形 —— 用同一枚记号，不另画一个。
+-->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23080b10'/%3E%3Cpath d='M6 6H26V18.4L18.4 26H6Z' fill='%23FF7A45'/%3E%3C/svg%3E">
 </head>
 <body>
 
