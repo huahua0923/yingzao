@@ -38,6 +38,10 @@ export function createPortalWorld(host, opts = {}) {
   const HEALTH = {
     failed: 'failed', failedTotal: 'failedTotal', sse: 'sse', renderer: 'renderer',
     sseLog: 'sseLog', base: 'base', tiles: 'tiles', rendered: 'rendered',
+    // ★ 帧率也转出来：它是**退档判据本身**。世界层 `sseLog` 里那句
+    //   「连续 3 笔不足 22 fps（末笔实测 N）」的 N 就来自这里；
+    //   不转出来，屏幕上只剩"档位变了"，看不出"因为几帧才变的"。
+    fps: 'fps',
     // ★ 世界层那个 `error` **换个名字**进来。这一层自己的 `state.error` 有别的含义
     //   （"轮廓读不到"），同名会盖掉一个、而两个都叫 error 谁也分不出读到的是哪个
     //   （铁律 174②：两个同名的量必须死掉一个）。

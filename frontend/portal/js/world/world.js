@@ -173,23 +173,56 @@ const MAX_FAILURES = 50;
 //   ★ 这个数**跟机器绑**：本机渲染器是 SwiftShader（软件 WebGL，实测）。
 //     真实 GPU 上 16 是能收敛的、也只有 16 才够清晰。
 //     ⇒ 换机器要重量（一条命令的事），**不许照抄这个 256 走**。
-// ★★ 上面那个 256 **不能写死发出去** —— 它自己那句话就是这么说的
-//   （「换机器要重量，不许照抄这个 256 走」），而门户是要发给**别人的浏览器**的。
-//   所以改成：**先看渲染器是谁**，再定档位；并允许从 URL 覆盖、允许自动退档。
+// ★★ 这三个常数**全部换掉了**（2026-10-02：真 GPU 与 SwiftShader 各扫一遍全档）。
 //
-//   · 软件渲染（SwiftShader / llvmpipe / Microsoft Basic Render）⇒ 上表量出来的 256；
-//   · 其它（真实 GPU）⇒ Cesium 默认的 16。
-//     ★ 这一档**本机量不到**（本机没有 GPU）。它写在这里是"该用哪一档"，
-//       不是"量过的结论" —— 别把它读成实测值（铁律 052）。
+//   上一版是「先看渲染器是谁 ⇒ 软件 256 / GPU 16；看不住就只往粗退」。
+//   那张表**只量过一档**（软件 256），其余是推的。这次把 16/32/64/128/256
+//   在**两条渲染路径**上各量了一遍，结论把整套设计掀掉了：
 //
-//   ★ 再看不住就**只往粗退**：25 s 还没铺完就上一档。
-//     **刻意不做"先粗后细"**：本仓试过，细化会把已铺好的粗瓦片扔掉，
-//     而细的那一档在这台机上永远铺不完 ⇒ 画面从"完整"退回"一片洞"。
-//     **一个铺不完的细化，比不细化更差。** 退档方向相反，所以它是安全的。
-const SSE_SOFTWARE = 256;                   // 上表实测：收敛 22.4 s / fps 6.7 / 122 块
-const SSE_HARDWARE = 16;                    // Cesium 默认档；★ 本机量不到
-const SSE_LADDER = [16, 32, 64, 128, 256];  // 退档阶梯（只往粗走）
-const SSE_WATCHDOG_MS = 25000;
+//   ── 真 GPU（RTX 3060，1600×950，相机高 599 m）─────────────────────
+//       档位  就绪块  三角面   在飞  几何MB   fps(前/后)
+//        16     561    1.1M     14   107    24.5 / 23.2   ← 永不收敛
+//        32    1795    2.2M      0   258    60.0 / 60.0   ← 铺完了
+//        64    1788    2.2M      0   258    60.0 / 60.0
+//       128    1194    1.5M      0   214    60.0 / 60.0   ← 画面开始破
+//       256     419    0.8M      0   156    60.1 / 60.0   ← 画面塌了
+//
+//   ── SwiftShader（无 GPU，相机高 877 m）───────────────────────────
+//       32 → 2.1 fps ｜ 64 → 2.3 ｜ 128 → 3.5 ｜ 256 → 4.5
+//
+//   ★ 两条结论，**都不是"再调调参数"能得到的**：
+//
+//   ① **32 比 16 更好，而且好得全面。** 画面：`sse_016/032/064.png` 三张的
+//      中心裁切**逐处一样**（同一排窗户、同一条屋脊）；帧率 **24 → 60**；
+//      而且 16 那一档 `在飞=14` —— 它**一直在流、从不收敛**，32 是 `在飞=0`。
+//      ⇒ 16 付了 2.5 倍的帧率，换到的画面**一样**。默认档改成 32。
+//
+//   ② ★★ **往粗退不是"变糊"，是"变坏"，而 64 以外没有能用的层。**
+//      `sse_128.png` 中央已出现黑洞（一整块楼的屋面缺了），
+//      `sse_256.png` 整片塌成互不衔接的错位板子 —— **软件渲染那条路上同样塌**
+//      （`_cmp_sw.png`）。**这不是渲染器的毛病，是数据的毛病**：本仓这份瓦片是
+//      从 OSGB 的 PagedLOD 转的，**中间层的粗节点不是细节点的简化版**，
+//      `refine=REPLACE` 退到那一层，露出来的就是那些互不衔接的板。
+//      ⇒ 这同时说明**原来那个 `SSE_SOFTWARE = 256` 是个真缺陷**：
+//        它让**每一台没有显卡的机器**看到的就是一片被撕碎的校园。
+//      ⇒ 阶梯砍成 `[32, 64]`，**64 是下限，再往下画面就没了**。
+//
+//   ★ 判据也跟着换：**直接量 fps**。前两版分别拿"死线"和"进度"当代理 ——
+//     死线（25 s 没收完就退）在这份 48695 块的数据上**恒触发**，一个恒触发的
+//     判据等于没有判据，只是单方面把代价付了出去；进度（连续 20 s 没新块才退）
+//     **从不触发**，而它想指认的那件事**是真的**（16 确实只有 6~9 fps）。
+//     两个都是代理，而这个量**本身就能直接量**：「看不住」的直译就是
+//     每秒画不出几帧。⇒ 量帧。（铁律 183：修好一个错法只算改了一半 ——
+//     上一版把警铃拆了，却没量警铃报的那个数。）
+const SSE_SOFTWARE = 64;        // 与 256 同量级（2.3 vs 4.5 fps，都不可用），但画面是好的
+const SSE_HARDWARE = 32;        // 与 16 画面相同、60 fps、且会收敛（见上表①）
+const SSE_LADDER = [32, 64];    // ★ 只两级：64 是下限，再粗数据本身就没有能看的层
+
+const SSE_FPS_FLOOR = 22;        // 低于这个数，拖动/旋转会明显顿
+const SSE_FPS_SAMPLES = 3;       // 连续三笔都低于门槛才退档（避开瞬时抖动）
+const SSE_FPS_WINDOW_MS = 1200;  // 一笔量多长的帧数
+const SSE_FPS_WARMUP_MS = 15000; // 起手这段不算：首屏的上传与解码本来就慢
+const SSE_FPS_AFTER_MS = 8000;   // 退完一档后等这么久再判（让粗的落位、细的卸掉）
 
 /** 这一台到底是软件渲染还是真 GPU —— 读**渲染器自己的名字**，不猜。
  *
@@ -231,6 +264,10 @@ export function createWorld(host, opts = {}) {
     // ★ 这三项是**这个数怎么来的**。铁律 121：一个参数不许变成装饰 ——
     //   档位若只活在代码里，谁都答不出"为什么这台机上这么糊"。
     sse: null,              // 当前生效的 maximumScreenSpaceError
+    fps: null,              // ★ 最近一次实测帧率 —— **它就是退档判据本身**，
+                            //   不留在 state 里，屏幕上就只能看见"档位变了"
+                            //   而看不见"因为几帧才变的"（铁律 109：判词要印在
+                            //   它输入已定之处）
     renderer: '',           // 判档所依据的渲染器名字（原样，不翻译）
     sseLog: [],             // 档位变动史 [{sse, why, t}]，退档要留痕
   };
@@ -418,52 +455,87 @@ export function createWorld(host, opts = {}) {
       return tileset;
     },
 
-    /** 铺不完就**只往粗退**（理由见 `SSE_LADDER` 上面那段）。
+    /** 画不动就**只往粗退**，**但最多退到 `SSE_LADDER` 的末档**（理由见上面那段）。
      *
-     *  ★ 它存在的理由只有一个：`SSE_HARDWARE = 16` 是本机**量不到**的一档，
-     *    万一看走眼（把慢机器认成 GPU），16 会让画面永远停在"一片洞"——
-     *    而"一直在加载"与"坏了"在屏幕上长得一样（铁律 020 的同一个病）。
-     *    退档方向与失败的"先粗后细"相反，所以这一步是**安全方向**。
+     *  ★ 它守的是**帧率**，不是"铺完了没有"：`tilesLoaded` 只说明**数据到齐了**，
+     *    不说明这台机器画得动（铁律 020 同族 —— "起来"与"在服务"是两件事）。
+     *    每 `SSE_FPS_WINDOW_MS` 数一次 `requestAnimationFrame` 的回调数，
+     *    那就是屏幕**真的**每秒画出几帧。
      *
-     *  ★ 判据用 `tileset.tilesLoaded`（Cesium 自己的"这一档已经铺完了吗"），
-     *    不用 `state.rendered` 的阈值 —— 那个数在**流式**加载里一直在变，
-     *    拿它当"铺完了"的门槛，就是在拿一个会动的数去判一件静止的事（铁律 159）。
+     *  ★ 为什么不拿 `state.rendered` 之类当门槛：那个数在**流式**加载里一直在变，
+     *    拿一个会动的数去判一件静止的事，等于没有判据（铁律 159）。
+     *
+     *  ★★ 为什么"到最粗档还是卡"必须**出声**而不是静默停手：在本仓这份数据上，
+     *    64 以外**根本没有能看的层**（见常量处 ②）—— 所以正确的处置**不是继续往粗退**，
+     *    而是**停手并把这件事报出来**，让人知道该换机器或换数据。
+     *    静默停手会让"退到底了"与"刚好够用"在屏幕上长得一样。
      */
     watchRefine() {
       const t0 = performance.now();
-      let tRung = t0;         // ★★ **这一档是什么时候上的** —— 不是"什么时候开的机"。
-      //
-      //  ⚠ 第一版这里量的是 `now - t0`（开机计时），而它在**退档之后不重置**：
-      //    过了 25 s，那个 `< SSE_WATCHDOG_MS` 就永远为假 ⇒ 每一档只摊到 2 秒
-      //    ⇒ 实测 16→32→64→128→256 全在 **25.1 s ~ 32.0 s** 这 7 秒里跑完，
-      //    而注释与判词说的是"每 25 秒退一档"。屏幕上这可是**正好相反**的两件事：
-      //    说好"先给细的 25 秒试试"，做的是"7 秒内一路退到最糊"。
-      //  ⇒ 计时必须**逐档重置**（铁律 044/146：判词要钉在它真正的输入上）。
+      let low = 0;                    // 连续几笔低于门槛
+      // ★ 印出来的必须是**秒**。原来这里是 `t: Math.round(el)`，而 `el` 是
+      //   `performance.now()` 的差 = **毫秒**，渲染器却拼成 `${t}s`
+      //   ⇒ 实测印出 `25201s`、`77378s`，实际是 **25.2 s / 77.4 s**，差 1000 倍。
+      //   一个读数单位错了 1000 倍而在屏幕上"看着像个数"，就是铁律 050 那个病。
+      const sec = (ms) => Math.round(ms / 100) / 10;
+
+      // 数 `SSE_FPS_WINDOW_MS` 里 rAF 回调了几次 —— 屏幕真的画出几帧。
+      // ★ 用 rAF 而不是 `requestAnimationFrame` 之外的办法（比如读 Cesium 的
+      //   `fps`）：Cesium 自己那个数是它**渲染循环**的频率，在
+      //   `requestRenderMode` 下与"屏幕多久换一帧"不是一回事。
+      const sampleFps = (done) => {
+        let n = 0;
+        const s0 = performance.now();
+        const tick = () => {
+          n += 1;
+          const el = performance.now() - s0;
+          if (el < SSE_FPS_WINDOW_MS) requestAnimationFrame(tick);
+          else done(Math.round(n / (el / 1000)));
+        };
+        requestAnimationFrame(tick);
+      };
+
       const step = () => {
         if (destroyed || !tileset || tileset.isDestroyed()) return;
-        const el = performance.now() - t0;
+        const now = performance.now();
         if (tileset.tilesLoaded) {
-          state.sseLog.push({ sse: state.sse, why: '已铺完', t: Math.round(el) });
+          state.sseLog.push({ sse: state.sse, why: '已铺完', t: sec(now - t0) });
           return;
         }
-        if (performance.now() - tRung < SSE_WATCHDOG_MS) { setTimeout(step, 2000); return; }
-        const i = SSE_LADDER.indexOf(state.sse);
-        const next = (i >= 0 && i < SSE_LADDER.length - 1) ? SSE_LADDER[i + 1] : null;
-        if (next === null) {           // 已经最粗了 —— 到这里必须**出声**
-          state.sseLog.push({ sse: state.sse, why: '★最粗档仍未铺完', t: Math.round(el) });
-          return;
-        }
-        tileset.maximumScreenSpaceError = next;
-        state.sse = next;
-        tRung = performance.now();
-        state.sseLog.push({
-          sse: next, t: Math.round(el),
-          why: `铺不完，退一档（本档给了 ${SSE_WATCHDOG_MS / 1000}s）`,
+        if (now - t0 < SSE_FPS_WARMUP_MS) { setTimeout(step, 1500); return; }
+        sampleFps((fps) => {
+          if (destroyed || !tileset || tileset.isDestroyed()) return;
+          state.fps = fps;                 // 判据本身就是这个数，所以要留下来
+          if (fps >= SSE_FPS_FLOOR) { low = 0; setTimeout(step, 1500); return; }
+          low += 1;
+          if (low < SSE_FPS_SAMPLES) { setTimeout(step, 1500); return; }
+          low = 0;
+          // ★ 取"比当前更粗的下一个"，**不用 `indexOf`** —— 从 URL 指名过
+          //   `?sse=8` 这种不在阶梯里的档时，`indexOf` 回 −1，
+          //   `SSE_LADDER[0]` 就成了**更细**的一档，方向整个反过来。
+          const next = SSE_LADDER.find((v) => v > state.sse) ?? null;
+          if (next === null) {             // 已经最粗了 —— 到这里必须**出声**
+            state.sseLog.push({
+              sse: state.sse, t: sec(performance.now() - t0),
+              why: `★已到最粗档（${state.sse}）而实测只有 ${fps} fps；`
+                 + '再粗画面就塌，停手',
+            });
+            return;
+          }
+          tileset.maximumScreenSpaceError = next;
+          state.sse = next;
+          state.sseLog.push({
+            sse: next, t: sec(performance.now() - t0),
+            why: `连续 ${SSE_FPS_SAMPLES} 笔不足 ${SSE_FPS_FLOOR} fps`
+               + `（末笔实测 ${fps}），退一档`,
+          });
+          viewer.scene.requestRender();
+          // ★ 退完要**等一等再判**：粗瓦片还没落位、细瓦片还没卸掉的那几秒，
+          //   帧率一定是低的 —— 立刻复判会一路退到底（原来是 2 s，太快）。
+          setTimeout(step, SSE_FPS_AFTER_MS);
         });
-        viewer.scene.requestRender();
-        setTimeout(step, 2000);
       };
-      setTimeout(step, SSE_WATCHDOG_MS);
+      setTimeout(step, 2000);
     },
 
     /** 铺一张**比测区大得多**的暗色地面，让世界有"外面"（见 `GROUND_PLANE` 上面那段）。
