@@ -1,0 +1,272 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<title>gym3d 状态板</title><style>
+:root{--ink:#1b1b1f;--dim:#6b6b76;--line:#e2e2e8;--bg:#fbfbfd;--hi:#b4232a;
+ --ok:#1f7a45;--warn:#9a6400;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+ font:15px/1.75 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:34px 26px 90px}
+h1{font-size:27px;margin:0 0 4px;letter-spacing:.5px}
+h2{font-size:19px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--ink)}
+h3{font-size:15px;margin:24px 0 8px;color:var(--dim);font-weight:600}
+.sub{color:var(--dim);font-size:13px;margin-bottom:26px}
+.kpi{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0 6px}
+.kpi div{background:var(--card);border:1px solid var(--line);border-radius:9px;
+ padding:12px 18px;min-width:118px}
+.kpi b{display:block;font-size:25px;line-height:1.25;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--dim);font-size:12.5px}
+.step{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--ink);
+ border-radius:8px;padding:13px 17px;margin:9px 0}
+.step b{font-size:15px}
+.step .io{color:var(--dim);font-size:13.5px;margin-top:3px}
+.step code{background:#f1f1f5;padding:1px 6px;border-radius:4px;font-size:12.5px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card)}
+th,td{border:1px solid var(--line);padding:5px 9px;text-align:left}
+th{background:#f4f4f8;font-weight:600;position:sticky;top:0}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.bad{color:var(--hi);font-weight:700}
+.ok{color:var(--ok)}
+.mid{color:var(--warn)}
+.note{background:#fff8e6;border:1px solid #f0dca8;border-radius:9px;padding:15px 19px;
+ margin:16px 0}
+.note b{color:var(--hi)}
+.scroll{max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.legend{color:var(--dim);font-size:12.5px;margin:7px 0 0}
+details{margin:7px 0;background:var(--card);border:1px solid var(--line);border-radius:8px}
+summary{cursor:pointer;padding:10px 15px;font-weight:600}
+summary .cnt{color:var(--dim);font-weight:400;font-size:13px;margin-left:8px}
+details .body{padding:0 17px 15px}
+details ul{margin:5px 0;padding-left:20px;columns:5;font-size:13px}
+details li{break-inside:avoid}
+</style></head><body><div class="wrap">
+<h1>gym3d 状态板</h1>
+<div class="sub">读盘生成于 2026-09-29 17:30 &nbsp;·&nbsp; 本页由 <code>_scratch/_state_board.py</code> 从盘上现读现出，手打的数一个没有</div>
+<div class="kpi">
+<div><b>92</b><span>栋楼</span></div>
+<div><b>460</b><span>个层文件</span></div>
+<div><b>76</b><span>栋有房间表</span></div>
+<div><b>91</b><span>个交付 GLB</span></div>
+<div><b>91</b><span>份体检报告</span></div>
+<div><b>2011</b><span>条缺陷记录</span></div>
+</div>
+<h2>一、这套系统在干什么</h2>
+<div class="legend">四步。每一步都有「产物」，产物就是下一步的输入。检查的脚本是第五件事 —— 它不进这条链，只在旁边看。</div>
+<div class="step"><b>① 图纸 → DXF</b><div class="io">DWG 是二进制。先转成能读的 DXF。</div><div class="io">产物：<code>convert_dwg_to_dxf.py</code> → <code>*.dxf</code></div></div>
+<div class="step"><b>② DXF → 层（墙 / 轮廓 / 柱子 / 门 / 楼梯）</b><div class="io">这一步是核心，全靠 <b>backend/recognizer/</b> 那套识别器。</div><div class="io">产物：<code>run_step.py dxf</code> → <code>floors/floor*.json</code></div></div>
+<div class="step"><b>③ 层 → 房间表</b><div class="io">把标在房号层上的字认出来，做成清单。</div><div class="io">产物：<code>extract_rooms_generic.py</code> → <code>rooms.json</code></div></div>
+<div class="step"><b>④ 层 + 房间 → 3D 模型</b><div class="io">层和房间一起出 GLB，就是页面上那个模型。</div><div class="io">产物：<code>run_step.py glb</code> → <code>&lt;楼名&gt;-building.glb</code></div></div>
+<div class="step" style="border-left-color:#b4232a"><b>⑤ 检查（在旁边，不在链上）</b><div class="io">三把尺子：<code>audit_gate.py</code>（层/图核）、<code>qa_structural.py</code>（结构体检，就出本页那些缺陷记录）、<code>glb_gate.py</code>（GLB 检查）。</div><div class="io">★ 它们都会算出一个<b>退出码</b>表示结论，但接货的那一层（<code>backend/api/services/checks.py:620</code>）只把退出码当<b>读数</b>记下来，<b>没有一条路径因为退出码而停下来</b>。这就是「黑盒子」的准确位置。</div></div>
+<h2>二、全库状态</h2>
+<div class="legend">按楼一行。「体检」那列是这份报告里的缺陷条数，红 = 有 ERROR，黄 = 只有 WARN，灰 = 没跑过体检。</div>
+<div class="scroll"><table><tr><th>楼</th><th class="n">层</th><th class="n">层文件里的房间</th><th class="n">rooms.json</th><th class="n">GLB(MB)</th><th class="n">体检记录</th><th>最重的一条</th></tr>
+<tr><td>c015</td><td class="n">3</td><td class="n">—</td><td class="n">0</td><td class="n">6.2</td><td class="n bad">95</td><td>柱在楼板轮廓外72.5m 且柱族无锚点无板(悬空鳍,缺陷起跳层)  @(-8.00, 99.70)</td></tr>
+<tr><td>c041</td><td class="n">6</td><td class="n">47</td><td class="n">47</td><td class="n">3.4</td><td class="n bad">21</td><td>柱在楼板轮廓外0.9m 且柱族无锚点无板(悬空鳍,缺陷起跳层)  @(-1.27, -10.60)</td></tr>
+<tr><td>c028</td><td class="n">3</td><td class="n">29</td><td class="n">30</td><td class="n">2.4</td><td class="n bad">20</td><td>房间大面积外溢楼板轮廓 30% (面积13㎡) 房间44㎡  @(1.80, -10.55)</td></tr>
+<tr><td>c001</td><td class="n">6</td><td class="n">69</td><td class="n">69</td><td class="n">6.4</td><td class="n bad">123</td><td>柱在楼板轮廓外0.6m 且柱族无锚点无板(悬空鳍,缺陷起跳层)  @(-9.10, -13.22)</td></tr>
+<tr><td>c103</td><td class="n">6</td><td class="n">34</td><td class="n">172</td><td class="n">15.8</td><td class="n bad">22</td><td>房间大面积外溢楼板轮廓 28% (面积23㎡) 房间82㎡  @(-66.95, 12.97)</td></tr>
+<tr><td>c022</td><td class="n">7</td><td class="n">47</td><td class="n">47</td><td class="n">4.4</td><td class="n bad">11</td><td>房间大面积外溢楼板轮廓 5% (面积54㎡) 房间1188㎡  @(-0.86, 0.26)</td></tr>
+<tr><td>c075</td><td class="n">7</td><td class="n">—</td><td class="n">0</td><td class="n">21.7</td><td class="n mid">444</td><td>柱在自身轮廓外203.0m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-44.04, 27.56)</td></tr>
+<tr><td>c011</td><td class="n">5</td><td class="n">5</td><td class="n">31</td><td class="n">7.3</td><td class="n mid">207</td><td>柱在自身轮廓外179.7m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-27.66, 3.42)</td></tr>
+<tr><td>c113</td><td class="n">5</td><td class="n">134</td><td class="n">134</td><td class="n">10.0</td><td class="n mid">121</td><td>同位置重复柱(识别副本) @(31.60,-3.20) 出现在楼层 3</td></tr>
+<tr><td>c081</td><td class="n">1</td><td class="n">—</td><td class="n">0</td><td class="n">2.3</td><td class="n mid">96</td><td>柱在自身轮廓外63.4m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-40.64, -5.90)</td></tr>
+<tr><td>c009</td><td class="n">5</td><td class="n">146</td><td class="n">150</td><td class="n">11.2</td><td class="n mid">41</td><td>柱在自身轮廓外0.3m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-56.70, 11.52)</td></tr>
+<tr><td>c006</td><td class="n">11</td><td class="n">213</td><td class="n">214</td><td class="n">17.3</td><td class="n mid">35</td><td>外扩带空腔: 比上层多4456㎡ 厚41.1m 无柱/房/内墙 (疑似入口台阶/apron污染; 若为裙房屋面则正常可忽</td></tr>
+<tr><td>c045</td><td class="n">7</td><td class="n">105</td><td class="n">105</td><td class="n">6.9</td><td class="n mid">25</td><td>柱在自身轮廓外0.9m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-23.88, 3.12)</td></tr>
+<tr><td>c021</td><td class="n">5</td><td class="n">103</td><td class="n">103</td><td class="n">5.9</td><td class="n mid">24</td><td>柱在自身轮廓外0.3m(地面层:可能入口门廊/廊柱,人工核图纸)  @(1.41, -5.70)</td></tr>
+<tr><td>c044</td><td class="n">7</td><td class="n">105</td><td class="n">105</td><td class="n">19.7</td><td class="n mid">24</td><td>柱在自身轮廓外0.9m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-15.66, 4.68)</td></tr>
+<tr><td>c046</td><td class="n">6</td><td class="n">306</td><td class="n">306</td><td class="n">33.5</td><td class="n mid">24</td><td>门 16/170 未登记宿主墙 wallId —— 墙定稿后漏走 finalize_floor()</td></tr>
+<tr><td>c074</td><td class="n">7</td><td class="n">—</td><td class="n">0</td><td class="n">5.9</td><td class="n mid">23</td><td>几何中心距F0偏移29.9m(多翼/错列? 对照包围盒看嵌套)  @(-5.79, -8.64)</td></tr>
+<tr><td>c027</td><td class="n">8</td><td class="n">56</td><td class="n">56</td><td class="n">4.7</td><td class="n mid">21</td><td>几何中心距F0偏移14.6m(多翼/错列? 对照包围盒看嵌套)  @(-0.05, 0.00)</td></tr>
+<tr><td>c007</td><td class="n">5</td><td class="n">148</td><td class="n">148</td><td class="n">4.8</td><td class="n mid">20</td><td>同位置重复柱(识别副本) @(-3.40,3.40) 出现在楼层 0</td></tr>
+<tr><td>c003</td><td class="n">10</td><td class="n">36</td><td class="n">36</td><td class="n">10.2</td><td class="n mid">19</td><td>几何中心距F0偏移4.3m(多翼/错列? 对照包围盒看嵌套)  @(1.15, -5.75)</td></tr>
+<tr><td>c080</td><td class="n">6</td><td class="n">402</td><td class="n">402</td><td class="n">19.3</td><td class="n mid">19</td><td>同位置重复柱(识别副本) @(-50.00,-15.20) 出现在楼层 0,1</td></tr>
+<tr><td>c002</td><td class="n">10</td><td class="n">25</td><td class="n">25</td><td class="n">9.7</td><td class="n mid">18</td><td>门心压在墙里 16/16 道(门扇被墙吞) — 最低洞口残墙 9%</td></tr>
+<tr><td>c026</td><td class="n">6</td><td class="n">46</td><td class="n">46</td><td class="n">2.2</td><td class="n mid">17</td><td>上层内柱脚下无同轴柱也无下层板(退台/挑出,人工核) 下方f2无板无柱  @(-10.79, -1.80)</td></tr>
+<tr><td>c079</td><td class="n">6</td><td class="n">267</td><td class="n">267</td><td class="n">12.7</td><td class="n mid">17</td><td>门心压在墙里 50/57 道(门扇被墙吞) — 最低洞口残墙 34%</td></tr>
+<tr><td>c084</td><td class="n">6</td><td class="n">266</td><td class="n">266</td><td class="n">12.7</td><td class="n mid">17</td><td>门心压在墙里 48/55 道(门扇被墙吞) — 最低洞口残墙 34%</td></tr>
+<tr><td>c086</td><td class="n">6</td><td class="n">268</td><td class="n">268</td><td class="n">12.8</td><td class="n mid">17</td><td>门心压在墙里 50/57 道(门扇被墙吞) — 最低洞口残墙 34%</td></tr>
+<tr><td>c008</td><td class="n">5</td><td class="n">76</td><td class="n">76</td><td class="n">3.5</td><td class="n mid">16</td><td>柱在自身轮廓外1.0m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-2.74, -16.70)</td></tr>
+<tr><td>c023</td><td class="n">4</td><td class="n">28</td><td class="n">28</td><td class="n">1.5</td><td class="n mid">16</td><td>墙身主体在轮廓外&gt;1.2m(疑似室外构造混入union) 外溢137㎡  @(97.65, -1.93)</td></tr>
+<tr><td>c020</td><td class="n">5</td><td class="n">—</td><td class="n">0</td><td class="n">1.8</td><td class="n mid">15</td><td>上层内柱脚下无同轴柱也无下层板(退台/挑出,人工核) 下方f0无板无柱  @(5.46, 8.39)</td></tr>
+<tr><td>c019</td><td class="n">7</td><td class="n">129</td><td class="n">129</td><td class="n">6.3</td><td class="n mid">14</td><td>门心压在墙里 45/45 道(门扇被墙吞) — 最低洞口残墙 4%</td></tr>
+<tr><td>c030</td><td class="n">7</td><td class="n">97</td><td class="n">97</td><td class="n">5.5</td><td class="n mid">14</td><td>门心压在墙里 13/26 道(门扇被墙吞) — 最低洞口残墙 35%</td></tr>
+<tr><td>c034</td><td class="n">6</td><td class="n">155</td><td class="n">158</td><td class="n">9.6</td><td class="n mid">14</td><td>几何中心距F0偏移5.8m(多翼/错列? 对照包围盒看嵌套)  @(-2.00, 6.17)</td></tr>
+<tr><td>c037</td><td class="n">6</td><td class="n">—</td><td class="n">0</td><td class="n">2.6</td><td class="n mid">13</td><td>门 2/22 未登记宿主墙 wallId —— 墙定稿后漏走 finalize_floor()</td></tr>
+<tr><td>c083</td><td class="n">6</td><td class="n">266</td><td class="n">266</td><td class="n">12.3</td><td class="n mid">13</td><td>门心压在墙里 50/57 道(门扇被墙吞) — 最低洞口残墙 31%</td></tr>
+<tr><td>c085</td><td class="n">6</td><td class="n">267</td><td class="n">267</td><td class="n">12.5</td><td class="n mid">13</td><td>门心压在墙里 50/57 道(门扇被墙吞) — 最低洞口残墙 31%</td></tr>
+<tr><td>c104</td><td class="n">5</td><td class="n">41</td><td class="n">56</td><td class="n">11.0</td><td class="n mid">13</td><td>外扩带空腔: 比上层多57㎡ 厚1.6m 无柱/房/内墙 (疑似入口台阶/apron污染; 若为裙房屋面则正常可忽略)</td></tr>
+<tr><td>c029</td><td class="n">6</td><td class="n">108</td><td class="n">108</td><td class="n">5.6</td><td class="n mid">12</td><td>门心压在墙里 18/36 道(门扇被墙吞) — 最低洞口残墙 36%</td></tr>
+<tr><td>c031</td><td class="n">6</td><td class="n">71</td><td class="n">71</td><td class="n">4.0</td><td class="n mid">12</td><td>门心压在墙里 11/22 道(门扇被墙吞) — 最低洞口残墙 35%</td></tr>
+<tr><td>c032</td><td class="n">6</td><td class="n">155</td><td class="n">155</td><td class="n">8.5</td><td class="n mid">12</td><td>门心压在墙里 25/50 道(门扇被墙吞) — 最低洞口残墙 31%</td></tr>
+<tr><td>c033</td><td class="n">6</td><td class="n">143</td><td class="n">143</td><td class="n">7.8</td><td class="n mid">12</td><td>门心压在墙里 23/46 道(门扇被墙吞) — 最低洞口残墙 31%</td></tr>
+<tr><td>c018</td><td class="n">6</td><td class="n">179</td><td class="n">179</td><td class="n">6.8</td><td class="n mid">11</td><td>门心压在墙里 30/34 道(门扇被墙吞) — 最低洞口残墙 11%</td></tr>
+<tr><td>c036</td><td class="n">5</td><td class="n">54</td><td class="n">54</td><td class="n">3.8</td><td class="n mid">11</td><td>几何中心距F0偏移9.9m(多翼/错列? 对照包围盒看嵌套)  @(-1.57, 1.61)</td></tr>
+<tr><td>c118</td><td class="n">1</td><td class="n">—</td><td class="n">0</td><td class="n">0.9</td><td class="n mid">11</td><td>墙身主体在轮廓外&gt;1.2m(疑似室外构造混入union) 外溢6㎡  @(6.09, 161.39)</td></tr>
+<tr><td>c005</td><td class="n">5</td><td class="n">—</td><td class="n">0</td><td class="n">3.8</td><td class="n mid">10</td><td>几何中心距F0偏移6.7m(多翼/错列? 对照包围盒看嵌套)  @(-1.89, -6.58)</td></tr>
+<tr><td>c008f2</td><td class="n">2</td><td class="n">7</td><td class="n">7</td><td class="n">0.7</td><td class="n mid">10</td><td>上层内柱脚下无同轴柱也无下层板(退台/挑出,人工核) 下方f0无板无柱  @(34.14, 1.92)</td></tr>
+<tr><td>c107</td><td class="n">4</td><td class="n">—</td><td class="n">0</td><td class="n">1.6</td><td class="n mid">10</td><td>几何中心距F0偏移49.7m(多翼/错列? 对照包围盒看嵌套)  @(-1.61, 15.99)</td></tr>
+<tr><td>c010f1</td><td class="n">2</td><td class="n">12</td><td class="n">12</td><td class="n">0.5</td><td class="n mid">8</td><td>上层内柱脚下无同轴柱也无下层板(退台/挑出,人工核) 下方f0无板无柱  @(-12.96, -4.62)</td></tr>
+<tr><td>c025</td><td class="n">3</td><td class="n">48</td><td class="n">48</td><td class="n">2.7</td><td class="n mid">8</td><td>门 4/39 未登记宿主墙 wallId —— 墙定稿后漏走 finalize_floor()</td></tr>
+<tr><td>c017</td><td class="n">7</td><td class="n">254</td><td class="n">254</td><td class="n">8.9</td><td class="n mid">7</td><td>门心压在墙里 22/22 道(门扇被墙吞) — 最低洞口残墙 28%</td></tr>
+<tr><td>c043</td><td class="n">7</td><td class="n">154</td><td class="n">154</td><td class="n">8.6</td><td class="n mid">7</td><td>门心压在墙里 44/44 道(门扇被墙吞) — 最低洞口残墙 17%</td></tr>
+<tr><td>c058</td><td class="n">3</td><td class="n">53</td><td class="n">53</td><td class="n">4.2</td><td class="n mid">7</td><td>几何中心距F0偏移50.2m(多翼/错列? 对照包围盒看嵌套)  @(-5.99, 23.75)</td></tr>
+<tr><td>c116</td><td class="n">4</td><td class="n">83</td><td class="n">83</td><td class="n">1.6</td><td class="n mid">7</td><td>几何中心距F0偏移5.3m(多翼/错列? 对照包围盒看嵌套)  @(2.68, 15.30)</td></tr>
+<tr><td>c117</td><td class="n">4</td><td class="n">89</td><td class="n">89</td><td class="n">1.4</td><td class="n mid">7</td><td>门心压在墙里 26/26 道(门扇被墙吞) — 最低洞口残墙 28%</td></tr>
+<tr><td>c024</td><td class="n">3</td><td class="n">42</td><td class="n">42</td><td class="n">1.8</td><td class="n mid">6</td><td>门心压在墙里 18/18 道(门扇被墙吞) — 最低洞口残墙 36%</td></tr>
+<tr><td>c054</td><td class="n">6</td><td class="n">480</td><td class="n">480</td><td class="n">40.3</td><td class="n mid">6</td><td>门心压在墙里 159/159 道(门扇被墙吞) — 最低洞口残墙 33%</td></tr>
+<tr><td>c055</td><td class="n">6</td><td class="n">480</td><td class="n">480</td><td class="n">40.1</td><td class="n mid">6</td><td>门心压在墙里 159/159 道(门扇被墙吞) — 最低洞口残墙 33%</td></tr>
+<tr><td>c056</td><td class="n">6</td><td class="n">255</td><td class="n">255</td><td class="n">21.0</td><td class="n mid">6</td><td>门心压在墙里 79/79 道(门扇被墙吞) — 最低洞口残墙 30%</td></tr>
+<tr><td>c057</td><td class="n">6</td><td class="n">255</td><td class="n">255</td><td class="n">21.0</td><td class="n mid">6</td><td>门心压在墙里 79/79 道(门扇被墙吞) — 最低洞口残墙 30%</td></tr>
+<tr><td>c059</td><td class="n">6</td><td class="n">133</td><td class="n">133</td><td class="n">9.9</td><td class="n mid">6</td><td>门心压在墙里 23/44 道(门扇被墙吞) — 最低洞口残墙 37%</td></tr>
+<tr><td>c060</td><td class="n">6</td><td class="n">264</td><td class="n">264</td><td class="n">20.4</td><td class="n mid">6</td><td>门心压在墙里 34/87 道(门扇被墙吞) — 最低洞口残墙 37%</td></tr>
+<tr><td>c061</td><td class="n">6</td><td class="n">288</td><td class="n">288</td><td class="n">22.7</td><td class="n mid">6</td><td>门心压在墙里 36/95 道(门扇被墙吞) — 最低洞口残墙 37%</td></tr>
+<tr><td>c062</td><td class="n">6</td><td class="n">257</td><td class="n">257</td><td class="n">19.2</td><td class="n mid">6</td><td>门心压在墙里 15/16 道(门扇被墙吞) — 最低洞口残墙 14%</td></tr>
+<tr><td>c063</td><td class="n">6</td><td class="n">255</td><td class="n">255</td><td class="n">19.9</td><td class="n mid">6</td><td>门心压在墙里 13/14 道(门扇被墙吞) — 最低洞口残墙 14%</td></tr>
+<tr><td>c064</td><td class="n">6</td><td class="n">288</td><td class="n">288</td><td class="n">21.8</td><td class="n mid">6</td><td>门心压在墙里 36/95 道(门扇被墙吞) — 最低洞口残墙 37%</td></tr>
+<tr><td>c065</td><td class="n">6</td><td class="n">288</td><td class="n">288</td><td class="n">22.9</td><td class="n mid">6</td><td>门心压在墙里 36/95 道(门扇被墙吞) — 最低洞口残墙 37%</td></tr>
+<tr><td>c072</td><td class="n">6</td><td class="n">222</td><td class="n">402</td><td class="n">18.5</td><td class="n mid">6</td><td>门心压在墙里 60/148 道(门扇被墙吞) — 最低洞口残墙 20%</td></tr>
+<tr><td>c073</td><td class="n">6</td><td class="n">222</td><td class="n">402</td><td class="n">18.5</td><td class="n mid">6</td><td>门心压在墙里 61/149 道(门扇被墙吞) — 最低洞口残墙 20%</td></tr>
+<tr><td>c105</td><td class="n">2</td><td class="n">—</td><td class="n">0</td><td class="n">5.5</td><td class="n mid">6</td><td>墙身主体在轮廓外&gt;1.2m(疑似室外构造混入union) 外溢8㎡  @(14.67, 1.83)</td></tr>
+<tr><td>c106</td><td class="n">4</td><td class="n">59</td><td class="n">59</td><td class="n">3.0</td><td class="n mid">6</td><td>外扩带空腔: 比上层多97㎡ 厚8.2m 无柱/房/内墙 (疑似入口台阶/apron污染; 若为裙房屋面则正常可忽略)</td></tr>
+<tr><td>c114</td><td class="n">6</td><td class="n">64</td><td class="n">64</td><td class="n">2.1</td><td class="n mid">6</td><td>门心压在墙里 18/18 道(门扇被墙吞) — 最低洞口残墙 24%</td></tr>
+<tr><td>m282</td><td class="n">4</td><td class="n">64</td><td class="n">64</td><td class="n">3.1</td><td class="n mid">6</td><td>几何中心距F0偏移4.2m(多翼/错列? 对照包围盒看嵌套)  @(4.37, -10.80)</td></tr>
+<tr><td>ny27</td><td class="n">6</td><td class="n">36</td><td class="n">36</td><td class="n">3.3</td><td class="n mid">6</td><td>门心压在墙里 6/30 道(门扇被墙吞) — 最低洞口残墙 20%</td></tr>
+<tr><td>ny28</td><td class="n">6</td><td class="n">36</td><td class="n">36</td><td class="n">3.3</td><td class="n mid">6</td><td>门心压在墙里 6/30 道(门扇被墙吞) — 最低洞口残墙 20%</td></tr>
+<tr><td>ny29</td><td class="n">6</td><td class="n">48</td><td class="n">48</td><td class="n">4.4</td><td class="n mid">6</td><td>门心压在墙里 16/48 道(门扇被墙吞) — 最低洞口残墙 20%</td></tr>
+<tr><td>c004f1</td><td class="n">4</td><td class="n">—</td><td class="n">0</td><td class="n">2.7</td><td class="n mid">5</td><td>外扩带空腔: 比上层多90㎡ 厚20.7m 无柱/房/内墙 (疑似入口台阶/apron污染; 若为裙房屋面则正常可忽略)</td></tr>
+<tr><td>c008f1</td><td class="n">2</td><td class="n">20</td><td class="n">20</td><td class="n">1.0</td><td class="n mid">5</td><td>几何中心距F0偏移23.7m(多翼/错列? 对照包围盒看嵌套)  @(1.99, -11.54)</td></tr>
+<tr><td>c012</td><td class="n">3</td><td class="n">—</td><td class="n">0</td><td class="n">2.2</td><td class="n mid">5</td><td>几何中心距F0偏移6.5m(多翼/错列? 对照包围盒看嵌套)  @(0.26, -2.29)</td></tr>
+<tr><td>c038</td><td class="n">5</td><td class="n">12</td><td class="n">12</td><td class="n">3.5</td><td class="n mid">5</td><td>门 1/22 未登记宿主墙 wallId —— 墙定稿后漏走 finalize_floor()</td></tr>
+<tr><td>c109</td><td class="n">5</td><td class="n">118</td><td class="n">118</td><td class="n">9.4</td><td class="n mid">5</td><td>门心压在墙里 22/22 道(门扇被墙吞) — 最低洞口残墙 29%</td></tr>
+<tr><td>c004</td><td class="n">3</td><td class="n">74</td><td class="n">74</td><td class="n">4.0</td><td class="n mid">4</td><td>门心压在墙里 2/2 道(门扇被墙吞) — 最低洞口残墙 58%</td></tr>
+<tr><td>c004f2</td><td class="n">1</td><td class="n">—</td><td class="n">0</td><td class="n">0.7</td><td class="n mid">4</td><td>柱在自身轮廓外0.4m(地面层:可能入口门廊/廊柱,人工核图纸)  @(-12.98, -4.71)</td></tr>
+<tr><td>c012f1</td><td class="n">2</td><td class="n">—</td><td class="n">0</td><td class="n">0.4</td><td class="n mid">4</td><td>几何中心距F0偏移31.6m(多翼/错列? 对照包围盒看嵌套)  @(-10.89, -11.12)</td></tr>
+<tr><td>c053</td><td class="n">2</td><td class="n">—</td><td class="n">0</td><td class="n">2.0</td><td class="n mid">4</td><td>门心压在墙里 115/123 道(门扇被墙吞) — 最低洞口残墙 7%</td></tr>
+<tr><td>c108</td><td class="n">4</td><td class="n">32</td><td class="n">32</td><td class="n">1.8</td><td class="n mid">4</td><td>门心压在墙里 8/9 道(门扇被墙吞) — 最低洞口残墙 23%</td></tr>
+<tr><td>c035</td><td class="n">4</td><td class="n">27</td><td class="n">27</td><td class="n">1.3</td><td class="n mid">3</td><td>外扩带空腔: 比上层多99㎡ 厚7.8m 无柱/房/内墙 (疑似入口台阶/apron污染; 若为裙房屋面则正常可忽略)</td></tr>
+<tr><td>c110</td><td class="n">1</td><td class="n">61</td><td class="n">61</td><td class="n">1.3</td><td class="n mid">3</td><td>墙身主体在轮廓外&gt;1.2m(疑似室外构造混入union) 外溢4㎡  @(35.54, -0.52)</td></tr>
+<tr><td>c115</td><td class="n">1</td><td class="n">—</td><td class="n">0</td><td class="n">1.8</td><td class="n mid">3</td><td>墙身主体在轮廓外&gt;1.2m(疑似室外构造混入union) 外溢240㎡  @(-6.21, 175.17)</td></tr>
+<tr><td>c066f1</td><td class="n">2</td><td class="n">9</td><td class="n">9</td><td class="n">0.4</td><td class="n mid">2</td><td>门心压在墙里 6/6 道(门扇被墙吞) — 最低洞口残墙 38%</td></tr>
+<tr><td>c112</td><td class="n">3</td><td class="n">56</td><td class="n">56</td><td class="n">1.9</td><td class="n mid">2</td><td>几何中心距F0偏移13.6m(多翼/错列? 对照包围盒看嵌套)  @(3.24, -9.92)</td></tr>
+<tr><td>m281</td><td class="n">2</td><td class="n">6</td><td class="n">6</td><td class="n">0.4</td><td class="n mid">2</td><td>门心压在墙里 15/15 道(门扇被墙吞) — 最低洞口残墙 17%</td></tr>
+<tr><td>c066</td><td class="n">1</td><td class="n">23</td><td class="n">23</td><td class="n">1.0</td><td class="n mid">1</td><td>门心压在墙里 4/9 道(门扇被墙吞) — 最低洞口残墙 60%</td></tr>
+<tr><td>c006pub</td><td class="n">6</td><td class="n">119</td><td class="n">214</td><td class="n"><span class="bad">缺</span></td><td class="n ">未跑</td><td><span class="ok">干净</span></td></tr>
+</table></div>
+<h2>三、错在哪里 —— 按问题类型汇总</h2>
+<div class="legend">同一种毛病全库有多少栋、多少处。点开看是哪几栋。分类名是从体检报告的原话里剥掉数字得来的，没有手打图例。</div>
+<details><summary>门心压在墙里 #/# 道 — 最低洞口残墙 #%<span class='cnt'>84 栋 · 412 处 · 代号 I11</span></summary><div class='body'><ul><li>c001</li><li>c002</li><li>c003</li><li>c004</li><li>c005</li><li>c006</li><li>c007</li><li>c008</li><li>c008f1</li><li>c008f2</li><li>c009</li><li>c010f1</li><li>c011</li><li>c012</li><li>c012f1</li><li>c015</li><li>c017</li><li>c018</li><li>c019</li><li>c020</li><li>c021</li><li>c022</li><li>c023</li><li>c024</li><li>c025</li><li>c026</li><li>c027</li><li>c028</li><li>c029</li><li>c030</li><li>c031</li><li>c032</li><li>c033</li><li>c034</li><li>c036</li><li>c037</li><li>c041</li><li>c043</li><li>c044</li><li>c045</li><li>c046</li><li>c053</li><li>c054</li><li>c055</li><li>c056</li><li>c057</li><li>c058</li><li>c059</li><li>c060</li><li>c061</li><li>c062</li><li>c063</li><li>c064</li><li>c065</li><li>c066</li><li>c066f1</li><li>c072</li><li>c073</li><li>c074</li><li>c075</li><li>c079</li><li>c080</li><li>c081</li><li>c083</li><li>c084</li><li>c085</li><li>c086</li><li>c103</li><li>c104</li><li>c106</li><li>c107</li><li>c108</li><li>c109</li><li>c113</li><li>c114</li><li>c115</li><li>c116</li><li>c117</li><li>c118</li><li>m281</li><li>m282</li><li>ny27</li><li>ny28</li><li>ny29</li></ul></div></details>
+<details><summary>楼梯井内踏步假墙 # 块<span class='cnt'>47 栋 · 211 处 · 代号 I17</span></summary><div class='body'><ul><li>c001</li><li>c002</li><li>c003</li><li>c004</li><li>c004f1</li><li>c006</li><li>c007</li><li>c008f1</li><li>c008f2</li><li>c011</li><li>c015</li><li>c017</li><li>c018</li><li>c019</li><li>c020</li><li>c021</li><li>c023</li><li>c024</li><li>c025</li><li>c028</li><li>c029</li><li>c030</li><li>c031</li><li>c032</li><li>c033</li><li>c034</li><li>c036</li><li>c037</li><li>c041</li><li>c044</li><li>c045</li><li>c046</li><li>c053</li><li>c058</li><li>c074</li><li>c075</li><li>c079</li><li>c080</li><li>c081</li><li>c083</li><li>c084</li><li>c085</li><li>c086</li><li>c104</li><li>c107</li><li>c113</li><li>c115</li></ul></div></details>
+<details><summary>几何中心距F#偏移#m<span class='cnt'>34 栋 · 85 处 · 代号 I8</span></summary><div class='body'><ul><li>c001</li><li>c003</li><li>c004f1</li><li>c005</li><li>c006</li><li>c007</li><li>c008</li><li>c008f1</li><li>c008f2</li><li>c009</li><li>c011</li><li>c012</li><li>c012f1</li><li>c015</li><li>c020</li><li>c021</li><li>c023</li><li>c026</li><li>c027</li><li>c034</li><li>c035</li><li>c036</li><li>c058</li><li>c074</li><li>c075</li><li>c103</li><li>c104</li><li>c105</li><li>c106</li><li>c107</li><li>c112</li><li>c113</li><li>c116</li><li>m282</li></ul></div></details>
+<details><summary>门 #/# 未登记宿主墙 wallId —— 墙定稿后漏走 finalize_floor<span class='cnt'>25 栋 · 80 处 · 代号 I11</span></summary><div class='body'><ul><li>c006</li><li>c010f1</li><li>c012f1</li><li>c015</li><li>c023</li><li>c025</li><li>c026</li><li>c027</li><li>c028</li><li>c037</li><li>c038</li><li>c045</li><li>c046</li><li>c058</li><li>c074</li><li>c075</li><li>c079</li><li>c080</li><li>c083</li><li>c084</li><li>c085</li><li>c086</li><li>c107</li><li>c110</li><li>c113</li></ul></div></details>
+<details><summary>楼梯井 #/# 口围合不足<span class='cnt'>14 栋 · 29 处 · 代号 I17</span></summary><div class='body'><ul><li>c001</li><li>c005</li><li>c006</li><li>c011</li><li>c022</li><li>c027</li><li>c036</li><li>c041</li><li>c044</li><li>c046</li><li>c074</li><li>c075</li><li>c104</li><li>c113</li></ul></div></details>
+<details><summary>柱在自身轮廓外#m<span class='cnt'>11 栋 · 303 处 · 代号 I1</span></summary><div class='body'><ul><li>c001</li><li>c004f2</li><li>c008</li><li>c009</li><li>c011</li><li>c021</li><li>c044</li><li>c045</li><li>c075</li><li>c081</li><li>c103</li></ul></div></details>
+<details><summary>上层内柱脚下无同轴柱也无下层板 下方f#无板无柱<span class='cnt'>11 栋 · 618 处 · 代号 I2</span></summary><div class='body'><ul><li>c001</li><li>c007</li><li>c008f2</li><li>c010f1</li><li>c011</li><li>c015</li><li>c020</li><li>c021</li><li>c026</li><li>c075</li><li>c113</li></ul></div></details>
+<details><summary>墙身主体在轮廓外&gt;#m 外溢#㎡<span class='cnt'>11 栋 · 141 处 · 代号 I4</span></summary><div class='body'><ul><li>c011</li><li>c015</li><li>c023</li><li>c041</li><li>c075</li><li>c081</li><li>c105</li><li>c110</li><li>c113</li><li>c115</li><li>c118</li></ul></div></details>
+<details><summary>#/# 柱在板轮廓外却在墙包络内 → 楼板疑似只盖房间块,漏了开放柱廊/柱区<span class='cnt'>9 栋 · 10 处 · 代号 I10</span></summary><div class='body'><ul><li>c001</li><li>c008</li><li>c011</li><li>c015</li><li>c041</li><li>c044</li><li>c045</li><li>c075</li><li>c081</li></ul></div></details>
+<details><summary>同位置重复柱<span class='cnt'>9 栋 · 30 处 · 代号 I7</span></summary><div class='body'><ul><li>c007</li><li>c009</li><li>c022</li><li>c044</li><li>c045</li><li>c075</li><li>c080</li><li>c103</li><li>c113</li></ul></div></details>
+<details><summary>外扩带空腔: 比上层多#㎡ 厚#m 无柱/房/内墙<span class='cnt'>5 栋 · 5 处 · 代号 I5</span></summary><div class='body'><ul><li>c004f1</li><li>c006</li><li>c035</li><li>c104</li><li>c106</li></ul></div></details>
+<details><summary>与 F# 平面同构却错位 m —— 本层局部坐标系漂了，多半是 profile.offset 标错<span class='cnt'>5 栋 · 9 处 · 代号 I18</span></summary><div class='body'><ul><li>c005</li><li>c020</li><li>c107</li><li>c117</li><li>m282</li></ul></div></details>
+<details><summary>柱在楼板轮廓外#m 且柱族无锚点无板<span class='cnt'>3 栋 · 22 处 · 代号 I1</span></summary><div class='body'><ul><li>c001</li><li>c015</li><li>c041</li></ul></div></details>
+<details><summary>柱在楼板轮廓外#m但脚下踩下层楼板<span class='cnt'>3 栋 · 13 处 · 代号 I1</span></summary><div class='body'><ul><li>c001</li><li>c015</li><li>c075</li></ul></div></details>
+<details><summary>房间大面积外溢楼板轮廓 #% 房间#㎡<span class='cnt'>3 栋 · 7 处 · 代号 I3</span></summary><div class='body'><ul><li>c022</li><li>c028</li><li>c103</li></ul></div></details>
+<details><summary>楼梯踏步盒与同构的 F# 不重合<span class='cnt'>2 栋 · 2 处 · 代号 I18</span></summary><div class='body'><ul><li>c005</li><li>c117</li></ul></div></details>
+<details><summary>柱在楼板轮廓外#m但同轴柱族已锚定下层<span class='cnt'>2 栋 · 26 处 · 代号 I1</span></summary><div class='body'><ul><li>c008</li><li>c009</li></ul></div></details>
+<details><summary>房间边缘微溢轮廓 #%<span class='cnt'>1 栋 · 8 处 · 代号 I3</span></summary><div class='body'><ul><li>c028</li></ul></div></details>
+<h2>四、今天在做什么</h2>
+<div class="note"><b>★ 09-29 我犯的错（「c011 斜了 21°」这个结论本身是错的，同日自查推翻、已从页面上撤掉）：</b>
+我先报「楼比 DXF 斜 21°」，还配了三把尺子。它站不住 ——
+真正的量法是<b>把已知的脚印转多少度能和真实屋盖重合得最好</b>（未知只有一个自由度，相关峰是尖的），
+我却在<b>从零去量一个角度</b>。c011 的屋盖近八边形，那个角<b>本来就没有分辨力</b>（外接盒峰只有 1.2 倍，
+而全校 130 栋对照组的中位是 2.2 倍 —— 这个数我手里有，却没拿来当警戒线）。
+换成 IoU 那把尺子：<b>θ*=0~3°、IoU 0.82</b>；转 21° 反而掉到 0.79。出图逐条核对
+（<code>_scratch/c011_fly/_iou_overlay.png</code>）：θ=0 的脚印贴住屋盖的水平上边与竖直左边，
+转 21° 的明显对不上。<b>⇒ 我们模型的朝向是对的。</b>
+那个 21° 是<b>怎么来的</b>：飞的屋盖「高度带掩膜」与 DOM 深色掩膜<b>都吃进了周边的树和别的屋顶</b>
+（看那张图的红圈，顶部/右下/左侧的有机鼓包就是树冠），两把被污染的尺子恰好都偏向 ~21°，
+<b>我把它们的一致当成了互证</b>。同一天我还新做了一把**全校普查**（342 栋 CAD 轮廓 × DOM，13 万条边级判据），
+其中 130 栋「有条件数」的楼 <b>119 栋 CAD 与实测朝向差 &lt;5°、0 栋超 15°</b> ——
+这条普查恰恰证明<b>「从零量角度」这把尺子在多数楼上是对的</b>，是 c011 那种近八边形把它顶穿了。
+教训一句话：<b>手里已经有「这批量的条件数够不够」的分布时，必须先拿它当警戒线，再报单个结果。</b><br>
+<b>★ 同一轮里另一件（自查抓到、未发出去）：</b>
+我用 <code>cv2.findContours(..., CHAIN_APPROX_NONE)</code> 的**相邻像素差**去量平面上的角度 ——
+我用 <code>cv2.findContours(..., CHAIN_APPROX_NONE)</code> 的**相邻像素差**去量平面上的角度 ——
+可相邻边界像素的差只可能是 (±1,0)/(0,±1)/(±1,±1)，<b>能做到的角度只有 {0°,45°,90°,135°} 四档</b>。
+这是一把<b>饱和的尺子</b>：量什么楼都只回这四档。更坏的是我造了<b>两把</b>这样的尺子（飞的屋盖、模型顶板），
+它们互相「印证」得漂漂亮亮，而屏幕上每一条都对。<b>正确的做法是按弧长重采样 1 m、再取 ±2 m 的有限差分</b>
+（换成这把之后才量出 25/70/115/160 这四族真角）。这类错的形态是「判据没有分辨力」，
+<b>它不是假红也不是假绿，它是「问什么答什么」</b>。<br>
+<b>★ 同一轮里第二件，也是自查抓到的：</b>我把 <code>tileset</code>（页面里指向 <code>/d3t/Data/scene.json</code>，
+是<b>2022 那份 3D Tiles</b>）当成了「飞的实景」，据此截了一张俯视图准备当证据 ——
+实测它的 <code>numberOfTilesWithContentReady = 0</code>，<b>那张图里根本没有飞的实景，只有我们自己的 GLB</b>。
+飞的实景走的是另一个口子（<code>/api/fly2024/glb</code>，由 <code>cbFly24</code> 那个勾控制）。
+<b>判据没错，喂给它的状态错了</b> —— 差一步就把「模型和航拍对不上」报成结论。
+（那页 2022 Tiles 的 worker 全起不来：<code>decodeDraco</code>/<code>combineGeometry</code> 的
+<code>importScripts</code> 失败，是更早就报过的老缺陷。）<br>
+<b>★ 更近一轮（六教实景 · 去树，两件全是自查抓到、都在报出去之前）：</b>
+① <b>UV 的 v 方向判错</b>。glTF 贴图原点在<b>左上</b>、v 向下，trimesh 读进来不翻转 ⇒ 采样该是
+<code>py = v*H</code>；我按 OpenGL 习惯写了 <code>(1-v)*H</code>。它<b>不报错</b>，症状是
+「删掉 17.3 万面而视图只变 4.65%」—— <b>这个比例本身就是判据</b>：删了这么多、画面几乎不动，
+说明删的不是画面上看得见的东西。<br>
+② <b>同一个量里混了两种单位</b>：连通块那一步我拿「除以焊接容差后取整」的整数键当坐标去算面积与高度，
+<b>漏乘回容差</b>，面积印成 <b>4.27e9 m²</b>（真值 1.07e5，差 4 万倍），而旁边的高度列看起来完全正常。<br>
+③ 顺带量到一件真事，改变了做法：<b>六教这份实景模型焊完是「一块」</b> —— 917,020 面里
+<b>916,938 面（99.99%）属于同一个连通分量</b>。所以「按连通块整棵删树」这条路<b>在这份数据上不存在</b>，
+换任何软件都一样；只能按贴图颜色删，并且必须把绿块<b>向外长 1 m</b>，
+否则只删掉树的亮面半边，留下的暗面半边看起来是「树受伤了」而不是「树没了」。
+量这件事的脚本：<code>_scratch/c011_fly/_probe_comp.py</code>、<code>_strip_trees.py</code>、<code>_show_green.py</code>。<br>
+④ <b>「尺子选错了」比「动手错了」更难看见</b>：我一直拿「<b>删了多少</b>」当去树的成绩。
+可删得越多不等于树去得越干净 —— 删过头会把地面和立面一起吃进去。真正的尺子是
+<b>「活下来的绿还剩多少」</b>，于是把 <code>_strip_trees.py</code> 改成一次印出整条权衡曲线
+（格阈值 × 外长，每格报「删面积 / 活绿」），取舍才在一屏里读得出来，不用来回试。<br>
+⑤ <b>产物出图那条判据是空话</b>：<code>_render_glb_views.py</code> 表尾打
+「5 张图，5 个不同指纹 ⇒ 全不同 ✓」。本趟我把同一份模型渲了两遍，
+<b>像素逐位相同（943,800 个像素 0 个不等），而字节 sha 不同、连文件大小都一样</b>
+（PNG 里嵌了定宽时间戳 ⇒ 同尺寸不同字节）。<b>⇒ 那句 ✓ 对着 5 张一模一样的图也会打出来。</b>
+比对渲染只能<b>解码像素比</b>，不能比字节。<br>
+⑥ <b>我自己写的那条「交叉核」是错的</b>：我先加了断言「判绿且被删的面该是 0」，可<b>删掉绿面正是目的</b>，
+那个 9884 m² 不是异常、是成绩。改对之后留下的真交叉核是
+<b>「删绿 + 存绿 = 总绿」</b>，以及<b>两条路径互核</b>：measure 路径预告删 290,124 面，
+产物 628,512 面、源 918,636 面 ⇒ <code>918,636 − 290,124 = 628,512</code> <b>逐位相等</b>。<br>
+⑦ <b>我自己最后改的那几行里，有一个名字只改了一半</b> —— 点开「六教实景」查看器，
+模型<b>一律灰白</b>。页面自己的探针报 <code>nHasMap: 371 / nMap: 0 / nSaved: 0</code>：
+贴图<b>装载时全都在</b>、现在<b>一张都没有</b>、而且<b>不是被显示模式摘走的</b> ——
+三条并排，看起来像 GLB 坏了或者 three.js 没接上。我按那个方向查了 GLB 三遍
+（371 材质 / 371 图 / 0 sampler / 无扩展 / 无报错）、疑了一遍 loader、又疑了一遍浏览器缓存，
+<b>全是干净的</b>。真凶是我自己：早先存进去的是 <code>map</code>，这一趟为了区分
+「装载时有没有贴图」改成了存 <code>hasMap</code>，<b>却没回去改那一处读它的地方</b> ——
+<code>t.mapSaved = t.<b>map</b></code> 里的 <code>t</code> 是包装对象、<code>t.map</code> 根本不存在
+⇒ 赋进去的是 <code>undefined</code>，于是 <code>t.m.map = undefined</code>，
+而这一句就在<b>装载后的第一句</b>上：371 张贴图在出第一帧之前就全没了。<br>
+<b>更该记的是我的判据看不见它</b>：探针写的是 <code>mapSaved !== undefined</code>，
+而「赋成 undefined」<b>把属性建起来了、值是空</b>，所以那句一直报「从没被摘走过」。
+改成 <code>'mapSaved' in t</code> 之后，同一个页面立刻报 <code>nSaved: 371</code>。
+<b>⇒ 判「碰没过」要用 <code>'k' in obj</code>，判「有没有真值」再加一条形状判据，两条都要。</b>
+（顺带量到：查看器是 <code>&lt;script type="module"&gt;</code>，<code>page.evaluate</code> 在模块作用域里
+<code>typeof mode === 'undefined'</code> —— 从外面只能读挂在 <code>window</code> 上的闭包，
+这正是我一开始读不到真状态的原因。）<br>
+<b>本轮的落点</b>：<code>c006-fly2024-notree.glb</code>（<b>删 31.6%</b>，<code>sha256 2e8d6a60a281…</code>），
+刻度<b>格阈值 0.25 / 外长 2 格 / 小岛 ≥6 格</b>；楼体在 E/S/W/N/TOP 五张与原图逐处一致，
+N 视图下立面那块黑矩形<b>原图就有</b>（不是删出来的）。活绿 <b>2,354 m²</b>，且<b>全部是「所在格没被选中」</b>——
+残绿聚在树挨着楼的地方，因为那些格子同时装了立面面、绿占比被稀释到阈值以下；
+<b>这层稀释同时是保护</b>：再降阈值就会开始吃立面格的楼。<br>
+查看器（<code>_scratch/c011_fly/_store/one/web/index.html</code>）同机位切换已修好：原 <b>371</b> 张贴图 / 去树后 <b>353</b> 张，两件都在，相机逐位不动（<code>-146.82, 143.45, 105.16</code>）；贴图→纯几何→线框→贴图 来回走一趟都能回到 371。<br>
+<hr>
+<b>★ 更早一轮我犯的错：</b>我为了确认「公共流程现在还能不能跑」，
+<b>没先量「它跑完和现在的交付件一样不一样」，就把 c001 整条流程跑了一遍</b> —— 交付件被跑坏了：
+墙 F0 <b>142→84</b>、房间全栋 <b>69→32</b>、房号 01-01-00 图上 7.5㎡ 被算成 <b>1113.1㎡</b>（148 倍）。
+根因不在 c001：<b>全库 52 栋的 <code>.orig/</code> 里躺着约 40 种「后置修复」标签，
+公共流程的 14 个阶段里一个都没有</b> —— 所以「按公共流程重跑全库」目前等于把修好的东西重新弄坏。
+c001 已从 11:58 的快照还原（rooms sha16 / F0 墙 142 / F0 房 5 逐条回核通过），
+全库 92 份 rooms.json 逐字节未动。量这件事的脚本：<code>_scratch/_restore_c001.py</code>、
+<code>_scratch/_door_already_punched_census.py</code>。<br>
+<b>① 门洞那一环（stage 8）修好了。</b>它以前把 60 个门洞盒先并成一个多边形再当「一个盒」传下去，
+被折成整体外接矩形 ⇒ <b>15.66㎡ → 726.01㎡（46 倍）</b>，三层门槛拦住的是这个假大矩形，真门洞反而没打。
+改成逐盒传之后：c002 <b>0/130→130/130</b>、c003 <b>0/141→141/141</b> 层层通过，墙逐位不变。<br>
+<b>② 顺带量到一件真事：全库 83/92 栋的门洞本来就<b>没挖过</b></b>（该挖未挖 2587.4㎡，
+占墙面积 3.11%，共 21060 扇门）。这件事正在补，后台跑 90 栋（本页第三节的缺陷数会随之变）。<br>
+<b>③ 下一件必须先做的事：</b>把那约 40 种后置修复列出清单，逐条决定哪些回流进公共流程。
+在那之前，「重跑全库」这条路是关着的。</div>
+<h2>五、这一页不能告诉你的事</h2>
+<p>它只把<b>已经有记录</b>的东西摊开。以下三类它现在是瞎的，写在这里免得当成「没问题」：</p><ul><li>体检报告是<b>上一次跑</b>的结果 —— 哪天跑了、跑的哪一版，报告里没写。</li><li><b>GLB 那一层没有判据</b>：GLB 有/无和大小能看，里面结构对不对没人检查。</li><li><b>房间对不对图纸</b>没进这张表 —— 那要用图纸标注去对，是另一件事。</li></ul>
+<div class="legend" style="margin-top:26px">缺陷总数 2011（其中 ERROR/FAIL 29 条）。重新生成：<code>python -u _scratch/_state_board.py</code></div>
+</div></body></html>
