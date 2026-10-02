@@ -74,6 +74,32 @@ def die(msg):
     raise SystemExit(2)
 
 
+def write_private(path, data, mode=0o600):
+    """建文件**那一刻**就把权限定到 600，不用 `open()` 再 `chmod()`。
+
+    ★ 2026-10-02 改：原来是 `with open(path,"w") as fh: fh.write(...)` 之后
+      才 `os.chmod(path, 0o600)`。那中间有一段窗口，文件先按进程 umask 落地
+      （通常 0644，同机别的账号读得到），chmod 才收窄。
+      `os.open` 的第三个参数在创建时就生效 —— 没有那个窗口。
+      走这条路的有三处：库口令、搭建方临时口令、以及 `.env` 的备份副本
+      （备份里同样带着库口令，按 600 才与正本同级）。
+
+    `data` 收 str 或 bytes；str 按 UTF-8 编码，不翻译换行。
+
+    ★ `O_BINARY` 不能省：Windows 上 `os.open` **默认是文本模式**，写 `\n`
+      会变成 `\r\n`（Linux 上不会）。POSIX 没有 `O_BINARY` ⇒ 取 0，等于无操作。
+      少了它，同一个 helper 在两个平台上产出不同的字节 —— 而这一条是
+      我把它抠出来在已知输入上跑一遍才发现的（写完读回来比）。
+    """
+    blob = data.encode("utf-8") if isinstance(data, str) else data
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0)
+    fd = os.open(path, flags, mode)
+    try:
+        os.write(fd, blob)
+    finally:
+        os.close(fd)
+
+
 # ── .env 解析（只为读键值，不执行任何东西）─────────────────────────
 def parse_env(path):
     out = {}
@@ -235,9 +261,7 @@ def main(argv):
     #   锚定还要写 `building_anchors`，而且运行期还会执行 `CREATE TABLE IF NOT EXISTS`。
     #   给只读权限 ⇒ **登录都进不去**。范围仍然圈死在**这一个库**里：
     #   这台机同时托着 cdut-meeting / coze-agents，所以**不做** REASSIGN OWNED 这类跨库动作。
-    with open(DB_PW_FILE, "w", encoding="utf-8") as fh:
-        fh.write(dbpw + "\n")
-    os.chmod(DB_PW_FILE, 0o600)
+    write_private(DB_PW_FILE, dbpw + "\n")
     ok("口令写进 %s（600，内容不打印）" % DB_PW_FILE)
 
     # ── [5] 建库 ──────────────────────────────────────────────────
@@ -399,13 +423,10 @@ LIHUA_DB_REQUIRED=1
             old = fh.read()
         say("  ⚠ %s 已存在（%d 字节）—— 先备份再覆盖" % (ENV_OUT, len(old)))
         bkp = ENV_OUT + ".bak-" + __import__("time").strftime("%Y%m%d-%H%M%S")
-        with open(bkp, "wb") as fh:
-            fh.write(old)
-        ok("备份到 %s" % bkp)
+        write_private(bkp, old)          # 副本里也带着库口令 ⇒ 同样按 600
+        ok("备份到 %s（600）" % bkp)
 
-    with open(ENV_OUT, "w", encoding="utf-8", newline="\n") as fh:
-        fh.write(env_txt)
-    os.chmod(ENV_OUT, 0o600)
+    write_private(ENV_OUT, env_txt)
     # 读回来核：文件里确实有那几把闸，且都在关的那一侧
     #
     # ★★ 2026-10-01 我自己在这里踩了一次，记在最前面：
@@ -460,9 +481,7 @@ LIHUA_DB_REQUIRED=1
     say("══ [11] 建第一个搭建方账号（否则没人能建号）══")
     say("  计划原话：「删完要留一个能登进去的搭建方，否则没人能建账号」")
     boot_pw = secrets.token_urlsafe(18)
-    with open(BOOT_PW_FILE, "w", encoding="utf-8") as fh:
-        fh.write(boot_pw + "\n")
-    os.chmod(BOOT_PW_FILE, 0o600)
+    write_private(BOOT_PW_FILE, boot_pw + "\n")
     ok("临时口令写进 %s（600，内容不打印；首次登录会强制改密）" % BOOT_PW_FILE)
 
     venv_py = os.path.join(APP_ROOT, ".venv", "bin", "python")
