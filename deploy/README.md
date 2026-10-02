@@ -1,16 +1,30 @@
-# 部署到服务器（202.115.133.14 · RHEL/CentOS + nginx）
+# 部署到服务器（202.115.132.14 · RHEL/CentOS）
 
-> 目标形态：**浏览器 → nginx → 127.0.0.1:8140 uvicorn（systemd 常驻）→ PostgreSQL**。
+> **★ 现状（as-built，2026-10-02 实测）**：**浏览器 → uvicorn:8141（systemd `gym3d-api`）→ PostgreSQL**。
+> **没有 nginx**（`systemctl is-active nginx` = `inactive`），**没有 TLS，不走域名**。
+> `.env` 实测：`GYM3D_HOST=0.0.0.0` / `GYM3D_PORT=8141` / `COMPUTE=0` /
+> `LOOPBACK_BREAKGLASS=0` / `SESSION_COOKIE_SECURE=0`。
+> 外部实测 `curl http://202.115.132.14:8141/portal/` → **200**。
+>
+> 下面 2.6 那段 nginx 是**早期方案**，留着当备选，**不是现在的路**。
+> ★ 号段别搞混：`202.115.132.14` 是这台；`133.14` **是另一台机器**（实测 8141 连不上）。
+> 早先把两个地址当成一台，依据是「主机密钥逐位相同」——那个依据推不出这个结论
+> （克隆镜像会带着同一个主机密钥）。分辨它们的是**钥匙接受与否**。
+
 > 本目录只放**部署件**：跑之前先把 `..` 里的代码提交并推上去。
 
-## 分工（2026-10-01 定）
+## 分工（2026-10-01 定，2026-10-02 更新）
 
 | 阶段 | 谁做 | 在哪 |
 |---|---|---|
 | 0 提交推送 | 我 | 本机（`git push`） |
-| 1 打包数据 | 我 | 本机，产出 `gym3d-data-<日期>.tar.gz` |
-| 2 服务器上的命令 | **你**（我只给命令，不 SSH、不 scp、不要密码） | 服务器 |
-| 3 端到端探针 | **你**跑，把输出贴回来 | 服务器 |
+| 1 打包数据 | 我 | 本机，产出增量 `tgz` + sha 名单 |
+| 2 服务器上的命令 | **我**（有 key 可登录；**口令一律在服务器上敲，不发进对话**） | 服务器 |
+| 3 端到端探针 | 我跑，读数贴回 | 服务器 |
+
+> ★ 2026-10-01 那一版写的是「我不 SSH、只给你命令」。后来的实际做法变了：
+> 用已在 `~/.ssh` 里的钥匙直连部署，**口令仍在服务器上敲**，从未进过对话。
+> 表格里的做法以本行为准。
 
 ---
 
@@ -72,6 +86,8 @@ sudo -u postgres psql -d lihua_twin -c "grant select on all tables in schema pub
 ```
 sudo -u postgres psql -d lihua_twin -c "delete from users where username in ('admin','c006admin','viewer')"
 ```
+> ★ 2026-10-02 实测：这三个号计数已是 **0**（本机与服务器两侧都删了）。
+> 口令最后只出现在**本机开发库**里，泄漏面就那一处。
 
 删完要留一个能登进去的搭建方：
 ```
@@ -84,8 +100,8 @@ sudo -u postgres env GYM3D_SETPW_DSN="dbname=lihua_twin" \
 **2.5 `.env`**（复制 `.env.example` 再填；**这份文件不进 git**）
 ```
 GYM3D_ROOT=/opt/gym3d
-GYM3D_HOST=127.0.0.1
-GYM3D_PORT=8140
+GYM3D_HOST=0.0.0.0
+GYM3D_PORT=8141
 GYM3D_ENV=prod
 GYM3D_COMPUTE=0                 # ★ 执行面整条关死
 GYM3D_LOOPBACK_BREAKGLASS=0     # ★ 环回放行闸关掉
@@ -102,21 +118,26 @@ LIHUA_DB_REQUIRED=1
 ```
 
 > **`GYM3D_COMPUTE=0` 为什么是必须的**：`deps.py` 的执行面闸看的是 TCP 对端地址
-> （`client_is_loopback`，明写「不读 Host、不读 X-Forwarded-For」）。nginx 与本进程
-> **同机** ⇒ 对端恒为 `127.0.0.1` ⇒ 整条执行面对任何能到达 nginx 的人敞开，且这与
-> breakglass **无关**。`GYM3D_COMPUTE=0` 的 `if not cfg.compute` 排在 loopback 判断
-> **之前**，一关全关。
+> （`client_is_loopback`，明写「不读 Host、不读 X-Forwarded-For」）。
+> ★ **若前面套 nginx**：nginx 与本进程同机 ⇒ 对端恒为 `127.0.0.1` ⇒ 整条执行面
+> 对任何能到达 nginx 的人敞开，且这与 breakglass **无关**——这就是当初必须关它的理由。
+> **现状没有 nginx**（`HOST=0.0.0.0` 直听），外部来的对端是真实远端地址 ⇒ loopback 判为假，
+> 闸本来就关着。但 `COMPUTE=0` 仍然保留：它是**第二把锁**，不依赖「前面有没有 nginx」
+> 这个会变的前提。`if not cfg.compute` 排在 loopback 判断**之前**，一关全关。
 > 已核过它**不误伤门户页的写入**：`require_cap` 完全不读 `cfg.compute`，而
 > `POST /api/portal/anchors` 挂的是 `require_cap("manage")`，没有 `require_compute`
 > ⇒ **搭建方在服务器上照样能锚定**。
 
-**2.6 服务单元与 nginx**
+**2.6 服务单元**（★ 现状**只做前者**；nginx 那两行是备选，现在没在用）
 ```
 sudo cp /opt/gym3d/deploy/gym3d-api.service /etc/systemd/system/
-sudo cp /opt/gym3d/deploy/nginx-gym3d.conf  /etc/nginx/conf.d/
 sudo systemctl daemon-reload && sudo systemctl enable --now gym3d-api
-sudo nginx -t && sudo systemctl reload nginx
+# —— 以下仅在「决定改套 nginx」时才做（要单独问，不许顺手加）——
+# sudo cp /opt/gym3d/deploy/nginx-gym3d.conf /etc/nginx/conf.d/
+# sudo nginx -t && sudo systemctl reload nginx
 ```
+> ★ **改完 `.env` 必须 `systemctl restart gym3d-api`** —— `EnvironmentFile`
+> 只在**启动那一刻**读一次，改文件不重启 = 没改（现场实测过）。
 
 **2.7 开端口**（★ 已定用 IP:8141 对外，**这一步必须做**）
 ```
@@ -128,7 +149,7 @@ sudo firewall-cmd --permanent --add-port=8141/tcp && sudo firewall-cmd --reload
 ## 阶段 3 · 探针（你跑，把输出贴回来）
 
 ```
-bash /opt/gym3d/deploy/verify_deploy.sh http://127.0.0.1:8140 http://202.115.133.14:8141
+bash /opt/gym3d/deploy/verify_deploy.sh http://127.0.0.1:8141 http://202.115.132.14:8141
 ```
 
 第 2 条（不带 cookie 拿不到数据）是**唯一**能分辨「`.env` 写对了」与「`.env` 没生效」
@@ -148,8 +169,20 @@ bash /opt/gym3d/deploy/verify_deploy.sh http://127.0.0.1:8140 http://202.115.133
 - **`/api/buildings/<id>/source_dxf`**：`GYM3D_DXF_DIR` 留空 ⇒ 明确回 404 并说明原因，
   这是**设计**不是故障。
 - **高德底图**：本机 key 绑域名白名单、`127.0.0.1` 不在里面，两条通道都被拒（已实测）。
+- **`/api/components` → 503**（**已修，不是坏**）：`ezdxf` 被这份 requirements
+  **刻意排除**，而 handler 里那个 import 原先**没有 try** ⇒ 回的是 **500**。
+  2026-10-02 已包进 try，实测：`503` + 中文说明（点名缺 `ezdxf`）；
+  阳性对照 `/api/buildings` = `200`；阴性对照无 cookie = `401`。
+- ~~`/api/console/branches` → 503~~ **已修**：原因是 `config/branches.json`
+  **从没进过 git**（`git ls-files config` = 0，且不在 `.gitignore` 里）——
+  这是**仓的问题不是服务器的问题**，谁 clone 谁踩。现已把 `config/` 收进 git。
 
 ## 这一轮不做的
 
 实景三维整片接入（124 格 / 48701 文件 / 9.9 GB → 3D Tiles）。它是**独立的一轮**，
-本机链路已经跑通，产物是静态文件，走 nginx 直接 serve，与上面的进程和数据库无关。
+本机链路已经跑通，产物是静态文件，**由 uvicorn 的 `StaticFiles` 发**（现在没有 nginx）。
+
+> ★ 那里有一条**要先量再定**的风险：`gym3d-api` 是 **single worker 的 uvicorn**，
+> 一次整片校区浏览会拉起成百上千个小 `.glb` 请求。先量 P50/P95 与失败率；
+> 撑不住才谈「为静态大文件单开一条 nginx `location /tiles/`」——
+> 那是**另一件事**，要单独确认，**不许顺手加**。

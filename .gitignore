@@ -122,3 +122,30 @@ Desktop.ini
 
 # 部署打包产物（本机产出、传服务器解包；不进仓）
 gym3d-data-*.tar.gz
+
+# ---- 2026-10-02 补：未跟踪垃圾已到 32 GB，按「目录」堵，不逐个点名 ----
+# `_scratch/` 顶层那 215 个脚本是**有意跟踪**的（它们是记录），保留；
+# 它下面的**子目录**一律是产物 ⇒ 整类忽略，只留两个有已跟踪内容的。
+_scratch/*/
+!_scratch/_qa_selfint/
+!_scratch/su_src/
+# 根目录：92 栋的 `_tmp_<code>_door/`（164 MB）、`_backup_regen/`（2.3 GB）、`_bak_*_2026*/`
+_tmp_*/
+_backup_regen/
+_bak_*/
+# `_scratch/` 里的**大临时产物**（逐栋 6~15 MB 的 dump、部署 tgz、大图）：
+# 脚本留、产物不留。判据是体积，不是扩展名——同名 `.py` 一律保留。
+_scratch/_tmp_*.json
+_scratch/_tmp_*.txt
+_scratch/*.tgz
+_scratch/_qa_selfint/tmp_*/
+_scratch/_qa_selfint/spec/
+_scratch/_delta*
+# `_scratch/` 顶层的**二进制产物**（图 / 点云 / 重定向输出）——脚本和 JSON 留。
+# 已跟踪的同名文件不受影响（gitignore 管不到已跟踪的）。
+_scratch/*.png
+_scratch/*.npz
+_scratch/*.out
+_scratch/*.out2
+_scratch/*.err
+_scratch/*.part
