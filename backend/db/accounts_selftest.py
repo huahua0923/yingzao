@@ -124,7 +124,16 @@ def main():
                   conn.execute("SELECT to_regclass('public.%s')" % t).fetchone()[0] is not None)
         got = dict(conn.execute("SELECT code, name FROM roles").fetchall())
         expect = {c: n for c, n, _d, _r in A.ROLE_SEED}
-        check("四个角色齐全且名字与用户原话一致", got == expect, "库里=%s" % got)
+        # ★ 计数字样从清单自己算，不手打（铁律 174：手打的计数只在清单长到 N+1
+        #   那一刻才第一次出声，而那一刻它长得像"被测对象坏了"）。
+        check("%d 个角色齐全且名字与用户原话一致" % len(expect), got == expect,
+              "库里=%s" % got)
+        # ★ 2026-10-02 用户删掉「普通人」「普通管理员」两个角色。`ensure_schema`
+        #   对 ROLE_SEED 是 **upsert（只加不删）**，所以"库里没有这两行"是
+        #   `RETIRED_ROLES` 那段收尾做出来的，不是"没插过" —— 必须单独断言。
+        check("★ 已退役的 %s **不在**库里（收尾那一段真的删了）"
+              % "、".join(A.RETIRED_ROLES),
+              not (set(A.RETIRED_ROLES) & set(got)), "库里=%s" % got)
         check("能力矩阵里 builder 含 manage", "manage" in A.ROLE_CAPS["builder"])
         check("★ 没有哪个角色的能力集里出现未知档",
               all(set(v) <= set(A.CAPS) for v in A.ROLE_CAPS.values()),
@@ -144,23 +153,30 @@ def main():
 
         print("\n【3】账号与授权")
         uid, pw1 = A.create_user(conn, PREFIX + "alice", display_name="自检A",
-                                 password=pw, grants=(("admin", "c006"), ("viewer", "c001")))
+                                 password=pw, grants=(("line_admin", "c006"),
+                                                      ("builder", "c001")))
         row = A.find_user(conn, PREFIX + "alice")
         check("插进去读得回来", row is not None and row[0] == uid)
         check("库里存的不是明文口令", pw not in row[3])
         g = A.all_grants(conn, uid)
-        check("两条授权都在", sorted(g) == [("admin", "c006"), ("viewer", "c001")], str(g))
+        check("两条授权都在", sorted(g) == [("builder", "c001"), ("line_admin", "c006")],
+              str(g))
         check("user_id 是**新**的（不是撞上老账号）", uid > 0)
         expect_raise(conn, "同名账号再建 ⇒ 被 UNIQUE 拒",
                      lambda: A.create_user(conn, PREFIX + "alice", password=pw,
-                                           grants=(("viewer", "*"),)), want="23505")
+                                           grants=(("line_admin", "*"),)), want="23505")
         expect_raise(conn, "角色码不在字典里 ⇒ 被外键拒",
                      lambda: A.create_user(conn, PREFIX + "carol", password=pw,
                                            grants=(("学工处", "*"),)), want="23503")
+        # ★ 已退役的角色码也必须是"不在字典里"那一档（外键拒）。这条是 RETIRED_ROLES
+        #   的第二个守门人：只要那两行又回到库里，它立刻红。
+        expect_raise(conn, "★ 已退役的角色码 ⇒ 同样被外键拒（它们真的出表了）",
+                     lambda: A.create_user(conn, PREFIX + "retired", password=pw,
+                                           grants=(("viewer", "*"),)), want="23503")
         expect_raise(conn, "重复的 (账号,角色,范围) ⇒ 被 UNIQUE 拒",
                      lambda: conn.execute(
                          "INSERT INTO grants (user_id, role_code, scope_node) "
-                         "VALUES (%s,%s,%s)", (uid, "admin", "c006")), want="23505")
+                         "VALUES (%s,%s,%s)", (uid, "line_admin", "c006")), want="23505")
         expect_raise(conn, "空用户名 ⇒ 被 CHECK 拒",
                      lambda: conn.execute(
                          "INSERT INTO users (username, pwd_hash) VALUES (%s, %s)",
@@ -173,7 +189,7 @@ def main():
         check("★ 合法授权仍然放行（阳性；若上面几条把事务打挂了，这条会红）",
               conn.execute("SELECT count(*) FROM grants WHERE user_id = %s", (uid,)
                            ).fetchone()[0] == 2)
-        A.create_user(conn, PREFIX + "bob", password=pw, grants=(("viewer", "c006"),))
+        A.create_user(conn, PREFIX + "bob", password=pw, grants=(("line_admin", "c006"),))
         n = conn.execute("SELECT count(*) FROM grants g JOIN users u ON u.id=g.user_id "
                          "WHERE u.username LIKE %s", (PREFIX + "%",)).fetchone()[0]
         check("bob 的授权真的落库了（3 条）", n == 3, "实际 %d" % n)

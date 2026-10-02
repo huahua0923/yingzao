@@ -1,0 +1,422 @@
+/* home.css —— 只写首页独有的东西。
+   纸/墨/砖红那套变量、顶栏、汇总条、按钮、三维舞台的尺寸约束，全在
+   /site/site.css 里（本页第一个 <link>）。这里**不复述**任何一个色值：
+   同一个值写两处必然会各自漂移，而漂移的那天没人会发现。 */
+
+/* ── 版面宽度 ─────────────────────────────────────────────────
+   site.css 的 body 是 1280px —— 那是给**单栏正文**定的（它自己写着
+   「一行别超过 46 个汉字」）。首页是并排两栏：1280 下每栏只剩约 600px，
+   图纸和模型都展不开。放宽到 1440，两栏各约 690。 */
+body { max-width: 1440px; }
+
+/* ── 楼栋带 ───────────────────────────────────────────────────
+   92 栋排成一条横向胶片。它同时是目录和切换开关：
+   点一格就换一栋，不跳页、不刷新。 */
+.h-rail {
+  display: flex; overflow-x: auto; overscroll-behavior-x: contain;
+  border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2);
+  background: var(--paper-up);
+  scrollbar-width: thin;
+}
+.h-rail::-webkit-scrollbar { height: 8px; }
+.h-rail::-webkit-scrollbar-thumb { background: var(--rule-2); }
+
+.h-chip {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border: 0; border-right: 1px solid var(--rule);
+  background: transparent; font: inherit; font-size: 13px;
+  color: var(--ink-2); white-space: nowrap; cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.h-chip:hover { background: var(--paper-sink); color: var(--ink); }
+.h-chip[aria-current="true"] { background: var(--ink); color: var(--paper-up); }
+
+.h-chip .h-code { font-family: var(--mono); letter-spacing: .04em; }
+
+/* ★ 为什么「有模型」那一档不挂文字角标：
+   92 格里 91 格状态相同，给每一格都印上「模型」只会把唯一那格淹掉 ——
+   而这一带的全部信息量就在那**一格**上。所以只有**例外**（缺模型）挂
+   color+text 双通道角标（.dot.dot-no），正常的用一个小方块。
+   双通道这条规矩没有被绕过：例外是**有字**的，而且汇总条里「91 / 92」
+   也是写出来的。 */
+.h-mark {
+  width: 6px; height: 6px; flex: 0 0 auto;
+  background: var(--ok);
+}
+.h-chip[aria-current="true"] .h-mark { background: var(--paper-up); }
+.h-chip .dot { padding: 0 4px; font-size: 10px; }
+
+.h-empty { padding: var(--gap-4) var(--gap-2); font-size: 13px; color: var(--ink-3); }
+
+/* ── 对比台：左图 ｜ 右模型 ─────────────────────────────────── */
+.h-cmp {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gap-4); align-items: start;
+  margin-top: var(--gap-4);
+}
+@media (max-width: 1040px) { .h-cmp { grid-template-columns: minmax(0, 1fr); } }
+
+/* min-width:0 是承重的：grid 子项默认 min-width:auto，里面有个
+   max-width:100% 的 <img> 时，单元格会被图片的固有宽度顶开而不收缩。 */
+.h-pane { display: flex; flex-direction: column; gap: var(--gap-3); min-width: 0; }
+
+/* 左：图纸。高度必须**与右栏舞台相等** —— 两栏不等高，
+   「对比」这个词就落空了（底下会多出一截空的纸）。 */
+.h-sheet {
+  position: relative; display: grid; place-items: center;
+  min-height: min(46vh, 520px); padding: var(--gap-3);
+  background: var(--paper-up); border: 1px solid var(--rule-2); overflow: hidden;
+}
+.h-sheet img { display: block; max-width: 100%; max-height: min(46vh, 520px); }
+.h-pane .stage { min-height: min(46vh, 520px); }
+.h-pane .stage canvas { min-height: min(46vh, 520px); }
+
+/* 两栏的「这一格没有东西」状态（左：这层没这张图 / 右：没有三维模型）。
+   ★ 必须跟 .stage 一样高 —— 否则缺模型那栋的右栏会塌成一行字，
+   两栏高度一不等，「对比」这个版面就散了（还会让人以为下面被截断）。
+   site.css 的 .stage-miss 用的是 `min-height: inherit`，它的父元素
+   （.h-pane，flex 列）没有高度，inherit 拿到的是 0 —— 所以这里重写。 */
+.h-sheet-miss,
+.h-pane > .stage-miss {
+  display: grid; place-items: center;
+  min-height: min(46vh, 520px); margin: 0; padding: var(--gap-5);
+  text-align: center; font-size: 13px; line-height: 1.9; color: var(--ink-3);
+}
+.h-sheet-miss b, .h-pane > .stage-miss b { color: var(--ink-2); font-weight: 600; }
+.h-sheet-miss code { font-family: var(--mono); font-size: 11px; word-break: break-all; }
+
+/* 图注：来源 / 字节 / 像素 —— 三个都是「这一张图到底是从哪来的」，
+   一个都不能省（图上写的名字和它真实的出处常常不是一回事）。 */
+.h-cap {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap-2);
+  margin: 0; font-size: 11px; color: var(--ink-3);
+}
+.h-cap code { font-family: var(--mono); }
+.h-cap .warn { color: var(--miss); }
+
+/* ── 切换条（层 / 图种） ───────────────────────────────────── */
+.h-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-2); min-height: 28px; }
+.h-bar-k { font-size: 11px; letter-spacing: .2em; color: var(--ink-3); }
+
+.h-tab {
+  padding: 4px 10px;
+  border: 1px solid var(--rule-2); background: var(--paper-up);
+  font: inherit; font-size: 12px; color: var(--ink-2); cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.h-tab:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.h-tab[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper-up); }
+.h-tab:disabled {
+  color: var(--rule-2); border-color: var(--rule);
+  cursor: not-allowed; text-decoration: line-through;
+}
+
+/* ── 底部事实条 ─────────────────────────────────────────────── */
+.h-facts {
+  display: flex; flex-wrap: wrap; gap: var(--gap-2) var(--gap-5);
+  margin-top: var(--gap-5); padding-top: var(--gap-3);
+  border-top: 1px solid var(--rule-2);
+  font-size: 12px; color: var(--ink-2);
+}
+.h-fact { display: flex; align-items: baseline; gap: 6px; }
+.h-fact b { font-weight: 600; color: var(--ink); }
+.h-fact i { font-style: normal; font-size: 11px; color: var(--ink-3); }
+
+/* ── 口径提示 ─────────────────────────────────────────────────
+   「左边是第 N 层、右边是整栋」这条讲的是**这一对**，不是某一栏，
+   所以它归这里，不贴在任一侧的舞台上。 */
+.h-caution {
+  margin-top: var(--gap-3); padding: var(--gap-3);
+  background: var(--paper-sink); border-left: 3px solid var(--miss);
+  font-size: 12px; line-height: 1.8; color: var(--ink-2);
+}
+.h-caution b { color: var(--ink); }
+
+/* 楼名块（复用 site.css 的 .b-head/.b-title/.b-sub 排版） */
+.h-head { padding-top: var(--gap-5); }
+
+/* ══════════════════════════════════════════════════════════════
+   2026-10-02 新增：圈问题（左屏） / 实景校核（右屏） / 汇总页
+   仍然不复述任何一个色值与间距 —— 全部走 site.css 的变量。
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 右屏模式页签 [模型 | 实景校核] ──────────────────────────
+   与左屏的图种页签同一套 .h-tab，只是靠一道横线把这一组与右栏内容分开。 */
+.h-bar-r { border-bottom: 1px solid var(--rule-2); padding-bottom: var(--gap-2); }
+
+/* ── 左屏：圈问题图层 ────────────────────────────────────────
+   覆盖层由 JS 贴住 <img> 的屏幕矩形（left/top/width/height 都是行内样式）。
+   ★ 这里**不写** left/top/width/height 的默认值：写了就会和行内样式打架，
+     而"哪一条赢"取决于书写顺序，改一次样式表就可能让覆盖层悄悄错位。
+   ★ .h-sheet 是 `display:grid; place-items:center`。对绝对定位子元素，
+     place-items 只在 inset 是 auto 时才起作用；JS 同时给了 left 与 width，
+     所以它不会被居中拉走。为保险，这里再钉一句 align/justify-self。 */
+.ann-layer {
+  position: absolute; z-index: 3;
+  justify-self: start; align-self: start; margin: 0;
+  touch-action: none;                 /* 触屏拖框时别让浏览器抢去做滚动 */
+  outline: 1px dashed transparent;
+}
+.ann-layer.is-armed {
+  cursor: crosshair;
+  outline-color: var(--accent);
+  /* 画框模式下给整块图压一层极淡的底 —— 它回答的是"现在拖一下会发生什么"。
+     这个模式开着的时候人不会去滚动图，所以这层底不会误触。 */
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+/* 已有的框：可 Tab、可回车（见 annotate.js 文件头「画框只能靠指针」）。*/
+.ann-box {
+  position: absolute; padding: 0; margin: 0;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 2px solid var(--accent); cursor: pointer;
+  transition: background var(--t-fast);
+}
+.ann-box:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+.ann-box.is-sel { background: color-mix(in srgb, var(--accent) 34%, transparent); }
+/* 画框时旧框不吃指针，否则"从旧框上起手"会变成点它而不是画新框。 */
+.ann-layer.is-armed .ann-box { pointer-events: none; }
+
+/* 拖拽中的橡皮筋。 */
+.ann-band {
+  position: absolute; z-index: 2; pointer-events: none;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.ann-bar { gap: var(--gap-3); }
+.h-ann-arm.is-on { background: var(--accent); border-color: var(--accent); color: var(--paper-up); }
+.ann-n { font-size: 12px; color: var(--ink-2); }
+.ann-hint { font-size: 11px; color: var(--ink-3); }
+
+/* 存下这条标注的小卡片。它出现在图的**正下方**（不是弹到屏幕中间）：
+   人刚在图上画完，视线还在图的下沿。 */
+.ann-card {
+  border: 1px solid var(--rule-2); border-left: 3px solid var(--accent);
+  background: var(--paper-up); padding: var(--gap-3);
+}
+.ann-q { margin: 0 0 var(--gap-2); font-size: 13px; display: flex; gap: var(--gap-3);
+  align-items: baseline; flex-wrap: wrap; }
+.ann-row { display: flex; flex-wrap: wrap; gap: var(--gap-2); align-items: center; }
+.ann-sel, .ann-note {
+  font: inherit; font-size: 13px; padding: 5px 8px;
+  border: 1px solid var(--rule-2); background: var(--paper-up); color: var(--ink);
+}
+.ann-note { flex: 1 1 12em; min-width: 0; }
+.ann-msg { margin: 0; font-size: 12px; color: var(--ink-2); word-break: break-word; }
+
+/* ── 右屏：实景校核 ──────────────────────────────────────────
+   复用 .h-sheet 那块底板（同高、同边），只把内边距收紧：正射图尽量占满。 */
+.site-sheet { padding: var(--gap-2); }
+.site-sheet img { display: block; max-width: 100%; max-height: min(46vh, 520px); }
+
+.site-miss {
+  display: grid; place-items: center; gap: var(--gap-2);
+  min-height: min(46vh, 520px); padding: var(--gap-5);
+  text-align: center; font-size: 13px; line-height: 1.9; color: var(--ink-3);
+}
+.site-miss b { color: var(--ink-2); font-weight: 600; }
+.site-miss p { margin: 0; }
+.site-miss code { font-family: var(--mono); font-size: 11px; word-break: break-all; }
+
+.site-notes { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.site-note { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: var(--gap-2);
+  background: var(--paper-up); padding: var(--gap-2) var(--gap-3); font-size: 12px; }
+.site-note-k { color: var(--ink-3); letter-spacing: .06em; }
+.site-note-v { color: var(--ink); }
+.site-note-s { grid-column: 2; color: var(--ink-3); font-size: 11px; line-height: 1.7; }
+
+.site-src { margin: 0; font-size: 11px; color: var(--ink-3); line-height: 1.8; }
+.site-src code { font-family: var(--mono); word-break: break-all; }
+
+/* ── 数字条上那个按钮（「圈过 N 处 ↗」）────────────────────── */
+.h-fact-btn {
+  border: 0; padding: 0; background: transparent; font: inherit;
+  font-size: 12px; color: var(--ink-2); cursor: pointer;
+  display: flex; align-items: baseline; gap: 6px;
+  border-bottom: 1px solid var(--rule-2);
+}
+.h-fact-btn:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── 汇总页（两个轴）────────────────────────────────────────
+   它不是卡片墙，是一张**账簿对开页**：左边一栏人记的、右边一栏机器记的，
+   中间一道「≠」。这是本页唯一需要"并排看"的地方。 */
+.sum-dlg {
+  border: 1px solid var(--rule-2); padding: 0;
+  max-width: 1080px; width: calc(100vw - 2 * var(--gap-5));
+  max-height: 86vh; background: var(--paper); color: var(--ink); font: 15px/1.6 var(--sans);
+}
+.sum-dlg::backdrop { background: color-mix(in srgb, var(--ink) 45%, transparent); }
+.sum-wrap { padding: var(--gap-4) var(--gap-5) var(--gap-5); overflow: auto; max-height: 86vh; }
+
+.sum-head { display: flex; align-items: baseline; gap: var(--gap-3); flex-wrap: wrap;
+  border-bottom: 2px solid var(--ink); padding-bottom: var(--gap-2); }
+.sum-head h2 { margin: 0; font-family: var(--serif); font-size: 20px; font-weight: 600; }
+.sum-head .dim { flex: 1 1 22em; margin: 0; font-size: 12px; color: var(--ink-3); }
+.sum-x { border: 1px solid var(--rule-2); background: var(--paper-up); font: inherit;
+  font-size: 12px; padding: 4px 10px; cursor: pointer; color: var(--ink-2); }
+.sum-x:hover { border-color: var(--accent); color: var(--accent); }
+
+.sum-warn { margin: var(--gap-3) 0 0; padding: var(--gap-3);
+  background: var(--paper-sink); border-left: 3px solid var(--miss);
+  font-size: 12px; line-height: 1.8; color: var(--ink-2); }
+.sum-warn b { color: var(--ink); }
+
+.sum-big { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch;
+  gap: var(--gap-3); margin: var(--gap-4) 0; }
+.sum-axis { border: 1px solid var(--rule-2); background: var(--paper-up);
+  padding: var(--gap-3); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap-2); }
+.sum-axis-a { border-left: 3px solid var(--accent); }
+.sum-axis-b { border-left: 3px solid var(--ok); }
+.sum-k { flex: 1 1 100%; font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
+.sum-n { font-family: var(--mono); font-size: 30px; font-weight: 600; letter-spacing: -.01em; }
+.sum-u { font-size: 12px; color: var(--ink-3); }
+.sum-sub { margin-left: auto; font-size: 12px; color: var(--ink-2); }
+.sum-src { flex: 1 1 100%; font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+  word-break: break-all; }
+/* 中间那一道：它是「不许相加」的实物，不是装饰。 */
+.sum-plus { display: grid; place-items: center; font-size: 26px; color: var(--miss);
+  font-family: var(--serif); padding: 0 var(--gap-2); }
+
+.sum-sec { margin-top: var(--gap-4); }
+.sum-sec h3 { margin: 0 0 var(--gap-2); font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.sum-sec .dim { margin: var(--gap-2) 0 0; font-size: 11px; line-height: 1.8;
+  color: var(--ink-3); max-width: 62em; }
+
+.sum-tbl { width: 100%; border-collapse: collapse; font-size: 12px; font-feature-settings: "tnum" 1; }
+.sum-tbl th { text-align: left; font-weight: 600; font-size: 10px; letter-spacing: .1em;
+  color: var(--ink-3); border-bottom: 1px solid var(--rule-2); padding: 4px 8px; }
+.sum-tbl td { border-bottom: 1px solid var(--rule); padding: 5px 8px; vertical-align: baseline; }
+.sum-tbl .num { text-align: right; font-family: var(--mono); }
+.sum-tbl tr.is-common td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.sum-code { margin-left: 8px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.sum-guess { font-size: 11px; }
+.sum-guess.g-common { color: var(--accent); font-weight: 600; }
+.sum-guess.g-hint { color: var(--miss); }
+.sum-guess.g-single { color: var(--ink-3); }
+
+/* ── 页脚两节：怎么用 / 借了什么 ─────────────────────────────
+   ★ 它们**写在 HTML 里**，不是 JS 填的：后端连不上时，
+     最需要读到「怎么用」的正是那一刻。 */
+.howto { margin-top: var(--gap-6); padding-top: var(--gap-4); border-top: 2px solid var(--ink); }
+.howto h2 { font-family: var(--serif); font-size: 17px; font-weight: 600; margin: 0 0 var(--gap-3); }
+.howto ol { margin: 0; padding-left: 1.4em; }
+.howto li { margin-bottom: var(--gap-2); font-size: 13px; line-height: 1.85; color: var(--ink-2); }
+.howto li b { color: var(--ink); }
+.howto .borrow { margin-top: var(--gap-4); }
+.howto .borrow dl { margin: 0; display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--gap-2) var(--gap-3); font-size: 12px; align-items: baseline; }
+.howto .borrow dt { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.howto .borrow dd { margin: 0; color: var(--ink-3); line-height: 1.7; }
+.howto .borrow dd b { color: var(--ink-2); }
+.howto .no { color: var(--miss); }
+
+/* ══ 右屏第三模式：外形稽核（audit.js）══════════════════════════════
+   这一格的信息结构是**三层，权重差得开**：
+     ① 尺子（参照值 / 门槛 / 分布）—— 安静，但两个数要够大，因为后面
+        所有「偏离 x m」都是拿它当分母读的。判据的刻度必须和结论印在一起。
+     ② 要判的 —— 唯一的主角，卡片加大、给左侧一道砖红。**一次只摆一条**，
+        所以它敢占地方。
+     ③ 做不了 / 一致的 —— 收缩成一行字 + 一个可展开的表。
+   三个数（一致 / 有差 / 做不了）**各自计数、绝不合成一个**：后两档的
+   下一步动作相反（一个去查数据、一个去修管道）。 */
+
+.au-sheet { display: grid; gap: var(--gap-4); padding: var(--gap-3) var(--gap-2) 0; }
+
+/* ── ① 尺子 ─────────────────────────────────────────────────── */
+.au-head {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--gap-3) var(--gap-4);
+  padding: var(--gap-3);
+  background: var(--paper-up); border: 1px solid var(--rule);
+}
+.au-ref { display: grid; gap: 2px; align-content: start; }
+.au-ref-k { font-size: 11px; letter-spacing: .16em; color: var(--ink-3); }
+.au-ref-v {
+  font-family: var(--serif); font-size: 26px; line-height: 1.1;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.au-ref-s { grid-column: 1 / -1; font-size: 11px; line-height: 1.75; color: var(--ink-3); }
+.au-ref-s b { color: var(--ink-2); }
+
+.au-dist { grid-column: 1 / -1; display: grid; gap: 3px; padding-top: var(--gap-2);
+  border-top: 1px solid var(--rule); }
+.au-dist-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) 5em;
+  align-items: center; gap: var(--gap-2); font-size: 11px; color: var(--ink-3); }
+.au-dist-row code { font-family: var(--mono); text-align: right; color: var(--ink-2); }
+.au-dist-bar { display: block; height: 9px; background: var(--ink-3); }
+
+/* ── ②③ 三块 ─────────────────────────────────────────────────── */
+.au-sec { display: grid; gap: var(--gap-2); }
+.au-sec-h { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-2);
+  padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+.au-sec-h > b { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.au-sec-bad .au-sec-h { border-bottom-color: var(--miss); }
+.au-stepper { display: flex; align-items: center; gap: var(--gap-2);
+  margin-left: auto; font-size: 11px; color: var(--ink-3);
+  font-variant-numeric: tabular-nums; }
+.au-why-not { margin: 0; font-size: 11px; line-height: 1.8; color: var(--ink-3); }
+.au-why-not b { color: var(--accent); }
+
+/* ── 一张卡 = 一条要判的 ───────────────────────────────────────── */
+.au-card { display: grid; gap: var(--gap-3);
+  padding: var(--gap-3); background: var(--paper-up);
+  border: 1px solid var(--rule); border-left: 3px solid var(--accent); }
+.au-card-ok { border-left-color: var(--ok); }
+.au-card-na, .au-card-failed { border-left-color: var(--miss); }
+.au-card-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap-2); }
+.au-card-h > code { font-family: var(--mono); font-size: 15px; color: var(--ink); }
+.au-card-title { font-size: 12px; color: var(--ink-3); }
+.au-card-s { margin: 0; font-size: 11px; line-height: 1.8; color: var(--ink-3); }
+.au-card-s b { color: var(--ink-2); }
+.au-card > p { margin: 0; }
+
+/* 两把尺子并排 —— **并排**是要紧的：它们是同一个量的两条路，
+   上下摆会读成"第一步、第二步"。 */
+.au-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--gap-3); }
+.au-kv { display: grid; gap: 2px; padding-left: var(--gap-2);
+  border-left: 1px solid var(--rule-2); }
+.au-kv-k { font-size: 11px; letter-spacing: .1em; color: var(--ink-3); }
+.au-kv-v { font-family: var(--serif); font-size: 20px; color: var(--ink);
+  font-variant-numeric: tabular-nums; }
+.au-kv-s { font-size: 11px; line-height: 1.7; color: var(--ink-3); word-break: break-all; }
+.au-kv-s b { color: var(--ink-2); }
+
+.au-verdict { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap-2);
+  padding-top: var(--gap-2); border-top: 1px solid var(--rule); }
+.au-verdict-k { font-size: 11px; letter-spacing: .16em; color: var(--ink-3); }
+.au-verdict-v { font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.au-verdict-v b { color: var(--accent); font-size: 16px; }
+
+/* ── 档标 ─────────────────────────────────────────────────────── */
+.au-tag { flex: 0 0 auto; padding: 1px 7px; font-size: 10px; letter-spacing: .1em;
+  border: 1px solid currentColor; }
+.au-tag-ok { color: var(--ok); }
+.au-tag-off { color: var(--accent); }
+.au-tag-na, .au-tag-failed { color: var(--miss); }
+
+.au-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--gap-2);
+  padding: 5px 0; border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); }
+.au-row > code { font-family: var(--mono); color: var(--ink); }
+
+/* ── 全表 ─────────────────────────────────────────────────────── */
+.au-table-wrap { max-height: 46vh; overflow: auto; border: 1px solid var(--rule); }
+.au-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.au-table th { position: sticky; top: 0; z-index: 1; background: var(--paper-sink);
+  text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .08em;
+  color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--rule-2); }
+.au-table td { padding: 4px 8px; border-bottom: 1px solid var(--rule);
+  color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.au-table td code { font-family: var(--mono); color: var(--ink); }
+.au-tr { cursor: pointer; transition: background var(--t-fast); }
+.au-tr:hover { background: var(--paper-sink); }
+.au-tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.au-tr-off { background: #fbf1ee; }
+
+.au-read { margin: 0; font-size: 11px; line-height: 1.85; color: var(--ink-2); }
+.au-read code { font-family: var(--mono); word-break: break-all; }
+.au-read b { color: var(--ink); }
+.au-bar-note { font-size: 12px; color: var(--ink-3); }

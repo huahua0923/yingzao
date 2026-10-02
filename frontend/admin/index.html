@@ -29,11 +29,18 @@
 <link rel="stylesheet" href="js/views/checks.css">
 <link rel="stylesheet" href="js/views/compare.css">
 <link rel="stylesheet" href="js/views/workshop.css">
-<link rel="stylesheet" href="js/views/kg.css">
 <link rel="stylesheet" href="js/views/building.css">
 <link rel="stylesheet" href="js/views/console.css">
-<link rel="stylesheet" href="js/views/campus.css">
 <link rel="stylesheet" href="js/views/branches.css">
+<link rel="stylesheet" href="js/views/pipeline.css">
+<!-- ★ 2026-10-02 摘掉的两条：`kg.css` 与 `campus.css`（导航同步摘了那两屏，
+     用户原话「和建模没有关系的页面就不要了」）。
+     ★ 「摘掉」= 不在这里挂 + 不在 VIEWS 里登记，**文件一个字节没动**
+       （`js/views/kg.css`、`js/views/campus.css` 都还在盘上）。
+     为什么留文件：那两屏挨着数字孪生侧（校区地形/实景由另一个 claude 管），
+     删了就是越界；而且摘入口可逆（把这两行加回来就复原），删文件不可逆。
+     ⚠ 加回视图时**这里和 `js/app.js` 的 VIEWS 必须一起改** —— 只加 VIEWS
+       不加这一行的症状是「那一屏能进去、但没样式」，而屏幕上只是「版式花了」。 -->
 <!-- 登录页与账号管理页。★ 这两份**不在 js/views/ 里也要在这里挂** ——
      上面那句注释说"视图自己的样式表"，而登录页不是视图（它在 VIEWS 之外），
      账号页是视图。两者都靠这一行才上得了样式。 -->
@@ -46,10 +53,15 @@
   1) **必须排在所有 module 脚本之前**。浏览器只认**第一个** importmap，后面那张
      被**静默忽略**（不报错、不警告）—— 症状是页面里所有 three 说明符解析失败，
      看起来像"路径写错了"，其实是"这张表根本没生效"。
-  2) 路径必须是**根绝对**的（`/site/vendor/...`）。本页的文档 URL **永远是 `/`**
-     （hash 路由，`/admin/` 还会被 307 回 `/`），而 `/site` 是 `main.py` 已有的挂载点。
+  2) 路径必须是**根绝对**的（`/site/vendor/...`）。本页的文档 URL **永远是 `/admin/`**
+     （hash 路由；裸 `/admin` 由 `main.py` 的 307 补上尾斜杠），而 `/site` 是
+     `main.py` 已有的挂载点。根绝对路径与文档 URL 是 `/admin/` 还是 `/` 无关，
+     这条写法在两种挂载下都对 —— 这也是它必须是绝对的理由。
      ★ site 自己那份 importmap 是**相对**的（`./vendor/three/...`），在这里解析不到
      —— "照着隔壁抄一份"会直接坏掉。
+     （本行原文写的是「本页的文档 URL 永远是 `/`（hash 路由，`/admin/` 还会被
+       307 回 `/`）」—— 那是 2026-10-02 根挂载重排**之前**的事：当时后台挂在
+       `/`、`/admin` 被弹回 `/`。现在反过来了，后台真住在 `/admin/`。）
   3) **仓内自带，不走公网**：`frontend/site/vendor/three/` 已进 git、751 KB、0.185.1。
      旧版 `frontend/building.html` 走 unpkg CDN（内网/断网直接白屏），本轮正在消掉它。
 -->

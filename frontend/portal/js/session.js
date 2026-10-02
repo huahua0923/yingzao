@@ -80,11 +80,15 @@ export function mountLogin(onOk) {
 export function describe(principal) {
   if (!principal) return '';
   const caps = principal.caps ?? [];
-  // ★ 角色名是**机器码**（builder / admin / line_admin / viewer），
-  //   屏幕上要给人话。这里只做一层翻译，**不是**权限判断 ——
-  //   谁能看见什么由后端按 caps/scopes 定，前端一个字都不许自己判。
-  const ROLE = { builder: '搭建方', admin: '普通管理员',
-                 line_admin: '回线管理员', viewer: '普通人' };
+  // ★ 角色名是**机器码**（builder / line_admin），屏幕上要给人话。
+  //   这里只做一层翻译，**不是**权限判断 —— 谁能看见什么由后端按 caps/scopes 定，
+  //   前端一个字都不许自己判。
+  // ★ 表里只留**真存在**的角色码（2026-10-02）：`admin`（普通管理员）与
+  //   `viewer`（普通人）已按用户指令删除；`line_admin` 的显示名同日从
+  //   「回线管理员」改成「管线管理员」。留着旧键的后果**不是"多一行字"** ——
+  //   一条**过期的**授权行会被译成一个好看的中文名，而它本该印出那个生码
+  //   让人一眼看出来（铁律 141：名字不是定义；这里是反过来 —— 假名字藏住真问题）。
+  const ROLE = { builder: '搭建方', line_admin: '管线管理员' };
   const roles = (principal.roles ?? []).map((r) => ROLE[r] ?? r);
   // ★ 这三档**不能合成 `n === 0 ? 全校 : N 个范围`** —— 我原来就是这么写的，两档都错：
   //     · `scopes = ['*']` 是**全校**（后端的"覆盖一切"是那个星号，不是"0 个范围"），

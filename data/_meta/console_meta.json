@@ -279,13 +279,99 @@
       ]
     },
     {
-      "group": "⑩ 建模输出口径（控制台记账用，不参与识别）",
+      "group": "⑩ 单独流程（按楼不同，逐栋定）",
+      "fields": [
+        {
+          "k": "room_route",
+          "label": "房间路由",
+          "type": "select",
+          "options": [
+            "",
+            "auto",
+            "single"
+          ],
+          "step": "rooms",
+          "help": "房间从哪来。auto=逐层按图纸房号择优；single=读交付墙（单源墙路）；留空=走**主线**（默认）。★ 主线那个分支内部自报的名字叫 regen，但 regen **不是这里能填的取值**（本下拉里也没有它）—— 实测 96 栋里0 栋填过它，手填它也只是落回主线，与留空**同一支**。**这一项决定后面几项生不生效**：room_seal / room_grow_to_wall 只对 auto 或 single 路生效"
+        },
+        {
+          "k": "room_seal",
+          "label": "房间密封（米）",
+          "type": "num",
+          "step": 0.05,
+          "help": "房号 polygon 封口的容差。只对 room_route=auto/single 生效；留空=0（不密封）。c006 实值 0.08"
+        },
+        {
+          "k": "room_grow_to_wall",
+          "label": "房间长到墙（米）",
+          "type": "num",
+          "step": 0.05,
+          "help": "房间边界往外顶到墙线的距离。只对单源墙路（room_route=single）生效；留空=0"
+        },
+        {
+          "k": "rooms_from_floors",
+          "label": "房间取自 floors（旧）",
+          "type": "bool",
+          "help": "★ 已由「房间路由」取代，只为老楼保留。开=等价于 room_route=single。新楼请用 room_route，不要两个都设"
+        },
+        {
+          "k": "label_nearest_max",
+          "label": "房号远置阈值（毫米）",
+          "type": "num",
+          "step": 100,
+          "help": "房号标注画在楼外（ny27 式）时，容纳「标注→房间」的最大距离。留空=0=只认标注落在房间里的常规图"
+        },
+        {
+          "k": "keep_courtyard_holes",
+          "label": "保留内院洞",
+          "type": "bool",
+          "help": "回字形平面有真实内院/天井的楼：开=轮廓不把内院填实。默认关"
+        },
+        {
+          "k": "tread_cluster_filter",
+          "label": "踏步线过滤",
+          "type": "bool",
+          "help": "斜向楼梯踏步线画在**墙体图层**上的楼（c006 实测）：开=把这类簇从墙里剔掉。默认关；无此病的楼开了会少墙"
+        },
+        {
+          "k": "sheet_floors",
+          "label": "一图多层",
+          "type": "json",
+          "help": "一张图描述多层（如通高圆厅）时的展开规则。留空=一图一层"
+        },
+        {
+          "k": "outdoor_steps",
+          "label": "室外大台阶",
+          "type": "json",
+          "help": "图上有室外大台阶的楼，**故意不自动判**（自动判会命中室内楼梯间）。留空=不做。形如 {\"0\": [[x, y, 宽, 高, ...]]}"
+        },
+        {
+          "k": "roof_rooms",
+          "label": "屋面封顶",
+          "type": "json",
+          "help": "下层是该房间、本层图上没有楼板的地方要封顶（塔楼出屋面处）。形如 {\"4\": [\"6-C-04-05\"]}；留空=不做"
+        },
+        {
+          "k": "atrium_rooms",
+          "label": "中庭房间表",
+          "type": "json",
+          "help": "中庭：**该层图上有这个房间登记** ⇒ 挖洞。形如 {\"层\": [\"房号\"]}；与「中庭来源层」配对使用，两者都留空=不处理中庭"
+        },
+        {
+          "k": "atrium_from",
+          "label": "中庭来源层",
+          "type": "json",
+          "help": "中庭：**只补围护墙、不挖洞**（封顶层图上不画八角厅）。形如 {\"层\": 源层}；与「中庭房间表」配对"
+        }
+      ]
+    },
+    {
+      "group": "⑪ 建模输出口径（控制台记账用，不参与识别）",
       "fields": [
         {
           "k": "glb_windows",
           "label": "导出合成窗",
           "type": "bool",
-          "help": "该楼重出 GLB 时是否带 synthetic 窗。**必须记账**：所有 floor JSON 的窗都是 synthetic=True，而 run_step / run_building --glb 的 INCLUDE_SYNTHETIC_WINDOWS 默认 False —— 不记住这个口径，「流程 → 生成 GLB」不勾选就会静默把窗户全剥掉。load_profile 逐键读取，本键被识别层忽略、只给控制台用"
+          "help": "该楼重出 GLB 时是否带 synthetic 窗。**必须记账**：所有 floor JSON 的窗都是 synthetic=True，本键是唯一的开关。★ 实测（2026-09-26，两臂逐字节比对）：run_building --glb **不读本键** —— 批量路的模块默认就是 True，`--windows` 是空操作；只有控制台这条路（run_step）读它。★ 本键不止管 GLB：SU 交付规格（su_spec_floors_fleet.py）读同一个键，决定 .skp 里有没有合成窗。"
         },
         {
           "k": "skip_floors",
@@ -550,8 +636,96 @@
       "desc": "读 DXF → 分类构件 → 按 22 步逐层组装 → 写 floors/floor*.json + spec.json"
     },
     {
-      "id": "thin",
+      "id": "gate",
       "no": 2,
+      "label": "★ 结构 × 源图纸门禁",
+      "scope": "single",
+      "script": "audit_gate.py",
+      "args": [
+        "{name}"
+      ],
+      "writes": true,
+      "slow": true,
+      "runnable": true,
+      "produces": [
+        "{name}-audit.json"
+      ],
+      "upstream": "floors",
+      "desc": "把「识别 vs CAD 图纸」提到第一位：逐层量漏墙率（M）/糊块（W）/错位（F）+ 量具自检（G，源墙量不到就报 GATE_BLIND 不许判绿）+ 层身份辨识（D段=地下室 / 内容集中=屋面层嫌疑）。退出码非 0 = 有 ERROR 层。只读 floors，不改一个字节"
+    },
+    {
+      "id": "qa",
+      "no": 3,
+      "label": "结构体检 I1–I10",
+      "scope": "single",
+      "script": "qa_structural.py",
+      "args": [
+        "{name}"
+      ],
+      "writes": false,
+      "slow": false,
+      "runnable": true,
+      "produces": [],
+      "upstream": null,
+      "desc": "不变量门禁，只读存档 JSON 不写任何数据。任何改动后必跑。ERROR 数量是回归的第一指标。★ 它**只查内部自洽、完全不碰源图纸**，所以不能替代 gate（自洽的错几何照样自洽）"
+    },
+    {
+      "id": "cadrender",
+      "no": 4,
+      "label": "出忠实源图纸",
+      "scope": "single",
+      "script": "_dxf_cad_render.py",
+      "args": [
+        "{name}"
+      ],
+      "writes": true,
+      "slow": true,
+      "runnable": true,
+      "produces": [
+        "dxf_plan/index.html"
+      ],
+      "upstream": "floors",
+      "desc": "白底黑线、忠实还原 CAD 线稿（真值参照）"
+    },
+    {
+      "id": "recogrender",
+      "no": 5,
+      "label": "出识别叠加图",
+      "scope": "single",
+      "script": "_dxf_png_batch.py",
+      "args": [
+        "{name}"
+      ],
+      "writes": true,
+      "slow": true,
+      "runnable": true,
+      "produces": [
+        "dxf_plan_recog/floor0.png"
+      ],
+      "upstream": "floors",
+      "desc": "灰细线源墙垫底 + 彩色识别结果（灰实=墙/红=门/绿=楼梯井/蓝=柱）"
+    },
+    {
+      "id": "compare",
+      "no": 6,
+      "label": "A|B 对比页",
+      "scope": "single",
+      "script": "_dxf_compare_render.py",
+      "args": [
+        "{name}"
+      ],
+      "writes": true,
+      "slow": false,
+      "runnable": true,
+      "produces": [
+        "compare.html"
+      ],
+      "upstream": "floors",
+      "desc": "源图纸(真值) vs 第一轮识别，逐层并排 —— 找识别漏/错的主要视窗"
+    },
+    {
+      "id": "thin",
+      "no": 7,
       "label": "重建内墙（单栋强制）",
       "scope": "single",
       "script": "_wall_thin_force.py",
@@ -572,12 +746,13 @@
     },
     {
       "id": "doorpunch",
-      "no": 3,
-      "label": "门洞外科打穿",
+      "no": 8,
+      "label": "门洞外科打穿（写盘）",
       "scope": "single",
       "script": "_door_punch_apply.py",
       "args": [
-        "{name}"
+        "{name}",
+        "--apply"
       ],
       "writes": true,
       "slow": false,
@@ -588,11 +763,32 @@
       ],
       "upstream": "dxf",
       "inplace": true,
-      "desc": "备份 → 挖门洞 → 数值复验 → 失败自动回滚。门=gap 不是 hole，盒深必须 > 墙厚"
+      "why_manual": "两个前提：①`--apply` 才写盘 —— 控制台 args 里带着它，去掉就是只报不写的干跑；②写前逐层备份到 <楼>/.orig/before_doorpunch_<ts>/，任一数值门槛不过的层整层跳过（不写），不是回滚已写的层。★ 前置产物 `_tmp_<名>_door` **本阶段自带**（`_door_tmp_recognize.ensure()`：缺了、或比交付层旧，就地重识别一次；只写临时目录，有 out_dir 断言守着），不再依赖任何不在流程里的手工脚本",
+      "desc": "前置（重识别到临时目录）→ 备份 → 挖门洞 → 数值复验 → 失败该层跳过。门=gap 不是 hole，盒深必须 > 墙厚。★ 按下去就是真写（args 带 --apply），不是干跑"
+    },
+    {
+      "id": "rooms",
+      "no": 9,
+      "label": "房间提取 ⚠ 覆盖交付件",
+      "scope": "single",
+      "script": "backend/extract/extract_rooms_generic.py",
+      "args": [
+        "{name}"
+      ],
+      "writes": true,
+      "slow": true,
+      "runnable": false,
+      "danger": "high",
+      "produces": [
+        "rooms.json"
+      ],
+      "upstream": "dxf",
+      "why_manual": "★ 覆盖即不可回滚：rooms.json 是交付件，**不在 git**，脚本就地覆盖、没有 .orig 备份也没有自动回滚 ⇒ 跑之前先把现有的 rooms.json 另存一份。房间口径全库也没统一：room_route='regen' 的楼在同一次 recognize 里就从 DXF 墙推房，'single'/'auto' 的楼才需要 recognize→thin→rooms→backfill 这条链。顺序没理顺前一键推房会覆盖交付件（c006 的 rooms.json 是 35 条整翼汇总行、几何停在平移前，一跑即毁）。命令行：python -u backend/extract/extract_rooms_generic.py <名>（先加 --dry 看数）",
+      "desc": "从 DXF 标注+封闭区推房间 → rooms.json。**排在 thin/doorpunch 之后**，因为它要读的是已修边的交付墙。⚠ 本步**就地覆盖** data/buildings/<楼>/rooms.json 且不可回滚（该目录不在 git）：c006 那份是 35 条整翼汇总行、几何停在平移前，一跑即毁。先另存一份再跑"
     },
     {
       "id": "glb",
-      "no": 4,
+      "no": 10,
       "label": "生成 GLB",
       "scope": "single",
       "script": "backend/web/run_step.py",
@@ -610,78 +806,8 @@
       "desc": "只用现有 floors + spec 重建 GLB（不重跑识别，快）"
     },
     {
-      "id": "qa",
-      "no": 5,
-      "label": "结构体检 I1–I10",
-      "scope": "single",
-      "script": "qa_structural.py",
-      "args": [
-        "{name}"
-      ],
-      "writes": false,
-      "slow": false,
-      "runnable": true,
-      "produces": [],
-      "upstream": null,
-      "desc": "不变量门禁，只读存档 JSON 不写任何数据。任何改动后必跑。ERROR 数量是回归的第一指标"
-    },
-    {
-      "id": "cadrender",
-      "no": 6,
-      "label": "出忠实源图纸",
-      "scope": "single",
-      "script": "_dxf_cad_render.py",
-      "args": [
-        "{name}"
-      ],
-      "writes": true,
-      "slow": true,
-      "runnable": true,
-      "produces": [
-        "dxf_plan/index.html"
-      ],
-      "upstream": "dxf",
-      "desc": "白底黑线、忠实还原 CAD 线稿（真值参照）"
-    },
-    {
-      "id": "recogrender",
-      "no": 7,
-      "label": "出识别叠加图",
-      "scope": "single",
-      "script": "_dxf_png_batch.py",
-      "args": [
-        "{name}"
-      ],
-      "writes": true,
-      "slow": true,
-      "runnable": true,
-      "produces": [
-        "dxf_plan_recog/floor0.png"
-      ],
-      "upstream": "floors",
-      "desc": "灰细线源墙垫底 + 彩色识别结果（灰实=墙/红=门/绿=楼梯井/蓝=柱）"
-    },
-    {
-      "id": "compare",
-      "no": 8,
-      "label": "A|B 对比页",
-      "scope": "single",
-      "script": "_dxf_compare_render.py",
-      "args": [
-        "{name}"
-      ],
-      "writes": true,
-      "slow": false,
-      "runnable": true,
-      "produces": [
-        "compare.html"
-      ],
-      "upstream": "floors",
-      "desc": "源图纸(真值) vs 第一轮识别，逐层并排 —— 找识别漏/错的主要视窗"
-    },
-    {
       "id": "audit",
-      "no": 9,
+      "no": 11,
       "label": "覆盖度审计",
       "scope": "single",
       "script": "_dxf_audit.py",
@@ -693,11 +819,11 @@
       "runnable": true,
       "produces": [],
       "upstream": null,
-      "desc": "带洞覆盖 + 门 mask 的墙漏检审计，输出可疑层排名"
+      "desc": "带洞覆盖 + 门 mask 的墙漏检审计，输出可疑层排名。与 gate 判据同源（都走 qa_defect_census），是明细视图；gate 是进出口门禁"
     },
     {
       "id": "sweep",
-      "no": 10,
+      "no": 12,
       "label": "全仓缺陷扫描",
       "scope": "all",
       "script": "_sweep_modeling.py",
@@ -711,7 +837,7 @@
     },
     {
       "id": "index",
-      "no": 11,
+      "no": 13,
       "label": "刷新索引",
       "scope": "all",
       "script": "build_index.py",
@@ -724,6 +850,29 @@
       ],
       "upstream": "floors",
       "desc": "生成 data/buildings/index.json，供网页选择器消费"
+    },
+    {
+      "id": "render",
+      "no": 14,
+      "label": "三维成图（GLB 出图）",
+      "scope": "single",
+      "script": "backend/web/run_step.py",
+      "args": [
+        "{name}",
+        "render"
+      ],
+      "writes": true,
+      "slow": false,
+      "runnable": true,
+      "produces": [
+        "renders/front.png",
+        "renders/side.png",
+        "renders/top.png",
+        "renders/iso.png",
+        "renders/flat_front.png"
+      ],
+      "upstream": "floors",
+      "desc": "按配置里的视图清单出图（5 档）；机位/分辨率/Blender 路径全在 config/pipeline.json 的『成图』段"
     }
   ],
   "specDefaults": {
@@ -754,21 +903,305 @@
   },
   "runnable": [
     "recognize",
-    "thin",
-    "doorpunch",
-    "glb",
+    "gate",
     "qa",
     "cadrender",
     "recogrender",
     "compare",
+    "thin",
+    "doorpunch",
+    "glb",
     "audit",
     "sweep",
-    "index"
+    "index",
+    "render"
   ],
+  "selfCheck": {
+    "版本": 1,
+    "规格键": {
+      "状态": "已读",
+      "消费列表键数": 26,
+      "不在消费列表": []
+    },
+    "档案键": {
+      "状态": "已读",
+      "在参数页上": 50,
+      "登记表条数": 54,
+      "死旋钮": [
+        "door_depth",
+        "outline_buf",
+        "open_r",
+        "parapet_margin",
+        "slab"
+      ],
+      "不在登记表里": []
+    },
+    "投递通道": {
+      "状态": "已读",
+      "条数": 5,
+      "通道": [
+        "批量识别",
+        "控制台识别",
+        "GLB 导出档位",
+        "SU 分层建模",
+        "楼层清单"
+      ],
+      "一条都不读": [],
+      "识别通道不读": [
+        "glb_windows",
+        "skip_floors"
+      ],
+      "批量识别不读": [
+        "door_by_points"
+      ],
+      "控制台通道会丢": [
+        "outer_wall_t",
+        "pair_curved",
+        "room_route",
+        "room_seal",
+        "room_grow_to_wall",
+        "rooms_from_floors",
+        "label_nearest_max",
+        "tread_cluster_filter",
+        "atrium_rooms",
+        "atrium_from"
+      ],
+      "认它的通道": {
+        "title": [
+          "批量识别",
+          "控制台识别",
+          "楼层清单"
+        ],
+        "classifier": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "dxf": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "rooms": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "out_dir": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "offset": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "cx": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "cy": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "wall_layer": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "column_layer": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "door_min_points": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "stair_points": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "door_by_points": [
+          "控制台识别"
+        ],
+        "wall_min": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "wall_max": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "wall_extend": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "wall_fallback": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "single_wall_t": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "outer_wall_t": [
+          "批量识别"
+        ],
+        "wall_thicknesses": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "door_w_single": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "door_w_double": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "door_depth": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "outline_buf": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "open_r": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "outline_close_r": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "parapet_margin": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "outline_unify": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "outline_unify_floors": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "layer_height": [
+          "批量识别",
+          "控制台识别",
+          "楼层清单"
+        ],
+        "slab": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "x_range": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "pair_curved": [
+          "批量识别"
+        ],
+        "floor_ys": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "floor_plans": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "transition": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "room_route": [
+          "批量识别"
+        ],
+        "room_seal": [
+          "批量识别"
+        ],
+        "room_grow_to_wall": [
+          "批量识别"
+        ],
+        "rooms_from_floors": [
+          "批量识别"
+        ],
+        "label_nearest_max": [
+          "批量识别"
+        ],
+        "keep_courtyard_holes": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "tread_cluster_filter": [
+          "批量识别"
+        ],
+        "sheet_floors": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "outdoor_steps": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "roof_rooms": [
+          "批量识别",
+          "控制台识别"
+        ],
+        "atrium_rooms": [
+          "批量识别"
+        ],
+        "atrium_from": [
+          "批量识别"
+        ],
+        "glb_windows": [
+          "GLB 导出档位",
+          "SU 分层建模"
+        ],
+        "skip_floors": [
+          "GLB 导出档位",
+          "楼层清单"
+        ]
+      },
+      "分母": {
+        "状态": "已读",
+        "栋数": 92,
+        "逐键": {
+          "glb_windows": 92,
+          "skip_floors": 2
+        }
+      }
+    },
+    "阶段": {
+      "缺args": [],
+      "upstream未登记": [],
+      "阶段数": 15
+    },
+    "告警": [
+      "档案键 'door_depth' 在参数页上可改，但**载入后没有消费者**（kind=死键）⇒ 改了不生效、且不报错",
+      "档案键 'outline_buf' 在参数页上可改，但**载入后没有消费者**（kind=死键）⇒ 改了不生效、且不报错",
+      "档案键 'open_r' 在参数页上可改，但**载入后没有消费者**（kind=死键）⇒ 改了不生效、且不报错",
+      "档案键 'parapet_margin' 在参数页上可改，但**载入后没有消费者**（kind=死键）⇒ 改了不生效、且不报错",
+      "档案键 'slab' 在参数页上可改，但**载入后没有消费者**（kind=死键）⇒ 改了不生效、且不报错",
+      "档案键 'glb_windows' 由**非识别通道**读（GLB 导出档位 / SU 分层建模）⇒ 改了不影响识别；批量出图也读它 ⇒ 这条路**能生效**（实测 92/92 栋 profile.json 里写着它）",
+      "档案键 'skip_floors' 由**非识别通道**读（GLB 导出档位 / 楼层清单）⇒ 改了不影响识别；批量出图也读它 ⇒ 这条路**能生效**（实测 2/92 栋 profile.json 里写着它）",
+      "档案键 'door_by_points' **批量识别通道不读**（92 栋走的就是它）⇒ 被静默忽略；（实测 0/92 栋 profile.json 里写着它）",
+      "档案键 'outer_wall_t' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'pair_curved' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'room_route' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'room_seal' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'room_grow_to_wall' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'rooms_from_floors' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'label_nearest_max' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'tread_cluster_filter' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'atrium_rooms' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障",
+      "档案键 'atrium_from' 批量识别通道读、但控制台 fallback 会丢它 —— 那条路目前 0 栋在用，属于**潜伏**，不是现行故障"
+    ],
+    "告警条数": 18,
+    "量于": "2026-10-02 18:22:28",
+    "缓存": "构建期冻结（freeze_meta.py 跑的那一趟，此后不再变）",
+    "第几次算": 1
+  },
   "_frozen": {
-    "generatedAt": "2026-09-11T08:00:40+00:00",
+    "generatedAt": "2026-10-02T10:22:29+00:00",
     "source": "backend/web/console_meta.py",
-    "sourceSha256": "271c3943199dce728bb7675d608da63d5677e8b88375661a909f8a0b86c1bdfd",
+    "sourceSha256": "b0e76b2680250f7fe383240eabf940c6b519df8b302b8065bc1333d30eb04874",
     "specDefaultKeys": 24,
     "note": "本文件由 freeze_meta.py 生成，服务器只读；改了 console_meta.py 要重跑。"
   }

@@ -27,7 +27,10 @@ const $ = (id) => document.getElementById(id);
 //   而不是让后端多回一个 group 字段。后端那份 MODULES 只管"有什么、要什么权限"。
 const GROUPS = [
   ['校区', ['overview', 'datascreen', 'campus3d', 'building']],
-  ['设施与运行', ['facility', 'pipeline', 'energy', 'security']],
+  // ★ 「管网与回线」2026-10-02 撤屏（见 backend/api/routers/portal.py 的 MODULES）。
+  //   分组是**人的读法**，后端那份清单才是"有什么" —— 两边一起改，缺一边的后果是
+  //   这一组只剩 3 个按钮（不报错，只是少一个），而脚本读的是后端那份。
+  ['设施与运行', ['facility', 'energy', 'security']],
   ['平台管理', ['pipeline_flow', 'iam']],
 ];
 
@@ -62,7 +65,6 @@ const HUD_FORM = {
   iam: 'sheet',
   building: 'dash',
   facility: 'dash',
-  pipeline: 'dash',
   energy: 'dash',
   security: 'dash',
   pipeline_flow: 'dash',
@@ -79,7 +81,6 @@ const ICONS = {
   //   两块都是"看全景"的，图标长得像的话，切换时人会以为自己没点动。
   datascreen: 'M2 4h20v13H2zM6 13l3.2-4.6L12 12l2.6-3.4L18 13M8 21h8M12 17v4',
   facility: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 8a4 4 0 100 8 4 4 0 000-8z',
-  pipeline: 'M3 8h6a3 3 0 013 3v2a3 3 0 003 3h6M3 16h4M17 5h4v6',
   energy: 'M13 2L4 14h6l-1 8 9-12h-6z',
   security: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
   pipeline_flow: 'M4 6h6M14 6h6M4 12h16M4 18h6M14 18h6M10 3v6M10 15v6',

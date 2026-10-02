@@ -15,7 +15,9 @@
 同样只依赖标准库 + fastapi/pydantic。
 """
 import ipaddress
+import logging
 import secrets
+import time
 from typing import Annotated, NamedTuple
 
 from fastapi import Depends, Path, Request
@@ -39,6 +41,8 @@ if __package__ in (None, ""):
 
 from .responses import ERR_COMPUTE_DISABLED, ERR_LOCAL_ONLY, ApiError
 from .settings import Settings, get_settings
+
+log = logging.getLogger("gym3d.api.deps")
 
 # 楼号：c113 / c012f1 / ny27 这类。刻意**不允许**点号与斜杠，
 # 备份文件（profile.json.bak-bands-20260917）因此天生不在可寻址空间内。
@@ -129,6 +133,118 @@ def client_is_loopback(request: Request) -> bool:
     return _addr_is_loopback(client.host)
 
 
+def client_is_own_host(request: Request) -> bool:
+    """这一份请求的来源地址，是不是**这台机器自己的某张网卡地址**。
+
+    ★ 为什么需要它（2026-10-02）：`_addr_is_loopback` 只认 `127.0.0.1`/`::1`，
+      而本机那个开发页真正被打开时用的地址往往是自己的**局域网/虚拟网卡**地址
+      （实测这台机是 `172.18.144.1`、`172.26.115.238`、`100.96.148.70`）——
+      于是"本机打开"被判成"远程"，屏幕上跳出登录框。用户的口径是**本机不要口令**。
+
+    ★ 为什么这个判据依然**只覆盖本机**、不是把闸开给局域网：
+      比的是"**来源地址 == 本机自己的地址**"。局域网另一台机的来源地址是它自己的，
+      不等于本机的任何一个 ⇒ 照样不放行。而远端**伪造**不出这个来源地址 ——
+      TCP 要完成三次握手，伪造源地址的 SYN-ACK 会发给真正的地址持有者，
+      伪造方收不到，连接建不起来。
+
+    ★ 全枚举的开销实测 **7.26 ms/次**（这台机 18 个地址）。每请求都算太贵，
+      所以加 10 秒 TTL；取舍是"网卡地址刚变、最多 10 秒内还认不出来"——
+      那种情形表现为"刷新一下就好了"，方向是 fail-closed，不会误放行。
+      （不缓存死 = 因为配置活在进程内存里迟早会丢，铁律 022；10 秒是折中。）
+    """
+    client = request.client
+    if client is None or not client.host:
+        return False                # 取不到 ⇒ 不放行（与 `client_is_loopback` 同一条纪律）
+    return _addr_is_own_host(client.host)
+
+
+_OWN_ADDRS: tuple[float, frozenset] = (0.0, frozenset())
+_OWN_ADDRS_TTL_S = 10.0
+
+
+def _own_host_addrs() -> frozenset:
+    global _OWN_ADDRS
+    now = time.monotonic()
+    ts, cached = _OWN_ADDRS
+    if cached and now - ts < _OWN_ADDRS_TTL_S:
+        return cached
+    addrs: set = set()
+    try:
+        import socket as _socket
+
+        import psutil
+        for group in psutil.net_if_addrs().values():
+            for a in group:
+                if a.family in (_socket.AF_INET, _socket.AF_INET6) and a.address:
+                    addrs.add(a.address.split("%", 1)[0])
+    except Exception as exc:                                  # noqa: BLE001
+        # ★ 枚举不出来 ⇒ 返回**空集**，闸就退化成"只认回环"。**不许**退化成
+        #   "全放行" —— 一个拿不到网卡清单的进程，没有任何资格替谁开门。
+        #   但也不许安静：这条一定会被人问"为什么还要登录"，得在日志里有据可查。
+        log.warning("枚举本机网卡地址失败，本地免登录这一支本次不生效（%s）", exc)
+        addrs = set()
+    _OWN_ADDRS = (now, frozenset(addrs))
+    return _OWN_ADDRS[1]
+
+
+def _addr_is_own_host(host: str) -> bool:
+    """地址串是不是本机网卡地址之一。**解析不了就算不是**（fail-closed）。"""
+    try:
+        addr = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        return False
+    if addr.version == 6 and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    return str(addr) in _own_host_addrs()
+
+
+def local_bypass_via(request: Request, cfg: Settings) -> str | None:
+    """**唯一**判断"这份请求从哪条本机通道进来的"的地方。返回 通道名 / None。
+
+    通道名就是它的**由来**：`"loopback"` = 回环地址；`"own_host"` = 本机自己的
+    网卡地址（仅在 `GYM3D_LOCAL_NO_LOGIN=1` 时算数）。
+
+    ★ 为什么返回值是"哪一条"而不是 True/False（2026-10-02 实测踩到）：
+      身份面原先给 break-glass 出来的 Principal 写死 `via="loopback"`，
+      于是**从 `172.18.144.1` 进来的请求也印 `via=loopback`** —— 而
+      `/api/auth/session` 的 `via` 正是"你这次走没走旁路、走的哪条"的**唯一**
+      对外可见处。两个完全不同的分支印同一个词，后果是：
+        (a) 我拿它当新分支生效的证据，会**读成通过**（铁律 098：两侧同值
+            ⇒ 这次改动可能是装饰）；
+        (b) 阴性对照（局域网地址必须被拒）与阳性对照（本机网卡地址必须放行）
+            **在屏幕上一模一样**，两条对照的分辨力一起归零。
+      ⇒ 判据的取值必须能分开它要分的那些情形（铁律 141：名字不是定义）。
+
+    ★ 布尔与这里的关系：`client_is_this_machine` 由它**推出**，不是各判一次
+      —— 两份判断会各自跟着不同的规则走（memory: one-judgement-many-implementations）。
+    """
+    if client_is_loopback(request):
+        return "loopback"
+    if bool(cfg.local_no_login) and client_is_own_host(request):
+        return "own_host"
+    return None
+
+
+def client_is_this_machine(request: Request, cfg: Settings) -> bool:
+    """**唯一**回答"这份请求算不算从本机来的"的地方 —— 两道闸共用这一个。
+
+    = 回环，**或**（`GYM3D_LOCAL_NO_LOGIN=1` 且来源是本机网卡地址）。
+
+    ★ 为什么收成一个函数（memory `one-judgement-many-implementations`）：
+      `deps.exec_denied_reason`（执行面）与 `authz._breakglass`（身份面）问的是
+      **同一件事**。写成两份的后果本仓记过：同一屏上两句话，只有一份跟着规则走。
+    ★ 为什么开成独立开关而不是把 `client_is_loopback` 直接放宽：
+      那个函数的名字、docstring、以及 `_breakglass_selftest` 里"局域网不放行"
+      那条判据，说的都是"只认回环"。悄悄改掉它的语义 = 让一条判据与它守的东西
+      说的不是一回事（铁律 141：名字不是定义）。
+
+    ★ 实现只有一行：问上面那个函数。**不要**在这里重写一遍判断 ——
+      重写的那一份迟早与 `local_bypass_via` 分岔，而分岔的表现是
+      "闸放行了、但 `via` 说它是另一条路来的"。
+    """
+    return local_bypass_via(request, cfg) is not None
+
+
 def _token_ok(request: Request, cfg: Settings) -> bool:
     """非本机时的第二个入口：带对 `X-Admin-Token` 也放行。
 
@@ -157,7 +273,7 @@ def exec_denied_reason(request: Request, cfg: Settings) -> tuple[str, str] | Non
         return (ERR_COMPUTE_DISABLED,
                 "本进程以只读方式运行（GYM3D_COMPUTE=0），写操作不可用。"
                 "要改数据请连本机全功能控制台。")
-    if not (client_is_loopback(request) or _token_ok(request, cfg)):
+    if not (client_is_this_machine(request, cfg) or _token_ok(request, cfg)):
         # ★ 提示语按「token 配没配」分岔。配了还叫人去设 `GYM3D_ADMIN_TOKEN`，
         #   是让人去做一件**已经做过**的事 —— 他会以为没配成功，然后再去改一遍配置。
         #   同一句 403 里的"下一步"，必须跟着事实走。
@@ -167,9 +283,16 @@ def exec_denied_reason(request: Request, cfg: Settings) -> tuple[str, str] | Non
         else:
             how = ("要放开就设 GYM3D_ADMIN_TOKEN 并带上 X-Admin-Token 头"
                    "（当前没配 ⇒ 局域网严格只读）。")
+        # ★ 这句话里的"本机"是**哪些形态**，跟着开关走，不写死 ——
+        #   `local_no_login=1` 时本机网卡地址（本机实测 172.18.144.1 等）也算本机，
+        #   而屏幕上原来说的是"只接受 127.0.0.1"。那句话会把一个**已经能用的**
+        #   本机地址说成不能用，读的人于是去改配置 —— 同一屏上两句话、只有一句
+        #   跟着规则走，本仓记过（memory `one-judgement-many-implementations`）。
+        who = ("来自 127.0.0.1 或**本机自己的网卡地址**" if cfg.local_no_login
+               else "来自 127.0.0.1")
         return (ERR_LOCAL_ONLY,
-                "执行面仅限本机：改参数、跑阶段这类操作只接受来自 127.0.0.1 的请求。"
-                "用 http://127.0.0.1:8140/ 打开即可；局域网访问是只读的。" + how)
+                "执行面仅限本机：改参数、跑阶段这类操作只接受%s的请求。"
+                "用 http://127.0.0.1:8140/ 打开即可；局域网访问是只读的。" % who + how)
     return None
 
 
@@ -196,6 +319,11 @@ def require_compute(request: Request, cfg: SettingsDep) -> Settings:
         raise ApiError(403, code, msg, {
             "compute": cfg.compute,
             "client_loopback": client_is_loopback(request),
+            # ★ 2026-10-02 增：回环以外还多了"本机网卡地址"这一支（本地免登录）。
+            #   把它**单独**报出来，是为了让"为什么这次没被拒"在现场有据可查 ——
+            #   上面那个 `client_loopback=false` 会让读的人以为闸坏了。
+            "client_this_machine": client_is_this_machine(request, cfg),
+            "local_no_login": bool(cfg.local_no_login),
             "token_configured": bool(cfg.admin_token),
             "env": cfg.env,
         })

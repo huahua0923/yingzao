@@ -485,6 +485,59 @@ def _load_pipeline():
     return out
 
 
+def pipeline_drift():
+    """`config/pipeline.json` 的 stages 与 `PIPELINE_FALLBACK` 对不上的地方。
+
+    返回告警字符串列表（**空 = 干净**）。只读，不改任何运行时行为。
+
+    ★ 为什么要有它：`PIPELINE = _load_pipeline() or PIPELINE_FALLBACK` ——
+      json 一旦读不到/读坏就**静默**换成代码里那一份，而「回落态」与「配置态」
+      在屏幕上长得一样。回落落后于配置时，症状是「某个阶段忽然不见了」；
+      回落**超前**时更坏：一条配置里已经删掉的阶段会**又冒出来**，而且
+      `runnable=True` 的话它还是可一键跑的。
+
+    ★★ 比对的两边必须**同构**：回落的对应物是 json 的 `stages` 数组本身，
+      **不含** `成图` 段翻出来的那条 —— `_load_pipeline()` 会在末尾追加它。
+      拿 `PIPELINE` 去比，`render` 会**永远**出现在「只在配置里有」那一栏，
+      这条告警从装上的那天起就常亮。常亮的告警 = 训练人忽略告警（本仓记过
+      同一个形状：一条被忽略的警告比没有警告更坏）。
+
+    ★ 这里只核 **id 集合**（启动印出来要短）。逐条**字段**的差
+      （label/scope/runnable/writes/danger/inplace/script/no 八个）由
+      `_scratch/_rootmount_20261002/_n6_pipeline_check.py` 核 ——
+      那边是判据，这边只是启动提醒。一个 `runnable` 在回落里写反了，
+      症状是回落态下多给/少给一个「可一键跑」，而屏幕上只有流程表能看出来。
+
+    ★ 返回的字符串会**原样 print 到终端**，所以这里不写 Markdown 的 `**`
+      （屏幕上会看见星号本身；本仓那个形状：`rich()` 只管后台 DOM，终端不认）。
+    """
+    if _load_pipeline() is None:
+        return ["★ config/pipeline.json 读不到或读坏了 —— 此刻整张阶段表是代码里的 "
+                "PIPELINE_FALLBACK（回落态）。要改流程，先修那个 JSON。"]
+    try:
+        with open(_CONFIG_PIPELINE, encoding="utf-8") as f:
+            stages = json.load(f).get("stages") or []
+    except Exception as e:                               # noqa: BLE001
+        return ["★ 读 config/pipeline.json 失败：%s: %s" % (type(e).__name__, e)]
+
+    conf_ids = [s["id"] for s in stages if isinstance(s, dict) and s.get("id")]
+    fb_ids = [s["id"] for s in PIPELINE_FALLBACK]
+    problems = []
+    only_fb = [i for i in fb_ids if i not in conf_ids]
+    only_conf = [i for i in conf_ids if i not in fb_ids]
+    if only_fb:
+        problems.append(
+            "★ PIPELINE_FALLBACK 里多出 %d 条配置里没有的阶段：%s"
+            " —— 配置读不到时它们会上桌；若其中标着 runnable，它在回落态下还是"
+            "可一键跑的。" % (len(only_fb), "、".join(only_fb)))
+    if only_conf:
+        problems.append(
+            "★ PIPELINE_FALLBACK 里少了 %d 条配置里有的阶段：%s"
+            " —— 配置读不到时这几个阶段会消失。"
+            % (len(only_conf), "、".join(only_conf)))
+    return problems
+
+
 PIPELINE = _load_pipeline() or PIPELINE_FALLBACK
 
 _BY_ID = {s["id"]: s for s in PIPELINE}

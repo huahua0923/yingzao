@@ -15,6 +15,12 @@ import psycopg
 
 sys.path.insert(0, os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))   # 仓库根
+# ★ 2026-10-02 补：`paths` 在 backend/ 下，只插仓库根够不着 ——
+#   本机与服务器**都是** `ModuleNotFoundError: No module named 'paths'`，
+#   也就是说这个脚本当独立入口（`python backend/db/load_rooms_db.py`）从来没能跑起来
+#   （铁律 17：写好的函数 ≠ 被调用的函数；这次是「能被 import 的模块 ≠ 能被当脚本跑的模块」）。
+sys.path.insert(0, os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))         # backend/ (paths.py)
 from backend.api.settings import get_settings  # noqa: E402
 from paths import BUILDINGS, DATA  # noqa: E402
 
@@ -32,6 +38,20 @@ for path in sorted(glob.glob(str(BUILDINGS / "*" / "rooms.json"))):
 
 
 def load_rooms():
+    """收集 (building, room) —— 并**挡住两类会静默出错的源**。
+
+    ★ 2026-10-02 实测补的两道：
+    ① **文件不是这栋的**：`data/buildings/c006pub/rooms.json` 里每一间的
+       `building` 字段都写着 `c006` —— 那一份是 c006 的**公共流程复跑**产物
+       （它 `profile.json` 的 title 就是「第六教学楼（逸夫楼）（公共流程复跑）」），
+       不是另一栋楼。按目录名收进来，它的 214 间会和 c006 的 214 间**同号**
+       （同一个 `ID_BASE=100000`），落库时才以主键冲突的形式露出来。
+       实测 92 个目录里**只有它一个**不自洽（其余 91 个都是「目录名 == 文件里的 building」），
+       所以这条判据是**可推导的**，不是手打一份跳过名单（铁律 174）。
+    ② **号段重号**：写库前先自己数一遍重复 id。不数的话，症状是
+       `psycopg.errors.UniqueViolation: Key (id)=(100001) already exists` ——
+       **不说**是哪两栋撞的（铁律 16/149：得靠外部约束才发现，而不是自洽性检查）。
+    """
     rooms = []
     for path, building in SOURCES:
         if not os.path.exists(path):
@@ -40,8 +60,29 @@ def load_rooms():
         if not data:
             print(f"  跳过空房间文件：{building}")
             continue
+        # ★ 只挡「**声明了、且声明的不是自己**」。
+        #   不能写成 `inner != {building}` —— 基线 `data/rooms.json`（理化楼）
+        #   是**老格式、不带 building 字段**，那样写会把整栋理化楼判成副本丢掉，
+        #   而它只印一行「跳过」，屏幕上看不出少了一栋 139 间房
+        #   （★ 这一版我第一趟就是这么写的，靠这句 print 抓回来的）。
+        inner = {r.get("building") for r in data} - {None}
+        if inner and building not in inner:
+            print(f"  ★ 跳过：{building} 的 rooms.json 里声明的是 {sorted(inner)}"
+                  f" —— 它不是这一栋的（复跑/副本产物），收进来会与那一栋撞号")
+            continue
         for r in data:
             rooms.append((building, r))
+
+    dup = {}
+    for building, r in rooms:
+        dup.setdefault(r["id"], []).append(building)
+    dup = {k: v for k, v in dup.items() if len(v) > 1}
+    if dup:
+        print("★ 号段重号，**不写库**（写了就是主键冲突，且它不说是哪两栋）：")
+        for k in sorted(dup)[:10]:
+            print("     id %s ← %s" % (k, " / ".join(dup[k])))
+        print("   共 %d 个重号；先修 ID_BASE/段位再跑" % len(dup))
+        raise SystemExit(3)
     return rooms
 
 

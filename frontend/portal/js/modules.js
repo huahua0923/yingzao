@@ -3,14 +3,25 @@
 // ★ 这一份里**每一块都自己声明它是实测还是模拟**，而且声明**印在屏幕上**：
 //     · 「建筑与空间」「账号与权限」—— 走真实接口，来源是盘上的
 //       `data/buildings/`（92 栋、房间表）与库里的 `users/roles/grants`。
-//     · 设施 / 管网与回线 / 能耗 / 安防 / 数据与流程 —— **模拟**。
+//     · 设施 / 能耗 / 安防 / 数据与流程 —— **模拟**。
 //       数不是随便编的：由**固定种子**从楼栋代码推出来（见 `rng.js` 的 `rng`），
 //       刷新不变、换机器也不变。这么做不是为了好看 —— 一个每次刷新都变的数
 //       看起来比一个固定的数更"真"，而它同样是编的。
 //
-// ★ 「回线」这个词**照抄用户原话**（用户写的是"井、通道、线以及回线"），
-//   没有改成"管线"。它到底指什么还没确认 —— 在确认之前，
-//   改动这个词就等于把用户的定义换成了我的猜测，而那不会报错。
+// ★★ 2026-10-02 **删掉「管网与回线」整屏**（用户原话「回线你理解错了，相关的删掉」）。
+//   同趟删的：`ledgerPipeline()` + `pipeline()` 那一屏 + `PIPE_KINDS` / `PIPE_OWNER`
+//   两张表；后端 `api/routers/portal.py` 的 `MODULES` 里那条也撤了。
+//
+//   ★ 为什么删**整屏**而不是只抹掉「回线」两个字：四个类型（井 / 通道 / 线 / 回线）
+//     出自**同一句**用户原话，我既然理解错了一个，另外三个的合法性也从未被验过 ——
+//     而它们看起来比「回线」正常得多，所以更危险。那一屏的四列
+//     （长度 / 埋深 / 权属 / 巡检）与 `J-/TD-/X-/HX-` 编号前缀，**全部**是我的编造，
+//     盘上没有任何真管网资料。
+//   ★ 也**不许**把它改名成「管线」留着：那等于把用户的定义换成我的猜测，
+//     而那一步不会报错。这条纪律 2026-10-01 就定下了（见
+//     `校园数字孪生平台·功能梳理.md` §215）。
+//   ⇒ 恢复条件：先拿到**真的**管网资料（走向 / 埋深 / 权属 / 巡检至少一个真源），
+//     再把这一屏与后端那条一起写回来。空手加回来 = 又把编的数摆上屏幕。
 
 import { API, ApiError } from './api.js';
 import { el, fill, kv, block, chip, note, num, int, statBox } from './dom.js';
@@ -22,8 +33,6 @@ import { renderDatascreen } from './datascreen.js';
 
 const DEVICES = ['电梯', '多联机空调', '新风机组', '配电柜', '生活水泵', '消防泵',
                  '锅炉', '空压机', 'UPS', '弱电柜'];
-const PIPE_KINDS = ['井', '通道', '线', '回线'];
-const PIPE_OWNER = ['后勤保障处', '基建处', '网络与信息中心', '国有资产管理处'];
 
 function iso(dayOffsetFromToday) {
   const d = new Date();
@@ -31,7 +40,8 @@ function iso(dayOffsetFromToday) {
   return d.toISOString().slice(0, 10);
 }
 
-// ★★ 这五张模拟台账的**主键**从「341 条轮廓」改成了「93 栋真名册」。
+// ★★ 这四张模拟台账的**主键**从「341 条轮廓」改成了「93 栋真名册」。
+//   （原为五张，「管网与回线」2026-10-02 整屏删除 —— 见本文件开头的长注。）
 //
 //   旧版的主键是 `ctx.scene.state.blocks` —— 那是**建筑轮廓**，一条只有
 //   `{ i, poly, area, h, base, cal, code }`。换掉假体块那一步把 `use / area_m2 /
@@ -39,8 +49,8 @@ function iso(dayOffsetFromToday) {
 //     · 设施设备 / 能耗 / 安防 / 数据与流程 —— **四页直接抛**
 //       `TypeError: Cannot read properties of undefined (reading 'split')`，
 //       屏幕上只有一条红字，整页是空的；
-//     · 管网与回线 —— **不抛**，但那一列印的是 `O12` 这种**轮廓编号**，
-//       而它看起来就是一个正常的楼号。
+//     · （已删的「管网与回线」当时**不抛**，但那一列印的是 `O12` 这种
+//       **轮廓编号**，而它看起来就是一个正常的楼号。）
 //   ⇒ 两种坏法里，**不抛的那一种更坏**（铁律 016/046：命令自己报错时的空输出
 //     不是"没有数据"；反过来，静默印出一个像楼号的编号也不是数据）。
 //
@@ -117,29 +127,6 @@ function ledgerFacility(rows) {
   return out;
 }
 
-/** 管网与回线：每栋 1~3 段。 */
-function ledgerPipeline(rows) {
-  const out = [];
-  let i = 0;
-  for (const b of rows) {
-    const r = rng(`pipeline:${b.name}`);
-    const k = 1 + Math.floor(r() * 3);
-    for (let j = 0; j < k; j++) {
-      i += 1;
-      const kind = PIPE_KINDS[Math.floor(r() * PIPE_KINDS.length)];
-      out.push({
-        编号: `${kind === '井' ? 'J' : kind === '通道' ? 'TD' : kind === '线' ? 'X' : 'HX'}-${String(i).padStart(3, '0')}`,
-        类型: kind,
-        所在: labelOf(b),
-        长度: kind === '井' ? null : (20 + r() * 380).toFixed(1),
-        埋深: (0.6 + r() * 3.4).toFixed(2),
-        权属: PIPE_OWNER[Math.floor(r() * PIPE_OWNER.length)],
-        巡检: r() > 0.82 ? '待巡检' : '正常',
-      });
-    }
-  }
-  return out;
-}
 
 /** 能耗：每栋一行。
  *
@@ -366,27 +353,6 @@ export function createModules(ctx) {
           ['台数', '在用', '待修']),
         missing ? note(`★ ${missing} 条台账条目**没有计入合计** —— 那几栋在名册里没有面积，`
           + `无从推算台数。这里报的是「我没量到」，不是「那里没有设备」。`, '') : null,
-        MOCK_NOTE(),
-      );
-    },
-
-    async pipeline(mod, form) {
-      const rows = ledgerPipeline(await rosterOf());
-      const byKind = {};
-      for (const r of rows) byKind[r.类型] = (byKind[r.类型] ?? 0) + 1;
-      return page(mod, form, '模拟 · 井、通道、线与回线',
-        statBox([
-          [`${rows.length}`, '管网条目'],
-          [`${byKind['井'] ?? 0}`, '井'],
-          [`${byKind['通道'] ?? 0}`, '通道'],
-          [`${(byKind['线'] ?? 0) + (byKind['回线'] ?? 0)}`, '线 / 回线'],
-        ]),
-        // ★ 这一句**不许删**：它是"这个词还没定"的唯一凭据（用户原话里就有
-        //   「井、通道、线以及回线」）。删掉它，「回线」这个标签在屏幕上
-        //   与别的标签就再没有区别了。
-        note('「回线」照抄需求原话，含义待确认。'),
-        table(['编号', '类型', '所在', '长度', '埋深', '权属', '巡检'], rows,
-          ['长度', '埋深']),
         MOCK_NOTE(),
       );
     },

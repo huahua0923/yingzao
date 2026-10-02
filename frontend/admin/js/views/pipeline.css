@@ -1,0 +1,160 @@
+/* 流程总表 —— 只放本视图自己的东西。
+   视觉方向沿用 app.css 的**工程制图/蓝图**底子：等宽数字、青=可信、
+   琥珀=可疑、红只在"确定会毁东西"上出现。危险三段是这一屏唯一用红的地方。 */
+
+.pl-wrap { max-width: 1100px; }
+
+.pl-head h1 { font-size: 22px; margin: 0 0 var(--sp-2); letter-spacing: .02em; }
+.pl-h1n {
+  font: 600 12px var(--mono); color: var(--text-dim);
+  margin-left: var(--sp-3); letter-spacing: .08em;
+}
+.pl-lede { color: var(--text-dim); max-width: 88ch; margin: 0 0 var(--sp-4); }
+
+/* ── 「这份表是哪来的」 ──────────────────────────────────────────
+   ★ live 与 frozen 必须有**两种不同的颜色**，不能只换一句话：
+   这一行是整屏里唯一能看出"后端正跑在回退档"的地方。 */
+.pl-src {
+  border: 1px solid var(--rule); border-left-width: 3px;
+  border-radius: var(--r-1); padding: var(--sp-2) var(--sp-3);
+  background: var(--panel); margin-bottom: var(--sp-3);
+}
+.pl-src.is-ok   { border-left-color: var(--green); }
+.pl-src.is-warn { border-left-color: var(--amber); background: rgba(232,163,61,.06); }
+.pl-src-h { font-weight: 600; }
+.pl-src.is-ok   .pl-src-h { color: var(--green); }
+.pl-src.is-warn .pl-src-h { color: var(--amber); }
+.pl-src-n { color: var(--text-dim); font: 12px var(--mono); }
+.pl-src-w { color: var(--amber); font: 12px var(--mono); }
+.pl-src-prov {
+  display: flex; flex-wrap: wrap; gap: var(--sp-3);
+  margin-top: var(--sp-2); padding-top: var(--sp-2);
+  border-top: 1px solid var(--rule-soft);
+}
+.pl-src-prov code { font: 11px var(--mono); color: var(--text-faint); }
+
+/* ── 汇总数 ────────────────────────────────────────────────── */
+.pl-counts {
+  display: flex; flex-wrap: wrap; gap: var(--sp-4);
+  padding: var(--sp-3) 0; border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule); margin-bottom: var(--sp-4);
+}
+.pl-count { display: flex; align-items: baseline; gap: var(--sp-2); }
+/* ★ 数字等宽：这一屏的数都要**逐位对比**（哪个是 15、哪个是 13），比例字体会让
+   一列数字左右不对齐，读的人得逐个数位。 */
+.pl-count b { font: 700 20px var(--mono); color: var(--text); }
+.pl-count span { font-size: 12px; color: var(--text-dim); }
+.pl-count.is-danger b { color: var(--red); }
+.pl-count.is-warn b { color: var(--amber); }
+.pl-count.is-note { margin-left: auto; }
+.pl-count.is-note span { color: var(--green); font: 12px var(--mono); }
+
+/* 交叉核对不过时的一条横幅。★ 用琥珀不用红：这一条说的是"两个数对不上"，
+   不是"确定错了" —— 红要留给危险阶段。 */
+.pl-warnbar {
+  border: 1px solid var(--amber); border-radius: var(--r-1);
+  background: rgba(232,163,61,.08); color: var(--amber);
+  padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3);
+  font-size: 12px; line-height: 1.7;
+}
+
+/* ── 危险三段单列 ──────────────────────────────────────────── */
+.pl-dangerbox {
+  border: 1px solid var(--red); border-left-width: 3px;
+  border-radius: var(--r-2); background: rgba(229,72,77,.06);
+  padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-5);
+}
+.pl-dangerbox h2 { font-size: 15px; margin: 0 0 var(--sp-2); color: var(--red); }
+.pl-h2n { font: 600 11px var(--mono); color: var(--text-dim); margin-left: var(--sp-2); }
+.pl-dangerbox ul { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
+.pl-dangerbox li { margin-bottom: var(--sp-1); }
+.pl-dangerbox .pl-note { color: var(--text-dim); font-size: 12px; margin: 0; }
+
+/* ── 逐条 ──────────────────────────────────────────────────── */
+.pl-stages-h { font-size: 15px; margin: 0 0 var(--sp-3); }
+.pl-stages { list-style: none; margin: 0; padding: 0; }
+
+.pl-stage {
+  display: flex; gap: var(--sp-3);
+  border: 1px solid var(--rule); border-left-width: 3px;
+  border-left-color: var(--rule);
+  border-radius: var(--r-2); background: var(--panel);
+  padding: var(--sp-3); margin-bottom: var(--sp-2);
+}
+.pl-stage.is-danger  { border-left-color: var(--red);   background: rgba(229,72,77,.05); }
+.pl-stage.is-inplace { border-left-color: var(--amber); background: rgba(232,163,61,.04); }
+/* 危险优先于就地改写：一条同时是两者的（thin/doorpunch）必须显红。 */
+.pl-stage.is-danger.is-inplace { border-left-color: var(--red); }
+.pl-stage.is-focus { box-shadow: 0 0 0 2px var(--cyan-dim); }
+
+.pl-no {
+  flex: 0 0 34px; text-align: right;
+  font: 700 17px var(--mono); color: var(--text-faint);
+}
+.pl-stage.is-danger .pl-no { color: var(--red); }
+.pl-main { flex: 1; min-width: 0; }
+
+.pl-title { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.pl-label { font-weight: 600; font-size: 14px; }
+.pl-id { font: 11px var(--mono); color: var(--text-faint); }
+.pl-badges { display: inline-flex; gap: var(--sp-1); flex-wrap: wrap; }
+
+.pl-badge {
+  font: 600 10px var(--mono); letter-spacing: .05em;
+  padding: 1px 6px; border-radius: 999px;
+  border: 1px solid var(--rule); color: var(--text-dim); white-space: nowrap;
+}
+.pl-badge.is-ok     { border-color: var(--cyan-dim);  color: var(--cyan); }
+.pl-badge.is-warn   { border-color: var(--amber);     color: var(--amber); }
+.pl-badge.is-danger { border-color: var(--red);       color: var(--red); background: rgba(229,72,77,.14); }
+.pl-badge.is-no     { border-color: var(--amber);     color: var(--amber); }
+.pl-badge.is-dim    { color: var(--text-faint); }
+
+.pl-cmd { margin-top: var(--sp-2); display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: baseline; }
+.pl-cmd code { font: 11px var(--mono); }
+.pl-scriptname { color: var(--cyan); }
+.pl-arg { color: var(--text-dim); }
+/* `--apply` 单独标红：去掉它就是干跑，带着它就是真写 —— 这个字面量值得一眼看见。 */
+.pl-arg.is-apply { color: var(--red); font-weight: 700; }
+.pl-miss { font-size: 12px; color: var(--amber); }
+.pl-note { font-size: 12px; color: var(--text-faint); }
+.pl-sep  { color: var(--text-faint); }
+
+.pl-desc { margin: var(--sp-2) 0 0; font-size: 13px; color: var(--text); max-width: 92ch; }
+
+.pl-facts { margin-top: var(--sp-2); display: flex; flex-direction: column; gap: 2px; }
+.pl-pair { display: flex; gap: var(--sp-2); align-items: baseline; font-size: 12px; }
+.pl-k {
+  flex: 0 0 44px; color: var(--text-faint);
+  letter-spacing: .1em; text-align: right;
+}
+.pl-v { min-width: 0; overflow-wrap: anywhere; }
+.pl-path { font: 11px var(--mono); color: var(--cyan); }
+
+/* 「为什么必须人工」—— 整屏里信息密度最高的一段，给它一个独立的底。
+   ★ `overflow-wrap: anywhere` 不是可选项：这一段里有整句中文 + 反引号包的长命令，
+   本仓栽过一次（memory: value-column-pushed-offscreen）：没写 overflow-wrap 的列
+   被最宽那行撑出视口，读数全画在屏幕外而判据照样绿。 */
+.pl-why {
+  margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--rule-soft); border-radius: var(--r-1);
+  background: var(--panel-2);
+}
+.pl-why-h {
+  display: block; font: 600 11px var(--mono); letter-spacing: .12em;
+  color: var(--amber); margin-bottom: var(--sp-1);
+}
+.pl-why p {
+  margin: 0; font-size: 12px; line-height: 1.75; color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+/* ── 取不到数 / 载荷不对 ──────────────────────────────────── */
+.pl-err {
+  border: 1px solid var(--red); border-left-width: 3px;
+  border-radius: var(--r-2); background: rgba(229,72,77,.07);
+  padding: var(--sp-3) var(--sp-4);
+}
+.pl-err p { margin: 0 0 var(--sp-2); }
+.pl-err p:first-child { color: var(--red); font-weight: 600; }
+.pl-err p:last-child { margin-bottom: 0; }

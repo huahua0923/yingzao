@@ -96,9 +96,7 @@ CAPS = ("view", "edit", "manage")
 #     断言"与对方逐条相同"，不一致就红。这是有意留的重复，不是疏忽。
 ROLE_CAPS = {
     "builder":    ("view", "edit", "manage"),
-    "admin":      ("view",),
     "line_admin": ("view", "edit"),
-    "viewer":     ("view",),
 }
 
 
@@ -248,11 +246,32 @@ def _token_ok(request: Request, cfg: Settings) -> bool:
                                   cfg.admin_token.encode("utf-8"))
 
 
-def _breakglass(request: Request, cfg: Settings) -> bool:
+def _breakglass_via(request: Request, cfg: Settings) -> str | None:
+    """旁路是**从哪一条**进来的。`None` = 没走旁路。
+
+    取值：`"loopback"`（回环）· `"own_host"`（本机网卡地址）· `"token"`（对上了
+    `X-Admin-Token`）。前两条由 `deps.local_bypass_via` 给 —— 那个函数是**唯一**
+    判断本机通道的地方，这里不重写。
+
+    ★ 为什么要有这个函数（2026-10-02 实测）：原先 `principal_of` 把 `via` 写死成
+      `"loopback"`，于是从本机网卡地址进来的请求也印 `via=loopback`。而
+      `/api/auth/session` 的 `via` 是这两条通道**唯一**对外可见的分别 ——
+      写死之后：阳性对照（本机网卡地址放行）与阴性对照（局域网拒）在屏幕上
+      分不开，我拿它当"新分支生效"的证据会读成通过（铁律 098）；而且旧分支和
+      新分支印同一个词。判据的取值必须能分开它负责分的那些情形。
+    """
     if not cfg.loopback_breakglass:
-        return False
-    from .deps import client_is_loopback        # 复用同一个判断，绝不重写一遍
-    return client_is_loopback(request) or _token_ok(request, cfg)
+        return None
+    from .deps import local_bypass_via    # 复用同一个判断，绝不重写一遍
+    via = local_bypass_via(request, cfg)
+    if via is not None:
+        return via
+    return "token" if _token_ok(request, cfg) else None
+
+
+def _breakglass(request: Request, cfg: Settings) -> bool:
+    """有没有走旁路。由 `_breakglass_via` **推出**，不是各判一遍。"""
+    return _breakglass_via(request, cfg) is not None
 
 
 def principal_of(request: Request, cfg: Settings) -> Principal | None:
@@ -266,8 +285,16 @@ def principal_of(request: Request, cfg: Settings) -> Principal | None:
         return cached                      # 同一请求里第二道闸直接用，不重算
 
     if _breakglass(request, cfg):
-        return Principal(None, "本机", ("builder",), frozenset(ROLE_CAPS["builder"]),
-                         ("*",), "loopback", False)
+        # ★ `via` 取**实际走的那一条**（`"loopback"` / `"own_host"` / `"token"`），
+        #   不写死 —— 它是这两条通道唯一对外可见的分别，见 `_breakglass_via`。
+        #   同理 `username` 也随那条路走：带令牌从局域网进来的请求不是"本机"，
+        #   把它印成"本机"是同一个病（名字不是定义）—— 审计日志里会留下
+        #   一条看起来像本机操作的记录。
+        via = _breakglass_via(request, cfg) or "loopback"
+        name = {"loopback": "本机", "own_host": "本机（网卡地址）",
+                "token": "本机（凭 ADMIN_TOKEN）"}[via]
+        return Principal(None, name, ("builder",), frozenset(ROLE_CAPS["builder"]),
+                         ("*",), via, False)
 
     token = request.cookies.get(cfg.session_cookie)
     if not token:
@@ -884,12 +911,23 @@ def assert_caps_gated(app) -> dict:
 
 
 def describe(cfg: Settings) -> str:
-    """启动日志里印的一行 —— **让后门看得见**（一个看不见的后门比有后门更糟）。"""
-    if cfg.loopback_breakglass:
-        return ("[authz] break-glass **开着**：来自 127.0.0.1 的请求直接当搭建方"
-                "（全校区、全能力）；局域网请求走登录。"
-                "真上公网前必须设 GYM3D_LOOPBACK_BREAKGLASS=0。")
-    return "[authz] break-glass **关着**：包括本机在内一律走登录。"
+    """启动日志里印的一行 —— **让后门看得见**（一个看不见的后门比有后门更糟）。
+
+    ★ 2026-10-02：`local_no_login` 也必须印出来，且**印它到底放行了什么范围**。
+      原来那句「来自 127.0.0.1」，在开关一开之后就成了假话 ——
+      后门说明与实际范围不一致，比没有说明更糟（铁律 141：名字不是定义）。
+    """
+    if not cfg.loopback_breakglass:
+        return "[authz] break-glass **关着**：包括本机在内一律走登录。"
+    if cfg.local_no_login:
+        return ("[authz] break-glass **开着** → **本机免登录**：来自 127.0.0.1 "
+                "**或本机自己网卡地址**的请求直接当搭建方（全校区、全能力）；"
+                "局域网请求走登录。"
+                "真上公网前必须设 GYM3D_LOOPBACK_BREAKGLASS=0（本地免登录另需 "
+                "GYM3D_LOCAL_NO_LOGIN=0）。")
+    return ("[authz] break-glass **开着**：来自 127.0.0.1 的请求直接当搭建方"
+            "（全校区、全能力）；局域网请求走登录。"
+            "真上公网前必须设 GYM3D_LOOPBACK_BREAKGLASS=0。")
 
 
 # ── 自检：证明这两道闸**都能红** ─────────────────────────────────────
@@ -924,12 +962,25 @@ def _selftest() -> int:
     b = Principal(1, "u", ("builder",), frozenset(caps_of("builder")), ("*",), "session", False)
     ck("builder 有 manage", b.allows("manage", "c006"))
     ck("★ builder 也有 view（高含低）", b.allows("view", "c006"))
-    v = Principal(2, "u", ("viewer",), frozenset(caps_of("viewer")), ("c006",), "session", False)
-    ck("★ viewer 有 view —— 这一支是**本该放行**的那支", v.allows("view", "c006"))
-    ck("viewer 没有 edit", not v.allows("edit", "c006"))
-    ck("viewer 没有 manage", not v.allows("manage", "c006"))
-    ck("★ viewer 越界看 c001 ⇒ 拒", not v.allows("view", "c001"))
+    # ★ 2026-10-02：这一组原来是拿 `viewer` 当夹具，而 `viewer` 已被用户删掉。
+    #   换成唯一活着的受限角色 `line_admin`。**四个断言的角度一个不少**：
+    #   本该放行的那支 / 有 edit / 没有 manage / 越界拒 ——
+    #   只是把"没有 edit"改成"有 edit"（line_admin 的能力就是 view+edit）。
+    #   ★ 注意别再拿已删的码当夹具：`caps_of` 对它的空元组会让全部断言**照样全绿**
+    #     （一个空能力的角色当然什么都不允许），而那是假绿，铁律 084。
+    v = Principal(2, "u", ("line_admin",), frozenset(caps_of("line_admin")),
+                  ("c006",), "session", False)
+    ck("★ line_admin 有 view —— 这一支是**本该放行**的那支", v.allows("view", "c006"))
+    ck("line_admin 有 edit", v.allows("edit", "c006"))
+    ck("★ line_admin 没有 manage（唯一带 manage 的是搭建方）",
+       not v.allows("manage", "c006"))
+    ck("★ line_admin 越界看 c001 ⇒ 拒", not v.allows("view", "c001"))
     ck("未知角色 ⇒ 空能力（不是默认有权限）", caps_of("学工处") == ())
+    # ★ 已退役的两个码必须也落进"未知角色"那一支。这条判据就是 RETIRED_ROLES
+    #   的守门人：哪天有人把它们加回 ROLE_CAPS，这里立刻红。
+    ck("★ 已退役的 admin / viewer ⇒ 空能力（fail-closed）",
+       caps_of("admin") == () and caps_of("viewer") == (),
+       "admin=%s viewer=%s" % (caps_of("admin"), caps_of("viewer")))
     ck("★ 空身份（有账号无授权）什么都看不了",
        not Principal(3, "u", (), frozenset(), (), "session", False).allows("view", "c006"))
     ck("target=None 时只查能力（/api/auth/me 那种）", v.allows("view", None))
@@ -1167,22 +1218,68 @@ def _breakglass_selftest(ck) -> None:
       而那正好就是"永远放行的闸"（铁律 153 的反面同样成立）。"""
     cfg = get_settings()
     saved = cfg.loopback_breakglass
+    saved_nologin = cfg.local_no_login
     loop = Request(_mk_scope("GET", "/api/rooms", "127.0.0.1"), None)
     lan = Request(_mk_scope("GET", "/api/rooms", "192.168.1.50"), None)
     try:
         object.__setattr__(cfg, "loopback_breakglass", True)
+        object.__setattr__(cfg, "local_no_login", False)      # 先按"只认回环"量
         ck("★ 开着：本机 ⇒ 放行（**你今天的用法不变**）", _breakglass(loop, cfg))
         ck("★ 开着：局域网 ⇒ **不放行**（本机通道只认回环，不是「所有人」）",
            not _breakglass(lan, cfg))
         p = principal_of(loop, cfg)
         ck("★ 开着：本机身份 = builder@*（全校区全能力）",
            p is not None and p.via == "loopback" and p.allows("manage", "c006"), str(p))
+
+        # ── ★ 2026-10-02 新增的那一支：本机**网卡地址**（用户的口径：本机不要口令）。
+        #    地址从实物读回来，不手打 —— 手打的地址换个网络就过期，而它过期时
+        #    屏幕上印的是"这一支坏了"（铁律 105/174）。
+        from .deps import _addr_is_loopback, _own_host_addrs
+        own = sorted(a for a in _own_host_addrs() if not _addr_is_loopback(a))
+
+        # ★★ 每一条都用**新造**的 Request —— `principal_of` 会把结果缓存在
+        #    `request.scope["lihua_principal"]`（同一请求里第二道闸不重算）。
+        #    复用同一个对象来量"换了开关之后呢"，读到的永远是**上一次的缓存**，
+        #    于是那条对照会恒真/恒假 —— 而屏幕上看不出它读的是缓存。
+        def _req(host: str) -> Request:
+            return Request(_mk_scope("GET", "/api/rooms", host), None)
+
+        if not own:
+            # ★ 铁律 166②：判不了就印「不适用」，**不许**退化成"没有异常"。
+            ck("★ 本机网卡地址这一支：**不适用**（这趟枚举不到本机网卡地址，"
+               "psutil 缺失或没有网卡 ⇒ 本条无从量起，不是「通过了」）", False,
+               "本机网卡地址集为空")
+        else:
+            host = own[0]
+            object.__setattr__(cfg, "local_no_login", True)   # ← 这一支的前提
+            # 阳性：开关开 ⇒ 该放行，且 `via` 必须**说出**是这一条
+            ck("★ 开着 GYM3D_LOCAL_NO_LOGIN：本机网卡地址（%s）⇒ 放行" % host,
+               _breakglass(_req(host), cfg))
+            pm = principal_of(_req(host), cfg)
+            ck("★ 这一支的 via = `own_host`（不是 `loopback`）—— 两条通道必须印得不一样",
+               pm is not None and pm.via == "own_host", str(pm))
+            # ★ 对照（铁律 098：改动不许是装饰）：**同一个地址**、只把新开关关掉，
+            #   必须变回"不放行"。两侧都放行 = 走的还是老路，这次改动白做。
+            object.__setattr__(cfg, "local_no_login", False)
+            ck("★ 对照：同一个网卡地址，关掉本机免登录 ⇒ **不放行**"
+               "（两侧都放行就说明这条分支是装饰）", not _breakglass(_req(host), cfg))
+            ck("★ 对照：关掉之后认不出身份（不是「本机」，也不是别人）",
+               principal_of(_req(host), cfg) is None)
+            object.__setattr__(cfg, "local_no_login", True)
+            # 开开关之后，局域网地址**依然**不放行 —— 放宽的是"自己"，不是"别人"
+            ck("★ 开着本机免登录：局域网地址 ⇒ **仍然不放行**（放宽的是自己，不是所有人）",
+               not _breakglass(_req("192.168.1.50"), cfg))
+            ck("★ 开着本机免登录：via 对局域网地址不给出任何通道",
+               _breakglass_via(_req("192.168.1.50"), cfg) is None,
+               str(_breakglass_via(_req("192.168.1.50"), cfg)))
+
         object.__setattr__(cfg, "loopback_breakglass", False)
         ck("★ 关掉：本机 ⇒ **也不放行**（开关是真的能关，不是装饰）",
            not _breakglass(loop, cfg))
         ck("关掉：局域网 ⇒ 不放行", not _breakglass(lan, cfg))
     finally:
         object.__setattr__(cfg, "loopback_breakglass", saved)
+        object.__setattr__(cfg, "local_no_login", saved_nologin)
 
 
 def _account_plane_selftest(ck) -> None:
@@ -1346,7 +1443,9 @@ def _batch2_selftest(ck) -> None:
 
     cfg = get_settings()
 
-    def _p(scopes, roles=("viewer",)):
+    # ★ 默认角色从 `viewer` 改成 `line_admin`：`viewer` 2026-10-02 已退役，
+    #   而默认值里的那个码会**悄悄**作用于这一节里每一个不显式传 roles 的夹具。
+    def _p(scopes, roles=("line_admin",)):
         return Principal(7, "u", roles, frozenset(c for r in roles
                                                   for c in caps_of(r)),
                          tuple(scopes), "session", False)
@@ -1356,7 +1455,7 @@ def _batch2_selftest(ck) -> None:
         sc["lihua_principal"] = p
         return Request(sc)
 
-    v6 = _p(("c006",))            # 只覆盖 c006 的普通管理员
+    v6 = _p(("c006",))            # 只覆盖 c006 的受限管理员
     vstar = _p(("*",), ("builder",))   # 全校区
 
     print("\n【9】批次 2：集合路由不能「挂个闸就完事」")

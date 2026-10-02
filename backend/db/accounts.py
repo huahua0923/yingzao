@@ -9,7 +9,8 @@
     会话   sessions   服务端会话。Cookie 里只有一个随机串，真身在这张表。
 
 ★ 关键：**能力（角色）与范围（空间节点）是两个正交的维度。**
-  用户口述的四类人（搭建方 / 普通管理员 / 回线管理员 / 普通人）是**能力**；
+  用户口述的"四类人"（搭建方 / 普通管理员 / 回线管理员 / 普通人）是**能力**
+  —— 其中「普通管理员」「普通人」2026-10-02 已按用户指令删除（见 `ROLE_SEED`）；
   「哪个学院看哪几栋」是**范围**。把两者塞进一个字段，就会出现"给某人单开一个角色"
   这种没法维护的局面。所以 grants 是三元组，且**一个账号可以有多条**（多角色、多范围）。
 
@@ -42,6 +43,7 @@ import argparse
 import base64
 import hashlib
 import hmac
+import logging
 import os
 import secrets
 import sys
@@ -54,6 +56,12 @@ sys.path.insert(0, os.path.normpath(os.path.join(_HERE, "..", "..")))
 sys.path.insert(0, os.path.normpath(os.path.join(_HERE, "..")))
 sys.path.insert(0, _HERE)
 from db_config import db_params  # noqa: E402
+
+# ★ 名字**不能**叫 `log`：本文件后面有一个 `def log(conn, action, …)`（审计写库），
+#   模块级赋值会被它整个盖掉 ⇒ `log.info(...)` 变成 "'function' object has no
+#   attribute 'info'"。这是 CLAUDE.md 铁律 11（别拿全局构造器的名字给变量命名）
+#   的同一个形状，实测在 `ensure_schema` 的收尾那一行炸出来。
+logger = logging.getLogger("gym3d.db.accounts")
 
 # ---------------------------------------------------------------- 常量
 
@@ -77,23 +85,39 @@ SESSION_HOURS = 8
 CAPS = ("view", "edit", "manage")
 
 # 角色字典。code 是**稳定标识**（进库、进断言、进 URL），name 是给人看的。
-# ★ 这几个名字是**照抄用户原话**的，不许顺手改成"系统管理员"之类：
-#   「回线管理员」这个词我还不知道确切所指（用户写「井、通道、线以及回线」，线与回线并列），
-#   照抄原词，等问清楚再动。
+# ★ 2026-10-02 用户明令：**「普通人」与「普通管理员」不要了** ⇒ 只剩两个角色
+#   （「搭建方」+「管线管理员」）。这是**删角色**，不只是"不再问二者差别"——
+#   问过用户、他选的是"删掉这两个角色"。
+# ★ 同日第二件：「回线」二字是**我理解错了**（用户原话「回线你理解错了，相关的删掉」）
+#   ⇒ 这一行的显示名从「回线管理员」改成「管线管理员」。
+#   **只改 name、不改 code**：`grants.role_code` 认的是 `line_admin`，
+#   库里已有的授权一条都不受影响。
+#   ★ 改完**必须**在库里跑一次 `python backend/db/accounts.py --init`：
+#     `ensure_schema` 对 `ROLE_SEED` 是 upsert，会把这行的 name/description/rank
+#     刷成新的。不跑不报错 —— 屏幕上还是旧名字。
+# ★ description 同日也改了：原来的「负责井、通道、线、回线的功能」跟着那一屏
+#   一起作废（`管网与回线` 模块 2026-10-02 撤下，见 `api/routers/portal.py`）。
+#   ⚠ 记一笔：「管网与回线」原来是 `MODULES` 里**唯一**要求 `cap: "edit"` 的模块
+#     ⇒ 撤屏之后 `line_admin` 多出来的 `edit` 在**模块层暂无落点**，
+#     它现在与「只读 + 限范围」在功能地图上还看不出差别。别把它读成"降权了"。
+# ★ name 仍是贴近用户用词的，不许顺手改成"系统管理员"之类。
 ROLE_SEED = [
     ("builder",   "搭建方",     "输入 CAD 图并生成成果；管理账号与授权；跑生成流程", 10),
-    ("admin",     "普通管理员", "查看授权范围内房屋的情况与使用情况", 20),
-    ("line_admin", "回线管理员", "负责井、通道、线、回线的功能", 30),
-    ("viewer",    "普通人",     "只能查看", 40),
+    ("line_admin", "管线管理员", "负责名下范围内的设施与管线台账", 30),
 ]
+
+# 已退役的角色码（2026-10-02）。★ 为什么要单独列出来：`ensure_schema` 对
+#   `ROLE_SEED` 是 **upsert**（`ON CONFLICT DO UPDATE`），**只加不删** ——
+#   光把上面那两行去掉，老库（本机、服务器）里那两行会原样留着，于是
+#   "角色还在库里、能力矩阵里却查不到它" ⇒ `caps_of()` 按 fail-closed 回空元组，
+#   那不是"删掉了"，是**凭空造出一个什么也看不见的角色**（铁律 41 的落点）。
+RETIRED_ROLES = ("admin", "viewer")
 
 # 角色 → 能力。★ 这张表是**代码**不是数据：它要被断言逐条核，且改动要过 code review。
 #   放进数据库会让"谁把自己提权了"查不出来。
 ROLE_CAPS = {
     "builder":    ("view", "edit", "manage"),
-    "admin":      ("view",),
     "line_admin": ("view", "edit"),
-    "viewer":     ("view",),
 }
 
 
@@ -180,7 +204,7 @@ def connect():
 
 
 def ensure_schema(conn):
-    """建表 + 灌角色字典。**幂等**，可反复跑。"""
+    """建表 + 灌角色字典 + 清掉已退役的角色。**幂等**，可反复跑。"""
     conn.execute(SCHEMA_SQL)
     with conn.cursor() as cur:
         cur.executemany(
@@ -190,6 +214,27 @@ def ensure_schema(conn):
                  SET name = EXCLUDED.name,
                      description = EXCLUDED.description,
                      rank = EXCLUDED.rank""", ROLE_SEED)
+        # ── 退役角色的收尾（2026-10-02）────────────────────────────
+        # ★ `grants.role_code REFERENCES roles(code)` **没有 ON DELETE** ⇒ 默认
+        #   是 RESTRICT：还有授权引用着它，DELETE 会直接抛。这正是我要的姿势 ——
+        #   但**先自己查一遍**，因为"外键抛异常"和"我打算拒"在屏幕上都是 500，
+        #   而这两件事的下一步完全不同（一个是数据坏了，一个是有人在用这个角色）。
+        cur.execute("SELECT role_code, count(*) FROM grants WHERE role_code = ANY(%s)"
+                    " GROUP BY role_code ORDER BY role_code",
+                    (list(RETIRED_ROLES),))
+        held = cur.fetchall()
+        if held:
+            raise RuntimeError(
+                "★ 不肯删除已退役的角色：还有 %d 条授权引用它们（%s）。"
+                "把那些账号改授「搭建方」或「管线管理员」（或删号）之后再跑一次。"
+                "——**不静默级联删授权**：那会在没有任何痕迹的情况下改掉某个人的权限。"
+                % (sum(n for _c, n in held),
+                   "、".join("%s×%d" % (c, n) for c, n in held)))
+        cur.execute("DELETE FROM roles WHERE code = ANY(%s)", (list(RETIRED_ROLES),))
+        if cur.rowcount:
+            # 出声。删了几行要看得见 —— 一行也不删时说明库里本来就干净（那也是信息）。
+            logger.info("roles：删掉已退役的 %s，共 %d 行",
+                        "、".join(RETIRED_ROLES), cur.rowcount)
     conn.commit()
 
 
@@ -518,7 +563,8 @@ def _print_users(conn):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="账号 / 角色 / 授权 / 会话")
-    ap.add_argument("--init", action="store_true", help="建表 + 灌角色字典（幂等）")
+    ap.add_argument("--init", action="store_true",
+                    help="建表 + 灌角色字典 + 删已退役角色（幂等）")
     ap.add_argument("--admin", metavar="用户名", help="开一个搭建方账号（口令随机，只打印一次）")
     ap.add_argument("--password", help="指定口令（不传则随机生成；★ 别把它写进任何文件）")
     ap.add_argument("--list", action="store_true", help="列出账号与授权")
@@ -532,6 +578,16 @@ def main(argv=None):
             for code, name, _d, rank in sorted(ROLE_SEED, key=lambda x: x[3]):
                 print("   角色 %-11s %-6s 能力：%s"
                       % (code, name, "、".join(ROLE_CAPS.get(code, ())) or "（无）"))
+            # ★ 把"删了哪几个"印出来。这段收尾在**老库**上才会真的删东西
+            #   （新库本来就没有那两行），而"删了 0 行"与"我不看"在屏幕上一样 ——
+            #   所以两个都要印：打算删谁、实际删了几行。
+            print("   ★ 已退役（本次收尾若还在库里就删掉）：%s"
+                  % "、".join(RETIRED_ROLES))
+            left = conn.execute("SELECT count(*) FROM roles WHERE code = ANY(%s)",
+                                (list(RETIRED_ROLES),)).fetchone()[0]
+            print("     收尾之后库里还剩 %d 个已退役角色（应为 0）" % left)
+            if left:
+                print("     ★ 不对 —— 上面那段的报错应该已经拦住了，请查")
         if args.admin:
             if not conn.execute("SELECT to_regclass('public.users')").fetchone()[0]:
                 ensure_schema(conn)

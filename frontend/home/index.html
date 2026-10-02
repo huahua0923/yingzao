@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>营 · 校园建筑数字档案</title>
+<!--
+  首页 = **一屏一栋**：上面一条楼栋带，下面「原 DWG 图 ⇄ 三维模型」对比台。
+
+  ★ 为什么不复述 site.css 的那套设计变量（纸/墨/砖红）：
+    `/site/site.css` 是**同一个原点**上的另一份静态资源，根绝对路径取得到。
+    首页与 /site 是同一种介质（建筑图册），把它整个 link 进来，两扇门的
+    顶栏、汇总条、按钮、三维舞台就**天然同款** —— 手抄一份变量表出来，
+    唯一的效果是它们以后会各自漂移（本仓记过：同一个值写两处必然漂移）。
+    所以 home.css 只写**本页独有的东西**（楼栋带 / 对比台两栏 / 口径清单）。
+
+  ★ 三维舞台那几条样式也在 site.css 里（`.stage` / `.stage canvas` /
+    `.hud` / `.stage-notes` / `.btn-ghost` / `.stage-miss`）—— 那是单栋页
+    已经跑通的一套，canvas 的尺寸约束就在里面（不写的话 canvas 会按属性
+    尺寸 300×150 渲染，父元素高度反被它顶开）。
+
+  ★ importmap 必须**根绝对**（抄 frontend/admin/index.html 那份）：
+    本页的文档 URL 是 `/`，说明符按文档基址解析；而 `site/building.html`
+    里那一份写的是相对路径 `./vendor/three/…`，照着它抄会在这里解析成
+    `/vendor/three/…` ⇒ 全部 404。另外它必须排在**任何 module 脚本之前**：
+    浏览器只认第一张 importmap，后面那张被静默忽略。
+-->
+<link rel="stylesheet" href="/site/site.css">
+<link rel="stylesheet" href="home.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "/site/vendor/three/build/three.module.min.js",
+    "three/addons/": "/site/vendor/three/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#stage">跳到内容</a>
+
+<header class="topbar">
+  <a class="mark" href="/">
+    <span class="mark-glyph" aria-hidden="true">营</span>
+    <span class="mark-text">
+      <b>营造</b>
+      <i>校园建筑数字档案</i>
+    </span>
+  </a>
+  <nav class="topnav" aria-label="主导航">
+    <a href="/" aria-current="page">楼栋</a>
+    <a href="/admin/" rel="nofollow" title="建模后台：改参数、跑阶段、核检查">后台</a>
+  </nav>
+</header>
+
+<main id="home">
+  <!-- 汇总条与楼栋带由 js/home.js 填。读盘失败时这里会变成一块说明，
+       不是空白——「连不上后端」与「库里一栋楼都没有」必须分开说。 -->
+  <div class="loading" id="boot">正在读楼栋清单…</div>
+  <div id="summary"></div>
+  <div id="rail"></div>
+  <div id="stage"></div>
+
+  <!-- ★ 下面两节**写在 HTML 里、不由 JS 生成**：后端连不上时，
+       最需要读到「怎么用」的正是那一刻 —— 而那一刻 JS 什么都画不出来。 -->
+  <section class="howto" aria-labelledby="howto-h">
+    <h2 id="howto-h">怎么用</h2>
+    <ol>
+      <li><b>挑一栋。</b>上面楼栋带点一下（也可以直接改地址栏的 <code>#/c113</code>）。
+        楼栋带那一格上只有<b>例外</b>才挂文字角标，所以看到「无模型」就知道是少的那个。</li>
+      <li><b>左屏圈问题。</b>点「圈问题」→ 在图上按住拖一个框 → 选类型、写一句话 → 存下。
+        框存的是<b>图幅比例（0..1）</b>，不是像素 —— 换楼层、换窗口大小、换设备都不错位。
+        存进 <code>_qa/annotations.json</code>，与建模后台那个标注台是<b>同一份文件</b>。</li>
+      <li><b>看是不是通用问题。</b>数字条上那个「<b>N 处人圈的问题 ↗</b>」点开就是汇总：
+        同一个毛病在<b>几栋楼</b>上出现，就是这个毛病通用不通用的判据。
+        那一页上还并排摆着<b>机器找到的</b>另一轴 —— 两个轴<b>不许相加</b>，页上写着为什么。</li>
+      <li><b>右屏切「实景校核」。</b>把模型足迹贴到无人机正射影像上，看外形对不对得上。
+        <b>这一格能不能用，取决于这栋楼有没有落位锚点</b>；没有的话页上会直说，
+        并且给出锚点表在哪 —— 它不会画一张空图糊过去。</li>
+    </ol>
+    <div class="borrow">
+      <h2>借了哪些现成的</h2>
+      <dl>
+        <dt>rasterio 1.5.1</dt>
+        <dd><b>正射按窗口裁切</b>：<code>from_bounds</code> + <code>out_shape</code> 走已建好的金字塔
+          （[2…255]）。<b>这一步不能省</b> —— 校区级窗口按原始分辨率要读 18.8 GB，
+          走了金字塔 0.3 秒。加载中那一栏里显示的是<b>实测毫秒数</b>。</dd>
+        <dt>CloudCompare 2.13.2</dt>
+        <dd><b>逐点偏差</b>（<code>-ICP</code> 配准 + <code>-C2M_DIST</code>）。
+          这一步是分钟级的，<b>不在这页现场跑</b>，由离线跑完产物落盘、页面读进来。</dd>
+        <dt>Open3D 0.20.0</dt>
+        <dd>点云/网格距离的备用通路。<b>★ 0.20.0 已经没有
+          <code>TriangleMesh.compute_point_cloud_distance</code></b>，网上旧样例直接抛。</dd>
+        <dt>PIL · numpy · matplotlib</dt>
+        <dd>叠合、着色带、出图。</dd>
+        <dt class="no">没有的东西</dt>
+        <dd class="no">没有成熟的「扫描 → BIM 偏差」端到端开源工具（DURAARK 一系是已停的研究原型）。
+          这一截只能自己拼：<b>正射 → CloudCompare 配准 → 逐点偏差 → 烘成顶点色 → 看数台</b>。
+          本页就是这条链最后那个<b>看数台</b>。ODM 重建、SAM 提轮廓本机未装，且本仓不需要
+          （1:500 图上白描的 341 条轮廓就是真值，比自动提的可靠）。</dd>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>成都理工大学 · 营造</span>
+  <span class="grow"></span>
+  <span class="dim">数据来自建模后台 <code>/api</code> · 除人工标注外只读呈现</span>
+</footer>
+
+<script type="module" src="js/home.js"></script>
+</body>
+</html>

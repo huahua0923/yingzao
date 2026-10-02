@@ -50,7 +50,7 @@ import struct
 from pathlib import Path
 from typing import Any
 
-CRITERION_VERSION = "shapeaudit-1"
+CRITERION_VERSION = "shapeaudit-2"   # 2：一栋都没量到时，参照值/门槛改吐 null（原先吐 0.0）
 
 # 地上/地下的分界：`floor` 字段小于它的不算地上（c011 的 −1 是地下一层）。
 GROUND_FLOOR = 0
@@ -292,22 +292,47 @@ def audit(cfg, names: list[str], titles: dict[str, str] | None = None) -> dict[s
 
     off = sorted([r for r in items if r["state"] == "off"],
                  key=lambda r: -abs(r.get("dev_m") or 0.0))
+
+    # ★ `_median([])` 回 0.0 —— 于是**一栋都没量到**时，这一支会照样印出
+    #   「全库层高中位数 0.00 m ⇒ 典型门槛 0.05 m」这么一句权威口吻的话，
+    #   而它底下是**空集**（铁律 062/084：分母为 0 的 k/N 是最像结论的假数）。
+    #   这正是本模块 docstring 里那条纪律的反面：**口径要写进每一个数旁边** ——
+    #   一个从空集里造出来的数，它的口径是「不适用」，那就得印「不适用」，
+    #   不许退化成一个看起来像量过的 0.00（铁律 166②）。
+    #   服务器上就是这个情形：最小集部署没有逐栋 GLB ⇒ 92 栋全 `na`。
+    #   前端 `N(null, d)` 本来就吐 `—`，所以这里改成 None 是一条真话，不是占位。
+    if resid:
+        ref_m = round(ref, 3)
+        mad_m = round(_mad(resid, ref), 3)
+        tol_m = round(max(0.05, TOL_LAYER_FRAC * lh_med), 3)
+        tol_why = ("**逐栋**取那栋楼自己层高的一半（全库层高中位数 %.2f m ⇒ 典型门槛 %.2f m）"
+                   "—— 它是**物理分辨率**：差不到半层就说不清是哪一层，超过半层才有一个可判的说法"
+                   % (lh_med, tol_m))
+    else:
+        ref_m = mad_m = tol_m = None
+        tol_why = ("**不适用**：这一趟**一栋都没量到**（%d 栋里 %d 栋缺 GLB、%d 栋缺 floors/、"
+                   "%d 栋读坏了）⇒「全库层高中位数」与「典型门槛」都无从谈起。"
+                   "屏幕上的「—」是**没有这个数**，不是 0。"
+                   "真门槛仍是逐栋取那栋楼自己层高的一半。"
+                   % (len(items),
+                      sum(1 for r in items if r.get("why") == "这一栋没有 GLB"),
+                      sum(1 for r in items if r.get("why") == "这一栋没有 floors/ 目录"),
+                      counts.get("failed", 0)))
+
     return {
         "criterion_version": CRITERION_VERSION,
         "counts": counts,
         "reference": {
-            "m": round(ref, 3),
+            "m": ref_m,
             "how": "全库实测中位数（**不是手打**）—— 口径：GLB 的 Y 跨度 − Σ(floor≥%d 的层高)"
                    % GROUND_FLOOR,
             "n_measured": len(resid), "n_agree": n_agree,
-            "mad_m": round(_mad(resid, ref), 3),
+            "mad_m": mad_m,
             "min_m": round(min(resid), 3) if resid else None,
             "max_m": round(max(resid), 3) if resid else None,
         },
-        "tol_m": round(max(0.05, TOL_LAYER_FRAC * lh_med), 3),
-        "tol_why": "**逐栋**取那栋楼自己层高的一半（全库层高中位数 %.2f m ⇒ 典型门槛 %.2f m）—— "
-                   "它是**物理分辨率**：差不到半层就说不清是哪一层，超过半层才有一个可判的说法"
-                   % (lh_med, max(0.05, TOL_LAYER_FRAC * lh_med)),
+        "tol_m": tol_m,
+        "tol_why": tol_why,
         "dist": dist,
         "off": off,
         "items": items,
