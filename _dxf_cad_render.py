@@ -4,32 +4,26 @@
 画：LWPOLYLINE(含 bulge 圆弧内插)/LINE/ARC/CIRCLE/SPLINE/INSERT 折线 + TEXT/MTEXT(房间号)。
 跳：DIMENSION/ACAD_TABLE/MULTILEADER 纯标注(易太乱)。
 按 floor_of 切层 → to_local 到楼层局部坐标(与 floor JSON/building.html 同基准)。
-白底黑线，实体线宽尊重 DXF lineweight(默认 ~0.8px)，文字按图纸实际字高换算可读大小。
+白底黑线，线宽 = DXF lineweight（无设定/ByLayer/读不到 → 回落 0.8pt；单位是**点**不是像素），
+文字按图纸实际字高换算可读大小。
 输出 data/buildings/<name>/dxf_plan/floor{F}.png + 每栋 index.html + 总目录 _dxf_index.html。
 用法: python -u _dxf_cad_render.py [<name> ...]   (不带参数=全部楼)
 """
 import os, sys, json, glob, re
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
-sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend\vision",
-                r"D:\gym3d\backend", r"D:\gym3d"]
+sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend", r"D:\gym3d"]
 import ezdxf
 from ezdxf import path as ezpath
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import _render_common as RC
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DengXian"]
 plt.rcParams["axes.unicode_minus"] = False
 
 BASE = r"D:\gym3d\data\buildings"
 COL_DEFAULT = "#111111"
 SKIP = {"DIMENSION", "ACAD_TABLE", "MULTILEADER", "HATCH", "ATTDEF"}
-
-
-def _cn_from_dxf(p):
-    """从 dxf 文件名抽中文楼名：'C025-第一教学楼.dxf' → '第一教学楼'。"""
-    base = os.path.splitext(os.path.basename(p.dxf))[0]
-    cn = re.sub(r"^[A-Za-z]+\d+[-_ ]*", "", base).strip(" -_")
-    return cn or base
 
 
 def _is_axis_layer(e):
@@ -80,6 +74,23 @@ def _aci_color(e):
     except Exception:
         pass
     return COL_DEFAULT
+
+
+def _lineweight_pt(e, default=0.8):
+    """DXF lineweight(单位 1/100 mm) → matplotlib 线宽(pt)。
+
+    旧代码把 `lw = 0.8` 写死、注释还写成"0.8px"，与"尊重 lineweight"不符：
+    图上的线宽单位是**点**（dpi=130 时 1pt≈1.8px），且 CAD 里最常见的 0.25mm
+    按 3.2 倍换算恰好是 0.8pt —— 所以这条映射**不改变**绝大多数线的观感，
+    只让真设过线宽的实体（粗墙线/细标注线）恢复图纸上的粗细对比。
+    """
+    try:
+        v = e.dxf.lineweight
+        if v is None or int(v) < 0:      # -1 ByLayer / -2 ByBlock / -3 默认
+            return default
+        return max(0.4, min(2.4, float(v) / 100.0 * 3.2))
+    except Exception:                     # noqa: BLE001
+        return default
 
 
 def _sampled_pts(e, p, F, dist=0.05):
@@ -147,11 +158,38 @@ def _in_box(x, y, box, m=6.0):
     return (x0 - m) <= x <= (x1 + m) and (y0 - m) <= y <= (y1 + m)
 
 
-def collect_floor(doc, p, F, box=None):
+def _box_drop(pts, bw, bh, box):
+    """本层实体被 box 规则剔掉的原因；没被剔 → None。
+
+    两个判据必须分开报（这是本函数存在的理由）：
+      "oversize" = 比轮廓大太多（图框/立面/长剖）—— 剔是对的
+      "outside"  = 整段落在轮廓盒外 —— 多数也对，但**真构件也会命中这一条**
+                   （雨篷/坡道/外挂梯离轮廓盒 1.5m 以外时）
+    旧代码把两者合成一个 `_overlap() -> bool` 且**一句话都不打**，
+    于是"图少画了东西"在出图环节完全不可见（见 main() 里的剔除汇总）。
+    """
+    x0, y0, x1, y1 = box
+    xa = min(q[0] for q in pts); xb = max(q[0] for q in pts)
+    ya = min(q[1] for q in pts); yb = max(q[1] for q in pts)
+    if (xb - xa) > bw or (yb - ya) > bh:
+        return "oversize"
+    if xb < x0 - 1.5 or xa > x1 + 1.5 or yb < y0 - 1.5 or ya > y1 + 1.5:
+        return "outside"
+    return None
+
+
+def collect_floor(doc, p, F, box=None, stats=None):
     """收集 F 层主副本实体: polylines=[(pts,color,lw)], texts=[(x,y,text,h,rot,kind)]
-    box=(x0,y0,x1,y1) = 该层 outline 包围盒(识别主副本范围)，剔掉并排/镜像多副本与杂项。"""
+    box=(x0,y0,x1,y1) = 该层 outline 包围盒(识别主副本范围)，剔掉并排/镜像多副本与杂项。
+
+    stats（可选）：传入一个 dict 就**记账**，键 =
+      drawn_line / drawn_text / oversize / outside / text_outside / no_pts
+    调用方（main）据此印出「这层剔掉了多少、为什么」—— 剔除不再静默。"""
     polys, texts = [], []
     pool = []
+    def _bump(k):
+        if stats is not None:
+            stats[k] = stats.get(k, 0) + 1
     for e in doc.modelspace():
         if e.dxftype() in SKIP:
             continue
@@ -165,15 +203,13 @@ def collect_floor(doc, p, F, box=None):
         uscale = to_local(p, 1.0, 0.0, F)[0] - to_local(p, 0.0, 0.0, F)[0]
     except Exception:
         uscale = 0.001
-    x0, y0, x1, y1 = box
-    bw = (x1 - x0) + 5.0      # 轮廓尺寸上限(+5m 容差)
-    bh = (y1 - y0) + 5.0
-    def _overlap(pl):
-        xa = min(q[0] for q in pl); xb = max(q[0] for q in pl)
-        ya = min(q[1] for q in pl); yb = max(q[1] for q in pl)
-        if (xb - xa) > bw or (yb - ya) > bh:   # 大于轮廓太多 = 图框/跨副本框线
-            return False
-        return not (xb < x0 - 1.5 or xa > x1 + 1.5 or yb < y0 - 1.5 or ya > y1 + 1.5)
+    # box=None（无 outline 的楼）→ 不做盒过滤。旧代码在这里无条件解包，
+    # 传 None 必崩（TypeError），而函数签名/文档写的是"可选" —— 名不副实。
+    bw = bh = None
+    if box is not None:
+        x0, y0, x1, y1 = box
+        bw = (x1 - x0) + 5.0      # 轮廓尺寸上限(+5m 容差)
+        bh = (y1 - y0) + 5.0
     for e in pool:
         t = e.dxftype()
         if t in SKIP or _is_axis_layer(e) or _is_anno_layer(e):
@@ -188,16 +224,22 @@ def collect_floor(doc, p, F, box=None):
         if f != F:
             continue
         col = _aci_color(e)
-        lw = 0.8
+        lw = _lineweight_pt(e)
         if t in ("LWPOLYLINE", "LINE", "ARC", "CIRCLE", "SPLINE", "ELLIPSE"):
             pts = _sampled_pts(e, p, F)
             if not pts:
+                _bump("no_pts")
                 continue
             pts = [to_local(p, x, y, F) for x, y in pts]
             if len(pts) < 2:
+                _bump("no_pts")
                 continue
-            if box is not None and not _overlap(pts):
-                continue
+            if box is not None:
+                why = _box_drop(pts, bw, bh, box)
+                if why:
+                    _bump(why)
+                    continue
+            _bump("drawn_line")
             polys.append((pts, col, lw))
         elif t == "TEXT":
             h = float(e.dxf.height or 0.2) * uscale
@@ -207,7 +249,9 @@ def collect_floor(doc, p, F, box=None):
                 r = 0
             lx, ly = to_local(p, e.dxf.insert.x, e.dxf.insert.y, F)
             if box is not None and not _in_box(lx, ly, box):
+                _bump("text_outside")
                 continue
+            _bump("drawn_text")
             texts.append((lx, ly, e.dxf.text, h, r, "text"))
         elif t == "MTEXT":
             h = float(e.dxf.char_height or 0.2) * uscale
@@ -221,7 +265,9 @@ def collect_floor(doc, p, F, box=None):
                 txt = e.text
             lx, ly = to_local(p, e.dxf.insert.x, e.dxf.insert.y, F)
             if box is not None and not _in_box(lx, ly, box):
+                _bump("text_outside")
                 continue
+            _bump("drawn_text")
             texts.append((lx, ly, txt, h, r, "mtext"))
     return polys, texts
 
@@ -290,26 +336,20 @@ def _gallery_html(name, floors, cn="", od=""):
     for F in floors:
         has_rec = os.path.exists(os.path.join(recdir, f"floor{F}.png"))
         cap = f"{disp} · {F + 1}层"
+        # 计数与面积：口径集中在 _render_common（原先这里写的是**包围盒**面积，
+        # c006 首层 10805 ㎡ 而轮廓真实 5698.7 ㎡ —— 虚高 90%，见铁律 17）。
+        # ★ 且**不再挂在 has_rec 里**：没有 B 图时也该有计数。
         extra = ""
+        fj = os.path.join(base, "floors", f"floor{F}.json")
+        try:
+            fl = json.load(open(fj, encoding="utf-8"))
+            extra = RC.caption_counts_html(RC.floor_counts(fl), F, RC.mtime_str(fj))
+        except Exception:  # noqa: BLE001
+            extra = ""
         if has_rec:
             any_pair = True
-            fj = os.path.join(base, "floors", f"floor{F}.json")
-            if os.path.exists(fj):
-                try:
-                    fl = json.load(open(fj, encoding="utf-8"))
-                    ol = fl.get("outline")
-                    area = (int((max(x for x, _ in ol) - min(x for x, _ in ol)) *
-                                (max(y for _, y in ol) - min(y for _, y in ol)))
-                            if ol else None)
-                    extra = (f"　门 {len(fl.get('doors', []))} · "
-                             f"楼梯井 {len(fl.get('stairwells', []))} · "
-                             f"房间 {len(fl.get('rooms', []))}"
-                             + (f" · 面积 {area}㎡" if area else ""))
-                except Exception:  # noqa: BLE001
-                    extra = ""
-        if has_rec:
             rows.append(
-                '<figure class=cmp><div class=pair>'
+                f'<figure class=cmp data-floor="{F}"><div class=pair>'
                 f'<div class=side><span class=tag>源图纸 A</span>'
                 f'<img loading="lazy" src="floor{F}.png" alt="{name} F{F} 源图纸"></div>'
                 f'<div class=side><span class=tag>识别叠加 B</span>'
@@ -317,9 +357,9 @@ def _gallery_html(name, floors, cn="", od=""):
                 f'alt="{name} F{F} 识别"></div>'
                 f'</div><figcaption>{cap}{extra}</figcaption></figure>')
         else:
-            rows.append(f'<figure><img loading="lazy" src="floor{F}.png" '
+            rows.append(f'<figure data-floor="{F}"><img loading="lazy" src="floor{F}.png" '
                         f'alt="{name} {F + 1}层">'
-                        f'<figcaption>{cap}</figcaption></figure>')
+                        f'<figcaption>{cap}{extra}</figcaption></figure>')
     if any_pair:
         h1 = f"{disp} · 逐层对照：源图纸(真值) vs 第一轮识别叠加"
         leg = ("每层并排：左 A = 忠实源 CAD 线稿；右 B = 识别叠加 "
@@ -347,13 +387,16 @@ def _gallery_html(name, floors, cn="", od=""):
             "div.pair img{width:100%}"
             "figcaption{font-size:12px;color:#333;margin-top:5px}"
             "@media(max-width:900px){div.pair{grid-template-columns:1fr}}"
-            "</style></head><body>"
+            + RC.CSS_EXTRA + "</style></head><body>"
             f"<h1>{h1}</h1>"
             f"<p class=leg>{leg}</p>"
             f"<p><a href=\"../_dxf_index.html\">← 总目录</a>"
             + ('　<a href="../compare.html">整页对照版(含全部楼目录)</a>'
                if any_pair else "")
-            + "</p>" + "".join(rows) + "</body></html>")
+            + "</p>" + "".join(rows)
+            # 页面在浏览器里按**当前** floor JSON 重算计数并打过期警告
+            # （本页在 <楼>/dxf_plan/ 下，floors 在上一级 → rel = "../floors/"）
+            + RC.freshness_script("../floors/", floors) + "</body></html>")
 
 
 def _master_html(items):
@@ -384,7 +427,7 @@ def main():
             doc = ezdxf.readfile(p.dxf)
         except Exception as e:  # noqa: BLE001
             failed.append((name, "*", f"读源失败 {str(e)[:80]}")); continue
-        cn = _cn_from_dxf(p)
+        cn = RC.cn_from_dxf(p)
         disp = f"{name} · {cn}"
         fd = os.path.join(BASE, name, "floors")
         floors = sorted(int(os.path.basename(f)[5:-5])
@@ -392,6 +435,7 @@ def main():
         od = os.path.join(BASE, name, "dxf_plan")
         os.makedirs(od, exist_ok=True)
         ok = 0
+        drop = {}          # 本栋累计的剔除记账（按原因）
         for F in floors:
             try:
                 box = None
@@ -402,7 +446,11 @@ def main():
                     if ol:
                         box = (min(q[0] for q in ol), min(q[1] for q in ol),
                                max(q[0] for q in ol), max(q[1] for q in ol))
-                polys, texts = collect_floor(doc, p, F, box)
+                st = {}
+                polys, texts = collect_floor(doc, p, F, box, stats=st)
+                for k in ("oversize", "outside", "text_outside", "no_pts"):
+                    if st.get(k):
+                        drop[k] = drop.get(k, 0) + st[k]
                 if render_floor(name, F, polys, texts,
                                 os.path.join(od, f"floor{F}.png"), disp):
                     ok += 1
@@ -411,6 +459,12 @@ def main():
             except Exception as e:  # noqa: BLE001
                 failed.append((name, F, str(e)[:90]))
         tot += ok
+        # ★ 剔除必须可见：以前是静默的 —— 真构件（雨篷/坡道/外挂梯）若落在轮廓盒
+        #   1.5m 外会被丢掉而图上一片正常。这里把"为什么少画了"印到 stdout。
+        if drop:
+            print(f"      剔除: " + " · ".join(
+                f"{k}={v}" for k, v in sorted(drop.items()) if isinstance(v, int)),
+                flush=True)
         with open(os.path.join(od, "index.html"), "w", encoding="utf-8") as f:
             f.write(_gallery_html(name, floors, cn, od))
         master.append((name, cn, len(floors)))

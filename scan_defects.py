@@ -59,14 +59,28 @@
 D4 是**分组内相对判据**（同构组自己当基线）。所有记录都带 `metric`，
 出报表时同时给**全库命中分布**，让每个数都能被相对读。
 
-产物（**只写 `_qa/`，绝不碰 `data/`**）
-  `_qa/defects.json`        统一清单（含 pos / ids / metric），供 8150 叠框与后续修
-  `_qa/defect_summary.md`   全库总表（按命中条数排名）
+产物（**只写 `_qa/`，绝不碰 `data/`**）—— 按**范围**分址，见下
+  全库跑（不给楼名）
+    `_qa/defects.json`        统一清单（含 pos / ids / metric），供 8150 叠框与后续修
+    `_qa/defect_summary.md`   全库总表（按命中条数排名）
+  点名跑（给了楼名）
+    `_qa/defects_partial.json`        只含点名的那些楼
+    `_qa/defect_partial_summary.md`   同上，总表
   `_qa/defect_shots/*.png`  `--shots`：命中层的对照图（轮廓+墙+房间，命中房间填红）
 
+★ 为什么要分址（2026-09-24 门禁抓到的实洞，不是洁癖）
+  `names = args or 全库` ⇒ 单栋跑一趟时 `allrecs` 只有那一栋，而下面仍然**原子写**
+  `_qa/defects.json` —— 于是 **767 行的全库清单被静默覆盖成只剩一栋，不可回滚**。
+  屏幕上单栋跑和全库跑的结尾长得一模一样（只多一行 `→ _qa/defects.json`）。
+  这正是本仓反复记的那一条：**「只扫了一栋」和「全库只剩一栋」在屏幕上不是同一件事，
+  但当时它们长得一样。** 分址之后，点名跑**物理上够不着**全库清单。
+
+  推论（同样要紧）：`_qa/defects_partial.json` 是**子集**，别拿它当全库台账读。
+  规矩与 `data/collect/_ocr_gaps_STALE_gapmetric.json` 一致：**产物要能自证是哪一趟的。**
+
 用法
-  python -u scan_defects.py                 # 全库扫 → 总表
-  python -u scan_defects.py c103 c104       # 指定楼，打印逐条
+  python -u scan_defects.py                 # 全库扫 → defects.json ＋ 总表
+  python -u scan_defects.py c103 c104       # 指定楼，打印逐条 → defects_partial.json
   python -u scan_defects.py --deep          # 加跑 D6（慢）
   python -u scan_defects.py --shots c103    # 出命中层对照图
   python -u scan_defects.py --selftest      # ★正控：每条判据都必须能变红，否则判据是空的
@@ -85,8 +99,22 @@ import qa_structural as Q                                            # noqa: E40
 BASE = Q.BASE
 QA_DIR = Q.QA_DIR
 SHOT_DIR = os.path.join(QA_DIR, "defect_shots")
-OUT_JSON = os.path.join(QA_DIR, "defects.json")
-OUT_MD = os.path.join(QA_DIR, "defect_summary.md")
+FLEET_JSON = os.path.join(QA_DIR, "defects.json")
+FLEET_MD = os.path.join(QA_DIR, "defect_summary.md")
+PARTIAL_JSON = os.path.join(QA_DIR, "defects_partial.json")
+PARTIAL_MD = os.path.join(QA_DIR, "defect_partial_summary.md")
+
+
+def out_paths(names):
+    """点名了楼 ⇒ 落**局部**产物；没点名 ⇒ 这才是全库那一趟，落全库清单。
+
+    ★ 一个判断一份实现：范围决定产物路径，只在这里判一次。
+      别在 main 里再写一遍 —— 两处写同一个判断，迟早只改一处（本仓栽过）。
+      返回 `(json, md, 是全库吗)`；末位那项是给自检与打印用的，别在调用处再推一遍。
+    """
+    if names:
+        return PARTIAL_JSON, PARTIAL_MD, False
+    return FLEET_JSON, FLEET_MD, True
 
 # 组名只是给人看的分类；阈值出处都写在各自判据里
 GROUP = {"D0": "退化", "D1": "重复", "D2": "台账", "D3": "缺层", "D4": "错帧",
@@ -1000,7 +1028,9 @@ def selftest():
 
     def mut(m):
         c = copy.deepcopy(base_ctx)
-        m(c)
+        # ★ 变异函数可以**回一句话说明「我这份夹具没进到被测分支」**（None / "" = 进去了）。
+        #   记在 c 上而不是靠返回值往回传 —— 调用处（kinds_of / d2_of）直接把 mut(m) 当 ctx 用。
+        c["_fixture"] = m(c)
         return c
 
     def first_room(c):
@@ -1041,13 +1071,37 @@ def selftest():
         c["declared"] = len(c["floors"]) + 3
 
     def m_frame(c):
-        # 把某层房间整体平移 5m（同构组内必现形）
-        for g in c["floors"][1:]:
-            if g.get("rooms"):
+        """整层错帧的实物形态：把**同构组里某一层**的房间整体平移出去。
+
+        ★ 2026-09-24 修 —— 这条正控**长期是空的**，而屏幕上只写「没变红」。
+          原版两处都在**猜**：
+            ① 目标层写死 `c["floors"][1:]`（列表第二层起）。c103 F0 收平之后同构组
+               碎成 `[3,4]` 一组 ＋ 0/1/2/5 各一组，而列表第二层恰好是 floor 1（单例）
+               ⇒ 判据在 `len(gs) < 2` 就 continue 了，变异**根本没进被测分支**；
+            ② 平移量写死 5 m，够不够还得看该层房间离轮廓留了多少余量（留白 >5 m 就探不出去）。
+          两个"猜"叠起来 ⇒ 屏幕上分不清「判据是空的」和「夹具没走到那一步」，
+          而下一步就是去修一条本来就好的判据（CLAUDE.md 铁律 26 第三面）。
+        ⇒ 改法：目标层从**判据自己的分组**里取（`_iso_groups`，一份实现）；
+          平移量**按轮廓算**（把并集底边抬到轮廓顶边之上 5 m）—— 探出量于是
+          = 该层房间并集的高度 + 5 m，天然越过绝对阈 3 m，且不靠任何拍出来的常数。
+          找不到可动的层就**明说**（回一个理由串），由调用处按「夹具没进分支」报。
+        """
+        for gs in _iso_groups(c):
+            if len(gs) < 2:
+                continue
+            for g in gs:
+                rb = rooms_bbox(g)
+                ob = _bbox([(p[0], p[1]) for p in (g.get("outline") or [])])
+                if not rb or not ob or not g.get("rooms"):
+                    continue
+                dy = (ob[3] - rb[1]) + 5.0                 # 并集底边 → 轮廓顶边之上 5 m
+                if dy <= 0:
+                    continue
                 for r in g["rooms"]:
-                    r["poly"] = [[p[0], p[1] + 5.0] for p in r["poly"]]
-                return
-        first_room(c)[1]["poly"] = [[p[0], p[1] + 5.0] for p in first_room(c)[1]["poly"]]
+                    r["poly"] = [[p[0], p[1] + dy] for p in r["poly"]]
+                return None
+        return ("正控 %s 没有「同构层数 ≥2」的组，无处可动 —— 换一栋，"
+                "别倒过来改判据" % name)
 
     def m_deg(c):
         first_room(c)[1]["poly"] = [[0, 0], [1, 1]]
@@ -1057,13 +1111,22 @@ def selftest():
             m_ledger(c)
         c["ledger"].append({"floor": -1, "number": "哨兵", "boundary": [[0, 0], [1, 0], [1, 1]]})
 
-    def _group_floors(c):
+    def _iso_groups(c):
+        """同构层分组 —— **照判据自己的口径**（`_shape_key` 相等且键非空）。
+
+        ★ 夹具要进判据的分支，就得用判据的分组。再写一份「哪几层同构」，
+          两份迟早对不上（本仓记过：一个判断多份实现 ⇒ 同一屏两句话）。
+        """
         groups = defaultdict(list)
         for g in c["floors"]:
             k = Q._shape_key(g.get("outline") or [])
             if k:
                 groups[k].append(g)
-        return max(groups.values(), key=len) if groups else []
+        return list(groups.values())
+
+    def _group_floors(c):
+        gs = _iso_groups(c)
+        return max(gs, key=len) if gs else []
 
     def _push_union_top(g, ob_top, amount):
         """把该层房间并集里**最高的那间**的顶抬到 ob_top+amount。
@@ -1111,6 +1174,20 @@ def selftest():
 
     print("正控：%s（%d 层）" % (name, len(base_ctx["floors"])))
     for fn, label, c in cases:
+        # ★ 2026-09-24 分出两种口径：**「判据是空的」与「夹具没走到那一步」必须分开报。**
+        #   原版两种都写成「没变红 = 空断言」，于是下一步就是去修一条**本来就好的**判据
+        #   （CLAUDE.md 铁律 26 第三面）。实测抓到的实例就在下面 m_frame 里。
+        why = c.get("_fixture")
+        if why:
+            print("  ✗ %-24s **夹具没进分支**：%s" % (label, why))
+            fails.append(label + "（夹具未进分支）")
+            continue
+        # 同族的第三种：变异函数没抛、没自报，可**压根没动过一行**（循环没找到目标之类）。
+        # 它也长得像「判据是空的」—— 三种结局必须分开认，不然修的是判据，坏的是夹具。
+        if {k: v for k, v in c.items() if k != "_fixture"} == base_ctx:
+            print("  ✗ %-24s **夹具没改动任何东西（空变异）**" % label)
+            fails.append(label + "（空变异）")
+            continue
         try:
             got = fn(c) or []
         except Exception as e:                                       # noqa: BLE001
@@ -1119,8 +1196,23 @@ def selftest():
         if got:
             print("  ✓ %-24s 变红 → %s" % (label, got[0]["code"]))
         else:
-            print("  ✗ %-24s **没变红 = 空断言**" % label)
+            print("  ✗ %-24s **没变红 —— 判据是空的**" % label)
             fails.append(label)
+    # ★ 刑具的刑具：把「夹具没进分支」记下来这条链**自己**也要能红。
+    #   链断了的话，变异函数的理由串会被丢掉，两种失败模式又并回同一句「没变红」——
+    #   而那时屏幕上完全看不出来（不过是 `mut` 里少了一行赋值）。
+    print()
+
+    def m_no_target(_c):
+        return "（刑具）本变异故意找不到目标层"
+
+    probe = mut(m_no_target)
+    if probe.get("_fixture") == "（刑具）本变异故意找不到目标层":
+        print("  ✓ 夹具自报没进分支能被记下来 → %r" % probe["_fixture"])
+    else:
+        print("  ✗ 变异函数的理由串没被记下来（`mut` 里那行赋值是不是没了？）实得 %r"
+              % probe.get("_fixture"))
+        fails.append("夹具分类链断开")
     # 分类能力自检：D1 必须能**分清**三种重复 —— 只报"8 个 id 出现多次"不算分清，
     # 因为剔重、改号、改几何是三种完全不同的修法（c103 三种都真实存在）。
     # 实测：c103 F1..F5 每组重复都落在 shift（错位 Δy=27.16）或 diff（1537㎡ vs 3422㎡）。
@@ -1155,6 +1247,26 @@ def selftest():
         else:
             print("  ✗ D1 分类 %-14s **没归到 %s**（实测 %s）" % (label, want, dict(ks)))
             fails.append("D1 分类 " + label)
+    # 范围守卫（★ 这是**数据安全**判据，不是风格判据）。
+    # 实测洞：`python scan_defects.py c057` 会让 767 行的 `_qa/defects.json` 被覆盖成只剩 c057
+    # —— 原子写、不可回滚，而屏幕上只多一行「→ _qa/defects.json」。
+    # ★ 两侧都要断：点名必须落局部、不点名必须落全库。只断一侧会漏掉另一种写反法。
+    print()
+    for argv, want_fleet in (([], True), (["c057"], False), (["c057", "c113"], False)):
+        pj, pm, fl = out_paths(argv)
+        ok = (fl == want_fleet) and (((pj, pm) == (FLEET_JSON, FLEET_MD)) == want_fleet)
+        if ok:
+            print("  ✓ 范围守卫 %-18s → %s" % (argv or "（全库）", os.path.basename(pj)))
+        else:
+            print("  ✗ 范围守卫 %-18s **判错了** → 全库=%s / %s"
+                  % (argv, fl, os.path.basename(pj)))
+            fails.append("范围守卫 argv=%r" % (argv,))
+    # 「只写 _qa/，绝不碰 data/」这句承诺，落成可核的判据。承诺写在 docstring 里没人管，
+    # 写成断言才会在路径被改坏的那一刻红。
+    for p in (FLEET_JSON, FLEET_MD, PARTIAL_JSON, PARTIAL_MD):
+        if os.path.dirname(os.path.abspath(p)) != os.path.abspath(QA_DIR):
+            print("  ✗ 产物路径跑出了 _qa/：%s" % p)
+            fails.append("产物路径出 _qa/ " + p)
     # D2 粒度判据的**两侧守卫**。★ 只写正控是不够的：把"汇总台账不报缺房"做过头，
     #   就会连**真**的房号不符一起静音 —— 那种"改完世界安静了"正是最危险的假绿。
     #   正控：台账换成每层 1 条整层块 ⇒ 必须认出汇总、只报"不适用"、**不许**报缺房；
@@ -1514,6 +1626,13 @@ def main():
                            if os.path.isdir(os.path.join(BASE, d))
                            and os.path.exists(os.path.join(BASE, d, "profile.json")))
     verbose = bool(args)
+    out_json, out_md, fleet = out_paths(args)
+    if fleet:
+        print("全库扫 %d 栋 ⇒ 写全库清单 %s" % (len(names), os.path.basename(out_json)))
+    else:
+        print("★ 点名 %d 栋（%s）⇒ **不写全库清单**；%s 保持不动，本次落 %s"
+              % (len(names), "、".join(names), os.path.basename(FLEET_JSON),
+                 os.path.basename(out_json)))
     os.makedirs(QA_DIR, exist_ok=True)
     allrecs = []
     made = []
@@ -1551,10 +1670,10 @@ def main():
         os.replace(t2, os.path.join(SHOT_DIR, "index.json"))
         print("  对照图共 %d 张 → %s" % (len(idx), os.path.join(SHOT_DIR, "index.json")))
 
-    tmp = OUT_JSON + ".tmp"
+    tmp = out_json + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         json.dump(allrecs, fh, ensure_ascii=False, indent=1)
-    os.replace(tmp, OUT_JSON)
+    os.replace(tmp, out_json)
 
     per = summary(allrecs)
     rows = sorted(per.items(), key=lambda kv: (-kv[1].get("ERROR", 0), -kv[1].get("WARN", 0),
@@ -1593,10 +1712,10 @@ def main():
         "D5 台账哨兵／D6 房间属别层(需 --deep)／D7 并块（一间**真盖住**同层多间，真几何）／"
         "D8 交付面积 vs 台账同号面积比（≥2× 或 ≤0.5×，台账汇总的楼跳过）／"
         "I1–I18 见 qa_structural.py"]
-    tmp = OUT_MD + ".tmp"
+    tmp = out_md + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
-    os.replace(tmp, OUT_MD)
+    os.replace(tmp, out_md)
 
     nerr = sum(1 for r in allrecs if r["sev"] == "ERROR")
     nwarn = sum(1 for r in allrecs if r["sev"] == "WARN")
@@ -1612,7 +1731,10 @@ def main():
         print("   %-4s %-9s %3d 条 / %2d 栋  %s"
               % (r["code"], _sevlabel(r["sev"]), r["recs"], r["prevalence"],
                  "(qa_structural 标注 by design)" if r["by_design"] else ""))
-    print("\n→ %s\n→ %s" % (OUT_JSON, OUT_MD))
+    if not fleet:
+        print("\n⚠ 本次是**局部**产物（只含上面 %d 栋）—— %s 与 %s **一字未动**。"
+              % (len(names), os.path.basename(FLEET_JSON), os.path.basename(FLEET_MD)))
+    print("\n→ %s\n→ %s" % (out_json, out_md))
     return 0
 
 

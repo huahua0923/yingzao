@@ -17,7 +17,9 @@
   · **表里只收跟踪文件**，一条 `_scratch/` 草稿都不收：
     草稿件不在 git 里 ⇒ 新克隆的仓里必然没有 ⇒ 要么整条消失、要么被读成「绿」
     （memory: gauge-coverage-invisible-in-summary）。它们本来也**只量草稿那一面**
-    （`_kg_view_check.py` / `_kg_view_accept.py` 量的是 8155 那份草稿页），
+    （`_kg_view_check.py` / `_kg_view_accept.py` **那时**量的是 8155 那份草稿页；
+    该页 **2026-09-25 已退役**，夹具没跟着走 —— 它们的默认目标现在不在盘上，
+    见 `_scratch/_retired_20260925/README.md` 末节），
     同一个面已有跟踪件在量（`backend/checks/kg_view_accept.py` 的 `--falsify`/`--walk`）
     ⇒ **同一个面不许有两份实现**（README 已按这条划界）。
   · 有些条今天是**预期红**的，要写进 `GAP_ALLOW`，但**预期红也要打出来**，不许静默放过。

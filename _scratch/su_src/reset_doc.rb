@@ -9,7 +9,17 @@
 # 页与 Tag 不在这里删（build_floors.rb 自己会清它自己那几个），只报出来。
 require 'json'
 
-BAK = 'D:/gym3d/_scratch/su_jobs/_su_before_lihua.skp'
+# 由 su_deploy.sh 烘进来的 spec 路径（只为给备份文件起个带楼名的名字；本脚本不用它读几何）
+SPEC = ENV['YZ_SPEC']
+
+# ★ 2026-09-14 修：备份名原先**写死** `_su_before_lihua.skp` —— 不管在建哪栋楼都往同一个
+#   文件覆盖（今天建 c006，日志里 `"backup"=>"..._su_before_lihua.skp"` 就是它）。
+#   后果：每建一栋，**上一栋的"改前"备份就没了**；而 .skp 是含手工操作的唯一副本。
+#   改成带楼名 + 时间戳（楼名从 SPEC 文件名推，取不到就退回 'doc'）。
+_bakname = File.basename(defined?(SPEC) && SPEC ? SPEC.to_s : '').sub(/\.[^.]*\z/, '')
+_bakname = 'doc' if _bakname.nil? || _bakname.empty? || _bakname == 'nil'
+BAK = format('D:/gym3d/_scratch/su_jobs/_su_before_%s_%s.skp',
+             _bakname, Time.now.strftime('%Y%m%d_%H%M%S'))
 m = Sketchup.active_model
 
 before = Hash.new(0)

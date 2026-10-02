@@ -1,6 +1,6 @@
 {
  "criterion_version": 1,
- "ruler_sha12": "37fa4d215f07",
+ "ruler_sha12": "fcf83c4eccc5",
  "what": "⑪ 仓内 .md 档（kb/ 之外）的**既有命中基线**：基线内放行、新增即红。",
  "keys": "文件 → {整行(去首尾空白)的 sha12: 处数}；用内容不用行号（行号会漂，见铁律 31）",
  "excluded": [

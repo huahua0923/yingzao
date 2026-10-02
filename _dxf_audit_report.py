@@ -14,8 +14,7 @@
 """
 import os, sys, json, glob
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
-sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend\vision",
-                r"D:\gym3d\backend", r"D:\gym3d"]
+sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend", r"D:\gym3d"]
 import shapely.geometry as sg
 import _dxf_audit as A
 import run_step, ezdxf

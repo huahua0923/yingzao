@@ -66,7 +66,11 @@ m = Sketchup.active_model
 File.delete(PROG) if File.exist?(PROG)
 
 u = m.options['UnitsOptions']['LengthUnit']
-LEN2M = LEN_TO_M[u] || 1.0
+# ★ 2026-09-14 修：`LEN2M` 的语义是「SU **内部**单位（英寸）→ 米」，恒为 0.0254。
+#   原先写成 `LEN_TO_M[文档单位]`，只有文档恰好是英寸模板时才对 —— 而 `Group#volume`
+#   按英寸³ 返回，与文档 LengthUnit（只影响显示与输入解析）无关。判例见 build_floors.rb
+#   头注释：拿文档单位换算 ⇒ 体积闸门 18741/18741 全红、实测比 60921×（≈0.0254⁻³）。
+LEN2M = 0.0254
 fh = spec['meta']['floor_h'] || 4.2
 PAIR = spec['meta']['pair'] || []
 all = spec['parts']

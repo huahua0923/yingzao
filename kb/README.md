@@ -78,7 +78,7 @@ python -u kb/battery.py --quiet    # 只打结论表，中间输出全进 logs/k
 python -u kb/battery.py --selftest # ★总表**自己**的尺子（六格）
 ```
 
-退出码：`0` 全绿 ｜ `1` 有非预期的红 ｜ `2` 有**没量成**的（后端 8153 没起 / 没装 playwright）。
+退出码：`0` 全绿 ｜ `1` 有非预期的红 ｜ `2` 有**没量成**的（后端 8140 没起 / 没装 playwright）。
 **为什么必须有它**：闸门存在 ≠ 闸门被跑过（铁律 25）—— 漏跑的那件和跑了且绿的那件
 在屏幕上是同一行字。**为什么它自己也要有尺子**：一张永远报绿的总表和一张真的总表
 在屏幕上也长得一样（memory: `saturated-criterion-has-no-resolution`）。
@@ -306,7 +306,11 @@ fail-closed 两面，**以及一格走真调用点**。
 `ask.py` 的开关是**与位置无关**地识别的（`"--run" in args`），而 HTTP 层把用户敲的词原样当
 **一个 argv** 递进去 ⇒ `?building=--run&q=楼层错位` 成功时会让一次「只读查询」变成
 **一次真跑判据 ＋ 写 `data/_meta/kg_runs.json`**；`?building=--pending` 写 `kb/pending.json`。
-而那条路由的约定白纸黑字写着「两条都是写操作，本域**一个都不开放**」。
+而那条路由当时的约定白纸黑字写着「两条都是写操作，本域**一个都不开放**」。
+★ **2026-09-25 那条约定的措辞变了，但这一条教训一个字都没变**：`--run` 现在**有** HTTP 口子
+（`POST /api/kg/run`，按钮在 `#/kg` 上），口径从「没有通路」换成「**有通路 ＋ 本机限定**」；
+`--pending` 仍然没有。⇒ 所以「HTTP 层的那些位置参数会不会被当成开关」这件事**只会更该管**：
+从前失误的后果是「绕过了一条约定」，现在同一个失误的后果是「绕过了那条闸门」。
 ★ `_BUILDING_RE` 原先就是那个形状（`^[A-Za-z0-9_-]{1,32}$`），`--run` 是**合法楼号**。
 
 ⇒ 证据：`_scratch/_sec_review_argv_probe.py` ① 把服务真正要跑的那条 argv 记下来
@@ -321,7 +325,10 @@ fail-closed 两面，**以及一格走真调用点**。
 - **边界拒**：`services/kg.py:_switch_like()` 对 `q` 与 `building` 判「长得像开关」即 `400`，
   并说明理由（它是命令行的开关位置，不是说法）；
 - **结构上不可能**：`kb/ask.py` 认 `--`（`split_at_dashdash`）—— `--` 之后的词**永远**是查询词。
-  三个调用方（`services/kg.py`、`_scratch/_kg_view.py`、命令行）都在位置参数前插 `--`。
+  两个调用方（`backend/api/services/kg.py`、判据夹具 `backend/checks/kg_view_accept.py`）
+  与命令行都在位置参数前插 `--`。
+  （原先的第三个 `_scratch/_kg_view.py` **2026-09-25 已退役**，见本文件后面那节；
+  这句话当时写的是「三个」，退役后不改就成了**指着一个不在的调用方**的说法。）
   ⇒ 「一个 token 是开关还是说法」这件事**只有这一个裁决处**（铁律 29）。
 - 判据：**T13**（含端到端两方向：开关位的 `--list` 必须列出症状表=阳性对照；
   `-- --list` 必须**不**列出）。
@@ -332,8 +339,19 @@ fail-closed 两面，**以及一格走真调用点**。
   且 `python -u kb/` 这个前缀本身很宽（含 `build_kb.py` 这类**会写产物**的入口）。
   ⇒ 这一层的强度是「挡住顺手的与错手的」，**不是沙箱**。要更强 = 把前缀白名单换成
   **逐条精确命令**，那是一次登记面变更（12 条命令要逐条重登记），留给下次。
-- ★ **进程不是源码**：8140/8153/8155 三个活进程跑的是**旧代码**，重启之前这两处修复
-  **都不在线**（实测：活进程 `?q=--list` 仍被当开关）。**重启是待办，不是已完成。**
+- ★ **进程不是源码** —— 这条**当时**的残留（2026-09-24 记）**已于 2026-09-25 收口**，
+  但下面的教训一个字都没变，只是换了主语：
+  · 当时：8140/8153/8155 三个活进程跑的是**旧代码**，两处修复**都不在线**
+    （实测：活进程 `?q=--list` 仍被当开关）。重启是待办。
+  · 现在：**8140 已重启到当前源码**，实测 `GET /api/kg/ask?q=--list` 与
+    `?q=--list&building=c057` 都回 **400 `bad_request`**「查询词里不许出现开关形的词」，
+    而正常说法照常 **200**（这是阳性对照 —— 没有它，400 也可能只是整条路由坏了）。
+    结构层的证据另有一条：作业记录里的 `cli` 是
+    `['python','-u','kb/ask.py','--json','--top','3','--run','--','楼层错位']`，`--` 真的在。
+  · 8153（同一份管理台在另一端口上的 stray 实例，`-m backend.api.run_api`）与 8152
+    （2026-09-23 留痕验收留下的那份）**2026-09-25 已退役**；8155 待 P5 退役（未进 git，退役即删）。
+  ⇒ 教训：**改完 `backend/api/**` 必须重启**，否则修复是「存在但不在线」——
+    而这两者在屏幕上长得一样（本仓铁律 20）。
 - 两条探针在 `_scratch/`（一次性、不进 git）。**durable 的是 T12/T13**（在 `ask.py --selftest` 里，
   每次自检都跑）；探针的探针是 **`kb/ask_guard_falsifier.py`**（2026-09-24 从 `_scratch/` 收进
   `kb/`：它改坏的是**跟踪文件** `kb/ask.py` 的六处，不跟着 `_scratch/` 退役 ——
@@ -534,30 +552,39 @@ T10 落地后再跑 `_rd2_falsify_hand_version.py`，④ 报红：「还原并�
 
 | 面 | 谁在服务 | 状态 |
 |---|---|---|
-| 后台视图（`frontend/admin/js/views/kg.js`） | `backend/api/run_api.py`（8140；临时实例 8153） | ★**正式的那个**，随仓走 |
-| 临时页面（`_scratch/_kg_view.py`） | 8155，只读 HTTP | 草稿：`_scratch/` 整体待搬出仓（P3），**别在这上面接东西** |
+| 后台视图（`frontend/admin/js/views/kg.js`） | `backend/api/run_api.py`（8140） | ★**只剩这一个面**，随仓走 |
 
-★ **正式面的验收**（在仓里，不在 `_scratch/`）：
+★ **2026-09-25 收口**：原先的第二个面（`_scratch/_kg_view.py`，8155，只读 HTTP）**退役了** ——
+不是搬进 8140 再留一份，是**并掉**：那条页面与后台面读的是同一份 `kb.json`，
+且 8155 那个文件**未进 git**（连「可复现地起起来」都做不到）。
+⇒ 「分面可以各有一份、同一个面不许有两份」这条边界**没有变**，变的是：**现在只有一个面**。
+⇒ 它原来那 900 秒超时的 `--run` 也一起并进来了，口径见下面「跑判据」那一段。
 
-    python -m backend.checks.kg_view_accept --parity --base http://127.0.0.1:8153
-    python -m backend.checks.kg_view_accept --shapes --base http://127.0.0.1:8153
+★ **验收**（在仓里，不在 `_scratch/`；`--base` 指**正在服务当前源码**的那个口）：
+
+    python -m backend.checks.kg_view_accept --parity   --base http://127.0.0.1:8140
+    python -m backend.checks.kg_view_accept --shapes   --base http://127.0.0.1:8140
     python -m backend.checks.kg_view_accept --falsify
-    python -m backend.checks.kg_view_accept --walk   --base http://127.0.0.1:8153
+    python -m backend.checks.kg_view_accept --walk     --base http://127.0.0.1:8140
+    python -m backend.checks.kg_view_accept --activation --base http://127.0.0.1:8140
 
-★ 另有一份**只测草稿页**的同类检查 `_scratch/_kg_view_accept.py`（四条判据：页面里没有第二份
-关键词表／页面必须去问 CLI／递出来的图 == 盘上的图／页面答案 == 命令行答案）。
-它随 `_scratch/` 一起退役，**不要拿它替代上面四条** —— 判据按接口分面，草稿页的检查
-证明不了后台面；反过来也一样。这就是「一个判断两份实现」的边界：**分面可以各有一份，
-同一个面不许有两份**。
+★ `--activation` 是 2026-09-25 加的第五个模式，管**扩散激活那张图**（`GET /api/kg/activation`）：
+节点/边/缺口按 `backend/checks/data/kg_activation_golden.json` 逐字段比，
+外加一条**形状判据**（每个 kind 的必需字段齐不齐）。⇒ 它与 `--parity` 是**两把尺子**：
+parity 量「同一个词两边答得一样不一样」，activation 量「图上该有的点在不在、缺口数对不对」。
+`--parity` 盖不住后者（图根本没有「查询词」这个概念，它是整张图）。
 
-四个模式**各盖不住一块**（parity 盖不住「画不出来」；shapes 盖不住「值的形状不对」——
+★ 四个旧模式**各盖不住一块**（parity 盖不住「画不出来」；shapes 盖不住「值的形状不对」——
 实测过 `mechanism` 是字符串却被喂进列表那一支 ⇒ 查陷阱整页白屏，而 shapes 当时是**绿的**；
-`--walk` 才看得见），所以四个都要，退出码 **3 = 没量成**，与 1 分开。
-★ **比之前先确认那个口上跑的是当前源码**（本机实测：8140 是 06:12 起的，`kg.py` 是 10:51 改的
-⇒ 拿 8140 比会量到旧进程，而屏幕上毫无差别）。已改用 10:56 起的 8153 实例。
+`--walk` 才看得见），所以都要，退出码 **3 = 没量成**，与 1 分开。
+★ **比之前先确认那个口上跑的是当前源码**（本机实测过一次：8140 是 06:12 起的，`kg.py` 是 10:51 改的
+⇒ 拿 8140 比会量到旧进程，而屏幕上毫无差别）。`GET /api/capabilities` 的 `endpoints`
+就是给这件事用的：它由 `app.routes` **现算**，所以「这个口认不认得这条路由」当场可查。
 ★ 页面**不许有第二份关键词表**：实测扫过 `kg.js` / `api.js` / `routers/kg.py` / `services/kg.py`，
 家族 slug 只出现 1 次、而且是在**注释里举的例子**（`// family / trap 是节点 id（floor-misalign / trap-…）`）
 —— 即「页面自己把词映射成家族」这件事在两侧都不存在，两侧都只能去问 CLI。
+★ 同理，**页面上也不许有第二份配色表 / 第二份节点摆放规则**：`KIND` 那张表是色的唯一出处，
+而「哪几个机器节点算缺口」由后端 `graph()` 的 `unmapped` 说了算 —— 页面只画，不判。
 
 ## 智能体流程（本图谱的**唯一**消费者是智能体）
 
@@ -574,8 +601,17 @@ python -u kb/ask.py --selftest            # 刑具清单**以输出里那串枚�
 python -u kb/ask_falsifier.py             # ★--selftest 自己的阳性对照（6 处改坏都要红）
 python -u kb/gate.py --anchors            # ★每条锚点「此刻指到什么内容」（改完文档必看一眼）
 python -u kb/gate.py --record             # 重新登记基线；★会列出变动的文件＋指进去的锚点
-python -m backend.checks.kg_view_accept --parity --base http://127.0.0.1:8153   # ★K5 验收（见末节）
+python -m backend.checks.kg_view_accept --parity --base http://127.0.0.1:8140   # ★K5 验收（见末节）
 ```
+
+★ **`--run` 的两条路（2026-09-25 起）**：命令行照旧；**HTTP 上现在也有一条** ——
+`POST /api/kg/run`（页面 `#/kg` 上那个按钮），走本仓**既有的那一处**执行面判定
+（`backend/api/deps.py:exec_denied_reason`）：**非回环来源一律 403，除非**设了
+`GYM3D_ADMIN_TOKEN` 且带对 `X-Admin-Token`；`GYM3D_COMPUTE=0` 时也是 403。
+⇒ 口径是「**有通路 ＋ 本机限定**」，**不是**「没有通路」。
+⇒ 它跑在 `services.jobs` 里（真超时、真并发上限、日志落文件），**不在请求处理里等** ——
+`--run` 最坏 900 秒，等出来的那次请求会拖住管理进程（所有屏共用一个事件循环）。
+⇒ 仍然**没有** HTTP 通路的两条是 `--pending`（写 `kb/pending.json`）与 `build_kb.py`（重打包）。
 
 ★ **「--selftest 有 11 组刑具」这句话本身就该被删掉。** 输出的第一行是「刑具全部能红 ——」
 后面跟着**枚举**（`miss` 不空回／`unverified` 与 `hit` 分开／单字别名不许凭子串点亮／…），

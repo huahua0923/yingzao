@@ -56,8 +56,13 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+# ★ 第 4 项原来是 `_scratch`（为了找到 `_defect_census`）。2026-09-24 那个文件随
+#   「中间产物移出仓库」收编进 `backend/checks/`，所以这一项**跟着文件走** ——
+#   留着 `_scratch` 会在它移出后变成一个指向不存在目录的 sys.path 项：
+#   不报错、不吭声，直到某天有人 import 不进来才发现（memory: silent-failure-needs-a-voice）。
 sys.path[:0] = [ROOT, os.path.join(ROOT, "backend"),
-                os.path.join(ROOT, "backend", "web"), os.path.join(ROOT, "_scratch")]
+                os.path.join(ROOT, "backend", "web"),
+                os.path.join(ROOT, "backend", "checks")]
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 import shapely.geometry as sg                                              # noqa: E402

@@ -41,7 +41,9 @@ end
 
 m = Sketchup.active_model
 u = m.options['UnitsOptions']['LengthUnit']
+# 文档单位的米当量，**只用于报告**；换算一律用固定 IN2M（SU 内部单位恒为英寸，见 build_floors.rb 的判例）
 LEN2M = { 0 => 0.0254, 1 => 0.3048, 2 => 0.001, 3 => 0.01, 4 => 1.0 }[u] || 1.0
+IN2M = 0.0254
 mine = m.entities.grep(Sketchup::Group).select { |g| g.name.to_s.start_with?('yingzao-') }
 
 R = { 'unit' => u, 'len2m' => LEN2M, 'group_count' => mine.length,
@@ -74,29 +76,29 @@ R['groups'] = mine.map do |g|
     subs[sg.name] = { 'faces' => sf.length, 'edges' => all_edges(sg.entities).length,
                       'tag' => (sg.layer.name rescue nil),
                       'faces_by_tag' => st.sort_by { |_, v| -v }.to_h,
-                      'area_m2' => (sf.sum { |f| f.area } * (LEN2M**2)).round(3) }
+                      'area_m2' => (sf.sum { |f| f.area } * (IN2M**2)).round(3) }
   end
   gt = Hash.new(0)
   faces.each do |f|
     if f.material
-      fa[f.material.name] += f.area * (LEN2M**2)
+      fa[f.material.name] += f.area * (IN2M**2)
       fc[f.material.name] += 1
     end
-    ba[f.back_material.name] += f.area * (LEN2M**2) if f.back_material
+    ba[f.back_material.name] += f.area * (IN2M**2) if f.back_material
     (f_by_tag[f.layer.name] += 1 rescue f_by_tag['<无>'] += 1)
     (gt[f.layer.name] += 1 rescue gt['<无>'] += 1)
     ln = (f.layer.name rescue nil)
     unless ln && ln.start_with?('yz构件-')
       c = f.bounds.center
       stray_faces << [g.name, ln, (f.material ? f.material.name : nil),
-                      (f.area * (LEN2M**2)).round(4), f.edges.length,
+                      (f.area * (IN2M**2)).round(4), f.edges.length,
                       [c.x.to_m, c.y.to_m, c.z.to_m].map { |v| v.round(3) }]
     end
   end
   by_group_tag[g.name] = gt.sort_by { |_, v| -v }.to_h
   # ①e 逐组逐色面积：逐色对账差一大截时，靠它定位到**哪一层哪一类**
   garea = Hash.new(0.0)
-  faces.each { |f| garea[f.material.name] += f.area * (LEN2M**2) if f.material }
+  faces.each { |f| garea[f.material.name] += f.area * (IN2M**2) if f.material }
   mat_by_group[g.name] = garea.map { |k, v| [k, v.round(3)] }.sort_by { |_, v| -v }.to_h
   all_edges(g.entities).each do |e|
     (e_by_tag[e.layer.name] += 1 rescue e_by_tag['<无>'] += 1)
@@ -117,7 +119,7 @@ no_mat_n = 0
 back_only_n = 0
 mine.each do |g|
   all_faces(g.entities).each do |f|
-    ar = f.area * (LEN2M**2)
+    ar = f.area * (IN2M**2)
     all_area += ar
     unless f.material
       no_mat_area += ar
@@ -137,7 +139,7 @@ mine.each do |g|
   R['big_horiz'][g.name] = all_faces(g.entities)
                               .select { |f| f.normal.z.abs > 0.99 }
                               .map { |f| [(f.bounds.center.z.to_m * 1000).round / 1000.0,
-                                          (f.area * (LEN2M**2)).round(3)] }
+                                          (f.area * (IN2M**2)).round(3)] }
                               .select { |_, a| a > HORIZ_MIN_M2 }.sort
 end
 R['horiz_min_m2'] = HORIZ_MIN_M2

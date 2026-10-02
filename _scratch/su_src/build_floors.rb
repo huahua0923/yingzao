@@ -37,7 +37,16 @@ NOTE_TAG = 'yingzao-用途标注'
 CAT_PREFIX = 'yz构件-'
 CAT_ORDER = %w[墙 窗 门 楼梯 柱 楼板 地垫 屋顶 场地 其他].freeze
 HIDE_IN_PLAN = %w[墙 窗].freeze     # 平面页关掉这两类（用户点名的「墙体隐藏、窗户隐形」）
+# 文档单位的"米当量"——**只用于报告**（`unit` / `len2m` 两个字段），不参与任何换算。
+# ★ 别拿它当"内部单位→米"的换算因子：SU 的内部几何单位**永远是英寸**（见 IN2M）。
 LEN_TO_M = { 0 => 0.0254, 1 => 0.3048, 2 => 0.001, 3 => 0.01, 4 => 1.0 }.freeze
+#: SU 内部单位（英寸）→ 米。`Face#area`＝英寸²、`Group#volume`＝英寸³、`Length#to_f`＝英寸，
+#: 三者**都与文档 LengthUnit 无关**（LengthUnit 只影响显示与输入解析）。
+#: ★ 2026-09-14 判例：原先读回一律乘 `LEN2M`（＝按文档单位查表），只有文档恰好是英寸模板时
+#:   才蒙对。今天把文档钉成米（LengthUnit=4）后，体积闸门当场 **18741/18741 全红**、
+#:   实测比 60921×（≈0.0254⁻³）——而**几何其实完全正确**（几何一律走 `.m`，见 build_part），
+#:   等于把好模型判成坏模型。判据必须量"要落盘的那件东西"，不是量"显示单位"。
+IN2M = 0.0254
 
 def prog(s)
   File.open(PROG, 'a') { |f| f.puts("#{Time.now.strftime('%H:%M:%S')} #{s}") }
@@ -59,6 +68,160 @@ def prism(ents, ext, holes, z0, z1)
   true
 rescue StandardError
   false
+end
+
+# ---- 退化轮廓修复：**只在已经失败的件上重试** ----
+#
+# 证据来自 `su_src/probe_degen.rb`（**自标定**：对照组 2×3×1 命中 6.000，标定因子 = 0.0254³，
+# 两条独立路径 —— `Group#volume` 实测比 与 0.0254³ —— 一致）。
+# c006 顶层 `exp 23823.055 − act 23787.42 = 35.635`，**精确等于这 4 件的规格体积和**，两类：
+#
+#   · **洞贴外边界**（`parts[2565]` F1 地垫：727 点外轮廓 + 348 点内洞，洞到外环 0.000000 m）
+#     机制不是"体积算不出"，是上面的 `prism()`：洞面与外环面**共享一条边**，`hf.erase!`
+#     把那条共享边一并抹掉，外环的面跟着废 ⇒ 这件建出来零体积（raw_volume = −1.0 哨兵）。
+#     把洞向内推 2mm 打破相切后 err = 0.0（精确）。
+#   · **亚毫米边**（`parts[487/488/489]` F0 内墙：同一 14 点 ext 分三段 z，含 1.000mm 边）
+#     删掉该边的一个端点后 err = 1e-06（精确）。
+#
+# ★ 为什么是"失败才重试"而不是按几何阈值预筛：这一类的离线判据不存在 —— 墙那一类
+#   「最接近 180° 的转角」偏差在全库是**连续分布**（0.017°→10° 平滑铺开、无断点），
+#   c006 偏差 <1° 的有 **154 件而真败只有 3 件**。任何阈值都是过拟合（`_probe_degen_gen.py`
+#   的原话）。所以判据只能由 SU 当场给，修复也只在当场判失败之后走。
+# ★ 这样射程为**零**：建得好的件（全库 41.9 万件）永远不进这条路；且重试结果由**同一道
+#   体积门禁复验** —— 修不好照样记 `vol_bad`，不会把真故障掩盖成"修好了"。
+MIN_EDGE = 0.001   # m：1 mm 以下的边（probe 里那个致命用例正是 1.000mm）
+TANGENT  = 0.001   # m：洞顶点离外环这么近就按相切处理
+NUDGE    = 0.002   # m：把相切点推离外环 2mm（probe 的可证最小改动）
+
+def seg_closest(px, py, ax, ay, bx, by)
+  dx = bx - ax
+  dy = by - ay
+  l2 = dx * dx + dy * dy
+  t = l2 <= 0 ? 0.0 : [0.0, [1.0, ((px - ax) * dx + (py - ay) * dy) / l2].min].max
+  cx = ax + t * dx
+  cy = ay + t * dy
+  [Math.hypot(px - cx, py - cy), cx, cy]
+end
+
+# 丢掉与前一顶点距离 < MIN_EDGE 的顶点（含"末点贴首点"的收尾）。少于 3 点则原样返回 ——
+# 宁可不动也不能把环退化成线段。
+def drop_short_ring(ring)
+  return ring if ring.length < 4
+  out = []
+  ring.each do |p|
+    q = out.last
+    out << p if q.nil? || Math.hypot(p[0] - q[0], p[1] - q[1]) >= MIN_EDGE
+  end
+  out.pop while out.length > 3 &&
+               Math.hypot(out.last[0] - out.first[0], out.last[1] - out.first[1]) < MIN_EDGE
+  out.length >= 3 ? out : ring
+end
+
+# 把贴住外环的洞顶点推离外环 NUDGE 米，打破相切（⇒ 不再有共享边 ⇒ erase! 只抹洞自己的边）。
+# 方向 = 背离外环上最近点；顶点**正好落在**外环上时该方向退化，改用洞在该点的内法线
+# `normalize(v − u)`（u = p−a、v = b−p；CCW 环下它就是指向洞内部的那一侧）。
+def push_off_ext(hole, ext)
+  n = hole.length
+  m = ext.length
+  return hole if n < 3 || m < 3
+  hole.each_with_index.map do |p, i|
+    best_d = Float::INFINITY
+    best_x = best_y = nil
+    m.times do |j|
+      q = ext[j]
+      r = ext[(j + 1) % m]
+      d, x, y = seg_closest(p[0], p[1], q[0], q[1], r[0], r[1])
+      if d < best_d
+        best_d = d
+        best_x = x
+        best_y = y
+      end
+    end
+    next p if best_d >= TANGENT
+
+    vx = p[0] - best_x
+    vy = p[1] - best_y
+    len = Math.hypot(vx, vy)
+    if len < 1e-9
+      a = hole[(i - 1) % n]
+      b = hole[(i + 1) % n]
+      ux = p[0] - a[0]
+      uy = p[1] - a[1]
+      wx = b[0] - p[0]
+      wy = b[1] - p[1]
+      lu = Math.hypot(ux, uy)
+      lw = Math.hypot(wx, wy)
+      next p if lu < 1e-12 || lw < 1e-12
+      vx = wx / lw - ux / lu
+      vy = wy / lw - uy / lu
+      len = Math.hypot(vx, vy)
+      next p if len < 1e-9
+    end
+    [p[0] + vx / len * NUDGE, p[1] + vy / len * NUDGE]
+  end
+end
+
+# ---- 第三类退化：**外环自近触**（轮廓上一个顶点离一条**不相邻**的边只差几微米）----
+#
+# 证据（2026-09-30，`su_src/probe_neartouch.rb`；两只对照同一次跑：
+# **自校准** 10×10×0.2 得 20.000000（期望 20.000）、**阴性对照** 一件本来就好的板
+# #11006 得 106.169433 vs 规格 106.169441（差 8e-06）⇒ 尺子是准的）：
+#   c006 建完有 **10 件** `Group#volume` 返回哨兵 **-1.0**（回执里印成 `-0.0`，
+#   因为 `(-1.0 * 0.0254³).round(4) = -0.0` —— **那不是体积，是"不是实心体"**）。
+#   这 10 件**全部**命同一个形状：外环上有个顶点离**不相邻**的边只差
+#   1 µm ~ 20 µm（#10989 2µm、#16105 20µm、#16999 20µm、#13566 8µm …）。
+#   SU 的模型容差是 0.001 英寸 = **25.4 µm** ⇒ 这点缝隙在 SU 眼里是**同一个点**，
+#   `add_face` 把它并到那条边上 ⇒ 面自触 ⇒ `pushpull` 收不成封闭体。
+#   （原先的假设"`add_face` 把面拆成两块"**被实测否掉**：12 行里
+#    `add_face 后该组面数` 全是 **1**。）
+#
+# ★ **"丢掉那个顶点"不是修法**（实测否掉）：#10989 / #13566 丢掉后**仍是 −1.0**；
+#   #16105 得 899.568699（规格 894.177380，差 **+5.391319**）、#16999 差 **+5.39136**
+#   （两件误差逐位相同 —— F6/F7 屋顶本来就是同一份轮廓）、#2673 得 0.187508（规格 0.026120）、
+#   #19493 得 0.843788（规格 0.117538）⇒ 那些顶点是**真角点**，删了就把形状改了。
+#
+# 所以修法是把缝隙**撑开**，不是删点 —— 与上面 `push_off_ext`（把贴住外环的洞顶点推离
+# 2mm 打破相切）同一个思路，只是这次撑的是外环跟**它自己**。
+# 位移上界 = SELF_TOUCH − d ≤ 100 µm ⇒ 面积变化 ≈ 位移 × 邻边 / 2，远在 VOL_TOL 之内。
+SELF_TOUCH = 0.0001   # m：SU 容差 0.001 英寸 = 25.4 µm 的约 4 倍，也是实测最坏那条缝的 5 倍
+
+# 把「离不相邻边 < SELF_TOUCH」的顶点沿**背离那条边**的方向推到正好 SELF_TOUCH。
+# 位移对**原环**一次算完再统一施加 —— 边算边改会让后面的判定读到已经动过的邻居。
+# 顶点**正好落**在那条边上时方向退化（len≈0）⇒ 不猜方向、不动它，让体积门禁去报。
+def fix_selftouch(ext)
+  n = ext.length
+  return ext if n < 4
+  moves = {}
+  n.times do |i|
+    p = ext[i]
+    best = nil
+    n.times do |j|
+      next if j == i || (j + 1) % n == i       # 跳过两条**相邻**边（i 自己就是它们的端点）
+      a = ext[j]
+      b = ext[(j + 1) % n]
+      d, cx, cy = seg_closest(p[0], p[1], a[0], a[1], b[0], b[1])
+      best = [d, cx, cy] if best.nil? || d < best[0]
+    end
+    next if best.nil? || best[0] >= SELF_TOUCH
+    vx = p[0] - best[1]
+    vy = p[1] - best[2]
+    len = Math.hypot(vx, vy)
+    next if len < 1e-12
+    k = (SELF_TOUCH - best[0]) / len
+    moves[i] = [p[0] + vx * k, p[1] + vy * k]
+  end
+  return ext if moves.empty?
+  ext.each_with_index.map { |p, i| moves[i] || p }
+end
+
+# 返回 [ext', holes']；什么都没改就返回原对象（调用方据此决定要不要重建）。
+def normalize_degenerate(ext, holes)
+  ne = fix_selftouch(drop_short_ring(ext))     # ★ 第三类：外环自近触（见上）
+  nh = holes.map do |h|
+    g = drop_short_ring(h)
+    push_off_ext(g, ne)
+  end
+  [ne, nh]
 end
 
 # 侧壁配对按**边中点**（端点会栽在毫米半格上，见 build_model.rb 的长注释）。
@@ -91,6 +254,12 @@ spec = JSON.parse(File.read(SPEC, mode: 'rb').force_encoding('UTF-8'))
 m = Sketchup.active_model
 File.delete(PROG) if File.exist?(PROG)
 
+# 把文档单位显式设成米（LengthUnit=4）—— 只为**显示/输入口径一致**（交付件上别人量尺寸、
+# 输入 4200 时看到的是同一个单位），**与几何无关**：几何一律走 `.m`（见 build_part），
+# 内部存的是英寸，换文档单位不会改一个顶点。今天 10:28 那次是英寸模板（unit=0）、
+# 13:19 新开文档是米（unit=4），同一个 spec 建出的楼在图上"尺寸标注"一个显示英寸一个显示米。
+m.options['UnitsOptions']['LengthUnit'] = 4      # 4 = Meters（见 LEN_TO_M）
+m.options['UnitsOptions']['LengthPrecision'] = 2 # 显示到 0.01m，够建筑用
 u = m.options['UnitsOptions']['LengthUnit']
 LEN2M = LEN_TO_M[u] || 1.0
 meta = spec['meta'] || {}
@@ -133,7 +302,15 @@ R = {
 # 只剩三万个散面，按组名认就完全看不见它，理化楼会直接盖在它身上。改成「顶层实体清单」判据：
 # 新文档顶层实体数 = 0，所以只要 `m.entities` 里还有非我所有的东西，就是没开新文档。
 mine_top = m.entities.grep(Sketchup::Group).select { |g| my_names.include?(g.name.to_s) }
-foreign = m.entities.to_a - mine_top
+# ★ 2026-09-14：**底图是"有意共存"的参照物，不算外来实体**（B 路线）。
+#   每层一张 Image、tag 前缀 `底图`；它不参与构建、也不该被守卫当成"没开新文档"。
+#   实测判例：贴完 11 张底图再投构建 ⇒ `aborted: 文档顶层还有 11 个不属于我的实体（Image×11）`，
+#   构建 2.8 秒就退（正常要 300+ 秒）。所以这里把底图从 foreign 里摘出去。
+bg_imgs = m.entities.grep(Sketchup::Image).select do |im|
+  (im.layer.name.to_s.start_with?('底图') rescue false)
+end
+foreign = m.entities.to_a - mine_top - bg_imgs
+R['bg_images'] = bg_imgs.length
 fk = Hash.new(0)
 foreign.each { |e| fk[e.class.name.split('::').last] += 1 }
 conflict = foreign.first(8).map { |e| "#{e.class.name.split('::').last}:#{(e.respond_to?(:name) ? e.name : '').to_s}" }
@@ -270,8 +447,10 @@ else
     end
 
     built = noface = bad_v = bad_f = miss = painted = nlab = 0
+    vol_fixed = 0                    # 体积对不上、经退化修复后对齐的件数（可见，不静默）
     missed = []
     verr = []
+    fberr = []                       # 面数对不上的**是哪几件**（只报个数等于没报）
     maxd = 0.0
     hist = Hash.new(0)
     exp_vol = Hash.new(0.0)
@@ -279,6 +458,7 @@ else
     g_built = Hash.new(0)
     g_noface = Hash.new(0)
     g_vol_bad = Hash.new(0)
+    g_vol_fixed = Hash.new(0)
     g_faces_bad = Hash.new(0)
     g_miss = Hash.new(0)
     g_cat = Hash.new(0)
@@ -296,6 +476,11 @@ else
         next
       end
       exp_vol[gn] += p['vol']
+      # 期望面数：默认就是规格给的 `nf`。**但下面退化修复一旦真动了环，就得跟着改**——
+      # `nf` 是规范化**前**的期望（= 边数 + 2，已对全库 20632 件逐件验过 Δ=0），
+      # `drop_short_ring` 丢掉一个顶点就少一条边 ⇒ 少一个侧面。不改的话，那 3 件修好的墙
+      # 会在 faces_bad 里年年喊狼 —— 全库 48 栋跑下来就是把真故障淹掉。
+      nf_exp = p['nf']
       # 建在**二级组**里（同 sub 的部件才同容器；见 2b 段的长注释）
       g = subg_of.call(gn, p['sub'] || p['cat'] || '其他', p['cat'] || '其他').entities.add_group
       unless prism(g.entities, p['ext'], p['holes'] || [], p['z0'], p['z1'])
@@ -308,10 +493,37 @@ else
       g_built[gn] += 1
 
       vol = (begin
-        g.volume * (LEN2M**3)
+        g.volume * (IN2M**3)
       rescue StandardError
         nil
       end)
+
+      # ★ 体积对不上 ⇒ 当场重试一次**退化轮廓修复**（洞贴外边界 / 亚毫米边）。理由与射程见
+      #   `normalize_degenerate` 上面的长注释：离线无判据，所以只能"失败才修"；且修复结果
+      #   由**下面同一道门禁复验** —— 修不好照样记 vol_bad，不会把真故障洗成"修好了"。
+      if vol.nil? || (vol - p['vol']).abs > VOL_TOL
+        ne, nh = normalize_degenerate(p['ext'], p['holes'] || [])
+        # 值比较（不是 `equal?` —— `drop_short_ring` 没事也返回新数组，对象身份永远不等，
+        # 那样这个守卫就形同虚设）。没改动就不重建，省一次白费的重建。
+        unless ne == p['ext'] && nh == (p['holes'] || [])
+          g.erase! if g.valid?
+          g = subg_of.call(gn, p['sub'] || p['cat'] || '其他', p['cat'] || '其他').entities.add_group
+          if prism(g.entities, ne, nh, p['z0'], p['z1'])
+            v2 = (begin
+              g.volume * (IN2M**3)
+            rescue StandardError
+              nil
+            end)
+            if v2 && (v2 - p['vol']).abs <= VOL_TOL
+              vol = v2
+              vol_fixed += 1
+              g_vol_fixed[gn] += 1
+              nf_exp = ne.length + nh.sum(&:length) + 2   # 环真变了 ⇒ 期望面数跟着变
+            end
+          end
+        end
+      end
+
       act_vol[gn] += vol if vol
       if vol.nil? || (vol - p['vol']).abs > VOL_TOL
         bad_v += 1
@@ -320,9 +532,10 @@ else
       end
 
       faces = g.entities.grep(Sketchup::Face)
-      unless faces.length == p['nf']
+      unless faces.length == nf_exp
         bad_f += 1
         g_faces_bad[gn] += 1
+        fberr << [gn, p['kind'], pi, faces.length, nf_exp] if fberr.length < 10
       end
 
       capm = p['purpose'] ? mat_purpose.call(p['purpose'], p['cap']) : mat_hex.call(p['cap'])
@@ -597,14 +810,15 @@ else
         'subs' => (sub_groups[n] || {}).keys,
         'sub_faces' => (sub_groups[n] || {}).map { |s, sg| [s, all_faces(sg.entities).length] }.to_h,
         'exp_vol' => exp_vol[n].round(3), 'act_vol' => act_vol[n].round(3),
-        'vol_bad' => g_vol_bad[n], 'faces_bad' => g_faces_bad[n], 'edge_miss' => g_miss[n] }
+        'vol_bad' => g_vol_bad[n], 'vol_fixed' => g_vol_fixed[n],
+        'faces_bad' => g_faces_bad[n], 'edge_miss' => g_miss[n] }
     end
     # 水平面台账（>50 m² 的，按 z 平面列）：直接验「地面/屋面的盖面还在不在」——
     # 每个带在**楼板底面那个 z**上都该有一块面积 == 本层足迹的板面；屋顶带在 21.0 要有
     # 屋面板下盖面、21.2 要有上盖面。被合并删掉的话这一格就是空的，一眼就能看出来。
     R['big_horiz'] = groups.map do |gn, g|
       [gn, all_faces(g.entities).select { |f| f.normal.z.abs > 0.99 }
-             .map { |f| [(f.bounds.center.z.to_m * 1000).round / 1000.0, (f.area * (LEN2M**2)).round(3)] }
+             .map { |f| [(f.bounds.center.z.to_m * 1000).round / 1000.0, (f.area * (IN2M**2)).round(3)] }
              .select { |_, a| a > 50.0 }.sort]
     end.to_h
     # 构件类别实测：面**真的**落在类别 Tag 上吗（explode 若把 Tag 丢了，这里立刻暴露）
@@ -639,8 +853,10 @@ else
     R['built'] = built
     R['noface'] = noface
     R['vol_bad'] = bad_v
+    R['vol_fixed'] = vol_fixed          # 修好的（报出来，别让修复变成静默）
     R['vol_err'] = verr
     R['faces_bad'] = bad_f
+    R['faces_bad_err'] = fberr
     R['edge_miss'] = miss
     R['missed'] = missed
     R['maxd_mm'] = maxd.round(5)
@@ -653,7 +869,7 @@ else
     R['colors'] = hist.sort_by { |_, v| -v }[0, 12].to_h
     R['materials'] = m.materials.map(&:name).select { |x| x.start_with?('yz') }.sort
     R['tags_after'] = m.layers.map(&:name)
-    R['bbox'] = bb && bb.map { |v| (v.to_f * LEN2M).round(3) }
+    R['bbox'] = bb && bb.map { |v| (v.to_f * IN2M).round(3) }
     R['secs'] = (Time.now - t0).round(1)
   rescue StandardError => e
     R['error'] = "#{e.class}: #{e.message}"

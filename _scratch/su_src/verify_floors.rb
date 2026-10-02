@@ -37,7 +37,9 @@ end
 
 m = Sketchup.active_model
 u = m.options['UnitsOptions']['LengthUnit']
-LEN2M = { 0 => 0.0254, 1 => 0.3048, 2 => 0.001, 3 => 0.01, 4 => 1.0 }[u] || 1.0
+# ★ 2026-09-14 修：`LEN2M` = SU **内部**单位（英寸）→ 米，恒为 0.0254
+#   （`Face#area` 按英寸² 返回，与文档 LengthUnit 无关；判例见 build_floors.rb 头注释）。
+LEN2M = 0.0254
 mine = m.entities.grep(Sketchup::Group).select { |g| g.name.to_s.start_with?('yingzao-') }
 
 R = { 'unit' => u, 'len2m' => LEN2M, 'group_count' => mine.length,

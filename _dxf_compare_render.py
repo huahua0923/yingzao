@@ -12,16 +12,11 @@ B = 复用第一轮画法(_dxf_png_batch.render_floor_png：灰实=识别墙/红
 """
 import os, sys, json, glob, re
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
-sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend\vision",
-                r"D:\gym3d\backend", r"D:\gym3d"]
+sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend", r"D:\gym3d"]
 import _dxf_png_batch as V1   # 第一轮画法复用
+import _render_common as RC
 
 BASE = r"D:\gym3d\data\buildings"
-
-
-def _cn_from_dxf(p):
-    base = os.path.splitext(os.path.basename(p.dxf))[0]
-    return re.sub(r"^[A-Za-z]+\d+[-_ ]*", "", base).strip(" -_") or base
 
 
 def _compare_html(name, cn, floors, stats):
@@ -29,11 +24,11 @@ def _compare_html(name, cn, floors, stats):
     rows = []
     for F in floors:
         st = stats.get(F, {})
-        cap = (f"{disp} · {F+1}层　门 {st.get('doors', '?')} · "
-               f"楼梯井 {st.get('stairs', '?')} · 房间 {st.get('rooms', '?')} · "
-               f"面积 {st.get('area', '?')}㎡")
+        # 面积/计数口径集中在 _render_common：旧写法 `面积 {包围盒}` 把 c006 首层
+        # 印成 10800㎡（真实轮廓 5698.7㎡，虚高 90%）。见铁律 17。
+        cap = f"{disp} · {F+1}层" + RC.caption_counts_html(st, F, st.get("_snap", ""))
         rows.append(
-            f'<figure class=cmp><div class=pair>'
+            f'<figure class=cmp data-floor="{F}"><div class=pair>'
             f'<div class=side><span class=tag>源图纸 A</span>'
             f'<img loading="lazy" src="dxf_plan/floor{F}.png" alt="{name} F{F} 源图纸"></div>'
             f'<div class=side><span class=tag>第一轮识别 B</span>'
@@ -55,6 +50,7 @@ def _compare_html(name, cn, floors, stats):
             "img{width:100%;height:auto;border:1px solid #e0e3e7}"
             "figcaption{font-size:12px;color:#333;margin-top:6px}"
             "@media(max-width:900px){div.pair{grid-template-columns:1fr}}"
+            + RC.CSS_EXTRA +
             "</style></head><body>"
             f"<h1>{disp} · 逐层对照：源图纸(真值) vs 第一轮识别</h1>"
             f"<p class=leg>左 A = 忠实源 CAD 线稿；右 B = 第一轮识别叠加 "
@@ -63,7 +59,9 @@ def _compare_html(name, cn, floors, stats):
             f"标题带 门/楼梯井/房间/面积 计数可对照。</p>"
             f"<p><a href=\"../_dxf_compare.html\">← 全部楼对比目录</a>　"
             f"<a href=\"dxf_plan/index.html\">单看源图纸页</a></p>"
-            + "".join(rows) + "</body></html>")
+            + "".join(rows)
+            # 本页在 <楼>/compare.html → floors 在下一级
+            + RC.freshness_script("floors/", floors) + "</body></html>")
 
 
 def _master_html(items):
@@ -93,7 +91,7 @@ def main():
                         for f in glob.glob(os.path.join(fd, "floor*.json")))
         try:
             p = run_step.load_profile(name)
-            cn = _cn_from_dxf(p)
+            cn = RC.cn_from_dxf(p)
         except Exception as e:  # noqa: BLE001
             failed.append((name, "*", f"profile {str(e)[:80]}")); continue
         od = os.path.join(BASE, name, "dxf_plan_recog")
@@ -110,12 +108,8 @@ def main():
                 if not os.path.exists(dstpng) or os.path.getmtime(dstpng) < os.path.getmtime(fp):
                     V1.render_floor_png(name, F, fl, dstpng)
                 ok += 1
-                ol = fl.get("outline")
-                area = int((max(x for x, _ in ol) - min(x for x, _ in ol)) *
-                           (max(y for _, y in ol) - min(y for _, y in ol))) if ol else None
-                stats[F] = dict(doors=len(fl.get("doors", [])),
-                                stairs=len(fl.get("stairwells", [])),
-                                rooms=len(fl.get("rooms", [])), area=area)
+                stats[F] = RC.floor_counts(fl)
+                stats[F]["_snap"] = RC.mtime_str(fp)
             except Exception as e:  # noqa: BLE001
                 failed.append((name, F, str(e)[:90]))
         tot += ok
@@ -123,9 +117,17 @@ def main():
             f.write(_compare_html(name, cn, floors, stats))
         master.append((name, cn, len(floors)))
         print(f"[{i}/{len(names)}] {name:6s} {ok}/{len(floors)}", flush=True)
-    with open(os.path.join(BASE, "_dxf_compare.html"), "w", encoding="utf-8") as f:
-        f.write(_master_html(master))
-    print(f"\n=== 对比完成 {tot} 张识别图 / {len(names)} 栋 / 失败 {len(failed)} ===")
+    # ★ 单栋保护（2026-09-14 修）：`_dxf_compare.html` 是**全仓总目录**，而本阶段是
+    #   scope=single/runnable → 控制台对一栋点一次就会把它覆盖成 1 栋（与
+    #   `_dxf_audit.html` 同一类活缺陷）。单栋自己的 `{name}/compare.html` 上面已写，
+    #   那个才是控制台要看的东西。只在**未指定楼名**时才写总目录。
+    if sys.argv[1:]:
+        print(f"\n=== 对比完成 {tot} 张识别图 / {len(names)} 栋 / 失败 {len(failed)} "
+              f"（单/多栋模式：**不覆盖**全仓总目录 _dxf_compare.html）===")
+    else:
+        with open(os.path.join(BASE, "_dxf_compare.html"), "w", encoding="utf-8") as f:
+            f.write(_master_html(master))
+        print(f"\n=== 对比完成 {tot} 张识别图 / {len(names)} 栋 / 失败 {len(failed)} ===")
     for nm, F, err in failed[:20]:
         print(f"  FAIL {nm} F{F}: {err}")
 

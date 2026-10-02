@@ -33,6 +33,10 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 PORT = int(os.environ.get("GYM3D_ANNOTATE_PORT", "8150"))
 HOST = "127.0.0.1"
 STORE = os.path.join(ROOT, "_qa", "annotations.json")
+QA_DIR = os.path.dirname(STORE)                       # _qa
+# 对照图目录的**所有者是 scan_defects.py**，本文件只读它（产物目录一目录一所有者：
+# 这里绝不写、不删，否则两个脚本会互相覆盖对方的结论）。
+SHOT_DIR = os.path.join(QA_DIR, "defect_shots")
 
 # 缺陷类型。key 进 JSON，label 给人看。
 TYPES = [
@@ -50,7 +54,7 @@ TYPES = [
 
 
 def building_list():
-    """列出有对照图的楼。判据与 run_batch 一致：data/buildings 下有 profile.json。"""
+    """列出有对照图的楼。判据：data/buildings 下有 profile.json。"""
     from paths import BUILDINGS
     out = []
     for d in sorted(os.listdir(BUILDINGS)):
@@ -115,10 +119,15 @@ main{flex:1;display:flex;min-height:0}
 .fb.on{background:#3a6ea5;color:#fff}
 #stage{flex:1;overflow:auto;padding:10px;min-height:0}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.side{position:relative;background:#fff;border-radius:5px;overflow:hidden;line-height:0}
+.side{position:relative;background:#fff;border-radius:5px;line-height:0}
 .side .tag{position:absolute;top:6px;left:6px;z-index:3;background:rgba(20,24,30,.86);color:#fff;font:600 11px/1.6 system-ui;padding:2px 8px;border-radius:4px;line-height:1.6}
-.side img{width:100%;display:block;user-select:none;-webkit-user-drag:none}
-.side .layer{position:absolute;inset:0;cursor:crosshair}
+.side .tag .zz{color:#9fd0ff;margin-left:6px;font-weight:600}
+/* 视口：滚轮缩放、滚动条平移。scrollbar-gutter:stable 让滚动槽常驻，
+   否则「放大→出滚动条→内容变窄→不出滚动条」会自激抖动。 */
+.vp{overflow:auto;scrollbar-gutter:stable;height:min(60vh,640px);border-radius:5px;background:#fff}
+.wrap{position:relative;width:100%;line-height:0}
+.wrap img{width:100%;display:block;user-select:none;-webkit-user-drag:none}
+.wrap .layer{position:absolute;inset:0;cursor:crosshair}
 .bx{position:absolute;border:2px solid #ff5c5c;background:rgba(255,92,92,.18);border-radius:2px}
 .bx.done{border-style:solid;background:rgba(255,92,92,.10)}
 .bx .idx{position:absolute;top:-1px;left:-1px;background:#ff5c5c;color:#fff;font:600 10px/1.5 system-ui;padding:0 4px;border-radius:2px}
@@ -146,7 +155,10 @@ main{flex:1;display:flex;min-height:0}
 </style></head><body>
 <header><b>缺陷标注台</b>
   <span class="hint">在图上<b style="color:#ff8f8f">按住拖动画框</b> → 选类型 + 写一句 → 保存。左右两栏都能画。</span>
-  <span id="stat" class="hint"></span></header>
+  <span id="stat" class="hint"></span>
+  <a href="/defects" style="margin-left:auto;color:#9fd0ff;text-decoration:none;
+     border:1px solid #3c4753;border-radius:5px;padding:3px 10px;font-weight:600">机器缺陷总表 →</a>
+</header>
 <main>
   <div id="side"></div>
   <div id="mid">
@@ -222,10 +234,12 @@ function pickF(f){
   var fn='floor'+f+'.png';
   var uSrc='/img/'+CUR+'/src/'+fn, uRec='/img/'+CUR+'/recog/'+fn;
   st.innerHTML='<div class="pair">'+
-    '<div class="side"><span class="tag">A 源图纸（真值）</span>'+
-      '<img src="'+uSrc+'"><div class="layer" data-k="src"></div></div>'+
-    '<div class="side"><span class="tag">B 识别结果</span>'+
-      '<img src="'+uRec+'"><div class="layer" data-k="recog"></div></div>'+
+    '<div class="side"><span class="tag">A 源图纸（真值）<b class="zz">100%</b></span>'+
+      '<div class="vp"><div class="wrap"><img src="'+uSrc+'">'+
+        '<div class="layer" data-k="src"></div></div></div></div>'+
+    '<div class="side"><span class="tag">B 识别结果<b class="zz">100%</b></span>'+
+      '<div class="vp"><div class="wrap"><img src="'+uRec+'">'+
+        '<div class="layer" data-k="recog"></div></div></div></div>'+
   '</div>';
   var ls=st.querySelectorAll('.layer');
   for(var i=0;i<ls.length;i++) wire(ls[i]);
@@ -244,6 +258,50 @@ function wire(el){
     el.appendChild(box); closePop();
     DRAG={el:el,box:box,x:e.clientX-r.left,y:e.clientY-r.top,w:r.width,h:r.height};
   });
+  var vp=el.closest('.vp');
+  if(vp){
+    // passive:false —— 必须能 preventDefault，否则滚轮会连带滚整页
+    vp.addEventListener('wheel',onWheel,{passive:false});
+    vp.addEventListener('dblclick',function(){ setZoom(vp,1,null,null); });
+  }
+}
+
+// 滚轮缩放：以**指针所在点**为锚，缩完该点在屏幕上不动。
+// 框存的是百分比，图层随 .wrap 一起缩放，所以缩放后框自动对齐，无需换算。
+var ZMIN=0.5, ZMAX=8, ZSTEP=1.15;
+function setZoom(vp,z,ax,ay){
+  var wrap=vp.querySelector('.wrap');
+  if(!wrap) return;
+  z=Math.max(ZMIN,Math.min(ZMAX,z));
+  var vr=vp.getBoundingClientRect(), wr=wrap.getBoundingClientRect();
+  var cw=wr.width,ch=wr.height;
+  // 锚点处的「内容百分比」——缩放前后这个百分比要停在同一个屏幕位置
+  var fx=cw?(vp.scrollLeft+(ax==null?vr.width/2:ax))/cw:0;
+  var fy=ch?(vp.scrollTop +(ay==null?vr.height/2:ay))/ch:0;
+  wrap.style.width=(z*100)+'%';
+  var wr2=wrap.getBoundingClientRect(), cw2=wr2.width, ch2=wr2.height;
+  var mx=(ax==null?vr.width/2:ax), my=(ay==null?vr.height/2:ay);
+  vp.scrollLeft=fx*cw2-mx;
+  vp.scrollTop =fy*ch2-my;
+  wrap.setAttribute('data-z',z);
+  var zz=vp.parentNode.querySelector('.tag .zz');
+  if(zz) zz.textContent=Math.round(z*100)+'%';
+}
+function onWheel(e){
+  e.preventDefault();
+  // 拖框过程中不许缩放：起点 d.x/d.y 是按按下那一刻的图层尺寸算的，
+  // 中途缩放会让起点与当前图层对不上，画出来的框会跳。
+  if(DRAG) return;
+  var vp=e.currentTarget, r=vp.getBoundingClientRect();
+  var wrap=vp.querySelector('.wrap');
+  var z=parseFloat(wrap.getAttribute('data-z'))||1;
+  setZoom(vp, e.deltaY<0 ? z*ZSTEP : z/ZSTEP, e.clientX-r.left, e.clientY-r.top);
+}
+// 框一律用百分比定位，**草稿也不例外**。用 px 的话，框在图上不会随
+// .wrap 缩放而移动 —— 滚轮一放大，框就留在原地跑偏（实测 2.66 倍下能偏出半个屏）。
+function place(el,n){
+  el.style.left=(n.x0*100)+'%'; el.style.top=(n.y0*100)+'%';
+  el.style.width=((n.x1-n.x0)*100)+'%'; el.style.height=((n.y1-n.y0)*100)+'%';
 }
 function onMove(e){
   var d=DRAG; if(!d) return;
@@ -251,9 +309,8 @@ function onMove(e){
   var x=e.clientX-r.left, y=e.clientY-r.top;
   var x0=Math.max(0,Math.min(d.x,x)), x1=Math.min(d.w,Math.max(d.x,x));
   var y0=Math.max(0,Math.min(d.y,y)), y1=Math.min(d.h,Math.max(d.y,y));
-  d.box.style.left=x0+'px'; d.box.style.top=y0+'px';
-  d.box.style.width=Math.max(0,x1-x0)+'px'; d.box.style.height=Math.max(0,y1-y0)+'px';
   d.n={x0:x0/d.w,y0:y0/d.h,x1:x1/d.w,y1:y1/d.h};
+  place(d.box,d.n);
 }
 function onUp(){
   var d=DRAG; if(!d) return;
@@ -280,7 +337,15 @@ function openPop(a){
   p.style.top=Math.min(window.innerHeight-230, Math.max(8,x.bottom+8))+'px';
   document.getElementById('popNote').focus();
 }
-function closePop(){document.getElementById('pop').style.display='none';PENDING=null;EDIT=null;}
+function closePop(){
+  document.getElementById('pop').style.display='none';
+  // 没保存就关掉的草稿框必须连节点一起删。否则它会留在图上，且因为不带 .done
+  // 而躲过 render() 的清理 —— 变成一个「看着像标注、其实库里没有」的幽灵框。
+  // 保存路径不受影响：savePop 在调这里之前已把 _node 置空。
+  if(PENDING&&PENDING._node&&PENDING._node.parentNode)
+    PENDING._node.parentNode.removeChild(PENDING._node);
+  PENDING=null;EDIT=null;
+}
 
 function savePop(){
   var t=document.getElementById('popType').value;
@@ -345,9 +410,7 @@ function render(){
       var a=ANN[j];
       if(a.building!==CUR||a.f!==CURF||a.kind!==k) continue;
       var d=document.createElement('div'); d.className='bx done';
-      // 用百分比定位：图会随窗口缩放，像素框会跑偏
-      d.style.left=(a.box.x0*100)+'%'; d.style.top=(a.box.y0*100)+'%';
-      d.style.width=((a.box.x1-a.box.x0)*100)+'%'; d.style.height=((a.box.y1-a.box.y0)*100)+'%';
+      place(d,a.box);   // 百分比定位：图会随窗口/滚轮缩放，像素框会跑偏
       layers[i].appendChild(d);
     }
   }
@@ -360,6 +423,95 @@ fetch('/api/types').then(function(r){return r.json()}).then(function(t){TPS=t;bo
 </script></body></html>"""
 
 
+DEF_PAGE = r"""<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<title>机器缺陷总表</title><style>
+*{box-sizing:border-box}
+body{font:13px/1.5 system-ui,"Microsoft YaHei",sans-serif;background:#11151a;color:#dfe4ea;margin:0;padding:14px}
+a{color:#9fd0ff}
+h1{font-size:16px;margin:0 0 4px}
+h2{font-size:13px;margin:18px 0 8px;color:#a9b6c4;border-left:3px solid #3a6ea5;padding-left:8px}
+.sub{color:#7d8794;font-size:12px;margin-bottom:10px}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border:1px solid #2b323b;padding:4px 8px;text-align:left;vertical-align:top}
+th{background:#1a1f26;color:#9fb0c2;position:sticky;top:0;z-index:2}
+tr.r:hover{background:#1b2129}
+.pill{display:inline-block;padding:0 6px;border-radius:9px;font:600 11px/1.6 system-ui}
+.E{background:#5a2020;color:#ffc9c9}.W{background:#4a3a12;color:#ffe0a3}
+.b{color:#9fd0ff;cursor:pointer;text-decoration:underline}
+.msg{color:#b9c4d0;max-width:640px}
+.shots{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+.shot{background:#fff;border-radius:6px;padding:4px}
+.shot img{width:100%;display:block;border-radius:4px}
+.shot .cap{color:#e6ebf1;background:#1a1f26;font:600 11px/1.8 system-ui;padding:1px 7px;border-radius:4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.bar input,.bar select{background:#141a20;color:#e6ebf1;border:1px solid #3c4753;border-radius:5px;padding:4px 7px;font:inherit;font-size:12px}
+.bar label{color:#8d97a3;font-size:12px}
+</style></head><body>
+<h1>机器缺陷总表 <span class="sub" style="font-weight:400">scan_defects.py 只读产出</span></h1>
+<div class="sub">这些是<b>程序按判据算出来的</b>，与你手画的标注互不覆盖：标注在
+  <a href="/">缺陷标注台</a>，机器结论在 <code>_qa/defects.json</code>。
+  对照图是世界坐标里直出的（不含标定误差），点楼层名看大图。</div>
+<div class="bar">
+  <label>楼 <select id="fb"><option value="">全部</option></select></label>
+  <label>级别 <select id="sv"><option value="">全部</option><option>ERROR</option><option>WARN</option></select></label>
+  <label>码 <select id="cd"><option value="">全部</option></select></label>
+  <label><input id="q" placeholder="搜房号 / 关键字" size="22"></label>
+  <span id="cnt" class="sub"></span>
+</div>
+<table><thead><tr><th>楼</th><th>层</th><th>码</th><th>级别</th><th>说明</th></tr></thead>
+<tbody id="tb"></tbody></table>
+<h2>对照图</h2>
+<div class="shots" id="shots"></div>
+<script>
+var RECS=[],SHOTS=[],B=[],S=[],C=[];
+function q(s){return document.getElementById(s)}
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function load(){
+  fetch('/api/defects').then(function(r){return r.json()}).then(function(j){
+    RECS=j.records||[];SHOTS=j.shots||[];
+    B=[];C=[];var seen={};
+    RECS.forEach(function(r){ if(B.indexOf(r.building)<0)B.push(r.building);
+      if(!seen[r.code]){seen[r.code]=1;C.push(r.code)} });
+    B.sort();C.sort();
+    C.sort(function(a,b){return (a[0]==='D'?0:1)-(b[0]==='D'?0:1)||a.localeCompare(b)});
+    q('fb').innerHTML='<option value="">全部</option>'+B.map(function(x){return '<option>'+x+'</option>'}).join('');
+    q('cd').innerHTML='<option value="">全部</option>'+C.map(function(x){return '<option>'+x+'</option>'}).join('');
+    q('shots').innerHTML=SHOTS.map(function(f){
+      var n=f.replace('.png','');var m=n.match(/^(.*)_F(\d+)$/);
+      return '<div class="shot"><img loading="lazy" src="/shots/'+encodeURIComponent(f)+'">'+
+        '<div class="cap">'+esc(m?m[1]+' 第'+m[2]+'层':n)+'</div></div>'}).join('');
+    render();
+  });
+}
+function render(){
+  var b=q('fb').value,s=q('sv').value,c=q('cd').value,t=q('q').value.trim();
+  var rows=RECS.filter(function(r){
+    if(b&&r.building!==b)return false; if(s&&r.sev!==s)return false;
+    if(c&&r.code!==c)return false;
+    if(t&&JSON.stringify(r).indexOf(t)<0)return false; return true});
+  q('cnt').textContent='显示 '+rows.length+' / '+RECS.length+' 条';
+  q('tb').innerHTML=rows.slice(0,600).map(function(r){
+    var f=r.floor==null?'<span class="sub">全楼</span>':'<span class="b" data-b="'+esc(r.building)+'" data-f="'+r.floor+'">F'+r.floor+'</span>';
+    return '<tr class="r"><td>'+esc(r.building)+'</td><td>'+f+'</td><td>'+esc(r.code)+'</td>'+
+      '<td><span class="pill '+(r.sev==='ERROR'?'E':'W')+'">'+esc(r.sev)+'</span></td>'+
+      '<td class="msg">'+esc(r.msg)+'</td></tr>'}).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('.b'),function(el){
+    el.onclick=function(){
+      var f=el.dataset.b+'_F'+el.dataset.f+'.png';
+      var img=document.querySelector('.shots img[src*="'+f+'"]');
+      if(img){img.scrollIntoView({block:'center'});img.style.outline='3px solid #ff5c5c';
+        setTimeout(function(){img.style.outline=''},2500)}
+      else{var n=document.querySelector('.shot .cap');alert('该层没有对照图（无 ERROR 命中或未跑 --shots）')}
+    };
+  });
+}
+['fb','sv','cd'].forEach(function(i){q(i).onchange=render});
+q('q').oninput=render;
+load();
+</script></body></html>
+"""
+
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         pass                                   # 静音，别刷屏
@@ -370,6 +522,10 @@ class H(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        # 默认 no-store：/img/ 是磁盘上的 PNG，楼层重渲后浏览器可能拿启发式缓存复用旧图
+        # （2026-09-12 用户就撞上了这个 —— 8150 显示的是三天前的识别结果）；
+        # HTML 也是模块级常量，重启后同样不该被缓存挡住。调用方仍可用 extra 覆盖。
+        self.send_header("Cache-Control", "no-store, must-revalidate")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -389,6 +545,32 @@ class H(BaseHTTPRequestHandler):
         if p == "/dump":
             return self._send(200, json.dumps(load_ann(), ensure_ascii=False, indent=2),
                               "application/json; charset=utf-8")
+        # ---- 机器缺陷（scan_defects.py 的产物），**只读**，与人工标注互不覆盖 ----
+        if p == "/defects":
+            return self._send(200, DEF_PAGE, "text/html; charset=utf-8")
+        if p == "/api/defects":
+            recs, shots = [], []
+            fp = os.path.join(QA_DIR, "defects.json")
+            if os.path.exists(fp):
+                try:
+                    with open(fp, encoding="utf-8") as fh:
+                        recs = [r for r in json.load(fh) if r.get("sev") != "INFO"]
+                except Exception:                                    # noqa: BLE001
+                    recs = []
+            if os.path.isdir(SHOT_DIR):
+                shots = sorted(x for x in os.listdir(SHOT_DIR) if x.endswith(".png"))
+            return self._json({"records": recs, "shots": shots,
+                               "generated": recs and "见 _qa/defect_summary.md" or "尚未扫描"})
+        if p.startswith("/shots/"):
+            fn = p[7:]
+            # 防目录穿越：只允许 <楼>_F<层>.png 这一种形状
+            if "/" in fn or "\\" in fn or ".." in fn or not fn.endswith(".png"):
+                return self._send(404, "bad name", "text/plain")
+            fp = os.path.join(SHOT_DIR, fn)
+            if not os.path.exists(fp):
+                return self._send(404, "missing", "text/plain")
+            with open(fp, "rb") as f:
+                return self._send(200, f.read(), "image/png")
         if p.startswith("/img/"):
             parts = p[5:].split("/")
             if len(parts) != 3:

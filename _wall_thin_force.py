@@ -57,8 +57,16 @@ def run(name):
             shutil.copy2(fp, os.path.join(bak, os.path.basename(fp)))
         keep = [w for w in fl["walls"] if w["type"] != "inner"]
         fl["walls"] = keep + inner_walls
-        json.dump(fl, open(fp, "w", encoding="utf-8"), ensure_ascii=False)
+        # 墙定稿 → 登记门宿主。与 _wall_thin_batch.process 走同一个口（B.finalize_floor）：
+        # 先前这里漏了这一步，墙换了 id 而门还指着旧 id = 悬空门。
+        n_orphan = B.finalize_floor(fl, F)
+        if n_orphan:
+            print("   %s F%d 悬空门 %d 个（已记 unresolved）" % (name, F, n_orphan))
+        B.dump_floor(fp, fl)
         changed.append((F, nw))
+    if changed:
+        # 全楼写盘后统一算井道（跨层并集）——逐层算会把并集切碎，理由见 B.refresh_shafts。
+        B.refresh_shafts(name)
     return name, ("OK changed=%d fail=%d skip=%d" % (len(changed), len(failed), len(skip))
                   if changed or failed else "NO_CHANGE"), changed, failed
 

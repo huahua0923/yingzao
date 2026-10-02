@@ -32,7 +32,19 @@
 require 'sketchup.rb'
 
 module YingzaoBridge
-  JOB_DIR = 'D:/gym3d/_scratch/su_jobs'.freeze
+  # 任务目录：可用环境变量 `GYM3D_SU_JOB_DIR` 覆盖 —— 这样**同一台机器开 N 个 SketchUp
+  # 实例**时，每个实例（通过启动时的环境变量）认领自己的任务目录，互不抢文件，
+  # 就能把 SU 侧的串行建库变成 N 路并行（SU API 必须跑在主线程上，多实例是唯一出路）。
+  # 不设变量时保持原行为（老脚本、老实例一个字都不用改）。
+  # ★ 2026-09-23：**路径必须归一到正斜杠**。`Dir.glob` 把反斜杠当**转义符**，
+  #   而 PowerShell/Python 传进来的 `D:\gym3d\_scratch\su_jobs5` 会让模式里的 `*.rb`
+  #   被读成"字面星号"，glob 一个文件都匹配不上 —— 于是**任务永远不被认领**。
+  #   症状极具误导性：日志照写 "bridge loaded, model=ok"（File.open 认反斜杠）、
+  #   定时器照跳，就是没有任务被取走，看着像"桥没在轮询 / 窗口没焦点"，能查一整天。
+  #   实测：当天用默认值（正斜杠）起的实例一切正常，10 个用反斜杠 env 起的实例全哑。
+  #   92.chr 就是反斜杠；此处不写反斜杠字面量 —— 生成式工具的转义会在落盘前被吃掉。
+  JOB_DIR = (ENV['GYM3D_SU_JOB_DIR'].to_s.empty? ? 'D:/gym3d/_scratch/su_jobs'
+                                                : ENV['GYM3D_SU_JOB_DIR']).tr(92.chr, '/').freeze
   LOG     = File.join(JOB_DIR, '_bridge.log').freeze
   INFLIGHT = '.inflight'.freeze
 
@@ -83,7 +95,8 @@ module YingzaoBridge
         inflight = "#{job}#{INFLIGHT}"
         begin
           File.rename(job, inflight) # 原子认领；抢不到说明别人已认领
-        rescue StandardError
+        rescue StandardError => e
+          log("claim ERR #{File.basename(job)} #{e.class}: #{e.message}") # ★ 别静默吞：认领失败=任务永远不跑
           next
         end
         run_job(job, inflight)

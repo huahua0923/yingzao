@@ -19,6 +19,15 @@
                                   斜墙（c103/c104 类）已知合法，仅 INFO 登记
   I10 柱在板外却在墙包络内      —— 一批柱落点超出楼板轮廓、却仍被墙凸包罩着：
                                   楼板疑似只盖了房间块、漏掉开放柱廊/柱区（c009 类），>10% 柱即 WARN
+  I11 门宿主登记与挖穿          —— 门带门洞盒却没登记宿主墙（finalize 漏了）；门洞盒里残墙
+                                  >50%（门夹在实心墙里）。无门洞盒的楼层跳过
+  I17 楼梯井闭合与踏步假墙      —— 井道内碎片假墙（踏步线配成的 0.3m「墙」）；井道（踏步盒
+                                  四向扩到实体墙）围合率 <0.45；四面扩不到墙。围合率只许
+                                  用**实体墙**量，否则是自证（同 I11 的挖穿率教训）
+  I18 同构平面必须叠加          —— 轮廓同构（边数/边长/面积全等）的两层，唯一可能的差别是
+                                  平移量，必须为 0。profile.offset 标错会让各层逐层漂
+                                  （c057 实测 446mm/层、六层累计 2.23m），而**单层指标全部
+                                  正常** —— 只有层与层对比才看得见
 I1 严重度细分：地面层轮廓外柱=入口门廊/廊柱可能(WARN)；上层=悬空鳍(ERROR)。
 
 用法：
@@ -33,7 +42,8 @@ import os
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-from shapely.geometry import Polygon, Point
+sys.path[:0] = [os.path.dirname(os.path.abspath(__file__))]   # 供 backend.recognizer 导入
+from shapely.geometry import Polygon, Point, box
 from shapely.ops import unary_union
 
 BASE = r"D:\gym3d\data\buildings"
@@ -326,13 +336,19 @@ def I6_atrium(floors, fs, verbose):
     for g in floors:
         fl = g["floor"]
         o = _poly(g["outline"])
-        for hi, h in enumerate(o.interiors):
-            hp = Polygon(h)
-            if hp.area >= ATRIUM_AREA:
-                if verbose:
-                    fs.append(Finding("INFO", "I6", fl,
-                                      "天井/中庭孔 #%d 面积%.0f㎡ x[%.1f..%.1f]y[%.1f..%.1f]" % (
-                                          hi, hp.area, *hp.bounds)))
+        # ⚠️ 轮廓可能是 MultiPolygon（2026-09-15：`outline_holes` 支持后，回字形平面/多块楼层
+        #    都走这条）—— 旧写法直接 `o.interiors`，全库体检会在第一栋上 AttributeError 崩掉。
+        _gs = [o] if o.geom_type == "Polygon" else list(getattr(o, "geoms", []))
+        hi = 0
+        for _p in _gs:
+            for h in getattr(_p, "interiors", []):
+                hp = Polygon(h)
+                if hp.area >= ATRIUM_AREA:
+                    if verbose:
+                        fs.append(Finding("INFO", "I6", fl,
+                                          "天井/中庭孔 #%d 面积%.0f㎡ x[%.1f..%.1f]y[%.1f..%.1f]" % (
+                                              hi, hp.area, *hp.bounds)))
+                hi += 1
 
 
 def I8_stacking(floors, fs, verbose):
@@ -424,6 +440,142 @@ def I9_irregular_walls(floors, fs):
                               "斜向墙段 %d 处(约%.0fm, 斜墙/切角合法, 登记)" % (ang_seg, ang_len)))
 
 
+def I11_opening_hosts(floors, fs):
+    """门 ↔ 宿主墙的登记与挖穿（BIM 的 hosted element 关系有没有落进交付物）。
+
+    两条，都只在**门带门洞盒**（bx0..by1）的楼层上判：
+      a) 门有盒子却没登记 `wallId` —— 墙定稿后漏走 `finalize_floor()`，宿主链断在交付物里；
+      b) 门洞盒里的残墙 > 50% —— 门夹在实心墙里（用户报的「门有的夹在墙里看不到」）。
+    没有盒子的楼层直接跳过：识别链早于门洞盒特性，不是本门禁的管辖范围
+    （普查 2026-09-11：49 栋 22461 道门只有 1187 道带盒子）。
+    幂等性不在这里判（是代码性质，不是数据性质）——见 `_scratch/_p2_verify.py`。
+    """
+    from backend.recognizer import openings
+    for g in floors:
+        fl = g["floor"]
+        boxed = [d for d in (g.get("doors") or [])
+                 if all(k in d for k in ("bx0", "by0", "bx1", "by1"))]
+        if not boxed:
+            continue
+        no_host = [d for d in boxed if not d.get("wallId")]
+        if no_host:
+            fs.append(Finding("WARN", "I11", fl,
+                              "门 %d/%d 未登记宿主墙 wallId —— 墙定稿后漏走 finalize_floor()"
+                              % (len(no_host), len(boxed))))
+        walls = g.get("walls") or []
+        buried = openings.buried_doors(walls, g.get("doors") or [])
+        if buried:
+            boxes = []
+            for d in boxed:
+                try:
+                    boxes.append(box(float(d["bx0"]), float(d["by0"]),
+                                     float(d["bx1"]), float(d["by1"])))
+                except (TypeError, ValueError):
+                    boxes.append(None)
+            rates = [r for r in openings.punch_through_rates(walls, boxes) if r is not None]
+            fs.append(Finding("WARN", "I11", fl,
+                              "门心压在墙里 %d/%d 道(门扇被墙吞) — 最低洞口残墙 %.0f%%"
+                              % (buried, len(g.get("doors") or []),
+                                 100 * min(rates) if rates else 0)))
+
+
+def I17_stair_shaft(floors, fs):
+    """楼梯井：井道闭合 + 踏步假墙（楼梯能不能站得住、楼板洞挖得对不对）。
+
+    判据全部来自 `recognizer.stairs`（识别/剔除/门禁共用一份实现）。逐层：
+      a) **假墙**：踏步盒内的碎片墙（踏步线被配成的 0.3m「墙」）> 0 —— 楼梯井被塞满，
+         梯段画不出来、井道占地也算错。量的范围是**踏步盒**不是扩后的井道：
+         井道合法地含楼梯口门垛与平台墙（c027 实测 0 vs 2~3），拿井道量会冤枉真墙；
+      b) **围合**：井道（踏步盒沿四向扩到实体墙）周长被**实体墙**盖住的比例 < 0.45；
+      c) **扩不到墙**（四向有方向一路到 4m 都没墙）—— 井道还原不出来，不渲染楼梯。
+
+    ⚠️ 围合率必须在**扩后的井**上、并且只用**实体墙**（排除碎片）量：
+    井 bbox 本来就是踏步的包围盒，假墙正压在它的周长上，用全部墙量是**自证**（恒 1.00）。
+    同 P2「拿 punch_walls 自己的输出量挖穿率」那个自证错误。
+
+    当前是 WARN 而非 ERROR：交付数据大面积建在这次修复之前（普查 2026-09-11：
+    28 栋有待办井），一次性判红等于把整仓判 FAIL。计数即重识别的工作清单。
+    """
+    from backend.recognizer import stairs as ST
+    for g in floors:
+        wells = g.get("stairwells") or []
+        walls = g.get("walls") or []
+        if not wells or not walls:
+            continue
+        F = g.get("floor")
+        ms = ST.measure(wells, walls)
+        frag = sum(m["frag"] for m in ms)
+        bad = [(i, m) for i, m in enumerate(ms) if m["shaft"] is None or m["enc"] < 0.45]
+        nosa = [i for i, m in enumerate(ms) if m["shaft"] is None]
+        if frag:
+            fs.append(Finding("WARN", "I17", F,
+                              "楼梯井内踏步假墙 %d 块（踏步线被配成墙，井被塞满）" % frag))
+        if bad:
+            worst = min(m["enc"] for _, m in bad)
+            fs.append(Finding("WARN", "I17", F,
+                              "楼梯井 %d/%d 口围合不足（最低 %.2f）%s"
+                              % (len(bad), len(ms), worst,
+                                 "，其中 %d 口扩不到墙" % len(nosa) if nosa else "")))
+
+
+STACK_TOL = 0.05      # 同构平面之间的允许平移量(m)
+
+
+def _shape_key(o):
+    """轮廓的**平移不变量**：边数 + 边长(排序, cm) + 面积。平面同构时这三个全等。"""
+    n = len(o)
+    if n < 3:
+        return None
+    e = [round(math.hypot(o[(i + 1) % n][0] - o[i][0], o[(i + 1) % n][1] - o[i][1]), 2)
+         for i in range(n)]
+    a = abs(sum(o[i][0] * o[(i + 1) % n][1] - o[(i + 1) % n][0] * o[i][1]
+                for i in range(n))) / 2.0
+    return (n, tuple(sorted(e)), round(a, 1))
+
+
+def I18_stacking(floors, fs):
+    """同构平面必须**叠在同一个局部坐标系**里（层与层之间平移为 0）。
+
+    `to_local` 按 `profile.offset` 把每层平面移回原点 —— offset 标错多少，各层就逐层漂多少
+    （c057 profile.offset=89554，DXF 实测层距 90000：六层累计歪 2.23m，还被误读成「南墙逐层
+    真退台」）。这类错**单层指标全都正常**：面积/墙数/围合率各自自洽，只有层与层错位，
+    所以任何逐层检查都看不见它 —— 必须拿两层对比才现形。
+
+    判据只用交付数据（不读 DXF）：轮廓**同构**（边数/边长/面积全等）的两层，平面形状一模一样，
+    唯一可能的差别就是平移量，那必须是 0。不同构（门厅/退台/裙楼/塔楼）的层对跳过不判。
+    同构层对的楼梯踏步盒/井道盒也必须一模一样（同平面 → 同楼梯）。
+    """
+    for i in range(len(floors) - 1):
+        a, b = floors[i], floors[i + 1]
+        oa, ob = a.get("outline") or [], b.get("outline") or []
+        ka, kb = _shape_key(oa), _shape_key(ob)
+        if not ka or ka != kb:
+            continue
+        ax = min(p[0] for p in oa)
+        ay = min(p[1] for p in oa)
+        dx = min(p[0] for p in ob) - ax
+        dy = min(p[1] for p in ob) - ay
+        if abs(dx) <= STACK_TOL and abs(dy) <= STACK_TOL:
+            continue
+        fs.append(Finding("WARN", "I18", b.get("floor"),
+                          "与 F%s 平面同构却错位 (+%.3f, +%.3f)m —— 本层局部坐标系漂了，"
+                          "多半是 profile.offset 标错（每层累加，越高越歪）"
+                          % (a.get("floor"), dx, dy)))
+        # 同构层对的楼梯盒也必须一致（错位会让楼板洞开在别处）
+        def _treads(g):
+            return [(round(w.get("x0", 0), 3), round(w.get("yBot", 0), 3),
+                     round(w.get("x1", 0), 3), round(w.get("yTop", 0), 3))
+                    for w in (g.get("stairwells") or [])]
+        ta, tb = _treads(a), _treads(b)
+        off = [(p[0] - q[0], p[1] - q[1]) for p, q in zip(sorted(ta), sorted(tb))]
+        if ta and tb and len(ta) == len(tb) and any(abs(x) > 0.3 or abs(y) > 0.3 for x, y in off):
+            fs.append(Finding("WARN", "I18", b.get("floor"),
+                              "楼梯踏步盒与同构的 F%s 不重合（最低错位 %.3f/%.3f m）"
+                              % (a.get("floor"),
+                                 min(off, key=lambda t: max(abs(t[0]), abs(t[1])))[0],
+                                 min(off, key=lambda t: max(abs(t[0]), abs(t[1])))[1])))
+
+
 def check_building(name, verbose):
     fs = []
     floors = load_floors(name)
@@ -442,6 +594,9 @@ def check_building(name, verbose):
     I8_stacking(floors, fs, verbose)
     I9_irregular_walls(floors, fs)
     I10_col_beyond_plate_inside_hull(floors, fs)
+    I11_opening_hosts(floors, fs)
+    I17_stair_shaft(floors, fs)
+    I18_stacking(floors, fs)
     return floors, fs
 
 

@@ -55,17 +55,36 @@ BDIR = ROOT / "data" / "buildings"
 CLUSTER_GAP_MM = 15000.0
 
 
-def wall_centres(msp, p) -> list[float]:
-    """x_range 内的墙折线质心 y（毫米）。按本栋 classifier 取墙。"""
-    p = type(p)(**{**p.__dict__, "floor_ys": None, "floor_plans": None,
-                   "floor_y_bands": None})
+def wall_points(msp, p, keep_floor_fields: bool = False) -> list[tuple[float, float]]:
+    """x_range 内的墙折线质心 (x, y)（毫米）。按本栋 classifier 取墙。
+
+    `keep_floor_fields` 决定**取墙时用不用本栋的定层配置**（两者都是生产的
+    `in_floor_x_range`，差别只在那份配置在不在）：
+      · False（默认）：清空 `floor_ys/floors_plans/floor_y_bands` 再取 ⇒ 拿到的是
+        **图上画了哪些墙**，不受定层配置影响。`_add_d1_floor.py` / `_d1_blob_xcheck.py`
+        要的正是这个中立视角（否则"配置漏掉的那片图"会因为配置而看不见）。
+      · True：按**生产口径**取（`in_floor_x_range` 用 `floor_plans` 的各层 X 区间）
+        ⇒ `_floor_coverage_gauge.py` 复演生产的归属时用它，跟 `recognize.py` 同一条路。
+
+    ★ 取墙这步**只许一份实现**：三处都调它，不各写一份 classify 调用
+      （memory: one-judgement-many-implementations）。
+    """
+    if not keep_floor_fields:
+        p = type(p)(**{**p.__dict__, "floor_ys": None, "floor_plans": None,
+                       "floor_y_bands": None})
     if getattr(p, "classifier", "lwpolyline") == "line":
         from recognizer.classify_line import classify_line
         walls, _, _, _ = classify_line(msp, p)
     else:
         from recognizer.classify import classify
         walls, _, _, _ = classify(msp, p)
-    return [sum(float(q[1]) for q in s) / len(s) for s in walls]
+    return [(sum(float(q[0]) for q in s) / len(s),
+             sum(float(q[1]) for q in s) / len(s)) for s in walls]
+
+
+def wall_centres(msp, p) -> list[float]:
+    """只要 y 时的薄壳（行为与从前逐字节相同）。"""
+    return [y for _x, y in wall_points(msp, p)]
 
 
 def cluster(ys: list[float]) -> list[list[float]]:

@@ -181,7 +181,16 @@ def make_camera(view, center, size, aspect):
     _look_at(cam, forward, up)
 
     if cam_data.type == "ORTHO":
-        cam_data.ortho_scale = max(vert, horiz / aspect) * pad
+        # ortho_scale 对应的是**较长那条分辨率轴**的世界跨度（sensor_fit=AUTO）：
+        #   横图(rx>=ry) → 它是 X 跨度，Y 跨度 = scale/aspect；
+        #   竖图(rx<ry)  → 它是 Y 跨度，X 跨度 = scale*aspect。
+        # 要保证两个方向都不裁切：横图 scale ≥ max(horiz, vert*aspect)，竖图 scale ≥
+        # max(vert, horiz/aspect)。旧代码恒用竖图那条，横图下把宽楼截掉两头
+        # （c009 前立面/顶视被砍，尺寸 114.8×73.5 而 ortho_scale 只给到 76m）。
+        if aspect >= 1.0:
+            cam_data.ortho_scale = max(horiz, vert * aspect) * pad
+        else:
+            cam_data.ortho_scale = max(vert, horiz / aspect) * pad
 
     bpy.context.scene.camera = cam
     return cam, forward, up

@@ -10,12 +10,18 @@
   S1 键里去掉「文件」这一维         ⇒ `_band_diff` 的 新增/命中 计数必须变红
   S2 拆掉尺子指纹判断             ⇒ 「尺子变了 ⇒ 整档判不了」必须红
   S3 清空排除清单                 ⇒ 「_scratch/ 下的 .md 不许算进来」必须红
+  S4 拆掉 `_fails` 里那行接线       ⇒ 「表里报了 ⇒ 退出码非 0」必须红
+     ★ S4 是补上来的，理由值得记：原先只断言 `cjk_repo_band(...)["state"] == "gap"`，
+       而**闸门走的是 `_fails`** —— 断言的与闸门的不是同一条路。实测就是：
+       盘上新增 4 处命中、屏幕上「GAP ＋ 逐条 ✗」、而**退出码 0**。
+       ⇒ 补的那条断言如果只量 `_repo_fails()` 自己，删掉 `_fails` 里那行照样全绿
+         ⇒ 所以这里拆的是**接线**，不是被调用的那个函数。
 
 每条的还原都按**字节**做，并在末尾核对 sha256；还原失败以非 0 退出码吵出来
 （铁律 35：回滚失败与回滚成功，差别必须落在退出码上）。
 
 用法：PYTHONIOENCODING=utf-8 python -u kb/gate_cjk_falsifier.py
-退出码：0 三条全红且还原成功 / 1 有哪条**没红**（那条断言是空的）/ 2 刑具自己出错
+退出码：0 全部变异都让自检变红且还原成功 / 1 有哪条**没红**（那条断言是空的）/ 2 刑具自己出错
 """
 import hashlib
 import io
@@ -38,6 +44,9 @@ CASES = [
     ("S3 清空排除清单",
      '_REPO_MD_SKIP = (".git", "node_modules", "__pycache__", ".orig", "_scratch", ".claude")',
      "_REPO_MD_SKIP = ()"),
+    ("S4 拆掉 `_fails` 里那行接线（退出码那条出路）",
+     '    out.extend(_repo_fails(res["cjk"]))',
+     "    pass  # ⑪repo 不再进退出码"),
 ]
 
 
@@ -97,7 +106,8 @@ def main() -> int:
         print("✗ 有 %d 条变异**没让自检变红**：%s" % (len(bad), "、".join(bad)))
         print("  ⇒ 对应的断言是**空的**（有别的项在替它把红点亮），不是「代码没问题」。")
         return 1
-    print("✓ 三条变异全部让 --selftest 变红 ⇒ 那三条断言各自真的在测东西。")
+    print("✓ %d 条变异全部让 --selftest 变红 ⇒ 那 %d 条断言各自真的在测东西。"
+          % (len(CASES), len(CASES)))
     return 0
 
 

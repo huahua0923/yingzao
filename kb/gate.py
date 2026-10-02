@@ -18,7 +18,8 @@
     ④ 值漂移       §3 宣称值 vs 代码真值（委派 `values.py`，它自带阳性对照）
     ⑤ 双源一致     图层语义：prose（`kb/src/05,07`）↔ `LAYER_ROLE`（代码）
     ⑥ 陈旧即红     证据文件的**内容 sha12** 与登记时不同 ⇒ 依赖它的边全部待复核
-    ⑦ --run 只读   登记的命令形里出现写操作 ⇒ 拒绝登记
+    ⑦ --run 只读   登记的命令形里出现写操作 ⇒ 拒绝登记；**且**「只读」必须是被**量过**的
+                   （没量过 ⇒ 拒登；声明与实测对不上 ⇒ 拒登）—— 见 `kb/readonly-lock.json`
     ⑪ ASCII 引号   `"` 被当成中文引号用（铁律 15）—— 见 `check_cjk_quotes`
     ⑫ 图 out/in    双向邻接由边派生，且**互为逆表**（手改任一侧即红）—— 见 `check_graph`
 
@@ -61,6 +62,7 @@ import os
 import re
 import sys
 import tempfile
+import tokenize
 
 # ★ 必须自己把 stdout 摆成 utf-8：本文件会打「④ 值漂移（阈值表 ↔ 代码）」这类字符，
 #   而 Windows 的管道 stdout 默认是 GBK ⇒ **打印这行时自己崩**（实测：
@@ -79,6 +81,9 @@ KBJSON = os.path.join(KB, "kb.json")
 TRAPS = os.path.join(KB, "traps.json")
 PLAYBOOK = os.path.join(KB, "playbook.json")
 LOCK = os.path.join(KB, "evidence-lock.json")
+#: ⑦ 的写盘判决登记表（**量出来的**，不是注释里抄的）。它不在 ⑥ 的 watched 里 ——
+#: ⑥ 管的是「边的证据文件」，这一份是「命令的副作用」，两者是不同域的证据。
+READONLY_LOCK = os.path.join(KB, "readonly-lock.json")
 
 #: 手写版本号。判据语义（复核哪几条、怎么算不合格）改了才 +1。与机械 sha12 并存。
 #: v2（2026-09-24）：加 ⑪「ASCII 引号当中文引号」（铁律 15）。**这是一次语义变更** ——
@@ -87,7 +92,11 @@ LOCK = os.path.join(KB, "evidence-lock.json")
 #:   与对的产物在屏幕上一样）。
 #: v3（2026-09-24）：加 ⑫「图 out/in 互为逆表」。同上：v2 的绿勾不含「产物里的双向邻接
 #:   与边一致」这一项 —— 一份 v2 的 ``图: PASS`` 只能说那批边本身没错。
-CRITERION_VERSION = 3
+#: v4（2026-09-25）：⑦ 从「命令形」扩到「写盘判决**必须量过**」。同上：v3 的
+#:   ``⑦ --run 只读：待登记命令 12 条`` 只说明那 12 条的**形状**合规 ——
+#:   它一个字都没说那 12 条真跑起来会不会写盘（那 12 条当时无一条量过）。
+#:   一份 v3 的「⑦ 全放行」读作「都安全」，是**读错了**；v4 才把这句话变成可核的。
+CRITERION_VERSION = 4
 
 _FLAGS = ("--selftest", "--record", "--anchors", "--json", "--cjk-baseline")
 
@@ -761,6 +770,55 @@ def _cjk_quote_hits(text: str, wide: bool) -> list[dict]:
     return out
 
 
+def _py_quote_hits(text: str) -> list[dict]:
+    """`.py` 档的判据：**只看注释与字符串 token 的内容**，两侧皆汉字 ⇒ 命中。
+
+    ★ 为什么不跟 md 那档共用「按行扫」：`.py` 里「汉字夹 ASCII 引号」还有**第三种**成因 ——
+      那对引号其实是**语法定界符**，中间夹的是一个合法的中文标识符（本仓铁律 15 的
+      原始现场：一行 `L.append(...)`，引号把串提前闭合，夹在中间的那串汉字被当成了
+      标识符，**整个文件 SyntaxError**）。按行扫会把这行报成
+      **两处**「中文引号用错」，而它的正解完全是另一件事 ⇒ **误报**。
+      `tokenize` 认 token 边界，定界符天然落在 token 之外、看不见 ⇒ 既不漏也不误报。
+      **实测**（2026-09-25，同一份内容造一个 .py 放进 `kb/`）：按行扫报 **4 处**，
+      其中**行 2 那两处是定界符误报**；tokenize 版报 **2 处**（只有真写错的那行）。
+      ⇒ 「一条判断一份实现」在这里不是洁癖：两种扫描对**同一份内容**给出**不同答案**，
+        它们本来就是**两条**判断，只是长得像。
+
+    ★ 另一个实测（防「换个写法数就变了」）：拿 `backend/checks/heavy.py` 同一份内容
+      用两法各量一遍，**都是 159 处** —— 差别不在数量，在**那一类形态**上。
+
+    ★ 读不了（lex 失败）⇒ 回 `None`：不许读成「干净」（铁律 16 同族）。
+      真身都 SyntaxError 的文件进不了 `kb/`（gate.py 自己就要 import 它），
+      所以这条在 `kb/` 内走不到；留着是为了**调用方必须处理它**。
+    """
+    try:
+        toks = list(tokenize.tokenize(io.BytesIO(text.encode("utf-8")).readline))
+    except Exception:
+        return None
+    out: list[dict] = []
+    for t in toks:
+        if t.type not in (tokenize.COMMENT, tokenize.STRING):
+            continue
+        for m in re.finditer('"', t.string):
+            left = t.string[m.start() - 1] if m.start() else ""
+            right = t.string[m.start() + 1] if m.start() + 1 < len(t.string) else ""
+            if not (_is_han(left) and _is_han(right)):
+                continue
+            nl = t.string[:m.start()].count("\n")
+            ln = t.start[0] + nl
+            # 列号要落在**那一行上**，不是落在 token 内部：token 可以起在行中间
+            # （赋值后面跟一行注释），token 也可以跨行（多行文档串）。
+            # ★ `tokenize` 的 `start[1]` 是 **0 基**的（实测：行首注释的 `start[1]` 是 0，
+            #   而命中列报出来比同行按行扫的那一版小 1）⇒ 单行这一支要 `+1`；
+            #   跨行那一支不用：续行的第一个字符 `m.start() - rfind` 天然就是 1。
+            col = ((t.start[1] + m.start() + 1) if nl == 0
+                   else (m.start() - t.string.rfind("\n", 0, m.start())))
+            raw = text.split("\n")[ln - 1].strip() if ln <= text.count("\n") + 1 else ""
+            out.append({"line": ln, "col": col, "text": raw[:96],
+                        "raw12": sha12(raw.encode("utf-8"))})
+    return out
+
+
 def _kb_sources(suffix: str) -> list[str]:
     """`kb/` 下所有该后缀的文件（相对 ROOT 的 posix 路径）。"""
     return sorted(os.path.relpath(p, ROOT).replace(os.sep, "/")
@@ -792,6 +850,34 @@ def _repo_md_sources() -> list[str]:
             if not rel.startswith("kb/"):
                 out.append(rel)
     return sorted(out)
+
+
+def _repo_py_outside_kb() -> tuple[int, int]:
+    """仓内 `kb/` **之外**的 `.py` 有几个 ⇒ `(在仓内但没量过的, 落在排除目录里的)`。
+
+    ★ **只数，不扫**。为什么要数：⑪ 的 py 档分母一直写着「py 10 严档」，
+      读起来像「仓里的 .py 都量过了」，而真身是**只量了 `kb/` 里那 10 个**；
+      仓内另外几十个（`backend/**`、根上的脚本）**一处都没量过**。
+      ⇒ 「没量过」和「干净」在屏幕上必须不是同一行字（铁律 23(b)、本文件里
+        `_REPO_MD_SKIP` 那条注释同一个道理）。
+    ★ 为什么**不**顺手把它们也扫了：`.py` 那一档的判据（`_py_quote_hits`）在这里是
+      **闸门**。全仓 .py 的既有命中一次改不干净，量了就得带基线，而基线化生产码上
+      一条**注释风格**约定，收益远小于它带来的摩擦。⇒ **决定与实测写在台账**
+      （`_qa/ledger-2026-09-25-floor-coverage.md` §9.12），这里只把**分母的真相**打出来。
+    """
+    kept = skip = 0
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        for d in [x for x in dirnames if x in _REPO_MD_SKIP]:
+            dirnames.remove(d)
+            for _dp, _dn, fns in os.walk(os.path.join(dirpath, d)):
+                skip += sum(1 for fn in fns if fn.lower().endswith(".py"))
+        for fn in filenames:
+            if not fn.lower().endswith(".py"):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+            if not rel.startswith("kb/"):
+                kept += 1
+    return kept, skip
 
 
 #: ⑪ 的**仓内 .md 档**基线：既有命中登记在此，**只对新增报红**。
@@ -876,12 +962,19 @@ def check_cjk_quotes() -> dict:
     """⑪：ASCII 引号被当中文引号用 ⇒ 红。**四**档的分工见上面那段注释。"""
     hits: list[dict] = []
     bad_json: list[str] = []
+    bad_py: list[str] = []
     mds, pys, jss = _kb_sources(".md"), _kb_sources(".py"), _kb_sources(".json")
     for rel in mds:
         for h in _cjk_quote_hits(_read_text(rel) or "", wide=True):
             hits.append(dict(h, file=rel, band="md"))
     for rel in pys:
-        for h in _cjk_quote_hits(_read_text(rel) or "", wide=False):
+        # ★ 词法读不了 ⇒ 进 `bad_py`：**不许静默当干净**（与「解析不了的 JSON」同一条出路，
+        #   但**另立一栏** —— 塞进 `bad_json` 会让文案说谎，而说谎的文案比没有文案更坏）。
+        ph = _py_quote_hits(_read_text(rel) or "")
+        if ph is None:
+            bad_py.append("%s：这个 .py 连词法都过不了（≠ 干净）" % rel)
+            continue
+        for h in ph:
             hits.append(dict(h, file=rel, band="py"))
     for rel in jss:
         try:
@@ -897,15 +990,18 @@ def check_cjk_quotes() -> dict:
         for h in _cjk_quote_hits(_read_text(rel) or "", wide=True):
             repo_hits.append(dict(h, file=rel, band="md-repo"))
     repo = cjk_repo_band(repo_hits)
+    py_out, py_skip = _repo_py_outside_kb()
     n = len(mds) + len(pys) + len(jss)
-    gap = bool(hits or bad_json or repo["state"] != "pass")
+    gap = bool(hits or bad_json or bad_py or repo["state"] != "pass")
     return {"status": "gap" if gap else "pass",
             "checked": n, "md": len(mds), "py": len(pys), "json": len(jss),
-            "hits": hits, "bad_json": bad_json,
+            "hits": hits, "bad_json": bad_json, "bad_py": bad_py,
+            "py_repo": py_out, "py_repo_skip": py_skip,
             "md_repo": len(repo_files), "repo": repo, "repo_hits": len(repo_hits),
             "detail": "%d 个文件（md %d 宽档 / py %d 严档 / json %d 只判能解析）；命中 %d 处；"
                       "另量仓内 .md %d 个／命中 %d 处（带基线：%s）"
-                      % (n, len(mds), len(pys), len(jss), len(hits) + len(bad_json),
+                      % (n, len(mds), len(pys), len(jss),
+                         len(hits) + len(bad_json) + len(bad_py),
                          len(repo_files), len(repo_hits), repo["detail"])}
 
 
@@ -997,7 +1093,130 @@ def readonly_ok(cmd: str) -> tuple[bool, str]:
     return True, "只读"
 
 
-def readonly_verdict(cmd: str, writes: str = "") -> tuple[bool, str]:
+#: 声明那句 `writes` 里「像文件路径」的片段。只用于**单向**比对（见 `writes_agreement`）。
+_DECL_PATH = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_./\\-]*\.(?:json|md|txt|csv|png|log)")
+
+
+def readonly_registry() -> tuple[dict | None, str]:
+    """读 ⑦ 的写盘判决登记表 ⇒ (内容, 为什么读不到)。读不到 = `None` ＋ 一句人话。
+
+    ★ 与 `load_cjk_baseline()` 同一条出路：**文件不在 ≠ 空表**。
+      当成空表 ⇒ 每条命令都「没登记」⇒ 全红（假红）；当成绿 ⇒ 差别更大。
+    """
+    if not os.path.exists(READONLY_LOCK):
+        return None, "没有 %s" % os.path.relpath(READONLY_LOCK, ROOT).replace(os.sep, "/")
+    try:
+        return json.loads(io.open(READONLY_LOCK, encoding="utf-8").read()), ""
+    except Exception as exc:                      # noqa: BLE001 —— 解析不了要说人话
+        return None, "%s 解析不了：%s" % (os.path.basename(READONLY_LOCK), str(exc)[:70])
+
+
+def writes_agreement(cmd: str, prose: str, reg: dict | None) -> tuple[bool, str]:
+    """**声明**那句 `writes` vs **量出来**的写盘判决。纯函数（自检往 `reg` 里注假表）。
+
+    ★ 为什么要有它：⑦ 原先只查**命令形**（黑名单 token ＋ 白名单前缀）。
+      于是「只读」是一句**没人验过的空话** —— 一条命令完全可以落在白名单里、
+      又不带任何写标记，却把盘写了。这一档存在的全部理由就是抓这个。
+      现在把它变成三条**机械**的检查：
+        ① 这条命令**量过吗**？（没量过 ⇒ 拒。「没量过」与「安全」不许同形）
+        ② 量出来写到的每只文件，声明里**点到名了吗**？（漏报即拒）
+        ③ 这份判决是拿**现在这版脚本**量的吗？（脚本内容 sha12 变了 ⇒ 拒，见铁律 24）
+      不做集合相等：声明里可以多提几笔（例如顺带说明「够不着那两份」），多说不算错。
+    """
+    if not isinstance(reg, dict) or not isinstance(reg.get("commands"), dict):
+        return False, "写盘判决登记表取不到或坏了 —— **判不了就不放行**"
+    entry = reg["commands"].get(cmd)
+    if not isinstance(entry, dict):
+        return False, ("这条命令**没量过**写盘副作用（`kb/readonly-lock.json` 里没有它）"
+                       "—— 没量过 ≠ 只读；按那份表里 `how` 说的两条腿量一遍再登记")
+    verdict = entry.get("verdict")
+    files = entry.get("files")
+    if verdict not in ("writes", "readonly"):
+        return False, "判决字段 `verdict` 不认识：%r（只认 writes / readonly）" % (verdict,)
+    if not isinstance(files, list):
+        return False, "判决没带 `files` 清单 —— 「写了什么」不许为空"
+    if verdict == "writes" and not files:
+        return False, "判决是会写，却一只文件都没列出来 ⇒ 这份判决本身就是空的"
+    if verdict == "readonly" and files:
+        return False, ("判决是只读，却列着写盘文件 %s ⇒ 自相矛盾"
+                       % "、".join(str(x) for x in files))
+    if verdict == "readonly":
+        # ★ 「只读」不许是自称的：必须带上**那次实测的 observed**，而且那份 observed
+        #   自己得自洽（零写盘 ＋ 非空分母）。少了这两条，一句手写的 `readonly`
+        #   就能让一条会写的命令过关 —— 那正是这一档要抓的东西。
+        obs = entry.get("observed")
+        if not isinstance(obs, dict):
+            return False, "判决「只读」却没带 observed —— 只读必须是**量出来的**，不是自称的"
+        trace = {k: obs.get(k) for k in ("files_written", "new", "gone")}
+        extra = {k: obs.get(k) for k in ("changed", "rewritten")}
+        if any(v not in (0, None) for v in trace.values()) or any(extra.values()):
+            return False, ("判决「只读」，可 observed 里记着写盘痕迹（files_written=%r、"
+                           "new=%r、gone=%r、changed=%r、rewritten=%r）⇒ 自相矛盾"
+                           % (obs.get("files_written"), obs.get("new"), obs.get("gone"),
+                              obs.get("changed"), obs.get("rewritten")))
+        if not (obs.get("denominator_before") or 0):
+            return False, ("判决「只读」，可分母是 0（denominator_before=%r）⇒ "
+                           "「一个都没写」是因为**一个都没看**"
+                           "（铁律 23a：判据在全部样本上取极值 = 没有分辨力）"
+                           % obs.get("denominator_before"))
+    prose_n = (prose or "").replace("\\", "/")
+    declared = {m.group(0).replace("\\", "/") for m in _DECL_PATH.finditer(prose_n)}
+    missing = [str(f) for f in files if str(f).replace("\\", "/") not in declared
+               and str(f).replace("\\", "/") not in prose_n]
+    if missing:
+        return False, ("声明的 `writes` 里没提到实测写到的文件：%s —— "
+                       "声明与实际对不上（声明那句：%s）"
+                       % ("、".join(missing), (prose or "")[:60]))
+    # ★ 只核**这条命令自己跑的那个脚本**：登记表里的指纹是全局的，但一条命令
+    #   跟另一个脚本的改动无关 —— 一把尺子变旧就红掉全部 12 条，会让人学会忽略它
+    #   （本仓「只追加账本上的整表断言」那条：整表红 = 被学会忽略）。
+    stale, matched = [], 0
+    for rel, want in (reg.get("scripts") or {}).items():
+        if os.path.basename(rel) not in cmd:
+            continue
+        matched += 1
+        data = _read_bytes(rel)
+        now = sha12(data) if data is not None else "missing"
+        if now != want:
+            stale.append("%s（登记 %s / 现在 %s）" % (rel, want, now))
+    if stale:
+        return False, ("这份判决是拿**旧版脚本**量的：%s —— 脚本一改，"
+                       "当时量到的写盘行为就与当下无关了（铁律 24：旧尺子量的产物"
+                       "与对的产物在屏幕上一样）。按 `kb/readonly-lock.json` 的 `how` 重量一遍"
+                       % "、".join(stale))
+    if not matched:
+        # ★ 对上一条的反面：**一条都没核**必须也拒，否则「没核」与「核过且一致」
+        #   在屏幕上同形（本仓记过：通过率 100% 的判据不是严格，是没接上）。
+        return False, ("这条命令没指明它在跑哪个**被量过的**脚本（表里只有 %s）⇒ "
+                       "它那份「只读」无从核对 —— 判不了就不放行"
+                       % "、".join(sorted(reg.get("scripts") or {})))
+    return True, "写盘判决已核：%s" % ("会写 " + "、".join(str(f) for f in files)
+                                        if verdict == "writes" else "只读（实测零写盘）")
+
+
+def readonly_label(cmd: str, reg: dict | None) -> str:
+    """⑦ 那一行要打出来的判决短语 —— 打印与 `--json` 同源，别在 `_print` 里再推一遍。"""
+    if not isinstance(reg, dict) or not isinstance(reg.get("commands"), dict):
+        return "判决：**取不到登记表**"
+    e = reg["commands"].get(cmd)
+    if not isinstance(e, dict):
+        return "判决：**没量过**"
+    files = e.get("files") or []
+    obs = e.get("observed") or {}
+    if e.get("verdict") == "readonly":
+        # ★ 措辞要点：这是**登记表里记着什么**，不是「门禁核过了」——
+        #   判决能不能过由 `readonly_verdict` 说，那行会打在下面。
+        #   写成「已核」就等于拿一句自称冒充一次核验（铁律 23a 的同族）。
+        return ("判决：只读（登记表记的是「实测 %s 个文件」）"
+                % (obs.get("files_written") if obs.get("files_written") is not None else "?"))
+    line = "判决：会写 → %s" % "、".join(str(f) for f in files)
+    if obs.get("files_written") == 0:
+        line += "；★ 本次实测写了 **0 个** —— %s" % (e.get("observed_zero_why")
+                                                    or "原因见 kb/readonly-lock.json")
+    return line
+
+
+def readonly_verdict(cmd: str, writes: str = "", reg: dict | None = None) -> tuple[bool, str]:
     """一条登记的判据命令**能不能跑** —— ★**唯一**的裁决处。
 
     登记侧（`run()` 那一列 `cmd_rows`）与执行侧（`kb/ask.py:run_registered`）都调它，
@@ -1009,11 +1228,33 @@ def readonly_verdict(cmd: str, writes: str = "") -> tuple[bool, str]:
 
     ★ 「只读」不许是空话：白名单是按**前缀**放的，而这些盘上脚本**会写报告**。
       没写 `writes` 的条目 = 副作用没人知道 ⇒ 拒（不是警告）。
+    ★ v4 再进一步：**写了 `writes` 也不够** —— 那句话同样可以是没人验过的。
+      所以再加一条：这一条命令的写盘判决必须在 `kb/readonly-lock.json` 里**量过**，
+      且声明与实测对得上（`writes_agreement`）。参数 `reg` 只为自检注入。
+
+    `reg=None` ⇒ 去读登记表；**读不到就拒**（判不了就不放行，与 `_run_guard` 同一条）。
+
+    ★★ **这一档抓不到什么（写在这里，免得日后被当成「都安全」）**：抓不到一份
+      **自洽的谎**。实测（2026-09-25，真盘上跑的刑具）：把 `scan_defects.py c001`
+      手工改成 `verdict="readonly"`、`files=[]`、`observed` 全零且分母非零（15017）——
+      ⑦ **放行**（那一行打的是 ○）。因为这个谎在内部是自洽的：
+      它宣称的量、它的分母、它的文件清单互不矛盾。
+      这一档量的是**内部一致 ＋ 脚本新鲜 ＋ 声明不漏报 ＋ 分母非空**这四件机械的事，
+      **不是**「登记表没被人手改过」。后者只能靠把登记表的改动当**签收动作**来守
+      （与 `evidence-lock.json` 同一套信任模型）：改它要走 `--record` 并**读**锚点视图。
+      出路（需要人裁决，见 `kb/readonly-lock.json` 的 `known_limits`）：给这份表一条边、
+      让它进 ⑥ 的指纹 —— 那要动 `kb/playbook.json`／`build_kb.py`，不属本次最小改动。
     """
     ok, why = readonly_ok(cmd)
-    if ok and not (writes or "").strip():
+    if not ok:
+        return ok, why
+    if not (writes or "").strip():
         return False, "没写 writes —— 判据命令的写盘副作用必须写明"
-    return ok, why
+    if reg is None:
+        reg, bad = readonly_registry()
+        if reg is None:
+            return False, "写盘判决判不了（%s）—— **判不了就不放行**" % bad
+    return writes_agreement(cmd, writes, reg)
 
 
 # ── 汇总 ────────────────────────────────────────────────────
@@ -1030,11 +1271,17 @@ def run(payload: dict | None = None) -> dict:
     dual = check_dual_source()
     value = _run_values()
     cmd_rows = []
+    # ★ 登记表**只读一次**（12 条命令各读一次盘没有必要，而且中途被人改了会出现
+    #   「同一次运行里前六条用旧表、后六条用新表」）。
+    reg, _reg_bad = readonly_registry()
     for c in _declared_commands(payload):
         # ★ 判决调 `readonly_verdict`（唯一裁决处），不在这里写第二遍 ——
         #   执行侧 `kb/ask.py:run_registered` 调的是同一个函数。
-        ok, why = readonly_verdict(c["cmd"], c.get("writes") or "")
-        cmd_rows.append((c["cmd"], ok, why, c.get("src") or ""))
+        ok, why = readonly_verdict(c["cmd"], c.get("writes") or "", reg)
+        # ★ 第 5 位是**判决短语**（`writes` 实际落在哪几只文件）—— 打印与 --json 同源。
+        #   索引 1 仍然是 `ok`：`backend/checks/kg_citation.py` 按 c[1] 消费，加一位不改它。
+        cmd_rows.append((c["cmd"], ok, why, c.get("src") or "",
+                         readonly_label(c["cmd"], reg)))
     # ★ 用**产物里那份**陷阱表（`traps_table`）—— 与 ①②③ 收边时用的是同一份。
     #   这里若改回读文件，「边来自产物、条数来自文件」，两者不一致时屏幕上看不出来。
     _te, bare = collect_trap_edges(traps_table(payload))
@@ -1069,6 +1316,10 @@ def run(payload: dict | None = None) -> dict:
                          "families": len((payload or {}).get("playbook") or {}),
                          "edges": len(pb_edges), "bare": pb_bare, "declared": pb_declared},
             "self_sha12": _self_sha12(),
+            # ★ ⑦ 的判决来自**盘上另一份文件**（readonly-lock.json）——
+            #   不把它的指纹报出来，读表的人就分不清这份「只读」是谁量的
+            #   （与下面 values_sha12 同一条理由，铁律 24）。
+            "readonly_sha12": _file_sha12("readonly-lock.json"),
             # ★ ④ 是**委派**给 values.py 的尺子。委派出去的那把尺子换了，
             #   本文件的指纹不会变 —— 不报出来，读的人就分不清这份结果是谁量的
             #   （铁律 24：「这份数是旧尺子量的」和「这份数是对的」屏幕上一样）。
@@ -1215,6 +1466,13 @@ def _print(res: dict) -> None:
             skipped.append("%s %d" % (d, k))
     print("        （排除清单：%s —— 这些目录里的 .md **一处都没量过**；"
           "没量到和干净不是同一行字）" % ("、".join(skipped) if skipped else "无"))
+    # ★ 同上，py 那一侧的分母也要说真话：`py 10 严档` 读起来像「仓里的 .py 都量过了」，
+    #   真身是**只量了 kb/ 里那 10 个**。这里把没量过的数**实时**打出来（不写死历史数）。
+    cj = res["cjk"]
+    print("        （py 档的分母 = `kb/` 内那 %d 个；仓内 `kb/` 之外另有 **%d 个 .py** "
+          "＋ 排除目录里 %d 个 —— **一处都没量过**，这一档只覆盖 `kb/`；"
+          "实测与「为什么不扩到全仓」见台账 §9.12）"
+          % (cj["py"], cj.get("py_repo", 0), cj.get("py_repo_skip", 0)))
 
     gp = res["graph"]
     if gp["status"] == "unavailable":
@@ -1234,12 +1492,50 @@ def _print(res: dict) -> None:
     print("⑦ --run 只读：待登记命令 **%d** 条%s"
           % (len(res["cmds"]),
              "（一个都还没查过 —— 这不等于都安全）" if not res["cmds"] else ""))
-    for cmd, ok, why, src in res["cmds"]:
+    # ★ 「只读」这一栏**现在有内容**了：每条后面跟着它**量出来的**写盘判决
+    #   （哪个文件、或「实测零写盘」）。v3 这里只有命令名 ——
+    #   于是「全放行」读起来像「都安全」，而当时没有一条量过（铁律 23a：饱和的判据
+    #   没有分辨力；12/12 全 ○ 与「都安全」必须不是同一行字）。
+    for cmd, ok, why, src, label in res["cmds"]:
         print("     %s %s  ← %s" % ("○" if ok else "✗", cmd, src))
+        print("        %s" % label)
         if not ok:
             print("        拒登：%s" % why)
-    print("（尺子自指纹 gate=%s / values=%s，criterion_version=%d）"
-          % (res["self_sha12"], res["values_sha12"], res["criterion_version"]))
+    # ★ 「全 ○」旁边必须站着「这一档抓不到什么」——否则 12/12 全 ○ 会被读成「都安全」。
+    #   登记表自己声明的那几条（`known_limits`）在这里原样透出一句，不缩写成「见文件」。
+    _rlock = readonly_registry()[0] or {}
+    _kl = _rlock.get("known_limits") or []
+    if _kl:
+        print("     ★ 这份登记表**自己声明了 %d 条抓不到的东西**（读上面那些 ○ 之前先读它）："
+              % len(_kl))
+        for s in _kl:
+            print("        · %s" % s[:160])
+    print("（尺子自指纹 gate=%s / values=%s / 写盘判决表=%s，criterion_version=%d）"
+          % (res["self_sha12"], res["values_sha12"],
+             res.get("readonly_sha12", "?"), res["criterion_version"]))
+
+
+def _repo_fails(cjk: dict) -> list[str]:
+    """⑪ 第四档（仓内 `kb/` 之外的 .md）该不该让**退出码**变非 0。
+
+    ★ 为什么单独抽成一个函数：这一档的状态早就并进了 ⑪ 的 `status`（表里打得出来），
+      却**没有并进 `_fails`** —— 实测（2026-09-25）：盘上新增 4 处命中时，屏幕上写着
+      「⑪ ... GAP」＋ 逐条「✗ [新增] ...」，而**退出码是 0**。
+      ⇒ 自动化消费方（CI、`backend/checks`）看到的是绿；只有**人读表**才看得见。
+      「表里报了」与「闸门关了」不是同一件事，而它们**在退出码上必须分开**。
+
+    ★ 抽出来还有第二个理由：自检原来只断言 `cjk_repo_band(...)["state"] == "gap"`，
+      而**闸门走的是 `_fails`** —— 断言的与闸门的不是同一条路，所以那条断言全绿、
+      退出码照旧 0（本仓记过「断言测的与闸门走的不是同一件事」）。有了这个函数，
+      自检可以拿**真的 band 输出**去量**真的那条出路**。
+    """
+    rp = cjk.get("repo") or {}
+    if rp.get("blocked"):
+        # 整档没比（尺子变了 / 基线不在）—— 与「真长了东西」分开写（铁律 16 同族）。
+        return ["引号（仓内 .md）：%s" % rp.get("detail")]
+    return ["引号（仓内 .md）新增 %s:%s col%s：ASCII 引号被当中文引号用（%s）"
+            % (h.get("file"), h.get("line"), h.get("col"), (h.get("text") or "")[:60])
+            for h in (rp.get("new") or [])]
 
 
 def _fails(res: dict) -> list[str]:
@@ -1262,6 +1558,9 @@ def _fails(res: dict) -> list[str]:
                    % (h["file"], h["line"], h["col"], h["text"][:60]))
     for b in res["cjk"]["bad_json"]:
         out.append("引号：JSON 解析不了 —— %s" % b)
+    for b in res["cjk"].get("bad_py") or []:
+        out.append("引号：%s" % b)
+    out.extend(_repo_fails(res["cjk"]))
     if not res["traps"]["present"]:
         out.append("陷阱：%s 不在 —— 这一类没被查过（不是「没有陷阱」）" % TRAPS)
     pb = res["playbook"]
@@ -1271,7 +1570,14 @@ def _fails(res: dict) -> list[str]:
     #   两者混成一个判据 = 把漏写解放成诚实。
     for b in pb["bare"]:
         out.append("手册 %s：%s" % (b["slug"], b["reason"]))
-    for cmd, ok, why, src in res["cmds"]:
+    reg, reg_bad = readonly_registry()
+    if reg is None:
+        # ★ 登记表读不到 ⇒ ⑦ **判不了** ⇒ 拒（fail-closed）。「判不了」与「都安全」
+        #   不许同形：少了这一条，删掉 readonly-lock.json 就等于把 ⑦ 关掉，
+        #   而且退出码是 0（铁律 16 的同族）。
+        out.append("--run：写盘判决判不了（%s）—— ⑦ 整档**没查**（不是「都安全」）"
+                   % reg_bad)
+    for cmd, ok, why, src, _label in res["cmds"]:
         if not ok:
             out.append("--run 拒登 %r（%s）：%s" % (cmd, src, why))
     return out
@@ -1527,6 +1833,127 @@ def selftest() -> int:
     if not readonly_ok("python -u backend/checks/qa_structural.py")[0]:
         fails.append("T⑦ 只读命令被误拒：%s" % readonly_ok("python -u backend/checks/qa_structural.py")[1])
 
+    # ⑦b（v4）：「只读」必须**被量过** —— 上面那一档只查**命令形**。
+    #   ★ 这一档存在的全部理由：一条命令完全可以在白名单里、不带任何写标记，却把盘写了。
+    #     所以这里量的是「登记表里那句判决」与「声明那句 writes」对不对得上，
+    #     以及判决是不是拿**现版脚本**量的。
+    #   ★ 阴性对照必须**在同一个位置**：右边四条断言「会红」，左边一条断言「真的那条照旧绿」——
+    #     少了左边那条，右边全红与「判据处处红」在屏幕上同形。
+    global READONLY_LOCK
+    _rl_keep = READONLY_LOCK
+    _rl_reg, _rl_why = readonly_registry()
+    if _rl_reg is None:
+        fails.append("T⑦b 读不到写盘判决登记表（%s）—— ⑦ 这一档**没查**" % _rl_why)
+    else:
+        # ── 阴性对照：kb.json 里**每一条**真登记的命令，配上 kb.json 里那句真 writes ⇒ 必须放行。
+        #    （用真表 + 真声明跑，而不是我在这里现编一句 —— 现编的那句会把
+        #      「我的检查太宽」和「我的例子太好」混在一起。）
+        _rl_decl = _declared_commands(json.loads(io.open(KBJSON, encoding="utf-8").read()))
+        _rl_pass = 0
+        for c in _rl_decl:
+            ok, why = readonly_verdict(c["cmd"], c.get("writes") or "", _rl_reg)
+            if not ok:
+                fails.append("T⑦b 阴性对照：真登记的那条 %r 被误拒（%s）" % (c["cmd"], why))
+            else:
+                _rl_pass += 1
+        if _rl_pass == 0:
+            fails.append("T⑦b 阴性对照一条都没过（共 %d 条）—— 下面那几条红的分不清是"
+                         "「判据对」还是「处处红」" % len(_rl_decl))
+
+        # 拿一个**真存在**的登记条目当底子改（挑不到就明说，不许静默跳过）
+        _rl_base = None
+        for k in sorted(_rl_reg["commands"]):
+            if isinstance(_rl_reg["commands"][k], dict) and _rl_reg["commands"][k].get("files"):
+                _rl_base = k
+                break
+        if _rl_base is None:
+            fails.append("T⑦b 登记表里没有一条带 files 的命令 —— 下面四条夹具无从构造")
+        else:
+            _rl_e = _rl_reg["commands"][_rl_base]
+            _rl_prose = "、".join(str(f) for f in _rl_e["files"])
+            # ① 没量过 ⇒ 拒（**多带一个参数就是另一条命令**：注册表的键是整条命令串）
+            ok, why = readonly_verdict(_rl_base + " c999", _rl_prose, _rl_reg)
+            if ok or "没量过" not in why:
+                fails.append("T⑦b ①没量过的命令被放行（%r）—— 这一档要抓的就是它" % why)
+            # ② 声明**漏报**一只实测写到的文件 ⇒ 拒
+            freg = json.loads(json.dumps(_rl_reg))
+            freg["commands"][_rl_base]["files"] = list(_rl_e["files"]) + ["_qa/声明里没提过的.txt"]
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "没提到" not in why:
+                fails.append("T⑦b ②声明漏报一只实测文件仍放行（%r）" % why)
+            # ②b 反向：声明**多说**几笔（合法，例如顺带说明「够不着全库那两份」）⇒ 必须仍放行
+            #    ——没有这一条，②太宽就退化成「声明与实测必须逐字相同」，
+            #      而那会把 kb.json 里那 12 句真 writes 全判红。
+            ok, why = readonly_verdict(_rl_base, _rl_prose + "；另：够不着 _qa/defects.json 那两份",
+                                       _rl_reg)
+            if not ok:
+                fails.append("T⑦b ②b 声明多说了几笔就被拒（%r）—— 单向包含写成了集合相等" % why)
+            # ③ 判决写「只读」却带着 files ⇒ 自相矛盾 ⇒ 拒
+            freg = json.loads(json.dumps(_rl_reg))
+            freg["commands"][_rl_base]["verdict"] = "readonly"
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "自相矛盾" not in why:
+                fails.append("T⑦b ③判决「只读」却列着写盘文件仍放行（%r）" % why)
+            # ③b 判决写「会写」却一只文件都不列 ⇒ 判决本身是空的 ⇒ 拒
+            freg = json.loads(json.dumps(_rl_reg))
+            freg["commands"][_rl_base]["files"] = []
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "空的" not in why:
+                fails.append("T⑦b ③b「会写」却列不出文件仍放行（%r）" % why)
+            # ③c 「只读」自称，但 observed 里记着写盘痕迹 ⇒ 自相矛盾 ⇒ 拒
+            freg = json.loads(json.dumps(_rl_reg))
+            freg["commands"][_rl_base] = dict(_rl_e, verdict="readonly", files=[],
+                                              observed=dict(_rl_e.get("observed") or {},
+                                                            files_written=1,
+                                                            rewritten=["_qa/写过的.txt"]))
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "自相矛盾" not in why:
+                fails.append("T⑦b ③c 自称只读、实测却写了文件，仍被放行（%r）—— "
+                             "「只读」变成了自称的一句话" % why)
+            # ③d 「只读」＋零写盘，但**分母是 0**（一个文件都没拍过）⇒ 拒
+            #     —— 「一个都没写」与「一个都没看」不许同形（铁律 23a）
+            freg = json.loads(json.dumps(_rl_reg))
+            freg["commands"][_rl_base] = dict(_rl_e, verdict="readonly", files=[],
+                                              observed=dict(_rl_e.get("observed") or {},
+                                                            files_written=0, new=0, gone=0,
+                                                            changed=[], rewritten=[],
+                                                            denominator_before=0))
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "一个都没看" not in why:
+                fails.append("T⑦b ③d 分母为 0 的「只读」被放行（%r）" % why)
+            # ④ 判决是拿**旧版脚本**量的 ⇒ 拒（铁律 24）
+            freg = json.loads(json.dumps(_rl_reg))
+            for rel in list(freg.get("scripts") or {}):
+                if os.path.basename(rel) in _rl_base:
+                    freg["scripts"][rel] = "000000000000"
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "旧版脚本" not in why:
+                fails.append("T⑦b ④旧版脚本量的判决仍放行（%r）" % why)
+            # ④b 一条指纹都没对上（命令没指明跑的是哪个被量脚本）⇒ 也必须拒
+            #     —— 「一条都没核」与「核过且一致」不许同形（100% 通过率 = 没接上）
+            freg = json.loads(json.dumps(_rl_reg))
+            freg["scripts"] = {"nobody-measured.py": "000000000000"}
+            ok, why = readonly_verdict(_rl_base, _rl_prose, freg)
+            if ok or "无从核对" not in why:
+                fails.append("T⑦b ④b 指纹一条都没核仍放行（%r）" % why)
+            # ④c 表结构坏了 ⇒ 拒（不是崩，也不是放行）
+            ok, why = readonly_verdict(_rl_base, _rl_prose, {"commands": "不是字典"})
+            if ok or "判不了" not in why:
+                fails.append("T⑦b ④c 登记表结构坏了仍放行 / 抛了（%r）" % why)
+
+    # ⑤ 登记表**不在** ⇒ ⑦ 判不了 ⇒ 拒（fail-closed）。★ 与 ⑥ 用临时 lock 同一手法：
+    #    把全局指向一只不存在的文件，跑完在 finally 里复位 —— 绝不碰真的 readonly-lock.json。
+    try:
+        READONLY_LOCK = os.path.join(KB, "no-such-readonly-lock.json")
+        if readonly_registry()[0] is not None:
+            fails.append("T⑦b ⑤登记表不在时 readonly_registry 没报错（把「不在」读成「有空表」）")
+        ok, why = readonly_verdict("python -u qa_structural.py c057", "_qa/c057_qa.txt")
+        if ok or "判不了" not in why:
+            fails.append("T⑦b ⑤登记表不在 ⇒ 命令仍被放行（%r）—— fail-closed 没生效；"
+                         "删掉那一份文件就等于把 ⑦ 关掉，而退出码是 0" % why)
+    finally:
+        READONLY_LOCK = _rl_keep
+
     # ⑧ 陷阱：**有锚点的边被收上来** 且 **没锚点的被数出来**（不是被丢掉）
     #   ★ 阳性对照用临时 traps 文件：一条有 case、一条无 case，
     #     必须分别落进 (edges, bare) 两栏；只断言「收上来了」会让整条静默失效溜过去。
@@ -1762,6 +2189,13 @@ def selftest() -> int:
         if (rb2["state"], rb2["known"], len(rb2["new"])) != ("pass", 1, 0):
             fails.append("T⑪repo 尺子对上且命中在基线内 ⇒ 应放行，实得 %s/命中%d/新增%d"
                          % (rb2["state"], rb2["known"], len(rb2["new"])))
+        # ★★ 这一组量的是**闸门那条出路**（`_repo_fails`），不是 band 的 status。
+        #    原来只断言 status ⇒ 条条全绿而**退出码照旧 0**（2026-09-25 实测的洞）。
+        if _repo_fails({"repo": rb2}):
+            fails.append("T⑪repo 阴性对照：基线内命中（state=pass/new=0）却让闸门关了：%r"
+                         % (_repo_fails({"repo": rb2})[:2],))
+        if not _repo_fails({"repo": rb}):
+            fails.append("T⑪repo 整档没比（blocked）却没让闸门关 —— 退出码会照旧是 0")
     finally:
         CJK_BASELINE = keep_cb
         for p in (tmp_cb, tmp_cb2):
@@ -1805,12 +2239,41 @@ def selftest() -> int:
             fails.append("T⑪repo 盘上新长的坏引号没被抓（%s）—— 这一档没接上盘" % r_bad)
         if rq2["status"] != "gap":
             fails.append("T⑪repo 有新增命中时整体状态仍为 %s（应为 gap）" % rq2["status"])
+        # ★★ 关键的一条：**退出码那条出路**。只断言 `status == gap` 不够 ——
+        #    表里打 GAP 而 `_fails` 不读这一档时，屏幕上「GAP ＋ 逐条 ✗」，
+        #    退出码却是 0，CI 看到的是绿。断言要落在**闸门实际走的那条路**上。
+        rf2 = _repo_fails(rq2)
+        if not rf2:
+            fails.append("T⑪repo 盘上有新增命中，`_repo_fails` 却一条都没返回 ——"
+                         " 退出码会照旧是 0（表里报了 ≠ 闸门关了）")
+        elif not any(r_bad in s for s in rf2):
+            fails.append("T⑪repo `_repo_fails` 没点出那个新长的文件（%s）—— %r"
+                         % (r_bad, rf2[:2]))
         if r_ok in got_new:
             fails.append("T⑪repo 阴性对照被误报（「」与反引号跨度里的引号撞红了）——"
                          " 判据宽了会被学会忽略，比漏检更坏")
         if r_sk in got_new:
             fails.append("T⑪repo 排除清单没生效：_scratch/ 下的 .md 被算进来了（%s）"
                          " —— 排除规则坏了是**静默**的" % r_sk)
+        # ★ **接线**是另一件事：上面那条量的是 `_repo_fails` 自己，把
+        #   `out.extend(_repo_fails(res["cjk"]))` 那行删掉，自检**照旧全绿**。
+        #   ⇒ 拿一份「别处全干净、只有 repo 这一处不对」的最小 res 过一遍**真的** `_fails`，
+        #     这道才是量「表里报了 ⇒ 退出码非 0」的。
+        res_min = {"edges": [], "stale": {"status": "pass"}, "dual": {"status": "pass"},
+                   "value": {"status": "pass"}, "graph": {"status": "pass"},
+                   "cjk": {"hits": [], "bad_json": [], "repo": rq2["repo"]},
+                   "traps": {"present": True}, "playbook": {"present": True, "bare": []},
+                   "cmds": []}
+        ff = _fails(res_min)
+        if not any(r_bad in s for s in ff):
+            fails.append("T⑪repo `_fails` 没把这一档带进退出码（只有 repo 不对时返回 %d 条）"
+                         " —— 自检会绿，而 CI 看到的是绿" % len(ff))
+        # 阴性对照：同一份 res 换一个干净的 repo，`_fails` 必须回空。
+        # （这一条同时证明上面那份最小 res 是**真干净**的 —— 不然上一条可能因别处不干净而假绿。）
+        res_min["cjk"]["repo"] = {"blocked": False, "new": []}
+        if _fails(res_min):
+            fails.append("T⑪repo 阴性对照：repo 干净（new=0、未 blocked）却仍让 `_fails` 非空：%r"
+                         % (_fails(res_min)[:2],))
     finally:
         CJK_BASELINE = keep_cb2
         for p in tmp_md + ([tmp_cb3] if tmp_cb3 else []):
@@ -1938,7 +2401,10 @@ def selftest() -> int:
     else:
         pb_note = "手册 **量不了**（kb.json 不在）"
     print("--selftest 绿：**12 条**刑具全部能红（①路径 ②行号 ③符号+注释不算 ④接上 ⑤非空转 "
-          "⑥改一字节即红+无表即说量不了 ⑦写操作被拒/只读放行 ⑧陷阱分两栏 ⑨手册三栏 "
+          "⑥改一字节即红+无表即说量不了 ⑦写操作被拒/只读放行＋**没量过即拒**"
+          "（真表里 12 条照旧放行；没登记／声明漏报实测文件／声称只读却带写盘痕迹／"
+          "只读而分母为 0／拿旧版脚本量的／指纹一条都没核／表结构坏／表不在 ⇒ 各有一条刑具）"
+          " ⑧陷阱分两栏 ⑨手册三栏 "
           "⑩re-baseline 差异报告只报真变动的文件、且打出锚点此刻指到的内容 "
           "⑪引号两档各自能红+掩码生效+分母非零、仓内 .md 档带基线（基线内放行/新增即红/"
           "排除清单生效/尺子变了整档未比）"
@@ -1975,6 +2441,7 @@ def main(argv: list[str]) -> int:
                    "playbook": res["playbook"],
                    "fails": _fails(res),
                    "self_sha12": res["self_sha12"], "values_sha12": res["values_sha12"],
+                   "readonly_sha12": res.get("readonly_sha12"),
                    "criterion_version": res["criterion_version"]},
                   sys.stdout, ensure_ascii=False, indent=1)
         sys.stdout.write("\n")

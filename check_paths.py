@@ -45,7 +45,7 @@ ROOT_GLOB = "*.py"
 #:   = 一次性探针 / 历史验证工具。跑过一次、留档、不再执行；
 #:   输入往往已经不存在，改了也没法验证，改了只是增加没有回报的改动面。
 #:   它们要跑起来，第一件该做的事是把自己接进 paths.py，而不是被门禁逼着改。
-#: 真正会反复执行的工具链（run_building / run_batch / build_index /
+#: 真正会反复执行的工具链（run_building / _par_batch / build_index /
 #: convert_dwg_to_dxf / qa_structural）都在检查范围内。
 SKIP_PREFIX = "_"
 

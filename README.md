@@ -13,7 +13,6 @@
 ```
 D:\gym3d
 ├── run_building.py          # 单栋管道入口（backend/web/run_step.py 真 import）
-├── run_batch.py             # 批量管道（⚠️ 铁律：不许跑）
 ├── convert_dwg_to_dxf.py    # DWG → DXF，管线第一步（audit=1 铁律）
 ├── build_index.py           # 生成 data/buildings/index.json
 ├── qa_structural.py         # 结构体检 I1–I10 门禁（⚠️ 只读，不可改）
@@ -40,7 +39,7 @@ D:\gym3d
 │   ├── modeling/
 │   │   └── build_standard_glb.py   # GLB 建模（三段挤出 + 门头过梁）
 │   ├── db/
-│   │   └── serve_rooms.py          # 8123：房间 API + 单层页
+│   │   └── (serve_rooms.py 已退役)  # 原 8123 房间 API → backend/api/routers/rooms.py，留档 _scratch/_retired_20260925/
 │   ├── web/
 │   │   ├── control.py              # 8130：建模控制台后端
 │   │   └── run_step.py             # 控制台步骤执行器
@@ -131,10 +130,21 @@ floors/floor{N}.json  (终态)
 3. **门洞必须在 recognize 和 wall_thin 两处都挖**
 4. **墙 `id` 必须唯一**；切墙后最大块继承原 id（保住 `windows[].wallId`）
 5. **楼层内部从 0 开始，显示从 1 开始**
-6. **FROZEN = {c006, c009, c103, c104}** 不得批量重建
+6. **冻结楼不得批量重建** —— 名单的**唯一来源是 `backend/paths.py::FROZEN_BUILDINGS`**
+   （2026-09-14 收敛）。原先 README / 算法文档 / `_par_batch.py` / `_wall_thin_batch.py`
+   **四处各写一份**，c006 当天被反复重建后三处名单还在说它"冻结"—— 名单只能有一个源。
+   ⚠️ 名单内容本身待你拍板：c006 实际上已经解冻（09-14 一天 20 轮改造 + 重出 GLB）。
 7. **`qa_structural.py` 只读**，不可改不可移
-8. **不得跑 `run_batch.py`**
-9. **不得对有 `.orig` 备份（曾人工修过楼层）的建筑跑 `run_building.py`**
+8. ~~**不得跑 `run_batch.py`**~~ —— **2026-09-14 退役**（脚本已删除，见下）。批量一律走
+   `_par_batch.py`：它自己带冻结名单 / recognize 二次确认 / 重复栋拒绝 / 内存预算四道守卫，
+   而且是唯一"转发给 owner 脚本、自己不写产物"的执行器。**规则变成守卫，就不必再靠人记。**
+9. ~~**不得对有 `.orig` 备份（曾人工修过楼层）的建筑跑 `run_building.py`**~~ ——
+   **2026-09-14 退役，换成纪律**：复核发现这条**无法用守卫表达**（控制台的 `recognize`
+   走的正是 `run_step.py` → `run_building`，而 49 栋**全部**有 `.orig`，守卫一加就把
+   控制台锁死），而它的真实目的是"别把人工修复冲掉"。⇒ **规则 = 改前必须自动备份
+   `.orig` → 数值化复验 → 失败自动回滚**（`_wall_thin_force` / `_door_punch_apply`
+   已这么做）；**没有备份就别跑 `recognize`**。`_par_batch.py` 的 `--allow-recognize`
+   二次确认就是这条纪律在批量侧的实现。
 10. **`data/` 不在 git 里** —— git 只管代码；`data/` 2.75 GB 走机外备份（服务器副本 + 移动硬盘）。
     `data/buildings/*/.orig/` 是人工修复成果的**唯一来源**，45 栋楼的 `.orig` 一个都不能删，
     同步脚本**永远不加 `--delete`**。改引擎前手动备份 + 数值化复验 + 失败自动回滚。
@@ -213,41 +223,90 @@ floors/floor{N}.json  (终态)
     **判据：格式探测必须能"解析后按探测结果写回 == 原文逐字节"**（本条已用
     compact / indent=1 两类文件各测过）。
 
-## 标准命令序列
+## 流程：唯一真源是 `config/pipeline.json`
 
-```bash
-python -u convert_dwg_to_dxf.py <name>      # 0) DWG → DXF
-python -u run_building.py <name>            # 1) 识别 → 楼层 JSON
-python -u _wall_thin_batch.py <name>        # 2) 内墙重建（交付链真内墙）
-python -u qa_structural.py                  # 3) 门禁（任何改动后必跑）
-python -u _glb_only.py <name>               # 4) 出 GLB（不重跑 recognize）
-python -u _dxf_cad_render.py <name>         # 5) 源图纸
-python -u _dxf_png_batch.py <name>          # 6) 识别叠加图
-python -u _dxf_compare_render.py            # 7) A|B 对比页 + 总目录
-python -u build_index.py                    # 8) 刷新索引
-```
+阶段表的**唯一真源是仓里的 `config/pipeline.json`**（14 个阶段 ＋ 一块独立的「成图」段）。
+加阶段、改机位、改参数、改危险级别，都改那个文件 —— 页面和执行面读的都是它。
+页面上那一屏：`http://127.0.0.1:8140/admin/#/pipeline`
+（**流程总表**，只读；`danger=high` 的阶段标红边，`--apply` 这类会真写盘的开关标红字）。
 
-**外科式修单栋**（不整栋重跑，避免窗数变化）：
-```bash
-python -u _door_punch_apply.py <name>       # 备份 → 挖洞 → 数值复验 → 失败自动回滚
-```
+下面这张表是**从 `config/pipeline.json` 现读生成**的
+（生成器 `_scratch/_rootmount_20261002/_gen_readme_seq.py`），摆在这里只为说明顺序与形态
+—— **它不是标准序列，而且会过期**。逐条命令、参数、产物、上游，一律现读那个 JSON。
+
+| # | 阶段 | 命令 | 作用域 | 写盘 | 危险 |
+|---|---|---|---|---|---|
+| 0 | DWG → DXF | `python -u convert_dwg_to_dxf.py --filter <名>` | 图纸源目录 | 写盘 | 不可一键跑 |
+| 1 | 识别出图 | `python -u backend/web/run_step.py <名> recognize` | 单栋 | 写盘 |  |
+| 2 | ★ 结构 × 源图纸门禁 | `python -u audit_gate.py <名>` | 单栋 | 写盘 |  |
+| 3 | 结构体检 I1–I10 | `python -u qa_structural.py <名>` | 单栋 | 只读 |  |
+| 4 | 出忠实源图纸 | `python -u _dxf_cad_render.py <名>` | 单栋 | 写盘 |  |
+| 5 | 出识别叠加图 | `python -u _dxf_png_batch.py <名>` | 单栋 | 写盘 |  |
+| 6 | A\|B 对比页 | `python -u _dxf_compare_render.py <名>` | 单栋 | 写盘 |  |
+| 7 | 重建内墙（单栋强制） | `python -u _wall_thin_force.py <名>` | 单栋 | 写盘 · **就地改** | ★ 危险 |
+| 8 | 门洞外科打穿（写盘） | `python -u _door_punch_apply.py <名> --apply` | 单栋 | 写盘 · **就地改** | ★ 危险 |
+| 9 | 房间提取 ⚠ 覆盖交付件 | `python -u backend/extract/extract_rooms_generic.py <名>` | 单栋 | 写盘 | ★ 危险 |
+| 10 | 生成 GLB | `python -u backend/web/run_step.py <名> glb` | 单栋 | 写盘 |  |
+| 11 | 覆盖度审计 | `python -u _dxf_audit.py <名>` | 单栋 | 写盘 |  |
+| 12 | 全仓缺陷扫描 | `python -u _sweep_modeling.py` | 全仓 | 只读 |  |
+| 13 | 刷新索引 | `python -u build_index.py` | 全仓 | 写盘 |  |
+| 14 | 三维成图（GLB 出图） | `python -u backend/web/run_step.py <名> render` | 单栋 | 写盘 |  |
+
+三条**从表里读不出来、但必须知道**的事：
+
+1. ★ **第 7 步不许换成批量版 `_wall_thin_batch.py`** —— 它**忽略 argv**、会遍历全部
+   48 栋，而且它到现在还在（本文件别处提到它，那是全库重做时的工具）。单栋重跑一律
+   用表里那条 `_wall_thin_force.py`：逐层 `.orig` 备份 ＋ 数值验收 ＋ 不通过自动回滚该层。
+2. ★ **第 8 步 `--apply` 才写盘**：去掉它就是只报不写的**干跑**；写前逐层备份到
+   `<楼>/.orig/before_doorpunch_<ts>/`，任一门洞复验不过就**跳过该层**（跳过不是回滚）。
+3. ★ **第 9 步覆盖即不可回滚**：`rooms.json` 是交付件、**不在 git**、脚本就地覆盖、
+   没有 `.orig` 也没有自动回滚 ⇒ 跑之前先把现有的 `rooms.json` 另存一份。
+   （`c006` 那份是 35 条整翼汇总行、几何停在平移前，一跑即毁。）
 
 ## 运行
 
+**只有一条启动命令。** 2026-09-25 收口：原先分开起的 8130 建模控制台 / 8123 房间 API ＋
+单层页 / 8144 作业台 / 8000 静态前端，能力都并进**这一个进程**了。
+
 ```bash
-# 建模控制台（8130）
-python backend/web/control.py
-
-# 房间 API + 单层查看页（8123）
-python backend/db/serve_rooms.py
-
-# 静态前端（8000）
-python -m http.server 8000 --directory D:/gym3d
+python -u backend/api/run_api.py     # 默认 http://127.0.0.1:8140/
 ```
 
-- 多楼层浏览：`http://localhost:8000/frontend/building.html`
-- 建模控制台：`http://localhost:8130/`
-- 六教查看器：`http://localhost:8000/frontend/render_j6.html`
+### 路由地图：一个进程，挂载**次序**是承重的
+
+| 路径 | 是什么 | 怎么挂的 |
+|---|---|---|
+| `/api/*` | 后端接口（文档在 `/api/docs`） | 路由，**最先** |
+| `/data/buildings/*` ＋ 窄 `/data/**` | 交付产物（受空间树 403 约束） | `ScopedStatic` |
+| `/building.html` | 老整栋三维（2451 行，原 8123 那个页面） | 根级单文件路由 |
+| `/site/*` | 前台「营造」静态页 | `FreshStatic` |
+| `/portal/*` | 数字孪生门户（**另一套系统，不归这里管**） | 原样 |
+| `/admin/*` | ★ **建模后台**（hash 路由；裸 `/admin` 由 307 补尾斜杠） | `FreshStatic` |
+| `/` | ★ **首页**：92 栋目录 ＋「原图 ⇄ 模型」对比台 | `FreshStatic`，**最后挂** |
+
+★ **`/` 必须最后挂**：挂载按前缀匹配、**先注册的赢**，而 `/` 会匹配一切尚未命中的路径。
+它要是排到前面去，`/api` 与 `/data` 全被它吃掉 —— 失败的样子是「接口 404」，
+**不是**「挂载顺序错了」。这是改路由时唯一不可逆的地方；改完必须验一句：
+`curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8140/api/buildings`。
+
+| 要什么 | 去哪 |
+|---|---|
+| **首页** —— 一栋楼的 CAD 原图 ⇄ 这栋楼的三维模型 | `http://127.0.0.1:8140/` |
+| **建模后台** —— 导航五组：概览 / 档案 / 流程 / 构件库 / 诊断 | `http://127.0.0.1:8140/admin/` |
+| **流程总表** —— 阶段表、危险级别、为什么必须人工 | `http://127.0.0.1:8140/admin/#/pipeline` |
+| 整栋三维 / 多楼层浏览（原 8123 那个页面） | `http://127.0.0.1:8140/building.html` |
+| 接口文档 | `http://127.0.0.1:8140/api/docs` |
+| 开发时改代码自动重载 | `python -u backend/api/run_api.py --reload` |
+
+★ **局域网打开这一页只有只读**：执行面（跑阶段 / 跑判据 / 上传）**仅限本机**（回环来源），
+非回环一律 `403 local_only` —— 除非设了 `GYM3D_ADMIN_TOKEN` 并带对 `X-Admin-Token`。
+页面上按钮的灰/亮由后端 `GET /api/capabilities` 说了算（`write_enabled` ＋
+`write_disabled_reason`），前端**不自己判** hostname —— 一个判断只许一份实现。
+
+⇒ `frontend/` 下那几张散页（`control.html` / `floor1_3d.html` / `render_j6.html` /
+`rooms-admin.html`）**都没有**挂在本进程上（只有 `building.html` 有路由）：整栋三维之外的
+入口本轮都并进了后台 SPA（`#/console` 控制台、`#/台账` 房间台账、`#/pipeline` 流程总表）。
+要单独用那几张，得另起静态服务器。
 
 ## 配置：先复制 .env
 
@@ -284,7 +343,8 @@ git 接管的是**代码**；`data/`（2.75 GB）不在版本库里，靠机外�
 
 PostgreSQL `lihua_twin`：`host=localhost port=5432 user=postgres`
 口令**只从环境变量 `LIHUA_DB_PASSWORD` 读**（见 `.env`，不入库）；
-读取逻辑统一在 `backend/db/db_config.py`，`load_rooms_db.py` 与 `serve_rooms.py` 都走它。
+读取逻辑统一在 `backend/api/settings.py`（`backend/db/db_config.py` 只是让老脚本不改调用点的垫片），
+`load_rooms_db.py` 与 `backend/api/services/rooms_db.py` 都走它。
 
 ## 文档地图
 
@@ -297,7 +357,7 @@ PostgreSQL `lihua_twin`：`host=localhost port=5432 user=postgres`
 | `楼层对齐修复方案.md` | 楼层对齐 |
 | `楼层错位排查·思路复盘.md` | 方法论：构件对应法 |
 | `kb/` | CAD 识图知识库 |
-| `_scratch/README.md` | 归档脚本分组导航 |
+| `docs/归档三闸.md` | ★ 搬/删文件前必过的三道闸（import 检查 / 按名引用检查 / 明令不碰清单） |
 
 ## 已知缺口
 

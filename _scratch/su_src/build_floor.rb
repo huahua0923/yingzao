@@ -46,7 +46,9 @@ File.delete(PROG) if File.exist?(PROG)
 prog "spec=#{spec['name']} 体#{1 + spec['prisms'].length}"
 
 u = m.options['UnitsOptions']['LengthUnit']
-LEN2M = LEN_TO_M[u] || 1.0
+# ★ 2026-09-14 修：`LEN2M` = SU **内部**单位（英寸）→ 米，恒为 0.0254
+#   （`Group#volume` 按英寸³ 返回，与文档 LengthUnit 无关；判例见 build_floors.rb 头注释）。
+LEN2M = 0.0254
 prog "模型长度单位=#{u} 折算#{LEN2M}"
 
 # ---- 平面点在轮廓内？（判面朝外/朝内用）----

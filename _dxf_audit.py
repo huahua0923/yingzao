@@ -8,10 +8,10 @@
   - data/buildings/_dxf_audit.html  可疑层目录(带 源图vs识别 对比页直达锚点)
 用法: python -u _dxf_audit.py [<name> ...]   不带=全部
 """
+import math
 import os, sys, json, glob
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
-sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend\vision",
-                r"D:\gym3d\backend", r"D:\gym3d"]
+sys.path[:0] = [r"D:\gym3d\backend\web", r"D:\gym3d\backend", r"D:\gym3d"]
 import ezdxf
 import shapely.geometry as sg
 from shapely.ops import unary_union
@@ -194,7 +194,7 @@ def _dense_local(lv, dist, closed):
     return ded
 
 
-def _source_wall_points(doc, p, F, box):
+def _source_wall_points(doc, p, F, box, stats=None):
     """该层源图『墙图层』主副本**直墙脸**采样点(局部坐标, m)。
     门开启弧/踏步等以多段折线逼近、整体弯曲 → 直段偏离>0.12m 剔除；房间矩形四边各算直墙。"""
     layer = getattr(p, "wall_layer", None) or "4.2墙体"
@@ -202,6 +202,7 @@ def _source_wall_points(doc, p, F, box):
     bw = (x1 - x0) + 5.0
     bh = (y1 - y0) + 5.0
     out = []
+    runs = []
     pool = []
     for e in doc.modelspace():
         if e.dxftype() == "INSERT":
@@ -263,7 +264,87 @@ def _source_wall_points(doc, p, F, box):
                 continue
             if _sagitta(run) > 0.12:      # 弧形(门开启/曲线)非直墙
                 continue
-            out.extend(run)
+            runs.append(run)
+    # ★ 2026-09-14：先剔「踏步带」再算漏墙率 —— 踏步线画在墙图层上但不是墙
+    #   （c006 F0 实测：13 根 14.2m 竖直平行线、间距 0.35~0.4m ⇒ 虚高 19.2%）
+    for run in _drop_tread_runs(runs, stats):
+        out.extend(run)
+    return out
+
+
+def _drop_tread_runs(runs, stats=None):
+    """剔掉「踏步带」——**楼梯踏步线不是墙**，但画在同一图层上。
+
+    为什么必须剔（2026-09-14 c006 F0 实测）：图纸上双跑楼梯的踏步画成
+    **13 根 14.2m 竖直平行线、间距 0.35~0.4m**（x≈−59.6~−57.8 与 57.9~60.0），
+    量具把它们当"源墙" ⇒ F0 漏墙率虚高 19.2%（其中 790m 里很大一块是它）。
+    判据（几何，不看图层/文字）：**同向、互相平行、间距 ≤ STEP_GAP、重叠 ≥ STEP_OVL、
+    成组 ≥ STEP_N 条** ⇒ 判为踏步带，整组剔除。
+
+    参数取自本仓踏实体量：踏步宽 0.35~0.4m（c006 实测）、梯段长 8~15m。
+    """
+    STEP_GAP, STEP_OVL, STEP_N = 0.5, 3.0, 4
+    segs = []
+    for run in runs:
+        if len(run) < 2:
+            continue
+        (x0, y0), (x1, y1) = run[0], run[-1]
+        dx, dy = x1 - x0, y1 - y0
+        L = (dx * dx + dy * dy) ** 0.5
+        if L < 1.0:
+            continue
+        ux, uy = dx / L, dy / L
+        ang = math.degrees(math.atan2(uy, ux)) % 180.0
+        segs.append(dict(run=run, ang=ang, L=L, u=(ux, uy),
+                         lo=(min(x0, x1), min(y0, y1)),
+                         hi=(max(x0, x1), max(y0, y1))))
+    drop = set()
+    # 按 5° 分箱找同向族
+    buckets = {}
+    for s in segs:
+        buckets.setdefault(int(s["ang"] // 5), []).append(s)
+    for _b, fam in buckets.items():
+        fam.sort(key=lambda s: (s["lo"][0] if abs(s["u"][0]) < 0.5 else s["lo"][1]))
+        used = [False] * len(fam)
+        for i in range(len(fam)):
+            if used[i]:
+                continue
+            grp = [fam[i]]
+            for j in range(i + 1, len(fam)):
+                if used[j]:
+                    continue
+                # 平行（已同箱）+ 间距 ≤ STEP_GAP + 重叠 ≥ STEP_OVL
+                a, b = grp[-1], fam[j]
+                if abs(b["ang"] - a["ang"]) > 5.0:
+                    continue
+                if abs(b["L"] - a["L"]) > 2.0:      # 单跑梯段的踏步线等长
+                    continue
+                # 两段中点在**法向**上的间距
+                ma = ((a["run"][0][0] + a["run"][-1][0]) / 2, (a["run"][0][1] + a["run"][-1][1]) / 2)
+                mb = ((b["run"][0][0] + b["run"][-1][0]) / 2, (b["run"][0][1] + b["run"][-1][1]) / 2)
+                nx, ny = -a["u"][1], a["u"][0]
+                gap = abs((mb[0] - ma[0]) * nx + (mb[1] - ma[1]) * ny)
+                if gap > STEP_GAP:
+                    continue
+                # 沿走向的重叠
+                ta0 = (a["lo"][0] - mb[0]) * a["u"][0] + (a["lo"][1] - mb[1]) * a["u"][1]
+                ta1 = (a["hi"][0] - mb[0]) * a["u"][0] + (a["hi"][1] - mb[1]) * a["u"][1]
+                tb0 = (b["lo"][0] - mb[0]) * b["u"][0] + (b["lo"][1] - mb[1]) * b["u"][1]
+                tb1 = (b["hi"][0] - mb[0]) * b["u"][0] + (b["hi"][1] - mb[1]) * b["u"][1]
+                ov = min(max(ta0, ta1), max(tb0, tb1)) - max(min(ta0, ta1), min(tb0, tb1))
+                if ov < STEP_OVL:
+                    continue
+                grp.append(b)
+                used[j] = True
+            if len(grp) >= STEP_N:
+                used[i] = True
+                for s in grp:
+                    drop.add(id(s["run"]))
+    out = [s["run"] for s in segs if id(s["run"]) not in drop]
+    if stats is not None:
+        stats["tread_m"] = stats.get("tread_m", 0.0) + sum(
+            s["L"] for s in segs if id(s["run"]) in drop)
+        stats["tread_runs"] = stats.get("tread_runs", 0) + len(drop)
     return out
 
 
@@ -372,9 +453,17 @@ def main():
         print(f"  {r['building']:6s} {r['F']+1:>2d}层 漏墙率{r['miss_pct']:5.1f}% "
               f"({r['miss_m']}/{r['src_m']}m) 墙{r['nwalls']} 覆盖{r['wall_cover']}% "
               f"门{r['doors']} 梯井{r['stairs']} 房{r['rooms']}")
-    with open(os.path.join(BASE, "_dxf_audit.html"), "w", encoding="utf-8") as f:
-        f.write(_audit_html(pool))
-    print(f"\n共审计 {len(allres)} 层 / 写 data/buildings/_dxf_audit.html")
+    # ★ 单栋保护（2026-09-14 修）：`data/buildings/_dxf_audit.html` 是**全仓总目录**，
+    #   而 PIPELINE 里 audit 阶段是 scope=single/runnable → 控制台对**一栋**点一次
+    #   就会把 49 栋的总目录覆盖成 1 栋（与 2026-09-10 图纸事故同类）。
+    #   只在**未指定楼名**（= 全库模式）时才写总目录；指定楼名时一律不写。
+    if sys.argv[1:]:
+        print(f"\n共审计 {len(allres)} 层（单/多栋模式：**不覆盖**全仓总目录 "
+              f"data/buildings/_dxf_audit.html；要看总目录请不带楼名跑一次）")
+    else:
+        with open(os.path.join(BASE, "_dxf_audit.html"), "w", encoding="utf-8") as f:
+            f.write(_audit_html(pool))
+        print(f"\n共审计 {len(allres)} 层 / 写 data/buildings/_dxf_audit.html")
 
 
 def _audit_html(pool):

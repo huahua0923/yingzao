@@ -11,7 +11,7 @@
   "traps_criterion_version": "陷阱表自己声明（kb/traps.json 顶层）"
  },
  "self_sha12": "4157fdf54769",
- "manifest_sha12": "9c2b1588798b",
+ "manifest_sha12": "654ecc953f60",
  "sources": {
   "00-overview.md": "b160e71d51e4",
   "01-line-types.md": "a174a9eab94f",
@@ -22,6 +22,7 @@
   "06-grid-axes.md": "2f48e3eb7957",
   "07-asset-survey.md": "12664e4beeec",
   "08-su-reference.md": "a50880f3c7f1",
+  "09-component-details.md": "12bb2574d9eb",
   "twin/00-overview.md": "6af6f86febb8",
   "twin/01-lineage.md": "d8e9b28bd3fe",
   "twin/02-industry-benchmark.md": "ce8252a1c673",
@@ -38,6 +39,7 @@
   "定位轴线",
   "高校资产图实测约定-本项目专属",
   "sketchup-建模参考-读图成图的对标标准",
+  "构件做法与外业校核",
   "数字孪生域总览",
   "孪生血缘链与新鲜度",
   "孪生行业案例与对标"
@@ -549,6 +551,102 @@
     "backend/modeling/build_standard_glb.py:673"
    ],
    "content": "# SketchUp 建模参考（读图成图的对标标准）\n\n> **本项目的 3D 建模方式对标 SketchUp（SU）——目前最成熟的「CAD 平面图 → 建筑三维模型」工具。**\n> SU 的底层原则一句话：**从 CAD 平面图的实际线条出发建模（读图成图），不臆造构件。**\n> 每个构件都按图上真实尺寸/位置画成闭合面 → 推拉成体；开口=推穿；重复构件=组件阵列；材质区分（金属窗框/半透明玻璃/木门/灰墙）。\n> 识别引擎每做一个构件，先问「SU 里这一步怎么做」；SU 没有的信号（线宽/层名被 ODA 剥离）才退回几何规则。详见 [[arch-rules-over-geometry]]。\n\n## 0. SU 总工作流（五步）\n\n1. **描墙线**——CAD 平面图当底图，沿墙描出闭合轮廓；**墙线是基础**，墙厚取图上画好的真实厚度。\n2. **推拉成墙**——选中墙平面 Push/Pull 拉出墙高。\n3. **加楼板**——每层墙顶封板，推拉出楼板厚（~200mm）。\n4. **挖门窗洞**——墙面画门/窗轮廓，向内推穿成洞。\n5. **建屋顶**——平顶封板 / 坡顶拉脊，最后贴材质。\n\n对照我们管道：第 3/4/5 步已有（楼板、门窗洞、屋顶），**主要偏差在第 1 步的「墙」**（见下）。\n\n## 0.5 3D 建模铁律（法线 / 去重 / 装配式）\n\n**法线（normal）**：凹墙（如南凹口入口的两侧墙）的「内法线」不能靠「朝质心翻」——\n质心在凹口侧，会把内法线翻反，导致窗洞沿法线凸出墙外，`ExtrudeGeometry` 的 hole 不在 shape 内\n→ earcut 三角化乱掉（「点击后出现很多不相关图形」根因，2026-09 修）。\n正确做法：从外皮中点往法线方向探一小步（0.02m），用 `pointInPoly` 判哪侧落在墙环（wall band）\n内，落内的那侧才是「往墙里」的内法线。别用质心（凹墙必错）。\n\n**去重（dedup，= SU 的 Union/OuterShell）**：同一物理实体只建一次、只画一次。\n- 墙：多段墙皮 buffer 后 `unary_union` 合并（转角/T 字轻微重叠再并集），共享墙不重复建。\n- 单源真相：floor JSON 是每层几何的唯一源，前端 building.html / GLB 都从它读，不各自重算。\n- 重复构件（柱/踏步/门扇）= 实例化（InstancedMesh），不逐份 copy。\n- 用户铁律：「构建物不用重复画」——违反就出重影/重面（z-fighting + 面叠加）。\n\n**装配式搭建**：识别后把构件一个个「装配」上：需要就显示、错了就删、构件错了就改、少了就加；\n构件库（`component_library.py`）沉淀每个构件的签名，后期直接调用复用。\n\n## 1. 墙 Wall —— 最大的偏差\n\n**SU 怎么做（两种取墙厚的方法，都合法）：**\n\n| 方法 | 适用 | 做法 |\n|------|------|------|\n| **双线墙直接成面**（推荐，本项目） | CAD 画了双线墙 | 描内外两条墙线，两线之间的带就是墙的闭合面 → 直接推拉，墙厚 = 两线真实间距 |\n| 偏移法（Offset） | CAD 只有单线/无墙厚 | 描外围轮廓 → 偏移工具向内 offset 墙厚 → 推拉 |\n\n- **墙交接（转角 L / T 字）**：SU 要求墙「轻微重叠」再 **并集 Union / 实体外壳 OuterShell** 合并成一体，清除内部重叠面——这正是「外墙内墙不能重复建设」的 SU 版解法。\n- **墙厚**：方案深度阶段用双线墙，读真实厚度（外墙 200/300mm、内墙 100/240mm，以图为准）。\n\n**我们现在的问题**：理化楼用了「偏移法」的变体——`outline.buffer(-0.30)` 合成一圈外环，**丢弃了图上真正画的双皮墙线**（每根 2 点墙皮线各 buffer 0.15m，没把两皮配成一条 0.24/0.30m 真实厚度的墙）。这偏离了「读图成图」。\n\n**正确做法（对齐 SU 双线墙直接成面）**：\n- 把墙 LWPOLYLINE 拆成横/竖线段，平行两两配对（间距 ∈ [wall_min, wall_max]）→ 真实厚度墙矩形。\n- union 成一片真实墙（外立面可见=外墙 0.30m、其余=内墙 0.24m，互不重叠）。\n- 转角/T 字靠 `unary_union` + `wall_extend`（墙段沿走向外延，等价 SU 的「轻微重叠再并集」）。\n- 参考实现：`backend/modeling/build_lihua_v3.py` 的 `pair_rects`（「原来的好」），以及 `geometry.py::pair_wall_faces`（已实现配对 + 真实墙厚，line 约定在用，lwpolyline 约定没用上）。\n\n## 2. 门 Door\n\n**SU**：门 = 墙面**开洞** + 门框（偏移 100mm）+ 门扇组件（50mm 厚板，双门可分扇）。\n**我们**：门 = gap（挖洞）+ 门扇薄板（`build_lihua_v3::add_door_leaf`，双门左右两扇留缝）。已对齐；**缺门框**（可选，当前不做）。\n\n## 3. 窗 Window / 玻璃 Glass\n\n**SU**：窗 = 墙面**开洞**（推穿）+ **窗框**（金属材质）+ **玻璃**（半透明材质薄板，略内嵌于墙厚中线）。\n**我们**：`facade_windows` 沿外墙直段等距生成**合成窗**（DXF 无窗；`synthetic` 标记默认不渲染），GLB/前端按同算法布窗；玻璃=半透明薄板。\n**差距**：~~只有玻璃、无窗框~~ 前端 `building.html` 与 GLB `build_standard_glb.py` 均已对齐「铝合金窗框 + 玻璃」（`addWindowFrame`/`add_frame`：四根框料围住窗洞、跨满墙厚、外皮齐平；玻璃内缩进框、居中墙厚）。GLB 侧合成窗 `INCLUDE_SYNTHETIC_WINDOWS` 已置 True（313 窗开洞 + 框 + 玻璃，raycast 验证命中玻璃非实墙）。\n**坑（法线）**：窗洞 = 在外墙直段上开洞，洞要横跨墙厚、整段落在墙皮内。合成窗中心落在外皮上，\n「往墙里」的方向对凹墙（南凹口侧墙）不能用质心翻——见上「3D 建模铁律」；前端 `facadeWindows` 已改为\n`pointInPoly` 探墙环内法线（`building.html`）。\n\n**坑（墙皮 / 挖洞，2026-09 定论）**：窗洞横跨整个墙厚（外皮到内皮），**没法用「单个带洞 ExtrudeGeometry」挖穿**——\n洞恰好贴在 band 的里外两条边界上，THREE 的 `ShapeUtils.triangulateShape → earcut` 会把贴边界的洞当退化**丢掉**（= 墙皮实心、玻璃被埋在墙里，raycast 打到外皮/内皮），或内缩 eps 又留下不透明墙皮盖住整扇窗（从外看仍是实墙）。\n「0 NaN」是假信号：三角化不报错 ≠ 洞真的挖出来了。\n**正确做法（= SU 推穿成洞）**：把窗带拆成一块块「墙段盒子」（`renderWindowBandSegments`），窗所在外皮直段按窗位切开留真缺口；内法线用 `pointInPoly` 探（凹墙不能用质心翻）。窗框跨满墙厚、外皮齐平；框/盒子的厚度轴要对齐内法线（`rotation.y = atan2(nx, -ny)`，凹墙内法线被翻转，固定 `atan2(dy,dx)` 会把厚度朝外）。\n\n## 4. 楼梯 Stair\n\n**SU**：参数化（层高/倾角 → 踏步高 150、踏步宽 300）+ 踏步**组件阵列** + 梯段 + 休息平台 + **扶手**（路径跟随 Follow-Me / 组件复制）。\n**我们**：`detect_stairwells` 从踏步聚类出井（跑数 → 直跑/双跑/双分式），踏步按 nosing 堆叠成台阶。\n**差距**：只建模踏步，**无扶手/栏杆**。\n\n## 5. 电梯 Elevator\n\n**SU**：先定**核心筒**（矩形平面）→ 井道墙 + 每层**电梯门** + **轿厢**（box 组件）。\n**我们**：`detect_elevator_shafts`（墙 union 里的小矩形洞=竖井）+ 电梯门。\n**差距**：有井道 + 门，**无轿厢**。\n\n## 6. 柱 Column\n\n**SU**：柱 = 足迹（矩形/圆）推拉成体，**组件阵列**复制。\n**我们**：columns 从图读（INSERT 块 / LWPOLYLINE），`localize_columns` 已按图定位。已对齐。\n\n## 7. 楼板 Slab / 地面 Floor\n\n**SU**：每层墙顶封板，推拉 ~200mm 厚。\n**我们**：slab 已有（`result[\"outline\"]` = slab_poly，`add_slab` 挤出）。已对齐。\n\n## 8. 屋顶 Roof\n\n**SU**：平顶封板 / 坡顶拉脊（画中线 → 移动抬脊 → 屋檐厚度）。\n**我们**：`result[\"roof\"]`（roofT/parapetH/parapetT）+ 女儿墙；style 支持 flat/gable。已对齐。\n\n---\n\n## 差距清单（按优先级）\n\n| 优先级 | 构件 | 差距 | 代码位置 |\n|--------|------|------|----------|\n| P0 | **墙** | 合成外环 → 改「双皮配对成真实厚墙」 | `geometry.py::derive_walls_and_outline` lwpolyline 分支 |\n| ~~P1~~ ✅ | **窗** | ~~缺金属窗框~~ 前端 + GLB 均已补窗框 | `building.html::addWindowFrame` / `glb_common.py::add_frame` |\n| P2 | **楼梯** | 缺扶手/栏杆 | `build_standard_glb.py` |\n| P3 | **电梯** | 缺轿厢 | `build_standard_glb.py` |\n| P4 | 门 | 缺门框（可选） | — |\n\n## 关键外部参考\n\n- [SketchUp 如何借助平面图搭建立体模型](https://www.gc5.com/3dmx/sujq/10426049.html)\n- [SketchUp 导入 CAD 创建墙体](https://www.justeasy.cn/baike/3659.html)\n- [SketchUp 实体工具（Union/OuterShell 去内部重叠面）](https://help.sketchup.com/zh-cn/sketchup/modeling-complex-3d-shapes-solid-tools)\n- [SU 楼梯建模（踏步组件阵列 + 扶手路径跟随）](https://www.sketchupbar.com/portal.php?mod=view&aid=1129&page=1&mobile=no)\n- [SU 玻璃门/半透明材质（玻璃和镜子分类）](https://soft.3dmgame.com/gl/3678.html)\n"
+  },
+  "构件做法与外业校核": {
+   "slug": "构件做法与外业校核",
+   "title": "构件做法与外业校核",
+   "file": "09-component-details.md",
+   "domain": "solid",
+   "standard": [
+    "本项目实测"
+   ],
+   "tags": [
+    "构件做法",
+    "实物",
+    "外业校核",
+    "挑檐",
+    "女儿墙",
+    "檐口",
+    "散水",
+    "勒脚",
+    "阳台",
+    "雨篷",
+    "正射影像",
+    "实景三维",
+    "落位"
+   ],
+   "alias": [
+    "挑檐",
+    "檐口",
+    "屋檐",
+    "外挑",
+    "挑出",
+    "雨篷",
+    "雨棚",
+    "勒脚",
+    "散水",
+    "女儿墙",
+    "压顶",
+    "阳台",
+    "栏板",
+    "台阶",
+    "坡道",
+    "屋面",
+    "屋顶",
+    "做法",
+    "构造",
+    "实物",
+    "外业",
+    "校核",
+    "纠正模型",
+    "正射",
+    "正射影像",
+    "DOM",
+    "实景三维",
+    "实景模型",
+    "点云",
+    "航拍",
+    "无人机",
+    "落位",
+    "配准"
+   ],
+   "keys": [
+    "★域缺口：原有 8 篇 drafting 域条目只答『图上怎么画』，本篇答『实物上应看到什么、量得到的两个数之间该是什么关系』 —— 缺了这一半，外业数据就只是一堆几何，没有尺子",
+    "★正射影像是**零落位成本**的尺子：理工DOM.tif 本身就在 EPSG:4544 里（0.05 m/px，44452×58113）；纠正**轮廓**不需要三维点云，三维只多给一样东西 —— 高度",
+    "★实景三维落位式（2026-09-29 定；与正射影像梯度互相关残余平移 0.0 m）：P_4544 = T(4978→4544)( 球心_ECEF + R·V )，R:(x,y,z)→(x,−z,y)",
+    "★每块 b3dm 瓦片**自带原点** = 它 json 里 boundingVolume.sphere 的中心（球半径与内容半对角逐位相等 ⇒ 配对确定）；全树 20403 块各带各的球心，给全部瓦片加同一个 SRSOrigin 会把它们叠在一起",
+    "★只摆根瓦片（97 块）只占全树体积的 **0.1%**（5038 MB 里的 5 MB）⇒ 只能粗看，纠不了细节",
+    "★挑檐：主体屋面**不外挑**（轮廓环带明文『宁可压满，也绝不外挑』）；EAVE_OVERHANG=1.5 只用于自由柱凸包作檐口板",
+    "阳台/雨篷**只识别不建**：几何识别里它只是『3 点 L 形折线且两腿都不短』的一种解释（c086 阳台栏板），没有构件"
+   ],
+   "related": [
+    "backend/modeling/build_standard_glb.py:EAVE_MIN_AREA",
+    "backend/modeling/glb_common.py:add_slab",
+    "backend/modeling/build_standard_glb.py:build_gable_roof"
+   ],
+   "recognition": [
+    {
+     "drafting": "挑檐（主体屋面外挑）",
+     "criterion": "正射上量『屋顶轮廓面积 / 墙外皮轮廓面积』应 > 1，差值 = 挑出宽度；模型侧该比值恒 = 1 ⇒ 缺挑檐",
+     "evidence": "backend/modeling/build_standard_glb.py:_outline_band"
+    },
+    {
+     "drafting": "檐口板（檐廊：自由柱上方无楼层）",
+     "criterion": "柱心到檐口边实测 1.2~1.6 m（c085/c079/c083）⇒ 自由柱凸包外扩 EAVE_OVERHANG=1.5 m 作檐口板，面积 ≥ EAVE_MIN_AREA=4.0 ㎡",
+     "evidence": "backend/modeling/build_standard_glb.py:EAVE_OVERHANG"
+    },
+    {
+     "drafting": "女儿墙（屋面外沿一圈上凸）",
+     "criterion": "轮廓整体内缩 th 再挖内环得闭合环带；内缩必须 mitre(join_style=2, mitre_limit=2.0)，GEOS 默认 5.0 遇锐角会甩出几米",
+     "evidence": "backend/modeling/glb_common.py:add_parapet"
+    },
+    {
+     "drafting": "阳台 / 雨篷（外挑构件）",
+     "criterion": "3 点 L 形折线且两腿都不短 ⇒ 按线 buffer（**识别级，非构件**）",
+     "evidence": null
+    }
+   ],
+   "content": "# 构件做法与外业校核\n\n## 为什么有这一篇\n\n原有 8 篇 drafting 域条目回答的都是「**图上是这么画的**」。本篇回答另一半：\n\n> **这个构件在实物上应该看到什么，量得到的那两个数之间该是什么关系。**\n\n缺了这一半，外业数据（正射影像 / 实景三维 / 点云）就只是一堆几何 —— **没有尺子**。\n拿它去和 BIM 比，比出不一样时，判不出是「模型错了」还是「数据错了」。\n\n本篇的由来：2026-09-29 用户说「**是有挑檐的**」，而我拿「挑檐」去问图谱，\n回的是 **【图里没有】**。四个字：域缺口。\n\n## 一、外业数据怎么当尺子\n\n### 正射影像 —— 首选，**零落位成本**\n\n- `D:\\理工数据\\DOM\\原始DOM影像\\理工DOM.tif`（2022 年，14.85 GB）\n- **EPSG:4544、0.05 m/px、44452 × 58113、3 波段 uint16**，bounds E 416909.43..419132.03 N 3394447.62..3397353.27\n- ★ 它**本身就在校区坐标系里** ⇒ 与 BIM 轮廓比对**不需要任何落位数学**。\n  这一条要记住：**纠正轮廓不需要三维点云**，三维只多给一样东西 —— 高度。\n- 刻度：0.05 m/px ⇒ 轮廓边界可判到 ~0.1 m。\n\n### 实景三维（b3dm / 3D Tiles）\n\n- 落位式（2026-09-29 定；三条独立判据一致，与正射互相关残余平移 **0.0 m**）：\n\n  `P_4544 = T(4978→4544)( 球心_ECEF + R · V )`，`R: (x,y,z) → (x, −z, y)`\n\n- ★ 每块瓦片**自带原点** = 它 `<tile>.json` 里 `boundingVolume.sphere` 的中心\n  （该球半径与内容半对角**逐位相等** ⇒ 配对是确定的）。\n  ⇒ **给全部瓦片加同一个 SRSOrigin 会把它们叠在一起。**\n- ★ 树是**嵌套**的：`root.children[].children…`，深 9 层；\n  每个节点的 `content.url` 指向自己的 b3dm。全树 **20403 块 / 5038 MB / 97 个瓦片文件夹**。\n- ★ 只摆根瓦片（97 块）**只占全树体积的 0.1%** ⇒ 只能粗看，纠不了细节。\n- 没有任何 `transform`、没有 `RTC_CENTER`、没有 GLB 节点变换\n  ⇒ **帧偏移全在顶点里**。\n\n## 二、逐构件：图纸 → 实物 → 我们建了什么\n\n| 构件 | 图上怎么画 | 实物 / 正射上应看到 | 我们建了吗 |\n|---|---|---|---|\n| **挑檐** | 屋面平面外沿一圈，比外墙外皮外挑 | **屋顶轮廓 > 墙外皮**，差值 = 挑出宽度 | 主体屋面**不外挑** |\n| **女儿墙** | 屋面外沿一圈双线 | 屋顶**上凸一圈**矮墙 | 建了 |\n| **檐口板（檐廊）** | 柱列外沿 | 柱顶外一片棚 | 建了，外挑 1.5 m |\n| **散水** | 外墙外一圈 | 地面**一圈浅色带**，宽 0.6~1.0 m | 部分 |\n| **阳台 / 雨篷** | 外挑构件 | 立面上**凸出一块** | **只识别，不建** |\n| **勒脚** | 外墙脚一圈 | 墙脚一圈深色 | **无** |\n| **台阶 / 坡道** | 出入口 | 地面一段有高差 | 部分 |\n\n## 三、已实测（带锚点）\n\n- **挑檐**：代码里有一条**实测标定**的外挑常量 `EAVE_OVERHANG = 1.5`（米）。\n  标定依据写在它头上：c085 / c079 / c083 的檐廊进深 2.7~3.2 m、柱距 3.0~4.2 m、\n  **柱心到檐口边实测 1.2~1.6 m**。\n  但——它**只用在自由柱（上方无楼层）的凸包**上作檐口板；\n  主体屋面那一圈（轮廓环带 `_outline_band`）明文写着\n  「宁可压满，也**绝不外挑**」，理由是外挑会凭空长出建筑 bbox。\n  ⇒ **主体挑檐目前没有构建路径。**\n\n- **女儿墙**：`MeshBuilder.add_parapet` 已有 —— 轮廓整体内缩 `th` 再挖掉内环，\n  得到闭合的一圈实体环带。内缩必须 `mitre(join_style=2, mitre_limit=2.0)`：\n  GEOS 默认上限 5.0 遇锐角会把角点甩出好几米（c018 翼楼屋面实测过），\n  取 1.0 又会把每个直角倒角。**两处口径必须一致，不能一个用 mitre 一个用默认。**\n\n- **阳台 / 雨篷**：只在几何识别里作为「3 点 L 形折线」的一种**解释**出现\n  （c086 阳台栏板：3 点 L 且两腿都不短 ⇒ 按线 buffer），**没有建成构件**。\n\n## 四、待核实（不许当结论用）\n\n- 「主体屋面确实没有外挑」是从**源码的声明**读出来的，不是从 GLB 量出来的。\n  要断言，得拿一栋的 GLB 量「屋面轮廓面积 / 墙外皮轮廓面积」，看是否恒 = 1。\n  ★ 这正是本仓反复踩的那条：**声明不是测量。**\n"
   },
   "数字孪生域总览": {
    "slug": "数字孪生域总览",
@@ -2922,7 +3020,8 @@
     "孪生行业案例与对标"
    ],
    "屋顶": [
-    "sketchup-建模参考-读图成图的对标标准"
+    "sketchup-建模参考-读图成图的对标标准",
+    "构件做法与外业校核"
    ],
    "建模": [
     "sketchup-建模参考-读图成图的对标标准"
@@ -2953,6 +3052,106 @@
    ],
    "读图成图": [
     "sketchup-建模参考-读图成图的对标标准"
+   ],
+   "DOM": [
+    "构件做法与外业校核"
+   ],
+   "做法": [
+    "构件做法与外业校核"
+   ],
+   "勒脚": [
+    "构件做法与外业校核"
+   ],
+   "压顶": [
+    "构件做法与外业校核"
+   ],
+   "台阶": [
+    "构件做法与外业校核"
+   ],
+   "坡道": [
+    "构件做法与外业校核"
+   ],
+   "外业": [
+    "构件做法与外业校核"
+   ],
+   "外挑": [
+    "构件做法与外业校核"
+   ],
+   "女儿墙": [
+    "构件做法与外业校核"
+   ],
+   "实景三维": [
+    "构件做法与外业校核"
+   ],
+   "实景模型": [
+    "构件做法与外业校核"
+   ],
+   "实物": [
+    "构件做法与外业校核"
+   ],
+   "屋檐": [
+    "构件做法与外业校核"
+   ],
+   "屋面": [
+    "构件做法与外业校核"
+   ],
+   "挑出": [
+    "构件做法与外业校核"
+   ],
+   "挑檐": [
+    "构件做法与外业校核"
+   ],
+   "散水": [
+    "构件做法与外业校核"
+   ],
+   "无人机": [
+    "构件做法与外业校核"
+   ],
+   "构件做法与外业校核": [
+    "构件做法与外业校核"
+   ],
+   "构造": [
+    "构件做法与外业校核"
+   ],
+   "栏板": [
+    "构件做法与外业校核"
+   ],
+   "校核": [
+    "构件做法与外业校核"
+   ],
+   "檐口": [
+    "构件做法与外业校核"
+   ],
+   "正射": [
+    "构件做法与外业校核"
+   ],
+   "正射影像": [
+    "构件做法与外业校核"
+   ],
+   "点云": [
+    "构件做法与外业校核",
+    "孪生行业案例与对标"
+   ],
+   "纠正模型": [
+    "构件做法与外业校核"
+   ],
+   "航拍": [
+    "构件做法与外业校核"
+   ],
+   "落位": [
+    "构件做法与外业校核"
+   ],
+   "配准": [
+    "构件做法与外业校核"
+   ],
+   "阳台": [
+    "构件做法与外业校核"
+   ],
+   "雨棚": [
+    "构件做法与外业校核"
+   ],
+   "雨篷": [
+    "构件做法与外业校核"
    ],
    "CAD 原图": [
     "数字孪生域总览"
@@ -3102,9 +3301,6 @@
     "孪生行业案例与对标"
    ],
    "激光扫描": [
-    "孪生行业案例与对标"
-   ],
-   "点云": [
     "孪生行业案例与对标"
    ],
    "现场实测": [
@@ -4492,6 +4688,12 @@
    "ev:backend/modeling/build_standard_glb.py:542": "evidence",
    "ev:backend/modeling/build_standard_glb.py:628": "evidence",
    "ev:backend/modeling/build_standard_glb.py:673": "evidence",
+   "ev:backend/modeling/build_standard_glb.py:EAVE_MIN_AREA": "evidence",
+   "ev:backend/modeling/build_standard_glb.py:EAVE_OVERHANG": "evidence",
+   "ev:backend/modeling/build_standard_glb.py:_outline_band": "evidence",
+   "ev:backend/modeling/build_standard_glb.py:build_gable_roof": "evidence",
+   "ev:backend/modeling/glb_common.py:add_parapet": "evidence",
+   "ev:backend/modeling/glb_common.py:add_slab": "evidence",
    "ev:backend/paths.py:26": "evidence",
    "ev:backend/recognizer/classify_line.py:_step_tread_mask": "evidence",
    "ev:backend/recognizer/component_library.py:199": "evidence",
@@ -4629,6 +4831,7 @@
    "孪生行业案例与对标": "entry",
    "尺寸标注": "entry",
    "数字孪生域总览": "entry",
+   "构件做法与外业校核": "entry",
    "楼梯画法": "entry",
    "门窗画法": "entry",
    "高校资产图实测约定-本项目专属": "entry"
@@ -7219,6 +7422,54 @@
     "src": "数字孪生域总览.recognition[2]"
    },
    {
+    "from": "构件做法与外业校核",
+    "to": "ev:backend/modeling/build_standard_glb.py:EAVE_MIN_AREA",
+    "kind": "相关",
+    "w": 0.35,
+    "label": "关联代码",
+    "src": "构件做法与外业校核.related"
+   },
+   {
+    "from": "构件做法与外业校核",
+    "to": "ev:backend/modeling/build_standard_glb.py:EAVE_OVERHANG",
+    "kind": "识别",
+    "w": 0.5,
+    "label": "檐口板（檐廊：自由柱上方无楼层）",
+    "src": "构件做法与外业校核.recognition[1]"
+   },
+   {
+    "from": "构件做法与外业校核",
+    "to": "ev:backend/modeling/build_standard_glb.py:_outline_band",
+    "kind": "识别",
+    "w": 0.5,
+    "label": "挑檐（主体屋面外挑）",
+    "src": "构件做法与外业校核.recognition[0]"
+   },
+   {
+    "from": "构件做法与外业校核",
+    "to": "ev:backend/modeling/build_standard_glb.py:build_gable_roof",
+    "kind": "相关",
+    "w": 0.35,
+    "label": "关联代码",
+    "src": "构件做法与外业校核.related"
+   },
+   {
+    "from": "构件做法与外业校核",
+    "to": "ev:backend/modeling/glb_common.py:add_parapet",
+    "kind": "识别",
+    "w": 0.5,
+    "label": "女儿墙（屋面外沿一圈上凸）",
+    "src": "构件做法与外业校核.recognition[2]"
+   },
+   {
+    "from": "构件做法与外业校核",
+    "to": "ev:backend/modeling/glb_common.py:add_slab",
+    "kind": "相关",
+    "w": 0.35,
+    "label": "关联代码",
+    "src": "构件做法与外业校核.related"
+   },
+   {
     "from": "楼梯画法",
     "to": "ev:backend/recognizer/geometry.py:1457",
     "kind": "相关",
@@ -9344,6 +9595,44 @@
      "kind": "识别",
      "w": 0.5,
      "src": "数字孪生域总览.recognition[2]"
+    }
+   ],
+   "构件做法与外业校核": [
+    {
+     "to": "ev:backend/modeling/build_standard_glb.py:EAVE_MIN_AREA",
+     "kind": "相关",
+     "w": 0.35,
+     "src": "构件做法与外业校核.related"
+    },
+    {
+     "to": "ev:backend/modeling/build_standard_glb.py:EAVE_OVERHANG",
+     "kind": "识别",
+     "w": 0.5,
+     "src": "构件做法与外业校核.recognition[1]"
+    },
+    {
+     "to": "ev:backend/modeling/build_standard_glb.py:_outline_band",
+     "kind": "识别",
+     "w": 0.5,
+     "src": "构件做法与外业校核.recognition[0]"
+    },
+    {
+     "to": "ev:backend/modeling/build_standard_glb.py:build_gable_roof",
+     "kind": "相关",
+     "w": 0.35,
+     "src": "构件做法与外业校核.related"
+    },
+    {
+     "to": "ev:backend/modeling/glb_common.py:add_parapet",
+     "kind": "识别",
+     "w": 0.5,
+     "src": "构件做法与外业校核.recognition[2]"
+    },
+    {
+     "to": "ev:backend/modeling/glb_common.py:add_slab",
+     "kind": "相关",
+     "w": 0.35,
+     "src": "构件做法与外业校核.related"
     }
    ],
    "楼梯画法": [
@@ -11712,6 +12001,54 @@
      "src": "数字孪生域总览.recognition[2]"
     }
    ],
+   "ev:backend/modeling/build_standard_glb.py:EAVE_MIN_AREA": [
+    {
+     "from": "构件做法与外业校核",
+     "kind": "相关",
+     "w": 0.35,
+     "src": "构件做法与外业校核.related"
+    }
+   ],
+   "ev:backend/modeling/build_standard_glb.py:EAVE_OVERHANG": [
+    {
+     "from": "构件做法与外业校核",
+     "kind": "识别",
+     "w": 0.5,
+     "src": "构件做法与外业校核.recognition[1]"
+    }
+   ],
+   "ev:backend/modeling/build_standard_glb.py:_outline_band": [
+    {
+     "from": "构件做法与外业校核",
+     "kind": "识别",
+     "w": 0.5,
+     "src": "构件做法与外业校核.recognition[0]"
+    }
+   ],
+   "ev:backend/modeling/build_standard_glb.py:build_gable_roof": [
+    {
+     "from": "构件做法与外业校核",
+     "kind": "相关",
+     "w": 0.35,
+     "src": "构件做法与外业校核.related"
+    }
+   ],
+   "ev:backend/modeling/glb_common.py:add_parapet": [
+    {
+     "from": "构件做法与外业校核",
+     "kind": "识别",
+     "w": 0.5,
+     "src": "构件做法与外业校核.recognition[2]"
+    }
+   ],
+   "ev:backend/modeling/glb_common.py:add_slab": [
+    {
+     "from": "构件做法与外业校核",
+     "kind": "相关",
+     "w": 0.35,
+     "src": "构件做法与外业校核.related"
+    }
+   ],
    "ev:backend/recognizer/geometry.py:1457": [
     {
      "from": "楼梯画法",
@@ -11803,7 +12140,7 @@
   },
   "counts": {
    "实例": 20,
-   "相关": 74,
+   "相关": 77,
    "处置": 18,
    "根因": 24,
    "症状": 30,
@@ -11811,9 +12148,9 @@
    "判据": 12,
    "并列陷阱": 31,
    "实物": 35,
-   "识别": 31,
-   "_edges": 337,
-   "_nodes": 191,
+   "识别": 34,
+   "_edges": 343,
+   "_nodes": 198,
    "_edges_no_anchor": 62
   },
   "skipped": [
@@ -11827,6 +12164,10 @@
    },
    {
     "src": "定位轴线.recognition[0]",
+    "why": "这条 evidence 是 null（声明无实现）"
+   },
+   {
+    "src": "构件做法与外业校核.recognition[3]",
     "why": "这条 evidence 是 null（声明无实现）"
    },
    {

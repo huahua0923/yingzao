@@ -26,6 +26,9 @@ matplotlib 画图。这条路径要 ezdxf + matplotlib，而服务器「只服�
     python prerender_floor_png.py --force         # 全部重渲
     python prerender_floor_png.py --only c108 c103   # 只跑指定楼
     python prerender_floor_png.py --dry-run       # 只列出要做什么
+
+★ 增量的判据 = **不比本层 floor JSON 旧**（`is_fresh()`），不是"文件存在就算数"：
+  后者会让图永远停在第一次渲染的那版（2026-09-14 实测 49/49 栋全过期）。
 """
 import argparse
 import os
@@ -131,6 +134,39 @@ def prune_stale(plan_dir, floors, dry_run):
     return removed
 
 
+def png_deps(profile):
+    """一张层图 PNG 的**真输入**：源 DXF + profile.json。
+
+    `render_floor_png()` 全程读 DXF + profile（`classify` / `wall_pts_for_floor`），
+    **不读** `floors/*.json` —— 所以新鲜度判据只能拿这两个当基准。判据与
+    `backend/web/control.py::_floor_png` 相同（那边是发图侧，这边是出图侧），
+    改一处要改两处。
+    """
+    deps = [profile.dxf]
+    pj = os.path.join(os.path.dirname(profile.out_dir), "profile.json")
+    if os.path.exists(pj):
+        deps.append(pj)
+    return deps
+
+
+def is_fresh(out, profile):
+    """已存在的图**是不是还有效** —— 判据 = 不比它的真输入（DXF/profile）旧。
+
+    ★ 旧代码只看 `os.path.exists(out)`：于是"增量"模式**永远不刷新**已存在的图。
+    实测 2026-09-14：全库 49/49 栋的 `plans/recog_floor*.png` 都停在 2026-09-11
+    那版，而 DXF 之后重出过 —— 用户看到的"实际那张图"一直是旧的，且不跑
+    `--force` 永远追不上。
+    """
+    if not os.path.exists(out):
+        return False
+    try:
+        t_out = os.path.getmtime(out)
+        return all((not os.path.exists(d)) or t_out >= os.path.getmtime(d)
+                   for d in png_deps(profile))
+    except OSError:
+        return False          # 读不到输入时间 → 当旧处理（重渲染是无害的）
+
+
 def main():
     ap = argparse.ArgumentParser(description="预渲染每层平面图为静态 PNG")
     ap.add_argument("--only", nargs="*", metavar="NAME", help="只处理指定楼栋")
@@ -170,7 +206,7 @@ def main():
         made = []
         for F in floors:
             out = os.path.join(plan_dir, "%s%d.png" % (PREFIX, F))
-            if os.path.exists(out) and not args.force:
+            if not args.force and is_fresh(out, p):
                 skipped += 1
                 continue
             if args.dry_run:
@@ -199,7 +235,7 @@ def main():
 
     elapsed = time.time() - t_start
     print("\n" + "=" * 60)
-    print("预渲染%s：%s %d 层 / 跳过（已存在） %d 层 / 清理过期 %d 张 / 失败 %d 层 / 耗时 %.1f 分钟"
+    print("预渲染%s：%s %d 层 / 跳过（已最新） %d 层 / 清理过期 %d 张 / 失败 %d 层 / 耗时 %.1f 分钟"
           % ("（试运行，未写文件）" if args.dry_run else "完成",
              "待渲" if args.dry_run else "新渲", planned,
              skipped, len(pruned), len(failed), elapsed / 60))

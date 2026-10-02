@@ -23,6 +23,7 @@
   "06-grid-axes.md",
   "07-asset-survey.md",
   "08-su-reference.md",
+  "09-component-details.md",
   "twin/00-overview.md",
   "twin/01-lineage.md",
   "twin/02-industry-benchmark.md"
@@ -281,6 +282,36 @@
     "backend/modeling/build_standard_glb.py:542",
     "backend/modeling/build_standard_glb.py:628",
     "backend/modeling/build_standard_glb.py:673"
+   ]
+  },
+  "09-component-details.md": {
+   "domain": "solid",
+   "standard": ["本项目实测"],
+   "tags": ["构件做法", "实物", "外业校核", "挑檐", "女儿墙", "檐口", "散水", "勒脚", "阳台", "雨篷", "正射影像", "实景三维", "落位"],
+   "alias": ["挑檐", "檐口", "屋檐", "外挑", "挑出", "雨篷", "雨棚", "勒脚", "散水", "女儿墙", "压顶", "阳台", "栏板", "台阶", "坡道", "屋面", "屋顶", "做法", "构造", "实物", "外业", "校核", "纠正模型", "正射", "正射影像", "DOM", "实景三维", "实景模型", "点云", "航拍", "无人机", "落位", "配准"],
+   "keys": ["★域缺口：原有 8 篇 drafting 域条目只答『图上怎么画』，本篇答『实物上应看到什么、量得到的两个数之间该是什么关系』 —— 缺了这一半，外业数据就只是一堆几何，没有尺子", "★正射影像是**零落位成本**的尺子：理工DOM.tif 本身就在 EPSG:4544 里（0.05 m/px，44452×58113）；纠正**轮廓**不需要三维点云，三维只多给一样东西 —— 高度", "★实景三维落位式（2026-09-29 定；与正射影像梯度互相关残余平移 0.0 m）：P_4544 = T(4978→4544)( 球心_ECEF + R·V )，R:(x,y,z)→(x,−z,y)", "★每块 b3dm 瓦片**自带原点** = 它 json 里 boundingVolume.sphere 的中心（球半径与内容半对角逐位相等 ⇒ 配对确定）；全树 20403 块各带各的球心，给全部瓦片加同一个 SRSOrigin 会把它们叠在一起", "★只摆根瓦片（97 块）只占全树体积的 **0.1%**（5038 MB 里的 5 MB）⇒ 只能粗看，纠不了细节", "★挑檐：主体屋面**不外挑**（轮廓环带明文『宁可压满，也绝不外挑』）；EAVE_OVERHANG=1.5 只用于自由柱凸包作檐口板", "阳台/雨篷**只识别不建**：几何识别里它只是『3 点 L 形折线且两腿都不短』的一种解释（c086 阳台栏板），没有构件"],
+   "related": ["backend/modeling/build_standard_glb.py:EAVE_MIN_AREA", "backend/modeling/glb_common.py:add_slab", "backend/modeling/build_standard_glb.py:build_gable_roof"],
+   "recognition": [
+     {
+      "drafting": "挑檐（主体屋面外挑）",
+      "criterion": "正射上量『屋顶轮廓面积 / 墙外皮轮廓面积』应 > 1，差值 = 挑出宽度；模型侧该比值恒 = 1 ⇒ 缺挑檐",
+      "evidence": "backend/modeling/build_standard_glb.py:_outline_band"
+     },
+     {
+      "drafting": "檐口板（檐廊：自由柱上方无楼层）",
+      "criterion": "柱心到檐口边实测 1.2~1.6 m（c085/c079/c083）⇒ 自由柱凸包外扩 EAVE_OVERHANG=1.5 m 作檐口板，面积 ≥ EAVE_MIN_AREA=4.0 ㎡",
+      "evidence": "backend/modeling/build_standard_glb.py:EAVE_OVERHANG"
+     },
+     {
+      "drafting": "女儿墙（屋面外沿一圈上凸）",
+      "criterion": "轮廓整体内缩 th 再挖内环得闭合环带；内缩必须 mitre(join_style=2, mitre_limit=2.0)，GEOS 默认 5.0 遇锐角会甩出几米",
+      "evidence": "backend/modeling/glb_common.py:add_parapet"
+     },
+     {
+      "drafting": "阳台 / 雨篷（外挑构件）",
+      "criterion": "3 点 L 形折线且两腿都不短 ⇒ 按线 buffer（**识别级，非构件**）",
+      "evidence": null
+     }
    ]
   },
   "twin/00-overview.md": {
