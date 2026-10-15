@@ -1,0 +1,143 @@
+{
+ "schema": "cdut3d-qc/1",
+ "building_id": "c006",
+ "level": "WARN",
+ "gauge": {
+  "name": "同口径 IoU（真值=DXF 墙线，栅格 50 mm，两侧同口径剔梯井标注）",
+  "value": 0.9883,
+  "threshold": 0.95,
+  "unit": "比值",
+  "scope": "全楼合计量（分子分母都是面积），逐层数见 evidence 里的打分件",
+  "weakest_floor_by_linecov": "8层"
+ },
+ "positive_control": {
+  "fired": true,
+  "perturbation": "墙厚 2 倍假件 —— 按 v4 规则把每条墙线各缓冲 ±120 mm ⇒ 双线墙并成 480 mm （造件脚本 libs3d/c006/ctrl4.py，件 c006_v4ctrl_walls.glb）",
+  "value": 0.5748,
+  "expect": "必须显著低于阈值 0.95（否则这把尺子对墙厚缺陷无分辨力）",
+  "evidence": "同一把尺子（score8.py --lift，栅格 50 mm）实测：基线 0.9883 → 假件 0.5748。机理可见：召回 99.4% 几乎不降（胖墙盖得住所有真墙线），精确 57.7% 塌 ⇒ **只看召回/漏墙率会把这份假件评成好件**。"
+ },
+ "known_defects": [
+  {
+   "floor": 4,
+   "sev": "WARN",
+   "code": "W_MILD",
+   "why": "W/F 元：层错位6.7m",
+   "flags": [
+    "层错位6.7m"
+   ],
+   "source_scope": "gym3d 仓 data/buildings/c006（**不是**本包模型）",
+   "recheck": {
+    "gauge": "a1/gauge_layer_shift.py（交付件 GLB 逐层包围盒中心水平位移）",
+    "gate_m": 3000.0,
+    "evidence_out": "floor_shift_recheck；判据 gates/J-10.2-02_floorshift.py",
+    "kind": "recomputed",
+    "node": "floor4",
+    "worst_touching_mm": 0.0,
+    "verdict": "NOT_REPRODUCED",
+    "note": "该声明出自 gym3d 网格；在**本件**上 floor4 参与的可比对最大 0.0 mm（门 3000 mm）⇒ **不复现**。★ 不写「本来就没错位」——两件是两条链建的（铁律 192）。"
+   }
+  },
+  {
+   "floor": 5,
+   "sev": "WARN",
+   "code": "W_MILD",
+   "why": "W/F 元：层错位9.5m",
+   "flags": [
+    "层错位9.5m"
+   ],
+   "source_scope": "gym3d 仓 data/buildings/c006（**不是**本包模型）",
+   "recheck": {
+    "gauge": "a1/gauge_layer_shift.py（交付件 GLB 逐层包围盒中心水平位移）",
+    "gate_m": 3000.0,
+    "evidence_out": "floor_shift_recheck；判据 gates/J-10.2-02_floorshift.py",
+    "kind": "recomputed",
+    "node": "floor5",
+    "worst_touching_mm": 5.0,
+    "verdict": "NOT_REPRODUCED",
+    "note": "该声明出自 gym3d 网格；在**本件**上 floor5 参与的可比对最大 5.0 mm（门 3000 mm）⇒ **不复现**。★ 不写「本来就没错位」——两件是两条链建的（铁律 192）。"
+   }
+  },
+  {
+   "floor": 6,
+   "sev": "WARN",
+   "code": "ROOF_TERRACE",
+   "why": "退台屋面层（有女儿墙、房间只覆盖轮廓 0%）—— 本层大部分是屋面，内墙少是设计，不按糊块/外壳判；漏墙率 4.8% 仅供参考",
+   "flags": [],
+   "source_scope": "gym3d 仓 data/buildings/c006（**不是**本包模型）",
+   "recheck": {
+    "gauge": "a1/gauge_layer_shift.py（交付件 GLB 逐层包围盒中心水平位移）",
+    "gate_m": 3000.0,
+    "evidence_out": "floor_shift_recheck；判据 gates/J-10.2-02_floorshift.py",
+    "kind": "by_design",
+    "verdict": "NOT_A_DEFECT",
+    "note": "设计性说明（非缺陷），本包**未**在交付件上复算"
+   }
+  }
+ ],
+ "blind_spots": [
+  "IoU 这一条只量**墙**；对门/窗/柱/楼梯/电梯件数**不置一词**（那是另一套判据）。",
+  "★ 缺点表取自 gym3d 仓的 audit_gate.py（口径见 evidence/c006-audit.json）—— 该件量的是**gym3d 那坨烘死的单网格**，与包里模型（libs3d/c006 逐层件 + B1）**不同源**。本包只对**层错位**一条在交付件上复算（见 `floor_shift_recheck`，结果=**不复现**）；**其余各项未在交付件上复算** —— 逐条状态见 `known_defects[*].recheck.verdict`。",
+  "本判据量的是**几何**，量不到「构件稳定 ID 会不会脱锚」——那是 tools/stable_id.py 的活。"
+ ],
+ "floor_shift_recheck": {
+  "schema": "cdut3d-floorshift/1",
+  "why": "证件与模型**不同源**：evidence 量 gym3d 网格，model 由 libs3d/c006 逐层件建。",
+  "gauge": "a1/gauge_layer_shift.py（读交付件 GLB；竖直轴由数据定，不写死）",
+  "gate_m": 3000.0,
+  "vertical_axis": "Y",
+  "n_nodes": 12,
+  "comparable_pairs": [
+   {
+    "a": "floor0",
+    "b": "floor1",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor1",
+    "b": "floor2",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor2",
+    "b": "floor3",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor3",
+    "b": "floor4",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor4",
+    "b": "floor5",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor5",
+    "b": "floor6",
+    "shift_mm": 5.0
+   },
+   {
+    "a": "floor7",
+    "b": "floor8",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor8",
+    "b": "floor9",
+    "shift_mm": 0.0
+   },
+   {
+    "a": "floor9",
+    "b": "floor10",
+    "shift_mm": 82.5
+   }
+  ],
+  "max_comparable_mm": 82.5,
+  "verdict": "交付件上**没有**任何可比相邻层对超过 3 m ⇒ 证件里那两条「层错位」在**本件上不复现**",
+  "blind_spots": "包围盒中心≠墙质心（跨度差>1 m 判不可比）；只量水平；只对交付件发言；层内错误全盲",
+  "gate": "gates/J-10.2-02_floorshift.py"
+ },
+ "level_basis": "level 沿用 gym3d 源表的判定（WARN）。★ 本包只对**层错位**一条在交付件上复算（不复现）；其余项**未复算** ⇒ **不据未复算的项改等级**（不许臆造）。"
+}

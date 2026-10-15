@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>构件库 · 对照（门 / 楼梯 / 竖井）— 第六教学楼</title>
+<style>
+  :root{
+    --ground:#0c0f14; --panel:#141a23; --panel2:#1b2230; --line:#28313f;
+    --ink:#e9edf4; --dim:#8b95a6; --dim2:#5d6778;
+    --amber:#e0a458; --mint:#57c98a; --coral:#f2705e; --sky:#6fb2e8;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+    --cjk:"Source Han Sans SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--cjk);
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--sky);text-decoration:none;border-bottom:1px dotted #3d5266}
+  a:hover{color:#a9d3f5;border-bottom-color:#a9d3f5}
+  code{font-family:var(--mono);font-size:12.5px;background:#0a0d12;border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;color:#c8d3e2}
+  .wrap{max-width:1560px;margin:0 auto;padding:0 22px 90px}
+  header{padding:40px 0 20px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:12px}
+  h1{margin:0 0 10px;font-size:30px;line-height:1.25;letter-spacing:-.01em;font-weight:700}
+  h1 em{font-style:normal;color:var(--amber)}
+  .lede{color:var(--dim);margin:0;max-width:92ch;font-size:14.5px}
+  .bar{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;margin:20px 0 0;background:var(--panel)}
+  .bar>div{flex:1 1 140px;padding:11px 15px;border-right:1px solid var(--line)}
+  .bar>div:last-child{border-right:0}
+  .bar .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2)}
+  .bar .v{font-family:var(--mono);font-size:16.5px;font-variant-numeric:tabular-nums;margin-top:3px}
+  .ok{color:var(--mint)} .no{color:var(--coral)} .wr{color:var(--amber)} .mut{color:var(--dim2)}
+
+  .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+  @media(max-width:1200px){.cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+
+  .comp{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+  .comp>h2{margin:0;padding:13px 15px;background:var(--panel2);border-bottom:1px solid var(--line);
+    font-size:16px;font-weight:600;letter-spacing:-.005em}
+  .comp>h2 .n{font-family:var(--mono);color:var(--amber);font-size:12px;margin-right:9px}
+  .comp>h2 .quote{display:block;margin-top:6px;font-size:12px;color:var(--dim2);font-weight:400}
+  .sect{padding:13px 15px;border-bottom:1px solid #1c232e}
+  .sect:last-child{border-bottom:0}
+  .sect>h3{margin:0 0 9px;font-size:12px;font-family:var(--mono);letter-spacing:.08em;
+    text-transform:uppercase;color:var(--dim2);font-weight:500}
+  .sect>h3 b{color:var(--ink);text-transform:none;letter-spacing:0;font-family:var(--cjk);font-size:13.5px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.6px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #1c232e;vertical-align:top}
+  th{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--dim2);font-weight:500}
+  /* ★ 不许 `white-space:nowrap`：三栏里「我们」那一格常有长串（如梯井宽 5 个值并排），
+     nowrap 会把同一行另外三列压成一字一行的竖条（实测截图就是这个样子）。 */
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .diffs{display:grid;grid-template-columns:1fr;gap:18px;margin-top:14px}
+  h2.bandtitle{margin:40px 0 0;font-size:19px;font-weight:600;letter-spacing:-.005em;
+    padding-bottom:9px;border-bottom:1px solid var(--line)}
+  tr.sum td{border-top:1px solid var(--line);font-weight:600;color:var(--ink)}
+
+  .tag{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:4px;
+    border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+  .t-实测{color:var(--mint);border-color:#2a5a41}
+  .t-假设{color:var(--amber);border-color:#5a4622}
+  .t-规范{color:var(--sky);border-color:#2b4a63}
+  .t-旧规范{color:#c9a0d8;border-color:#4a3a58}
+  .t-待坐实{color:var(--coral);border-color:#5c3129}
+
+  .shots{display:grid;grid-template-columns:1.6fr 1fr;gap:7px}
+  .shots img{width:100%;display:block;border:1px solid var(--line);border-radius:6px;background:#0a0d12}
+  .shots .two{display:grid;grid-template-rows:1fr 1fr;gap:7px}
+  .cap{font-family:var(--mono);font-size:10.5px;color:var(--dim2);margin-top:5px}
+  ul.tight{margin:6px 0 0;padding-left:18px;font-size:12.4px;color:var(--dim)}
+  ul.tight li{margin:3px 0}
+  ul.tight b{color:var(--ink)}
+  .note{font-size:12.2px;color:var(--dim);margin:9px 0 0}
+  .note b{color:var(--ink)}
+  .warn{color:var(--amber)}
+  .bad{color:var(--coral)}
+  .foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);color:var(--dim2);
+    font-family:var(--mono);font-size:11.5px;line-height:1.9}
+  .err{border:1px solid #5c3129;background:#1d1412;border-radius:8px;padding:14px;color:#f0b6ab}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">CDUT · 第六教学楼 · 构件库</div>
+  <h1>门 / 楼梯 / 竖井 —— <em>参考｜源图实测｜我们建的｜差在哪</em></h1>
+  <p class="lede">
+    用户报的三处：「门上面的缺失」「楼梯样式不对」「电梯生成的也不对」。
+    本页把三处摆成三栏，每栏四个格子。<b>每个数都是现算的</b> ——
+    规范值只从 <code>参数.json</code> 取（每条都带标注与出处），实测值只从 <code>对照.json</code> 取，
+    差值在浏览器里由两侧相减得到。哪一侧没坐实，就如实写「算不出来」，不拿二手数硬凑。
+    参考的图集与标准原文在 <a href="../rebuild/构件库/参考/出处.md">参考/出处.md</a>
+    （<b>只有链接与条号，没有图</b>），人读版全文在 <a href="../rebuild/构件库/对照.md">对照.md</a>。
+  </p>
+  <div class="bar" id="bar"><div><div class="k">loading</div><div class="v">…</div></div></div>
+</header>
+<div class="cols" id="cols"></div>
+<div class="foot" id="foot"></div>
+</div>
+
+<script>
+'use strict';
+const PARAM_URL = '../rebuild/构件库/参数.json';
+const DZ_URL    = '../rebuild/构件库/对照.json';
+const IMG       = '../rebuild/06_su/';
+// ★ 锚点字母：`参考/出处.md` 里 A = 楼梯 / B = 门 / C = 竖井。这是**标识符**，不是数。
+const ANCHOR = {门:'B', 楼梯:'A', 竖井:'C'};
+// ★「差在哪」不挤在三栏里：栏宽约 1/3 屏，四列表一塞就把「我们/参考/差」压成一字一行。
+//   三个面板把自己的差表推到 `DIFFS`，装配时**单独铺一整行**（见 `render`）。
+const DIFFS = [];
+
+const $ = (s,r)=> (r||document).querySelector(s);
+const el = (t,c,txt)=>{const e=document.createElement(t); if(c)e.className=c;
+  if(txt!=null)e.textContent=txt; return e;};
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const n = x => { if(typeof x!=='number'||!isFinite(x)) return String(x);
+  return Math.abs(x-Math.round(x))<1e-9 ? String(Math.round(x)) : String(+x.toFixed(3)); };
+const num = x => (x==null?'':n(x));
+const uniq = a => Array.from(new Set(a)).sort((p,q)=>p-q);
+
+async function jget(u){
+  // ★ 每次都带 cache-buster：本页读的是**随时会被重跑覆盖**的生成物，
+  //   浏览器缓存会把「刚重跑的件」喂成旧的（`demo/index.html:619-634` 记过这条坑）。
+  const r = await fetch(encodeURI(u) + '?t=' + Date.now());
+  if(!r.ok) throw new Error(u + ' → HTTP ' + r.status);
+  return await r.json();
+}
+
+/* ---------- 参数.json 取用 ---------- */
+let PARAM=null, DZ=null;
+const cat  = c => (PARAM['构件']||{})[c]||{};
+const spec = (c,k) => cat(c)[k];
+const val  = (c,k) => { const s=spec(c,k); return s ? s['值'] : undefined; };
+const mark = (c,k) => { const s=spec(c,k); return s ? s['标注'] : ''; };
+const unit = (c,k) => { const s=spec(c,k); const u=String(s?s['单位']:'').trim();
+  return (u==='-'||u==='—') ? '' : u; };
+const valTxt = (c,k) => { const s=spec(c,k); if(!s) return '—';
+  if(s['值']==null) return '—（未坐实）';
+  const v=s['值'];
+  if(Array.isArray(v)) return v.map(x=>Array.isArray(x)?x.join('×'):n(x)).join('、');
+  return n(v); };
+
+/* ---------- 小块 ---------- */
+function paramTable(c, onlyMarks){
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>参数</th><th class="num">值</th><th>标注</th>'
+    + '<th class="num">区间</th></tr></thead>';
+  const tb = el('tbody');
+  Object.keys(cat(c)).forEach(k=>{
+    const s = cat(c)[k];
+    if(onlyMarks && onlyMarks.indexOf(s['标注'])<0) return;
+    const tr = el('tr');
+    tr.innerHTML = '<td title="' + esc(s['出处']||'') + '">' + esc(k) + '</td>'
+      + '<td class="num">' + esc(valTxt(c,k))
+      + (s['值']!=null && unit(c,k) ? ' <span class="mut">'+esc(unit(c,k))+'</span>' : '') + '</td>'
+      + '<td><span class="tag t-'+esc(s['标注'])+'">'+esc(s['标注'])+'</span></td>'
+      + '<td class="num mut">' + esc(Array.isArray(s['区间'])? s['区间'].map(n).join('~') : '—') + '</td>';
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  return t;
+}
+
+function sect(caption, title){
+  const d = el('div','sect');
+  const h = el('h3', null);
+  h.innerHTML = esc(caption||'') + (title? ' <b>'+esc(title)+'</b>' : '');
+  d.appendChild(h);
+  return d;
+}
+
+function wrap(idx, title, quote, body){
+  // ★ 面板的**标题与用户原话**放在这里 —— 三栏各自对应他报的一条症状。
+  const d = el('div','comp');
+  const h = el('h2');
+  h.innerHTML = '<span class="n">'+esc(idx)+'</span>'+esc(title)
+    + '<span class="quote">用户原话：「'+esc(quote)+'」</span>';
+  d.appendChild(h); d.appendChild(body);
+  return d;
+}
+
+function diffTable(rows){
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>项</th><th class="num">我们</th>'
+    + '<th>参考（只从参数表取）</th><th>差</th></tr></thead>';
+  const tb = el('tbody');
+  rows.forEach(r=>{
+    const tr = el('tr');
+    tr.innerHTML = '<td>'+esc(r[0])+'</td><td class="num">'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td>';
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  return t;
+}
+const CANT = '<span class="wr">算不出来</span>（有一侧未坐实）';
+
+function shots(base, cap){
+  // ★ 2026-10-15 用户明令：「六个构件特写（18 张图）不要」。
+  //   ⇒ 本页**不再显示** closeup_<base>_*.png（那 12 张是手工跑 render3d.py 的
+  //   --only/--box 出的，不在任何自动链里；旧件已删）。只留一行**文字**说明这一栏量的是什么。
+  //   ★ 保留 `base` 参数是为了调用点（:247/:248/:326/:413）不用改口径；
+  //     ★ 不删 render.py 的 --only/--box —— 那是通用镜头，与「这一步要不要出图」是两件事
+  //       （铁律 196：别把「这一步不出图」说成「这个功能没用」）。
+  const d = el('div');
+  d.appendChild(el('div','cap', cap + '（文字说明；构件特写图按用户指示不出）'));
+  return d;
+}
+
+/* ================= 门 ================= */
+function doorPanel(D){
+  const rows = D['构件'];
+  const box = el('div');
+  const s1 = sect('参考 · 规范与图集', null);
+  s1.appendChild(paramTable('门', ['规范','旧规范','待坐实']));
+  s1.appendChild(el('p','note','原文与图集在 <a href="../rebuild/构件库/参考/出处.md">参考/出处.md '
+    + ANCHOR['门'] + '</a>。过梁现行本是 <b>13G322-1～4</b>，我们登记的档位取自已被替代的 03G322-1'
+    + ' ⇒ 所以标「旧规范」而不是「规范」。'));
+  box.appendChild(s1);
+
+  const s2 = sect('源图实测 · 逐层（主语 = ' + (D['计数主语']||'门扇') + '）', null);
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>层</th><th class="num">门扇</th><th class="num">有门头</th>'
+    + '<th class="num">漏</th><th class="num">贴墙</th><th class="num">离墙</th>'
+    + '<th class="num">块</th><th class="num">m²</th></tr></thead>';
+  const tb = el('tbody'); const T = {门扇:0,有门头:0,漏了:0,漏_贴墙:0,漏_离墙:0,块:0};
+  rows.forEach(r=>{
+    const tr = el('tr');
+    tr.innerHTML = '<td>'+esc(r['层'])+'</td><td class="num">'+r['门扇']+'</td>'
+      + '<td class="num">'+r['有门头']+'</td>'
+      + '<td class="num '+(r['漏了']?'bad':'ok')+'"><b>'+r['漏了']+'</b></td>'
+      + '<td class="num mut">'+r['漏_贴墙']+'</td><td class="num mut">'+r['漏_离墙']+'</td>'
+      + '<td class="num">'+r['块']+'</td><td class="num mut">'+n(r['面积合计_m2'])+'</td>';
+    tb.appendChild(tr);
+    ['门扇','有门头','漏了','漏_贴墙','漏_离墙','块'].forEach(k=>T[k]+=r[k]);
+  });
+  const trs = el('tr','sum');
+  trs.innerHTML = '<td>合计</td><td class="num">'+T.门扇+'</td><td class="num">'+T.有门头+'</td>'
+    + '<td class="num">'+T.漏了+'</td><td class="num">'+T.漏_贴墙+'</td>'
+    + '<td class="num">'+T.漏_离墙+'</td><td class="num">'+T.块+'</td><td></td>';
+  tb.appendChild(trs); t.appendChild(tb); s2.appendChild(t);
+  s2.appendChild(shots('doorplan', '门块与开启弧（源图件原样）'));
+  s2.appendChild(shots('door', '门扇 + 门头墙（我们建的）'));
+  const det = el('div');
+  rows.forEach(r=>{ if(!r['漏了']) return;
+    const ul = el('ul','tight');
+    (r['漏明细_距墙_距块_面积']||[]).forEach(m=>ul.appendChild(el('li',null,
+      '距墙 '+n(m[0])+' / 距最近够大块 '+n(m[1])+' / 扇面积 '+n(m[2])+' / 质心 ('+m[3]+', '+m[4]+')')));
+    det.appendChild(el('div','cap', r['层']+' · 漏 '+r['漏了'])); det.appendChild(ul);
+  });
+  if(det.childNodes.length){
+    s2.appendChild(el('p','note','<b>漏的是哪几扇</b>（读数，逐扇指名到源图坐标）：'));
+    s2.appendChild(det);
+  }
+  box.appendChild(s2);
+
+  const s3 = sect('差在哪（差值在浏览器里现算）', null);
+  const dh = val('门','洞高');
+  s3.appendChild(diffTable([
+    ['门洞高', num(dh)+' mm <span class="tag t-'+mark('门','洞高')+'">'+mark('门','洞高')+'</span>',
+     '优先尺寸在 <a href="../rebuild/构件库/参考/出处.md">出处.md '+ANCHOR['门']+'1</a>'
+       + '（表 3 来自二手汇总，<b>未回原表</b>）',
+     '<span class="wr">算不出来</span>（规范侧只在参考件里，参数表没有可相减的数）'],
+    ['门头墙覆盖', '<b class="'+(T.漏了?'bad':'ok')+'">'+T.漏了+'</b> / '+T.门扇+' 扇没补上',
+     '应为 0 扇',
+     T.漏了 ? '<span class="bad">还有 '+T.漏了+' 扇头顶没有门头</span>：贴墙 '+T.漏_贴墙
+       +' 扇（源图那面墙是实心的 ⇒ <b>缺的是门洞、不是门头</b>）、离墙 '+T.漏_离墙
+       +' 扇（源图那段墙整段没有线 ⇒ <b>没有墙可挂门头</b>）'
+       : '<span class="ok">每扇门头顶都有门头</span>'],
+    ['门头墙环最短边下限', n(val('共用','环_最短边下限'))+' mm',
+     '入口闸 ⑪ 的阈值 —— <b>必须与这里同值</b>',
+     '两处不等就判红（<code>J-10.8-00</code> 的 ⑯ 逐条核这一条）'],
+    ['门里有多少是假设', (function(){ let a=0,b=0; const C=cat('门');
+        Object.keys(C).forEach(k=>{ b++; if(C[k]['标注']==='假设') a++; }); return a+' / '+b+' 条'; })()
+      , '——', '假设值<b>必须在页面上标出来</b>：本表每条都带标注，不许当成实测'],
+  ]));
+  s3.appendChild(el('p','note','★ 「门上面的缺失」现在的形态：<b>不是没有门头，而是还剩 '
+    + T.漏了 + ' 扇没补上</b>，且这 '+T.漏了+' 扇逐扇指名（见上一格）。这条不许当它不存在。'));
+  DIFFS.push(['①', '门', s3]);
+  return box;
+}
+
+/* ================= 楼梯 ================= */
+function stairPanel(D){
+  const F = D['楼梯形制'];
+  const box = el('div');
+  const g   = k => uniq(F.map(r=>r[k]));
+  const cnt = k => { const m={}; F.forEach(r=>m[r[k]]=(m[r[k]]||0)+1); return m; };
+  const seq = (a,u) => a.map(x=>n(x)+(u||'')).join('、');
+
+  const s1 = sect('参考 · 规范与图集', null);
+  s1.appendChild(paramTable('楼梯', ['规范','待坐实']));
+  s1.appendChild(el('p','note','条号与图集在 <a href="../rebuild/构件库/参考/出处.md">参考/出处.md '
+    + ANCHOR['楼梯'] + '</a>（栏杆详图那本是 22J403-1）。'));
+  box.appendChild(s1);
+
+  const s2 = sect('源图实测 · 我们建出来的（' + F.length + ' 个梯间）', null);
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>读数</th><th>值（× 个数）</th></tr></thead>';
+  const tb = el('tbody');
+  [['踏面_mm','踏面 mm'],['踢面_mm','踢面 mm'],['级数_每跑','每跑级数'],
+   ['梯段宽_mm','梯段宽 mm'],['梯井宽_mm','梯井宽 mm'],['平台厚_mm','平台厚 mm'],
+   ['半层高_mm','半层高 mm']].forEach(pair=>{
+    const k = pair[0], label = pair[1], m = cnt(k);
+    const tr = el('tr');
+    tr.innerHTML = '<td>'+esc(label)+'</td><td class="num">'+Object.keys(m).sort((a,b)=>a-b)
+      .map(v=>n(+v)+(m[v]>1?' <span class="mut">×'+m[v]+'</span>':'')).join('、')+'</td>';
+    tb.appendChild(tr);
+  });
+  const one = F.filter(r=>!r['两跑']);
+  const r1 = el('tr'); r1.innerHTML = '<td>两跑 / 单跑</td><td class="num">'
+    + F.filter(r=>r['两跑']).length + ' / ' + one.length
+    + (one.length ? ' <span class="mut">（' + one.map(r=>r['层']+'@('+Math.round(r['中点_xy'][0])
+      + ', ' + Math.round(r['中点_xy'][1]) + ')').join('；') + '）</span>' : '') + '</td>';
+  tb.appendChild(r1);
+  const r2 = el('tr'); r2.innerHTML = '<td>栏杆 条 / 贴墙跳过 / 块</td><td class="num">'
+    + F.reduce((a,r)=>a+r['栏杆_侧'],0)+' / '+F.reduce((a,r)=>a+r['栏杆_贴墙'],0)+' / '
+    + F.reduce((a,r)=>a+r['栏杆_块'],0)+'</td>';
+  tb.appendChild(r2);
+  t.appendChild(tb); s2.appendChild(t);
+  s2.appendChild(shots('stair','楼梯：实心台阶 + 平台 + 梯井 + 栏杆'));
+  box.appendChild(s2);
+
+  const s3 = sect('差在哪（差值在浏览器里现算）', null);
+  const tg = g('踏面_mm'), steps = g('级数_每跑'), gw = g('梯井宽_mm'), bw = g('梯段宽_mm');
+  const gov  = val('楼梯','踏面_规范档');
+  const iv   = val('楼梯','步距_2踢面加踏面');
+  const span = Array.isArray(iv) ? iv : null;
+  const vals = uniq(F.map(r=>+(2*r['踢面_mm']+r['踏面_mm']).toFixed(2)));
+  const ls   = spec('楼梯','级数_规范区间');
+  const lv   = (ls && Array.isArray(ls['区间'])) ? ls['区间'] : null;
+  const trig = val('楼梯','梯井_防坠触发');
+  const bwm  = val('楼梯','栏杆高_白模'), pl = val('楼梯','栏杆高_平台');
+  const ws   = spec('楼梯','梯段宽');
+  const wmin = (ws && Array.isArray(ws['区间'])) ? ws['区间'] : null;
+  const out  = wmin ? bw.filter(x=>x<wmin[0]||x>wmin[1]) : [];
+  const gmax = Math.max.apply(null, gw);
+
+  s3.appendChild(diffTable([
+    ['踏面', seq(tg,' mm')+' <span class="tag t-'+mark('楼梯','踏面')+'">'+mark('楼梯','踏面')+'</span>',
+     gov==null ? '<span class="tag t-待坐实">待坐实</span> <code>踏面_规范档</code> 值留 null'
+       + '（原表是图片，只有二手汇总）' : n(gov)+' mm',
+     gov==null ? CANT+' —— 线索见 <a href="../rebuild/构件库/参考/出处.md">出处.md '
+       + ANCHOR['楼梯'] + '1</a>' : n(Math.max.apply(null,tg)-gov)+' mm'],
+    ['步距 2h+b（现算）', seq(vals,' mm'),
+     span ? span.map(n).join(' ~ ')+' mm（已坐实）' : '—（参数表里没读到区间）',
+     span ? (vals.every(v=>v>=span[0]&&v<=span[1])
+        ? '<span class="ok">全在区间内</span>'
+        : '<span class="bad">越界 '+seq(vals.filter(v=>v<span[0]||v>span[1]))+'</span>') : CANT],
+    ['每跑级数', seq(steps,' 级'),
+     lv ? lv.map(n).join(' ~ ')+' 级（区间按调研口径，值未坐实）' : '—',
+     lv ? (steps.every(s=>s>=lv[0]&&s<=lv[1])
+        ? '<span class="ok">全在区间内</span>'
+        : '<span class="bad">越界 '+seq(steps.filter(s=>s<lv[0]||s>lv[1]))+'</span>') : CANT],
+    ['梯井宽 vs 防坠触发', seq(gw,' mm'), n(trig)+' mm（适用：托幼 / 中小学 / 少年儿童场所）',
+     gmax>trig ? '本楼是大中专教学楼 ⇒ <b>该条不适用</b>；但 '+n(gmax)+' mm 已 &gt; '+n(trig)
+       + ' mm ⇒ <span class="warn">若按中小学口径就触发</span>（口径待问）'
+       : '<span class="ok">全 ≤ 触发值</span>'],
+    ['栏杆高', n(bwm)+' mm <span class="tag t-'+mark('楼梯','栏杆高_白模')+'">'
+       + mark('楼梯','栏杆高_白模')+'</span>',
+     '梯段 ≥'+n(val('楼梯','栏杆高_梯段'))+' mm、平台处水平段长 &gt;0.5 m 时 ≥'+n(pl)+' mm（已坐实）',
+     bwm-pl<0 ? '<span class="warn">'+n(bwm-pl)+' mm</span>：<b>平台那段若水平长 &gt;0.5 m 就低了</b>'
+       : '<span class="ok">不低于规范档</span>'],
+    ['梯段宽', seq(bw,' mm'),
+     wmin ? '我方登记的正常区间 '+wmin.map(n).join(' ~ ')+' mm（<b>假设</b>，不是规范值）' : '—',
+     out.length ? '<span class="warn">越出正常区间：'+seq(out,' mm')+'</span> —— 多半是窗口里'
+       + '两座梯间被并成一座，<b>要回源图核</b>，不许当成「规范就这么宽」'
+       : '<span class="ok">全在正常区间内</span>'],
+    ['平台宽', '平台跨两跑（宽 = 2·梯段宽 + 梯井宽）',
+     '下限随梯段净宽走（<b>不是一个常数</b>）',
+     '<span class="wr">算不出来</span>（参数表里该值留 null）'],
+  ]));
+  if(out.length || gmax>trig){
+    s3.appendChild(el('p','note','★ 越界的那些逐条在 <a href="../rebuild/构件库/对照.md">对照.md</a> '
+      + '2.3 节末列了层号与坐标 —— <b>是读数不是判词</b>，改不改要回源图看。'));
+  }
+  DIFFS.push(['②', '楼梯', s3]);
+  return box;
+}
+
+/* ================= 竖井 ================= */
+function shaftPanel(D){
+  const S = D['竖井'];
+  const box = el('div');
+  const s1 = sect('参考 · 规范与图集', null);
+  s1.appendChild(paramTable('竖井', ['规范','待坐实']));
+  s1.appendChild(el('p','note','条号与图集在 <a href="../rebuild/构件库/参考/出处.md">参考/出处.md '
+    + ANCHOR['竖井'] + '</a>。★ 井道毫米数在现行标准里放在<b>图注</b>里，第三方汇总互相矛盾'
+    + ' ⇒ <b>我们一个数都没填</b>。'));
+  box.appendChild(s1);
+
+  const nlayer = uniq(S.map(r=>r['层'])).length;
+  const s2 = sect('源图实测 · 我们建出来的（'+S.length+' 行 = '+nlayer+' 层 × '
+    + Math.round(S.length/nlayer)+' 个）', null);
+  const m = {}; S.forEach(r=>{ const k = r['净宽_mm']+'×'+r['净高_mm']; (m[k]=m[k]||[]).push(r); });
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>井道内空（净宽 × 净高）</th><th class="num">次数</th>'
+    + '<th class="num">净面积 m²</th><th class="num">层</th></tr></thead>';
+  const tb = el('tbody');
+  Object.keys(m).sort((a,b)=>m[b].length-m[a].length).forEach(k=>{
+    const hit = m[k], tr = el('tr');
+    tr.innerHTML = '<td class="num">'+esc(k)+' mm</td><td class="num">'+hit.length+'</td>'
+      + '<td class="num">'+n(hit[0]['净面积_m2'])+'</td>'
+      + '<td class="num mut">'+uniq(hit.map(r=>r['层'])).length+' 层</td>';
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); s2.appendChild(t);
+  s2.appendChild(shots('shaft','竖井井壁（数据键仍叫 LIFT）'));
+  box.appendChild(s2);
+
+  const s3 = sect('差在哪', null);
+  const nmin = Math.min.apply(null, S.map(r=>r['净宽_mm']));
+  s3.appendChild(el('p','note','<b>判词</b>（<code>参数.json::竖井/判定</code>，标 <span class="tag t-'
+    + mark('竖井','判定')+'">'+mark('竖井','判定')+'</span>）：<b class="bad">'
+    + esc(val('竖井','判定'))+'</b>。这句不看任何一条记来的井道毫米数，看两把互不同源的尺子：'
+    + '<b>形状</b>（墙上闭合矩形只有上表那几种，最小净宽 '+n(nmin)+' mm）与 '
+    + '<b>命名</b>（源图房间号 / 用途里没有一条含「井 / 梯 / 电梯」）。'));
+  s3.appendChild(diffTable([
+    ['井道内净尺寸应 ≥', '最小净宽 '+n(nmin)+' mm',
+     '<span class="tag t-待坐实">待坐实</span> <code>竖井/国标下限</code> 值 null',
+     CANT+' —— <a href="../rebuild/构件库/参考/出处.md">出处.md '+ANCHOR['竖井']
+       + '7</a> 明确报「井道毫米数<b>完全未从原文坐实</b>」⇒ 不许挑一个填进来当差'],
+    ['井壁厚', n(val('竖井','井壁厚'))+' mm <span class="tag t-'+mark('竖井','井壁厚')+'">'
+       + mark('竖井','井壁厚')+'</span>', '无规范常数（随井道做法与结构定）',
+     '<span class="warn">假设值</span> —— 页面上标出来了，不当实测用'],
+    ['层门洞', '不建（无真井）',
+     '净高 ≥'+n(val('竖井','层门洞_净高下限'))+' mm（已坐实）；洞口 1100×2200 <b>不是规范值</b>'
+       + '（是厂家土建图的常见值）',
+     '不适用；<b>不许拿 1100×2200 当依据</b>'],
+    ['竖井个数 vs 真电梯', S.length+' 个（'+nlayer+' 层 × '+Math.round(S.length/nlayer)+'）',
+     '按判词应为 0（本套图没有客运电梯井）',
+     '<span class="warn">名字叫电梯、建的其实是竖井</span>。人读文案已改叫「竖井」，'
+       + '<b>数据键仍叫 <code>LIFT</code></b>：那是数据契约，改名会让 SU 的硬编码类名表静默丢面'],
+  ]));
+  DIFFS.push(['③', '竖井', s3]);
+  return box;
+}
+
+/* ================= 装配 ================= */
+function topBar(P, D){
+  const all = [];
+  Object.keys(P['构件']||{}).forEach(c=>Object.keys(P['构件'][c])
+    .forEach(k=>all.push(P['构件'][c][k])));
+  const mk = m => all.filter(s=>s['标注']===m).length;
+  const b = $('#bar'); b.innerHTML = '';
+  const add = (k,v,cls)=>{ const d = el('div');
+    d.innerHTML = '<div class="k">'+esc(k)+'</div><div class="v '+(cls||'')+'">'+v+'</div>';
+    b.appendChild(d); };
+  add('参数条数', all.length);
+  add('实测 / 假设', mk('实测')+' / <span class="wr">'+mk('假设')+'</span>');
+  add('规范 / 旧规范', mk('规范')+' / '+mk('旧规范'));
+  add('待坐实（无值）', mk('待坐实'), 'no');
+  add('对照数据时刻', esc(D['生成时刻']||'—'));
+  add('门扇 / 梯间 / 竖井行',
+    D['构件'].reduce((a,r)=>a+r['门扇'],0)+' / '+D['楼梯形制'].length+' / '+D['竖井'].length);
+  add('门头墙漏', D['构件'].reduce((a,r)=>a+r['漏了'],0), 'wr');
+}
+
+function render(P, D){
+  PARAM = P; DZ = D;
+  topBar(P, D);
+  const cols = $('#cols'); cols.innerHTML = '';
+  cols.appendChild(wrap('①','门','门上面的缺失',       doorPanel(D)));
+  cols.appendChild(wrap('②','楼梯','楼梯样式不对',       stairPanel(D)));
+  cols.appendChild(wrap('③','竖井','电梯生成的也不是不对', shaftPanel(D)));
+  // ★ 差表单独铺一整行（栏宽只有 1/3 屏，四列表塞进栏里会被压成一字一行）
+  const band = el('div');
+  band.appendChild(el('h2','bandtitle','差在哪 —— 三个构件各一行'));
+  const diffs = el('div','diffs');
+  DIFFS.forEach(pair=>{
+    const d = el('div','comp'), h = el('h2');
+    h.innerHTML = '<span class="n">'+esc(pair[0])+'</span>'+esc(pair[1])
+      + ' · 差在哪<span class="quote">差值在浏览器里现算；任一侧未坐实就印「算不出来」，'
+      + '不拿二手数硬凑</span>';
+    d.appendChild(h); d.appendChild(pair[2]); diffs.appendChild(d);
+  });
+  band.appendChild(diffs);
+  cols.parentNode.insertBefore(band, $('#foot'));
+  $('#foot').innerHTML = '每个数现算自 <code>参数.json</code>（更新 ' + esc(P['更新']||'—')
+    + '）+ <code>对照.json</code>（生成于 ' + esc(D['生成时刻']||'—') + '）。'
+    + '本页不写死任何数字：重跑 <code>python rebuild/tools/build3d.py</code> 会重写 '
+    + '<code>对照.json</code>，刷新本页即见新读数（页面用时间戳绕开缓存）。<br>'
+    + '人读版 <a href="../rebuild/构件库/对照.md">对照.md</a> · '
+    + '参考件 <a href="../rebuild/构件库/参考/出处.md">参考/出处.md</a> · '
+    + '模型 <a href="index.html">index.html</a> · 楼板 <a href="slab.html">slab.html</a>';
+}
+
+(async()=>{
+  try{
+    const pair = await Promise.all([jget(PARAM_URL), jget(DZ_URL)]);
+    render(pair[0], pair[1]);
+  }catch(e){
+    $('#cols').innerHTML = '<div class="err"><b>读不到数据文件</b><br>' + esc(e.message)
+      + '<br><br>本页要与仓库一起用 HTTP 打开（<code>http://127.0.0.1:8451/demo/parts.html</code>），'
+      + '直接双击文件时浏览器会拦住 <code>fetch</code>。</div>';
+  }
+})();
+</script>
+</body>
+</html>

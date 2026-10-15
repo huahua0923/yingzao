@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>楼板在 T 型墙接触处的直角弧度 —— 能不能去掉</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0e1116;color:#e8ecf2;
+       font:14px/1.75 "Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 90px}
+  h1{font-size:21px;margin:0 0 6px;letter-spacing:.5px}
+  h2{font-size:16px;margin:34px 0 10px;border-left:3px solid #e5b567;padding-left:10px;font-weight:600}
+  h3{font-size:14px;margin:18px 0 8px;color:#c2ccd9;font-weight:600}
+  .sub{color:#8b98a8;font-size:13px;margin:0}
+  .card{background:#161b22;border:1px solid #232b36;border-radius:10px;padding:14px 16px;margin:12px 0}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border-bottom:1px solid #232b36;padding:6px 9px;text-align:left;white-space:nowrap}
+  th{color:#8b98a8;font-weight:400;font-size:12px}
+  tr:last-child td{border-bottom:none}
+  .num{font-variant-numeric:tabular-nums;text-align:right}
+  .bad{color:#ff6b6b;font-weight:600} .good{color:#54d18c;font-weight:600} .dim{color:#5d6a7a}
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  svg{background:#0b0e13;border:1px solid #232b36;border-radius:8px;display:block}
+  #view{width:100%;height:430px;background:#0b0e13;border:1px solid #232b36;
+        border-radius:8px;display:block;cursor:grab;touch-action:none}
+  #view.drag{cursor:grabbing}
+  .legend span{display:inline-flex;align-items:center;gap:7px;margin:4px 16px 4px 0;font-size:12px;color:#8b98a8}
+  .sw{width:22px;height:3px;border-radius:2px;display:inline-block;flex:none}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none}
+  code{background:#0b0e13;padding:1px 5px;border-radius:4px;color:#e5b567;font-size:12px}
+  .note{border-left:3px solid #d98b3f;background:#1b1710;padding:10px 14px;border-radius:0 8px 8px 0;
+        color:#d9c4a8;font-size:13px;margin:12px 0}
+  .io{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+  .io b{color:#8b98a8;font-weight:400;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>两条墙做 T 型接触 —— 楼板直角处那道弧是哪来的，能不能去掉</h1>
+  <p class="sub">比照件：墙厚 240 mm、板厚 120 mm、穿墙 6000 mm、支墙 4000 mm。全部尺寸为 <b>mm</b>，面积 m²。<br>
+     生成命令 <code>python _scratch/arcfix_demo.py</code> ｜ 数字取自同一次运行的 <code>demo/arcfix/measure.json</code></p>
+
+  <h2>一、那道弧是哪来的</h2>
+  <div class="card">
+    楼板轮廓不是「画」出来的，是把墙网<b>闭运算</b>出来的 ——
+    <code>libs3d/c006/build7.py:314-339</code>：
+    <div style="margin:10px 0 6px"><code>q = _pn.buffer(r).buffer(-r)</code></div>
+    <code>buffer()</code> 的 <code>join_style</code> <b>默认是 1 = round</b>（圆角）。于是「用半径 r 的圆盘去抹平缺口」这件事，
+    在<b>每一个角</b>上都同时干了两件事：把凸角磨圆、把凹角填上 —— 填进去的也是半径 r 的圆弧。
+    <div class="row" style="margin-top:12px">
+      <div style="flex:1;min-width:260px">
+        <h3>凸角（墙外角）</h3>
+        <p class="sub">圆盘在角上滚过去 ⇒ 外角被切成半径 r 的圆。<code>a0</code> 的 90° 尖角变成 <code>a1</code> 的一段弧。</p>
+      </div>
+      <div style="flex:1;min-width:260px">
+        <h3>凹角（T 的腋窝）</h3>
+        <p class="sub"><b>这才是你看到的那处。</b>圆盘塞不进 90° 的腋窝 ⇒ 只能贴着两侧墙滚 ⇒
+          在直角处留下一段半径 r 的圆弧，把 240 mm 的墙厚挤出圆角。</p>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:10px">
+      本例 <code>a1</code> 用的是链里 1 层实际选中的 <code>r = 800 mm</code> ⇒ 凹角被填进 <b>240.0 mm</b>
+      —— 正好等于墙厚的一半，也就是腋窝被填平到墙中心线。
+    </p>
+  </div>
+
+  <h2>二、情形 A：实心 T 型接触（无洞口）</h2>
+  <div class="row">
+    <div>
+      <div class="legend" style="margin-bottom:6px">
+        <span><i class="sw" style="background:#e8ecf2"></i>不闭合（尖角）</span>
+        <span><i class="sw" style="background:#ff6b6b"></i>现行：圆角闭运算 r=800</span>
+        <span><i class="sw" style="background:#54d18c"></i>改：斜接闭运算 r=800</span>
+        <span><i class="sw" style="background:#e5b567"></i>腋窝位置</span>
+      </div>
+      <svg viewBox="-3300 -4300 6600 4700" width="640" height="456"><rect x="-3300" y="-4300" width="6600" height="4700" fill="#0b0e13"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z" fill="#232b36" stroke="#3a4655" stroke-width="8"/><path d="M -2999.1 119.1 L -3000.0 100.4 L -3000.0 -100.4 L -2999.1 -119.1 L -2980.4 -120.0 L -920.0 -120.0 L -841.6 -123.9 L -763.9 -135.4 L -687.8 -154.4 L -613.9 -180.9 L -542.9 -214.5 L -475.5 -254.8 L -412.5 -301.6 L -354.3 -354.3 L -301.6 -412.5 L -254.8 -475.5 L -214.5 -542.9 L -180.9 -613.9 L -154.4 -687.8 L -135.4 -763.9 L -123.9 -841.6 L -120.0 -920.0 L -120.0 -3980.4 L -119.1 -3999.1 L -100.4 -4000.0 L 100.4 -4000.0 L 119.1 -3999.1 L 120.0 -3980.4 L 120.0 -920.0 L 123.9 -841.6 L 135.4 -763.9 L 154.4 -687.8 L 180.9 -613.9 L 214.5 -542.9 L 254.8 -475.5 L 301.6 -412.5 L 354.3 -354.3 L 412.5 -301.6 L 475.5 -254.8 L 542.9 -214.5 L 613.9 -180.9 L 687.8 -154.4 L 763.9 -135.4 L 841.6 -123.9 L 920.0 -120.0 L 2980.4 -120.0 L 2999.1 -119.1 L 3000.0 -100.4 L 3000.0 100.4 L 2999.1 119.1 L 2980.4 120.0 L -2980.4 120.0 Z" fill="none" stroke="#ff6b6b" stroke-width="22"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z" fill="none" stroke="#54d18c" stroke-width="22"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z" fill="none" stroke="#e8ecf2" stroke-width="22" stroke-dasharray="60 40"/><circle cx="120" cy="-120" r="60" fill="none" stroke="#e5b567" stroke-width="18"/></svg>
+    </div>
+    <div>
+      <div class="sub" style="margin-bottom:6px">腋窝放大（窗口 1.4 m 见方，金色虚线即凹角）</div>
+      <svg viewBox="-600 -800 1400 1400" width="440" height="440"><rect x="-600" y="-800" width="1400" height="1400" fill="#0b0e13"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z" fill="#232b36" stroke="#3a4655" stroke-width="7"/><path d="M -2999.1 119.1 L -3000.0 100.4 L -3000.0 -100.4 L -2999.1 -119.1 L -2980.4 -120.0 L -920.0 -120.0 L -841.6 -123.9 L -763.9 -135.4 L -687.8 -154.4 L -613.9 -180.9 L -542.9 -214.5 L -475.5 -254.8 L -412.5 -301.6 L -354.3 -354.3 L -301.6 -412.5 L -254.8 -475.5 L -214.5 -542.9 L -180.9 -613.9 L -154.4 -687.8 L -135.4 -763.9 L -123.9 -841.6 L -120.0 -920.0 L -120.0 -3980.4 L -119.1 -3999.1 L -100.4 -4000.0 L 100.4 -4000.0 L 119.1 -3999.1 L 120.0 -3980.4 L 120.0 -920.0 L 123.9 -841.6 L 135.4 -763.9 L 154.4 -687.8 L 180.9 -613.9 L 214.5 -542.9 L 254.8 -475.5 L 301.6 -412.5 L 354.3 -354.3 L 412.5 -301.6 L 475.5 -254.8 L 542.9 -214.5 L 613.9 -180.9 L 687.8 -154.4 L 763.9 -135.4 L 841.6 -123.9 L 920.0 -120.0 L 2980.4 -120.0 L 2999.1 -119.1 L 3000.0 -100.4 L 3000.0 100.4 L 2999.1 119.1 L 2980.4 120.0 L -2980.4 120.0 Z" fill="none" stroke="#ff6b6b" stroke-width="20"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z" fill="none" stroke="#54d18c" stroke-width="20"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z" fill="none" stroke="#e8ecf2" stroke-width="20" stroke-dasharray="60 40"/><circle cx="120" cy="-120" r="55" fill="none" stroke="#e5b567" stroke-width="9" stroke-dasharray="18 14"/></svg>
+      <p class="sub" style="margin-top:8px;max-width:460px">
+        红色实线是现行做法，绿色实线是斜接做法，白色虚线是理论上的尖角。
+        <b>绿色与白色虚线完全重合</b> —— 斜接闭运算在直角上什么都没改。
+      </p>
+    </div>
+  </div>
+
+  <h2>三、情形 B：穿墙上开 900 mm 洞口</h2>
+  <p class="sub">真实楼层里穿墙上是门窗洞。洞口尺度 900 mm，比闭运算半径 800 mm 还大一点 —— 这是下面结论的关键。</p>
+  <div class="row">
+    <div>
+      <div class="legend" style="margin-bottom:6px">
+        <span><i class="sw" style="background:#e8ecf2"></i>不闭合（洞口露着）</span>
+        <span><i class="sw" style="background:#ff6b6b"></i>现行：圆角闭运算 r=800</span>
+        <span><i class="sw" style="background:#54d18c"></i>改：沿墙向补缝 + 不闭合</span>
+      </div>
+      <svg viewBox="-3300 -4300 6600 4700" width="640" height="456"><rect x="-3300" y="-4300" width="6600" height="4700" fill="#0b0e13"/><path d="M 1500.0 -120.0 L 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z M 2400.0 -120.0 L 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 Z" fill="#232b36" stroke="#3a4655" stroke-width="8"/><path d="M 2149.0 -6.2 L 2224.5 -29.6 L 2297.3 -60.4 L 2366.7 -98.2 L 2401.0 -119.1 L 2419.6 -120.0 L 2980.4 -120.0 L 2999.1 -119.1 L 3000.0 -100.4 L 3000.0 100.4 L 2999.1 119.1 L 2980.4 120.0 L 2419.6 120.0 L 2400.3 119.0 L 2372.4 102.3 L 2360.8 94.6 L 2291.1 57.4 L 2218.0 27.3 L 2142.3 4.5 L 2118.9 -0.1 Z M -3000.0 100.4 L -3000.0 -100.4 L -2999.1 -119.1 L -2980.4 -120.0 L -920.0 -120.0 L -841.6 -123.9 L -763.9 -135.4 L -687.8 -154.4 L -613.9 -180.9 L -542.9 -214.5 L -475.5 -254.8 L -412.5 -301.6 L -354.3 -354.3 L -301.6 -412.5 L -254.8 -475.5 L -214.5 -542.9 L -180.9 -613.9 L -154.4 -687.8 L -135.4 -763.9 L -123.9 -841.6 L -120.0 -920.0 L -120.0 -3980.4 L -119.1 -3999.1 L -100.4 -4000.0 L 100.4 -4000.0 L 119.1 -3999.1 L 120.0 -3980.4 L 120.0 -920.0 L 123.9 -841.6 L 135.4 -763.9 L 154.4 -687.8 L 180.9 -613.9 L 214.5 -542.9 L 254.8 -475.5 L 301.6 -412.5 L 354.3 -354.3 L 412.5 -301.6 L 475.5 -254.8 L 542.9 -214.5 L 613.9 -180.9 L 687.8 -154.4 L 763.9 -135.4 L 841.6 -123.9 L 920.0 -120.0 L 1480.4 -120.0 L 1499.7 -119.0 L 1527.6 -102.3 L 1539.2 -94.6 L 1608.9 -57.4 L 1682.0 -27.3 L 1757.7 -4.5 L 1781.1 0.1 L 1751.0 6.2 L 1675.5 29.6 L 1602.7 60.4 L 1533.3 98.2 L 1499.0 119.1 L 1480.4 120.0 L -2980.4 120.0 L -2999.1 119.1 Z" fill="none" stroke="#ff6b6b" stroke-width="22"/><path d="M 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 L 1500.0 -120.0 L 2400.0 -120.0 L 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 Z" fill="none" stroke="#54d18c" stroke-width="22"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 L 2400.0 -120.0 Z M 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 L 1500.0 -120.0 Z" fill="none" stroke="#e8ecf2" stroke-width="22" stroke-dasharray="60 40"/><circle cx="120" cy="-120" r="60" fill="none" stroke="#e5b567" stroke-width="18"/></svg>
+    </div>
+    <div>
+      <div class="sub" style="margin-bottom:6px">左：腋窝（1.4 m 见方）　｜　右：900 mm 洞口（1.6 m 见方）</div>
+      <div class="row" style="gap:12px"><svg viewBox="-600 -800 1400 1400" width="440" height="440"><rect x="-600" y="-800" width="1400" height="1400" fill="#0b0e13"/><path d="M 1500.0 -120.0 L 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z M 2400.0 -120.0 L 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 Z" fill="#232b36" stroke="#3a4655" stroke-width="7"/><path d="M 2149.0 -6.2 L 2224.5 -29.6 L 2297.3 -60.4 L 2366.7 -98.2 L 2401.0 -119.1 L 2419.6 -120.0 L 2980.4 -120.0 L 2999.1 -119.1 L 3000.0 -100.4 L 3000.0 100.4 L 2999.1 119.1 L 2980.4 120.0 L 2419.6 120.0 L 2400.3 119.0 L 2372.4 102.3 L 2360.8 94.6 L 2291.1 57.4 L 2218.0 27.3 L 2142.3 4.5 L 2118.9 -0.1 Z M -3000.0 100.4 L -3000.0 -100.4 L -2999.1 -119.1 L -2980.4 -120.0 L -920.0 -120.0 L -841.6 -123.9 L -763.9 -135.4 L -687.8 -154.4 L -613.9 -180.9 L -542.9 -214.5 L -475.5 -254.8 L -412.5 -301.6 L -354.3 -354.3 L -301.6 -412.5 L -254.8 -475.5 L -214.5 -542.9 L -180.9 -613.9 L -154.4 -687.8 L -135.4 -763.9 L -123.9 -841.6 L -120.0 -920.0 L -120.0 -3980.4 L -119.1 -3999.1 L -100.4 -4000.0 L 100.4 -4000.0 L 119.1 -3999.1 L 120.0 -3980.4 L 120.0 -920.0 L 123.9 -841.6 L 135.4 -763.9 L 154.4 -687.8 L 180.9 -613.9 L 214.5 -542.9 L 254.8 -475.5 L 301.6 -412.5 L 354.3 -354.3 L 412.5 -301.6 L 475.5 -254.8 L 542.9 -214.5 L 613.9 -180.9 L 687.8 -154.4 L 763.9 -135.4 L 841.6 -123.9 L 920.0 -120.0 L 1480.4 -120.0 L 1499.7 -119.0 L 1527.6 -102.3 L 1539.2 -94.6 L 1608.9 -57.4 L 1682.0 -27.3 L 1757.7 -4.5 L 1781.1 0.1 L 1751.0 6.2 L 1675.5 29.6 L 1602.7 60.4 L 1533.3 98.2 L 1499.0 119.1 L 1480.4 120.0 L -2980.4 120.0 L -2999.1 119.1 Z" fill="none" stroke="#ff6b6b" stroke-width="20"/><path d="M 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 L 1500.0 -120.0 L 2400.0 -120.0 L 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 Z" fill="none" stroke="#54d18c" stroke-width="20"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 L 2400.0 -120.0 Z M 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 L 1500.0 -120.0 Z" fill="none" stroke="#e8ecf2" stroke-width="20" stroke-dasharray="60 40"/><circle cx="120" cy="-120" r="55" fill="none" stroke="#e5b567" stroke-width="9" stroke-dasharray="18 14"/></svg><svg viewBox="1150 -800 1600 1400" width="440" height="440"><rect x="1150" y="-800" width="1600" height="1400" fill="#0b0e13"/><path d="M 1500.0 -120.0 L 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 Z M 2400.0 -120.0 L 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 Z" fill="#232b36" stroke="#3a4655" stroke-width="7"/><path d="M 2149.0 -6.2 L 2224.5 -29.6 L 2297.3 -60.4 L 2366.7 -98.2 L 2401.0 -119.1 L 2419.6 -120.0 L 2980.4 -120.0 L 2999.1 -119.1 L 3000.0 -100.4 L 3000.0 100.4 L 2999.1 119.1 L 2980.4 120.0 L 2419.6 120.0 L 2400.3 119.0 L 2372.4 102.3 L 2360.8 94.6 L 2291.1 57.4 L 2218.0 27.3 L 2142.3 4.5 L 2118.9 -0.1 Z M -3000.0 100.4 L -3000.0 -100.4 L -2999.1 -119.1 L -2980.4 -120.0 L -920.0 -120.0 L -841.6 -123.9 L -763.9 -135.4 L -687.8 -154.4 L -613.9 -180.9 L -542.9 -214.5 L -475.5 -254.8 L -412.5 -301.6 L -354.3 -354.3 L -301.6 -412.5 L -254.8 -475.5 L -214.5 -542.9 L -180.9 -613.9 L -154.4 -687.8 L -135.4 -763.9 L -123.9 -841.6 L -120.0 -920.0 L -120.0 -3980.4 L -119.1 -3999.1 L -100.4 -4000.0 L 100.4 -4000.0 L 119.1 -3999.1 L 120.0 -3980.4 L 120.0 -920.0 L 123.9 -841.6 L 135.4 -763.9 L 154.4 -687.8 L 180.9 -613.9 L 214.5 -542.9 L 254.8 -475.5 L 301.6 -412.5 L 354.3 -354.3 L 412.5 -301.6 L 475.5 -254.8 L 542.9 -214.5 L 613.9 -180.9 L 687.8 -154.4 L 763.9 -135.4 L 841.6 -123.9 L 920.0 -120.0 L 1480.4 -120.0 L 1499.7 -119.0 L 1527.6 -102.3 L 1539.2 -94.6 L 1608.9 -57.4 L 1682.0 -27.3 L 1757.7 -4.5 L 1781.1 0.1 L 1751.0 6.2 L 1675.5 29.6 L 1602.7 60.4 L 1533.3 98.2 L 1499.0 119.1 L 1480.4 120.0 L -2980.4 120.0 L -2999.1 119.1 Z" fill="none" stroke="#ff6b6b" stroke-width="22.8571"/><path d="M 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 L 1500.0 -120.0 L 2400.0 -120.0 L 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 Z" fill="none" stroke="#54d18c" stroke-width="22.8571"/><path d="M 3000.0 -120.0 L 3000.0 120.0 L 2400.0 120.0 L 2400.0 -120.0 Z M 1500.0 120.0 L 120.0 120.0 L -120.0 120.0 L -3000.0 120.0 L -3000.0 -120.0 L -120.0 -120.0 L -120.0 -4000.0 L 120.0 -4000.0 L 120.0 -120.0 L 1500.0 -120.0 Z" fill="none" stroke="#e8ecf2" stroke-width="22.8571" stroke-dasharray="60 40"/><circle cx="120" cy="-120" r="55" fill="none" stroke="#e5b567" stroke-width="9" stroke-dasharray="18 14"/></svg></div>
+      <p class="sub" style="margin-top:8px;max-width:910px">
+        绿做法：先沿墙走向把那 900 mm 的口子补一条墙带（＝链里 <code>bridge_gaps()</code> 已经在干的事），
+        <b>然后再不做闭运算</b>。板就干净了，且洞口是「直着堵上」而不是「被圆盘糊上」。
+        注意右图红做法在洞口两端留下的圆弧 —— 那正是「口子没封住」的样子。
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">顺带量出来的一件事：现行半径<b>根本不够</b>把这个洞封上</h3>
+    <p class="sub" style="margin-bottom:10px">
+      直接问「缺口中心点 <code>(1950, 0)</code> 在不在闭运算的结果里」，从 50 mm 往上扫 25 mm 一格：
+    </p>
+    <table>
+      <thead><tr><th>闭运算的画法</th><th class="num">封住 900 mm 洞口所需的最小半径</th><th>备注</th></tr></thead>
+      <tbody><tr><td>圆角闭运算（现行 join_style=1）</td><td class='num good'>925 mm</td><td class='dim'>现行链用的就是它</td></tr><tr><td>斜接闭运算（join_style=2）</td><td class='num good'>450 mm</td><td class='dim'>本例 a2 / b2 用的做法</td></tr></tbody>
+    </table>
+    <p class="sub" style="margin-top:10px">
+      <b>现行链在 1 层选的是 <code>r = 800 mm</code>，比圆角所需的 925 mm 差一点</b>
+      —— 也就是说：它<b>该封的口子没封上</b>（板在门洞处仍然是断的），
+      却<b>照样</b>在 T 型腋窝处削进了 240 mm 的弧。
+      斜接只要 450 mm 就封住了，而且不削角。
+    </p>
+    <p class="sub" style="margin-top:8px">
+      ★ 别把「块数」当封洞的量具：本例 <code>b0</code> 不闭合时<b>本身就是 2 块</b>
+      （穿墙右端那 600 mm 墙垛是孤立的，与洞口无关）。
+      「块数」在情形 A 上才有分辨力 —— 所以上面这张表才是量的方法。
+    </p>
+  </div>
+
+  <h2>四、量出来的数</h2>
+  <div class="card">
+    <table id="tb">
+      <thead><tr>
+        <th>情形</th><th>画法</th>
+        <th class="num">外环顶点</th><th class="num">真直角 90°</th><th class="num">弧点</th>
+        <th class="num">弧线长 (mm)</th><th class="num">凹角被填进 (mm)</th>
+        <th class="num">碎成几块</th><th class="num">面积 (m²)</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="sub" style="margin-top:10px">
+      「真直角」＝ 内角与 90° 相差 &lt; 2° 的顶点数；「弧点」＝ 既不是直角也不是 180°（共线）的顶点数。
+      「凹角被填进」＝ 腋窝点 <code>(120,120)</code> 到板边界的距离（0 = 腋窝没被填）。
+    </p>
+  </div>
+
+  <h2>五、三种做法叠起来看（3D）</h2>
+  <p class="sub">左排＝情形 A（实心 T），右排＝情形 B（带 900 mm 洞）。拖拽旋转，滚轮缩放。</p>
+  <canvas id="view"></canvas>
+  <div class="legend" style="margin-top:8px">
+    <span><i class="dot" style="background:#8b98a8"></i>不闭合</span>
+    <span><i class="dot" style="background:#e05555"></i>现行：圆角闭</span>
+    <span><i class="dot" style="background:#3fae74"></i>改：斜接闭 / 补缝</span>
+    <span style="color:#5d6a7a">（每个 GLB 由本次运行导出，与本页同一目录）</span>
+  </div>
+
+  <h2>六、诚实的结论：简单 T 能去掉，但整层不能照抄</h2>
+  <div class="card">
+    <h3>能</h3>
+    <p>在这种<b>笔直、轴对齐</b>的 T 型接触上，把闭运算的 <code>join_style</code> 从 <code>1(round)</code> 换成
+       <code>2(mitre)</code>，弧度<b>完全消失</b>：顶点 52 → 8、真直角 0 → 8、弧点 52 → 0、弧线 19.5 m → 0、
+       凹角填进 240 mm → <b>0 mm</b>。而且它还<b>封得更省</b>：同样封住 900 mm 的洞，斜接只要 450 mm 的半径，
+       圆角要 925 mm —— 而链在 1 层只给了 800 mm。</p>
+    <h3 style="margin-top:14px">但是</h3>
+    <p>拿<b>真实楼层轮廓</b>（C006 第 7 层）试同一件事，斜接会把板<b>打碎</b>：
+       同样 <code>r = 200</code>，圆角做法 14 块、最大块 310.4 m²；斜接做法 46 块、最大块 87.9 m²。
+       总面积接近（327.2 vs 316.1 m²）——
+       所以<b>不是丢了面积，是碎片化</b>：斜接把每个不等于 90°/180° 的斜角都推成一个尖刺，
+       两块本来该连上的板在尖刺处断开了。</p>
+    <div class="note">
+      <b>所以「直接换 join_style 就行」是错的。</b>这张页面上绿色那条之所以完美，
+      是因为这件比照件里<b>只有 90° 和 180° 两种角</b>。真实图纸里有斜墙。
+      可行的路子有两条，都还没做、都要先量：<br>
+      ① <b>先规整再斜接</b> —— 把墙网里偏差很小（&lt; 5°）的斜角先吸附到 0°/90°，再做斜接闭运算；<br>
+      ② <b>换结构元</b> —— 不用圆盘，改用「正方形」的闭运算（对轴对齐轮廓等价于斜接，但对斜线不至于扎穿）。<br>
+      两条都要在 <b>11 层全部轮廓</b>上量「碎成几块 / 最大块面积 / 总面积的份额」，判据（不是这张页）才算过。
+    </div>
+  </div>
+
+  <h2>七、这一页自己没有判据</h2>
+  <div class="card io">
+    <b>性质</b><div>看见效应用的<b>比照件</b>，不是交付件，也没有判据门。数字只对这件比照件成立。</div>
+    <b>量具</b><div><code>_scratch/arcfix_demo.py</code> 里按顶点算内角：与 90° 相差 &lt;2° 记真直角，与 180° 相差 &lt;2° 记共线，其余记弧点。</div>
+    <b>盲区</b><div>① 只算<b>外环</b>，内环（楼板上的洞）没量；② 只认坐标平面上的角，<b>斜墙会被当成一整片弧点</b>；③ 顶点抽稀后同样的形状报出的顶点数会变。</div>
+    <b>正对照</b><div><code>a0</code> 不闭合＝已知尖角：它必须报出「8 个真直角、0 弧点」。若不是，说明尺子坏了。</div>
+    <b>源的出处</b><div>闭运算在 <code>libs3d/c006/build7.py:314-339</code>（只读引用，冻结基线未改）；补缝在 <code>libs3d/c006/build7.py:300-302</code> 的 <code>bridge_gaps()</code>。</div>
+  </div>
+
+</div>
+
+<script type="importmap">
+{"imports":{"three":"../vendor/three.module.js","three/addons/":"../vendor/jsm/"}}
+</script>
+<script id="rows" type="application/json">[{"n": 10, "right": 8, "collinear": 2, "arc": 0, "arc_len_mm": 0.0, "corner_fill_mm": 0.0, "blocks": 1, "area_m2": 2.3712, "key": "a0", "case": "A", "label": "不闭合（尖角）", "r": 0.0, "join": 1}, {"n": 52, "right": 0, "collinear": 0, "arc": 52, "arc_len_mm": 19541.500399974993, "corner_fill_mm": 240.00000000000003, "blocks": 1, "area_m2": 2.6473961211830397, "key": "a1", "case": "A", "label": "现行：圆角闭运算 r=800", "r": 800.0, "join": 1}, {"n": 8, "right": 8, "collinear": 0, "arc": 0, "arc_len_mm": 0.0, "corner_fill_mm": 0.0, "blocks": 1, "area_m2": 2.3712, "key": "a2", "case": "A", "label": "改：斜接闭运算 r=800", "r": 800.0, "join": 2}, {"n": 14, "right": 12, "collinear": 2, "arc": 0, "arc_len_mm": 0.0, "corner_fill_mm": 0.0, "blocks": 2, "area_m2": 2.1552, "key": "b0", "case": "B", "label": "不闭合（洞口露着）", "r": 0.0, "join": 1}, {"n": 80, "right": 0, "collinear": 0, "arc": 80, "arc_len_mm": 18969.69274740314, "corner_fill_mm": 240.0, "blocks": 2, "area_m2": 2.4867123882711804, "key": "b1", "case": "B", "label": "现行：圆角闭运算 r=800", "r": 800.0, "join": 1}, {"n": 14, "right": 8, "collinear": 6, "arc": 0, "arc_len_mm": 0.0, "corner_fill_mm": 0.0, "blocks": 1, "area_m2": 2.3712, "key": "b2", "case": "B", "label": "沿墙向补缝 + 不闭合", "r": 0.0, "join": 1}]</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* ---------- 表格 ---------- */
+const rows = JSON.parse(document.getElementById('rows').textContent);
+const tb = document.querySelector('#tb tbody');
+const N = v => v.toLocaleString('en-US', {maximumFractionDigits: 1});
+const CASE = {A: 'A 实心 T', B: 'B 带 900 mm 洞'};
+for (const r of rows) {
+  const tr = document.createElement('tr');
+  const cell = (txt, cls) => {
+    const td = document.createElement('td');
+    td.textContent = txt;
+    if (cls) td.className = cls;
+    return td;
+  };
+  tr.append(cell(CASE[r.case]));
+  tr.append(cell(r.label, r.key === 'a0' || r.key === 'b0' ? 'dim' : ''));
+  tr.append(cell(N(r.n), 'num'));
+  tr.append(cell(N(r.right), 'num ' + (r.right > 0 ? 'good' : 'bad')));
+  tr.append(cell(N(r.arc), 'num ' + (r.arc > 0 ? 'bad' : 'good')));
+  tr.append(cell(N(r.arc_len_mm), 'num ' + (r.arc_len_mm > 0 ? 'bad' : 'good')));
+  tr.append(cell(N(r.corner_fill_mm), 'num ' + (r.corner_fill_mm > 0 ? 'bad' : 'good')));
+  tr.append(cell(N(r.blocks), 'num ' + (r.blocks > 1 ? 'bad' : 'good')));
+  tr.append(cell(N(r.area_m2), 'num'));
+  tb.append(tr);
+}
+
+/* ---------- 3D：vendor 里没有 OrbitControls，自写一个最小轨道 ---------- */
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e13);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 4000);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x1b2733, 2.4));
+const l1 = new THREE.DirectionalLight(0xffffff, 1.8); l1.position.set(1.2, 2.2, 1.6); scene.add(l1);
+const l2 = new THREE.DirectionalLight(0x87a8ff, 0.8); l2.position.set(-1.4, 1.0, -1.2); scene.add(l2);
+
+const COL = {a0: 0x8b98a8, a1: 0xe05555, a2: 0x3fae74,
+             b0: 0x8b98a8, b1: 0xe05555, b2: 0x3fae74};
+const LAY = {a: {z:  2600, keys: ['a0', 'a1', 'a2']},
+             b: {z: -2600, keys: ['b0', 'b1', 'b2']}};
+const PITCH = 7600;                       // 同一排里相邻板的中心距（mm）
+
+const world = new THREE.Group();
+world.rotation.x = -Math.PI / 2;          // 板是沿 Z 挤出 ⇒ 转到 Y 朝上
+world.scale.setScalar(0.001);             // mm → m
+scene.add(world);
+
+const grid = new THREE.GridHelper(40, 40, 0x1d2632, 0x161d26);
+grid.position.y = -0.4;
+scene.add(grid);
+
+const target = new THREE.Vector3();
+let theta = 1.32, phi = 0.50, dist = 26;   // θ≈π/2 时两排横平；phi 小 = 更偏俯视
+
+const load = k => new Promise(res => {
+  new GLTFLoader().load(k + '.glb', g => res(g.scene), undefined, e => {
+    console.error(k + '.glb 载不动', e);
+    res(null);
+  });
+});
+
+function fit() {
+  const bb = new THREE.Box3().setFromObject(world);
+  const c = bb.getCenter(new THREE.Vector3());
+  const s = bb.getSize(new THREE.Vector3());
+  target.copy(c);
+  dist = Math.max(s.x, s.z) * 0.78;
+  grid.position.y = bb.min.y - 0.25;
+}
+function place() {
+  camera.position.set(
+    target.x + dist * Math.sin(phi) * Math.cos(theta),
+    target.y + dist * Math.cos(phi),
+    target.z + dist * Math.sin(phi) * Math.sin(theta));
+  camera.lookAt(target);
+}
+function onResize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+function tick() { onResize(); place(); renderer.render(scene, camera); requestAnimationFrame(tick); }
+
+window.__arcfix = {want: 0, placed: 0, missing: []};   // 让探针能核「真放进去了几块」，不靠眼看
+
+Promise.all(Object.keys(COL).map(load)).then(ms => {
+  const keys = Object.keys(COL);
+  window.__arcfix.want = keys.length;
+  ms.forEach((m, i) => {
+    const k = keys[i];
+    if (!m) { window.__arcfix.missing.push(k); return; }
+    const row = LAY[k[0]], col = row.keys.indexOf(k) - 1;
+    m.traverse(o => {
+      if (o.isMesh) {
+        o.material = new THREE.MeshStandardMaterial({
+          color: COL[k], metalness: 0.05, roughness: 0.62, side: THREE.DoubleSide});
+      }
+    });
+    m.position.set(col * PITCH, 0, row.z);
+    world.add(m);
+    window.__arcfix.placed++;
+  });
+  fit();
+  tick();
+});
+
+let drag = null;
+canvas.addEventListener('pointerdown', e => {
+  drag = {x: e.clientX, y: e.clientY};
+  canvas.classList.add('drag');
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  theta -= (e.clientX - drag.x) * 0.007;
+  phi = Math.min(Math.PI - 0.08, Math.max(0.08, phi - (e.clientY - drag.y) * 0.007));
+  drag = {x: e.clientX, y: e.clientY};
+});
+const stop = () => { drag = null; canvas.classList.remove('drag'); };
+canvas.addEventListener('pointerup', stop);
+canvas.addEventListener('pointercancel', stop);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  dist = Math.min(140, Math.max(3, dist * Math.exp(e.deltaY * 0.0011)));
+}, {passive: false});
+</script>
+</body>
+</html>

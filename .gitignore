@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────
+# cdut3d · .gitignore
+#
+# 原则：只入库「源」与「交付件」。凡是**跑一遍就能重出**的一律不入库 ——
+# 它们的身份由 EXPORT.md 里的「大小 + sha256」记账，git 里看代码/参数/文档就够。
+#
+# 实测（2026-10-16）：全树 3.5 G，其中
+#   _archive 1.5G / _scratch 397M / _edit 351M / _回切_按栋 195M / _drill 194M / _out 117M
+# = 2.7 G 是一次性目录；余下大头是 rebuild 下的 obj 93.6M / glb 70.4M / png 38.9M /
+#   dae 30.8M / skp 15.1M。排掉这些，入库量落到几十 MB 量级。
+# ─────────────────────────────────────────────────────────────
+
+# ── 1 脚手架 / 归档 / 一次性目录（下划线开头的那些）
+/_archive/
+/_scratch/
+/_edit/
+/_回切_按栋/
+/_drill/
+/_out/
+/_work/
+/_repair/
+/_flatten/
+/_clean/
+/_gen/
+# 同名目录出现在任何深度也一样排（rebuild/ 下也有一份 _archive / _scratch）
+**/_archive/
+**/_scratch/
+**/_work/
+**/_out/
+**/_probe_out/
+**/_gen/
+**/_stale-*/
+
+# ── 2 日志 / 缓存 / 半截件
+*.log
+*.pyc
+__pycache__/
+*.skb
+*.partial-*
+*.skp.partial-*
+# SU 的运行日志（su_step2_build.rb:38 追加写；摘要在 EXPORT.md，这里不入库）
+build_log.txt
+**/build_log.txt
+# Blender 的自动备份与工程文件（build3d.py:1261 由 GLB 无头另存，是派生物）
+*.blend1
+/rebuild/**/*.blend
+
+# ── 3 rebuild/ 下可重出的几何与渲染
+#     ★ 按**位置**排，不按扩展名全局排 —— 交付包 packs/ 与 demo/ 里的 .glb
+#       是页面真正要读的（`demo/arcfix/a1.glb`、`packs/cdut-main/c006/model/c006-building.glb`），
+#       全局排 `*.glb` 会把它们一起排掉、页面就空了。
+/rebuild/**/*.obj
+/rebuild/**/*.glb
+/rebuild/**/*.gltf
+/rebuild/**/*.skp
+/rebuild/**/*.dae
+/rebuild/**/*.stl
+/rebuild/**/*.png
+/rebuild/**/*.jpg
+
+# ── 4 export_contours 每次重出的机器接口件（进 SU 前的中间件，判据 J-10.8-00 会重验）
+/rebuild/06_su/contours/
+# mk_catalog.py 每次重出的逐块清单（2.52 MB，每趟都变；交付包里的副本照常入库）
+/rebuild/06_su/c006_catalog.json
+
+# ── 5 归档用的旧件（顶层 _archive 已排，这里兜住 rebuild 里散落的）
+/rebuild/_archive/

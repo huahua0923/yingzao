@@ -1,0 +1,16 @@
+SCRIPT_ENTERED pid=48144 ruby=2.7.2
+SU=Sketchup
+DXF exists=true bytes=599977
+TIMER_ARMED
+CLEARED was=24 now=0
+IMPORT ok=true secs=2.13
+ENTITIES=1
+TYPENAMES=[["ComponentInstance", 1]]
+LAYERS(5)=["Layer0", "Defpoints", "3轴线", "4.1结构柱", "4.2墙体"]
+BBOX_inch min=[0.0, 0.0, 0.0] max=[5145.669, 3362.205, 0.0]
+BBOX_mm   min=[0.0, 0.0, 0.0] max=[130700.0, 85400.0, 0.0]
+BBOX_mm   size=[130700.0, 85400.0, 0.0]
+期望（1层窗口 164000 × 111000 mm；内容约 129 × 84 m）
+SAVED exists=true bytes=664305
+EXPORT obj ok=true exists=true bytes=147
+DONE

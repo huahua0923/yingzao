@@ -1,0 +1,14 @@
+SketchUp: warning: already initialized constant SU_ID_FILE_REVERT
+
+I, [2026-10-13T18:35:11.979670 #49144]  INFO -- datasmith: Loading 'C:/ProgramData/SketchUp/SketchUp 2023/SketchUp/Plugins/UnrealDatasmithSketchUp/plugin_main.rb'...
+
+I, [2026-10-13T18:35:11.982181 #49144]  INFO -- datasmith: Loading plugin binary module from C:/ProgramData/SketchUp/SketchUp 2023/SketchUp/Plugins/UnrealDatasmithSketchUp/DatasmithSketchUp.so
+
+I, [2026-10-13T18:35:11.993036 #49144]  INFO -- datasmith: Engine Path: 'C:\ProgramData\Epic\Exporter\SketchUpEngine\', Enable UI: true
+
+LogPaths: Warning: No paths for game localization data were specifed in the game configuration.
+LogInit: Warning: No paths for engine localization data were specifed in the engine configuration.
+LogInit: Warning: SetProcessDpiAwareness failed.  Error code 80070005
+LogUdpMessaging: Display: Added local interface '172.26.115.238' to multicast group '230.0.0.1:6666'
+LogUdpMessaging: Display: Added local interface '172.31.112.1' to multicast group '230.0.0.1:6666'
+[1013/183713.639:INFO:webview.cpp(171)] Deleting WebView before DoClose.

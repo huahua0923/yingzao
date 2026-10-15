@@ -1,0 +1,801 @@
+{
+  "schema": "cdut3d-build3d/1",
+  "role": "reference",
+  "role_note": "参照件（Python 拉伸件）——由 CAD 底图+本仓代码生成的**对照物/尺子**，**不是**正式交付件；正式件=用户在 SketchUp 里建的件，见 rebuild/06_su/",
+  "storey_m": 3.5,
+  "basement_m": 3.5,
+  "top_m": 38.5,
+  "z_max_m": 41.5,
+  "z_max_main_m": 39.4,
+  "attach": {
+    "parapet_m": 1.2,
+    "roof_stair_m": 3.0,
+    "n_parapet": 1,
+    "n_roof_stair": 2,
+    "roof_step7_m2": 4468.8,
+    "n_roof_step7": 2
+  },
+  "lifts": {
+    "n_void": 36,
+    "n_ring": 36,
+    "A_void_m2": 70.68,
+    "A_ring_m2": 27.6,
+    "wall_t_m": 0.15,
+    "note": "井道净尺寸/位置=源件客观；壁厚=假设"
+  },
+  "n_nodes": 88,
+  "units": "m（源 mm 拉伸前 /1000）",
+  "参数来源": {
+    "共用/层高": {
+      "值": 3500,
+      "标注": "假设"
+    },
+    "楼梯/踢面_目标": {
+      "值": 155,
+      "标注": "假设"
+    },
+    "楼梯/踏面": {
+      "值": 270,
+      "标注": "实测"
+    },
+    "楼梯/梯井宽": {
+      "值": 120,
+      "标注": "实测"
+    },
+    "楼梯/平台厚": {
+      "值": 120,
+      "标注": "假设"
+    },
+    "顶部/女儿墙高": {
+      "值": 1200,
+      "标注": "假设"
+    },
+    "顶部/女儿墙厚": {
+      "值": 200,
+      "标注": "假设"
+    },
+    "顶部/楼梯房高": {
+      "值": 3000,
+      "标注": "假设"
+    },
+    "竖井/井壁厚": {
+      "值": 150,
+      "标注": "假设"
+    },
+    "门/门扇_线弧_补建": {
+      "值": 1,
+      "标注": "假设"
+    },
+    "门/门扇_线弧_名义厚": {
+      "值": 50,
+      "标注": "假设"
+    }
+  },
+  "参数表": "rebuild/构件库/参数.json（唯一真源）",
+  "schematic": {
+    "slab_m": 0.12,
+    "door_h": 2.1,
+    "door_t": 0.05,
+    "riser_m": 0.15,
+    "tread_h": 0.05,
+    "parapet_h": 1.2,
+    "parapet_t": 0.2,
+    "roof_stair_h": 3.0,
+    "lift_t_mm": 150.0
+  },
+  "scope": "墙+柱+楼板+门扇+楼梯(示意)+竖井(净尺寸客观/壁厚假设)+女儿墙(推)+顶楼楼梯房(推)+7→8台阶屋面(影像实测为真屋面)；**窗：源件无窗图层（12 层只有 0/3轴线/4.1结构柱/4.2墙体/5面积/6房间号/7用途/8单位/Defpoints）⇒ 无窗可建**；**一楼入口独立雨篷：源件与 2024 影像两处都查过，没有**——入口处的突出体是 1–7 层的体量，已在墙里",
+  "floors": [
+    {
+      "floor": "地下1层",
+      "z0": -3.5,
+      "h": 3.5,
+      "z_measured": [
+        -3.5,
+        0.9
+      ],
+      "z_by_class": {
+        "wall": [
+          -3.5,
+          0.0
+        ],
+        "col": [
+          -3.5,
+          0.0
+        ],
+        "lift": [
+          -3.5,
+          0.0
+        ],
+        "slab": [
+          -3.5,
+          -3.38
+        ],
+        "door": [
+          -3.5,
+          -1.4
+        ],
+        "lintel": [
+          -1.4,
+          0.0
+        ],
+        "stair": [
+          -3.5,
+          0.9
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 6,
+      "n_col": 44,
+      "n_slab": 2,
+      "n_door_leaf": 34,
+      "n_door_block": 167,
+      "n_step": 146,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 150.45,
+      "A_col_m2": 15.84,
+      "A_slab_m2": 1362.09,
+      "A_door_m2": 0.92,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 156.34,
+      "A_wall_recognized_m2": 165.94,
+      "faces_wall": 2604,
+      "watertight_wall": true
+    },
+    {
+      "floor": "1层",
+      "z0": 0.0,
+      "h": 3.5,
+      "z_measured": [
+        0.0,
+        4.4
+      ],
+      "z_by_class": {
+        "wall": [
+          0.0,
+          3.5
+        ],
+        "col": [
+          0.0,
+          3.5
+        ],
+        "lift": [
+          0.0,
+          3.5
+        ],
+        "slab": [
+          0.0,
+          0.12
+        ],
+        "door": [
+          0.0,
+          2.1
+        ],
+        "lintel": [
+          2.1,
+          3.5
+        ],
+        "stair": [
+          0.0,
+          4.4
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 41,
+      "n_col": 201,
+      "n_slab": 5,
+      "n_door_leaf": 181,
+      "n_door_block": 873,
+      "n_step": 512,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 650.58,
+      "A_col_m2": 70.42,
+      "A_slab_m2": 7000.1,
+      "A_door_m2": 5.64,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 656.47,
+      "A_wall_recognized_m2": 699.83,
+      "faces_wall": 21768,
+      "watertight_wall": true
+    },
+    {
+      "floor": "2层",
+      "z0": 3.5,
+      "h": 3.5,
+      "z_measured": [
+        3.5,
+        7.9
+      ],
+      "z_by_class": {
+        "wall": [
+          3.5,
+          7.0
+        ],
+        "col": [
+          3.5,
+          7.0
+        ],
+        "lift": [
+          3.5,
+          7.0
+        ],
+        "slab": [
+          3.5,
+          3.62
+        ],
+        "door": [
+          3.5,
+          5.6
+        ],
+        "lintel": [
+          5.6,
+          7.0
+        ],
+        "stair": [
+          3.5,
+          7.9
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 24,
+      "n_col": 197,
+      "n_slab": 1,
+      "n_door_leaf": 164,
+      "n_door_block": 775,
+      "n_step": 730,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 544.44,
+      "A_col_m2": 68.98,
+      "A_slab_m2": 5898.89,
+      "A_door_m2": 4.95,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 550.33,
+      "A_wall_recognized_m2": 590.39,
+      "faces_wall": 18092,
+      "watertight_wall": true
+    },
+    {
+      "floor": "3层",
+      "z0": 7.0,
+      "h": 3.5,
+      "z_measured": [
+        7.0,
+        11.4
+      ],
+      "z_by_class": {
+        "wall": [
+          7.0,
+          10.5
+        ],
+        "col": [
+          7.0,
+          10.5
+        ],
+        "lift": [
+          7.0,
+          10.5
+        ],
+        "slab": [
+          7.0,
+          7.12
+        ],
+        "door": [
+          7.0,
+          9.1
+        ],
+        "lintel": [
+          9.1,
+          10.5
+        ],
+        "stair": [
+          7.0,
+          11.4
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 24,
+      "n_col": 197,
+      "n_slab": 1,
+      "n_door_leaf": 160,
+      "n_door_block": 755,
+      "n_step": 730,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 538.74,
+      "A_col_m2": 68.98,
+      "A_slab_m2": 5902.26,
+      "A_door_m2": 4.84,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 544.64,
+      "A_wall_recognized_m2": 583.88,
+      "faces_wall": 17588,
+      "watertight_wall": true
+    },
+    {
+      "floor": "4层",
+      "z0": 10.5,
+      "h": 3.5,
+      "z_measured": [
+        10.5,
+        14.9
+      ],
+      "z_by_class": {
+        "wall": [
+          10.5,
+          14.0
+        ],
+        "col": [
+          10.5,
+          14.0
+        ],
+        "lift": [
+          10.5,
+          14.0
+        ],
+        "slab": [
+          10.5,
+          10.62
+        ],
+        "door": [
+          10.5,
+          12.6
+        ],
+        "lintel": [
+          12.6,
+          14.0
+        ],
+        "stair": [
+          10.5,
+          14.9
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 24,
+      "n_col": 197,
+      "n_slab": 1,
+      "n_door_leaf": 160,
+      "n_door_block": 755,
+      "n_step": 730,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 538.74,
+      "A_col_m2": 68.98,
+      "A_slab_m2": 5902.26,
+      "A_door_m2": 4.84,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 544.64,
+      "A_wall_recognized_m2": 583.88,
+      "faces_wall": 17588,
+      "watertight_wall": true
+    },
+    {
+      "floor": "5层",
+      "z0": 14.0,
+      "h": 3.5,
+      "z_measured": [
+        14.0,
+        18.4
+      ],
+      "z_by_class": {
+        "wall": [
+          14.0,
+          17.5
+        ],
+        "col": [
+          14.0,
+          17.5
+        ],
+        "lift": [
+          14.0,
+          17.5
+        ],
+        "slab": [
+          14.0,
+          14.12
+        ],
+        "door": [
+          14.0,
+          16.1
+        ],
+        "lintel": [
+          16.1,
+          17.5
+        ],
+        "stair": [
+          14.0,
+          18.4
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 24,
+      "n_col": 178,
+      "n_slab": 1,
+      "n_door_leaf": 147,
+      "n_door_block": 699,
+      "n_step": 584,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 477.31,
+      "A_col_m2": 63.57,
+      "A_slab_m2": 5369.0,
+      "A_door_m2": 4.45,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 483.2,
+      "A_wall_recognized_m2": 519.12,
+      "faces_wall": 15856,
+      "watertight_wall": true
+    },
+    {
+      "floor": "6层",
+      "z0": 17.5,
+      "h": 3.5,
+      "z_measured": [
+        17.5,
+        21.9
+      ],
+      "z_by_class": {
+        "wall": [
+          17.5,
+          21.0
+        ],
+        "col": [
+          17.5,
+          21.0
+        ],
+        "lift": [
+          17.5,
+          21.0
+        ],
+        "slab": [
+          17.5,
+          17.62
+        ],
+        "door": [
+          17.5,
+          19.6
+        ],
+        "lintel": [
+          19.6,
+          21.0
+        ],
+        "stair": [
+          17.5,
+          21.9
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 23,
+      "n_col": 178,
+      "n_slab": 1,
+      "n_door_leaf": 148,
+      "n_door_block": 707,
+      "n_step": 584,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 477.1,
+      "A_col_m2": 63.57,
+      "A_slab_m2": 5369.0,
+      "A_door_m2": 4.46,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 483.0,
+      "A_wall_recognized_m2": 518.87,
+      "faces_wall": 15792,
+      "watertight_wall": true
+    },
+    {
+      "floor": "7层",
+      "z0": 21.0,
+      "h": 3.5,
+      "z_measured": [
+        21.0,
+        25.4
+      ],
+      "z_by_class": {
+        "wall": [
+          21.0,
+          24.5
+        ],
+        "col": [
+          21.0,
+          24.5
+        ],
+        "lift": [
+          21.0,
+          24.5
+        ],
+        "slab": [
+          21.0,
+          21.12
+        ],
+        "door": [
+          21.0,
+          23.1
+        ],
+        "lintel": [
+          23.1,
+          24.5
+        ],
+        "stair": [
+          21.0,
+          25.4
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 8,
+      "n_col": 30,
+      "n_slab": 1,
+      "n_door_leaf": 62,
+      "n_door_block": 289,
+      "n_step": 438,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 393.77,
+      "A_col_m2": 10.8,
+      "A_slab_m2": 5380.41,
+      "A_door_m2": 1.81,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 399.67,
+      "A_wall_recognized_m2": 425.16,
+      "faces_wall": 21248,
+      "watertight_wall": true
+    },
+    {
+      "floor": "8层",
+      "z0": 24.5,
+      "h": 3.5,
+      "z_measured": [
+        24.5,
+        28.9
+      ],
+      "z_by_class": {
+        "wall": [
+          24.5,
+          28.0
+        ],
+        "col": [
+          24.5,
+          28.0
+        ],
+        "lift": [
+          24.5,
+          28.0
+        ],
+        "slab": [
+          24.5,
+          24.62
+        ],
+        "door": [
+          24.5,
+          26.6
+        ],
+        "lintel": [
+          26.6,
+          28.0
+        ],
+        "stair": [
+          24.5,
+          28.9
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 8,
+      "n_col": 22,
+      "n_slab": 1,
+      "n_door_leaf": 46,
+      "n_door_block": 209,
+      "n_step": 73,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 116.21,
+      "A_col_m2": 7.92,
+      "A_slab_m2": 911.05,
+      "A_door_m2": 1.37,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 122.11,
+      "A_wall_recognized_m2": 129.28,
+      "faces_wall": 2796,
+      "watertight_wall": true
+    },
+    {
+      "floor": "9层",
+      "z0": 28.0,
+      "h": 3.5,
+      "z_measured": [
+        28.0,
+        32.4
+      ],
+      "z_by_class": {
+        "wall": [
+          28.0,
+          31.5
+        ],
+        "col": [
+          28.0,
+          31.5
+        ],
+        "lift": [
+          28.0,
+          31.5
+        ],
+        "slab": [
+          28.0,
+          28.12
+        ],
+        "door": [
+          28.0,
+          30.1
+        ],
+        "lintel": [
+          30.1,
+          31.5
+        ],
+        "stair": [
+          28.0,
+          32.4
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 7,
+      "n_col": 22,
+      "n_slab": 1,
+      "n_door_leaf": 46,
+      "n_door_block": 209,
+      "n_step": 73,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 118.85,
+      "A_col_m2": 7.92,
+      "A_slab_m2": 911.05,
+      "A_door_m2": 1.37,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 124.74,
+      "A_wall_recognized_m2": 132.12,
+      "faces_wall": 2864,
+      "watertight_wall": true
+    },
+    {
+      "floor": "10层",
+      "z0": 31.5,
+      "h": 3.5,
+      "z_measured": [
+        31.5,
+        35.9
+      ],
+      "z_by_class": {
+        "wall": [
+          31.5,
+          35.0
+        ],
+        "col": [
+          31.5,
+          35.0
+        ],
+        "lift": [
+          31.5,
+          35.0
+        ],
+        "slab": [
+          31.5,
+          31.62
+        ],
+        "door": [
+          31.5,
+          33.6
+        ],
+        "lintel": [
+          33.6,
+          35.0
+        ],
+        "stair": [
+          31.5,
+          35.9
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 8,
+      "n_col": 22,
+      "n_slab": 1,
+      "n_door_leaf": 46,
+      "n_door_block": 209,
+      "n_step": 73,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 116.21,
+      "A_col_m2": 7.92,
+      "A_slab_m2": 911.05,
+      "A_door_m2": 1.37,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 122.11,
+      "A_wall_recognized_m2": 129.28,
+      "faces_wall": 2796,
+      "watertight_wall": true
+    },
+    {
+      "floor": "11层",
+      "z0": 35.0,
+      "h": 3.5,
+      "z_measured": [
+        35.0,
+        39.4
+      ],
+      "z_by_class": {
+        "wall": [
+          35.0,
+          38.5
+        ],
+        "col": [
+          35.0,
+          38.5
+        ],
+        "lift": [
+          35.0,
+          38.5
+        ],
+        "slab": [
+          35.0,
+          35.12
+        ],
+        "door": [
+          35.0,
+          37.1
+        ],
+        "lintel": [
+          37.1,
+          38.5
+        ],
+        "stair": [
+          35.0,
+          39.4
+        ],
+        "roof": [
+          38.38,
+          38.5
+        ]
+      },
+      "z_extra_m": 0.9,
+      "z_extra_by": "stair",
+      "n_wall": 7,
+      "n_col": 22,
+      "n_slab": 1,
+      "n_door_leaf": 46,
+      "n_door_block": 209,
+      "n_step": 73,
+      "n_lift": 3,
+      "n_lift_void": 3,
+      "A_wall_m2": 118.67,
+      "A_col_m2": 7.92,
+      "A_slab_m2": 911.05,
+      "A_door_m2": 1.37,
+      "A_lift_m2": 2.3,
+      "A_lift_void_m2": 5.89,
+      "A_wall_uncarved_m2": 124.56,
+      "A_wall_recognized_m2": 131.93,
+      "faces_wall": 2864,
+      "watertight_wall": true
+    }
+  ]
+}

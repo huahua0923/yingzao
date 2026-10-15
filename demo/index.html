@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cdut3d · 模型包查看器（演示）</title>
+<style>
+ :root{
+  --ink:#e9e6e0; --dim:#8f8b83; --line:#2b2825; --bg:#0f0e0d; --panel:#161513;
+  --hi:#c9a227; --ok:#7fd39a; --warn:#e8b86d; --bad:#e8776d; --teal:#37a99a;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+ }
+ *{box-sizing:border-box}
+ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+   font:14px/1.65 "Segoe UI",-apple-system,"Microsoft YaHei",sans-serif}
+ a{color:var(--teal)}
+ header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+   padding:14px 20px 12px;border-bottom:1px solid var(--line);background:#131211}
+ h1{margin:0;font-size:17px;letter-spacing:.2px}
+ header .sub{color:var(--dim);font-size:12.5px}
+ .fp{margin-left:auto;font:12px/1.5 var(--mono);color:var(--hi);
+   border:1px solid #3b3520;background:#1b1811;border-radius:3px;padding:4px 9px}
+ main{display:grid;grid-template-columns:minmax(0,1fr) 470px;height:calc(100% - 55px)}
+ #stage{position:relative;min-width:0}
+ #gl{width:100%;height:100%;display:block;touch-action:none;
+   background:radial-gradient(120% 90% at 50% 6%,#1c1b19,#0f0e0d 64%,#0a0a09)}
+ #postag{position:absolute;left:14px;bottom:12px;font:11.5px/1.7 var(--mono);
+   color:var(--dim);background:#0d0c0b99;border:1px solid var(--line);border-radius:3px;padding:6px 10px}
+ #postag b{color:var(--hi);font-weight:600}
+ #hint{position:absolute;right:14px;top:12px;font-size:12px;color:var(--dim)}
+ aside{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:0 20px 40px}
+ section{padding:18px 0;border-bottom:1px solid #201f1d}
+ h2{font:600 11.5px/1.4 inherit;letter-spacing:1.5px;text-transform:uppercase;
+   color:var(--hi);margin:0 0 10px}
+ h3{font-size:12.5px;margin:14px 0 6px;color:#c9c5bd;font-weight:600}
+ table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+ th,td{text-align:right;padding:3px 4px;border-bottom:1px solid #201f1d;white-space:nowrap}
+ th:first-child,td:first-child{text-align:left}
+ th{color:var(--dim);font-weight:500}
+ tbody tr:hover{background:#1c1b19}
+ tbody tr.sel{background:#241f12}
+ .kv{font-size:12.5px}
+ .kv div{display:flex;gap:10px;padding:2px 0}
+ .kv b{min-width:104px;color:var(--dim);font-weight:500}
+ .kv span{font-family:var(--mono);overflow-wrap:anywhere}
+ .badge{display:inline-block;font:600 11px/1.5 inherit;padding:1px 8px;border-radius:2px;
+   border:1px solid currentColor;letter-spacing:.4px}
+ .b-warn{color:var(--warn)} .b-ok{color:var(--ok)} .b-bad{color:var(--bad)}
+ .bar{position:relative;height:9px;background:#221f1c;border-radius:2px;overflow:hidden;margin:4px 0 2px}
+ .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#2f6fd0,#37a99a)}
+ .bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--bad)}
+ .barcap{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+ .fl{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+ .fl button{background:#1d1c1a;color:#cfcbc3;border:1px solid #2f2d2a;border-radius:3px;
+   padding:3px 9px;font:inherit;font-size:12px;cursor:pointer;transition:.12s}
+ .fl button:hover{border-color:#55504a;color:#fff}
+ .fl button.on{background:var(--hi);border-color:var(--hi);color:#14120c;font-weight:600}
+ #plan{width:100%;height:250px;background:#100f0e;border:1px solid var(--line);border-radius:3px}
+ .foot{color:var(--dim);font-size:12px;line-height:1.75}
+ code{background:#1d1c1a;padding:1px 5px;border-radius:2px;font:11.5px/1.5 var(--mono)}
+ ul{margin:6px 0;padding-left:18px} li{margin:3px 0}
+ .blind{color:#b8b3aa;font-size:12px}
+ ol.net{font:11.5px/1.7 var(--mono);color:#9c978e;padding-left:20px;margin:6px 0}
+ ol.net b{color:var(--teal);font-weight:600}
+ .note{font-size:12px;color:var(--dim);border-left:2px solid #3b3520;padding:2px 0 2px 10px;margin:8px 0}
+ .laylist{max-height:310px;overflow:auto;border:1px solid var(--line);border-radius:3px;
+   padding:4px;background:#100f0e}
+ .layrow{display:flex;align-items:center;gap:8px;padding:3px 4px;font-size:12px;border-radius:2px}
+ .layrow:hover{background:#1c1b19}
+ .layrow input[type=checkbox]{accent-color:var(--hi)}
+ .layrow .nm{font-family:var(--mono);min-width:44px;color:#cfcbc3;cursor:pointer;user-select:none}
+ .layrow .rg{color:var(--dim);font-size:11px;font-variant-numeric:tabular-nums;min-width:78px}
+ .layrow input[type=range]{flex:1;min-width:0;height:3px;accent-color:var(--hi)}
+ .layrow .pv{width:38px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
+ .laybar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0}
+ .laybar input[type=range]{flex:1;accent-color:var(--hi)}
+</style></head><body>
+
+<header>
+  <h1>cdut3d · 模型包查看器</h1>
+  <span class="sub">两平台唯一接缝的现场演示 —— 本页<b>只读一个模型包</b>，不碰建模仓、不碰任何绝对路径</span>
+  <span class="fp" id="fp">读取包指纹…</span>
+</header>
+
+<main>
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <div id="postag">模型件 <b id="mpath">…</b> · sha256 <b id="msha">…</b>
+      <div id="dims" style="margin-top:2px"></div></div>
+    <div id="hint"><b>单击一块 = 报出它的名字</b>（右侧 ⓪）· 左键拖拽旋转（可绕到楼底）· <b>中键 / 右键按住拖 = 平移</b> · 滚轮朝指针缩放（滚到哪看哪）· 双指捏合 · 双击复位</div>
+  </div>
+
+  <aside>
+    <section>
+      <h2>三维分层与透明</h2>
+      <div class="fl" id="piece" style="margin:2px 0 6px"></div>
+      <div class="note" id="piecenote" style="margin:0 0 8px"></div>
+      <div class="laybar">
+        <span style="color:var(--dim);font-size:12px">全层不透明度</span>
+        <input type="range" id="opAll" min="0" max="100" value="100">
+        <span class="pv" id="opAllV" style="width:38px;text-align:right">100%</span>
+      </div>
+      <div class="fl" style="margin:2px 0 6px">
+        <button id="allOn">全显</button><button id="allOff">全隐</button>
+        <button id="soloOff">取消独显</button>
+      </div>
+      <div id="layers" class="laylist"><div class="foot" style="padding:6px">装载模型后出现分层…</div></div>
+      <div class="note" id="laynote">每「层」= 模型包 GLB 里的一个<b>楼层节点</b>。装载后这段由
+        <code>meta/layering.json</code> 的实测数<b>现算</b>填上（层高口径 / 标高 / 面数 / 顶部三样标高）。</div>
+    </section>
+
+    <section>
+      <h2>⓪ 逐块定位（点到哪一块，就报它的名字）</h2>
+      <div class="kv" id="pickinfo">
+        <div><b>怎么用</b><span>在左边模型上<b>单击</b>任意一块 ⇒ 这里报出它的名字
+          （如 <code>6层-门-007</code>）。你只说「几层-什么-几号」，我就知道是哪一块。</span></div>
+      </div>
+      <div class="fl" style="margin:6px 0">
+        <input id="q" type="search" placeholder="按名字找：6层-楼梯 / 11层-墙体 / LIFT(竖井)" autocomplete="off"
+          style="flex:1;min-width:0;background:#100f0e;color:var(--ink);border:1px solid var(--line);
+                 border-radius:3px;padding:5px 8px;font:12px var(--mono)">
+        <button id="qclear">清空</button>
+      </div>
+      <div class="fl" id="qflr"></div>
+      <div class="fl" id="qcls"></div>
+      <div class="foot" id="qcap">逐块清单装载中…</div>
+      <div class="laylist" id="qlist" style="max-height:250px"></div>
+      <div class="note">★ 名字<b>不是我编的</b>：<code>F06-DOOR-007</code> / <code>6层-门-007</code> 本来就写在轮廓里
+        （<code>export_contours.py</code> 逐条给的），由 <code>rebuild/tools/mk_catalog.py</code> <b>原样搬</b>进包
+        <code>meta/blocks.json</code>（8720 块，逐层条数与 <code>contours/index.json</code> 对账过）——
+        你说号、我说块，两边指的是同一块。<br>
+        ★ 点清单里一行 = 相机飞过去 + 把那一块框出来。<b>报不出名字也是读数</b>：那说明件与轮廓在这一处对不上，正是要你说给我听的地方。</div>
+    </section>
+
+    <section>
+      <h2>① 包身份</h2>
+      <div class="kv" id="ident"></div>
+    </section>
+
+    <section>
+      <h2>② 质检（不过就装不上）</h2>
+      <div id="qc"></div>
+    </section>
+
+    <section>
+      <h2>③ 几何基线层（逐层二维）</h2>
+      <div class="note" id="flnote" style="margin:0 0 8px"></div>
+      <div class="fl" id="floors"></div>
+      <svg id="plan" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="foot" id="plancap" style="margin-top:6px">点一层看它的墙线（数据取自包里的 <code>baseline/floors/floorN.json</code>）</div>
+    </section>
+
+    <section>
+      <h2>④ 构件稳定 ID 台账</h2>
+      <div id="ids"></div>
+    </section>
+
+    <section>
+      <h2>⑤ 件清单</h2>
+      <table><thead><tr><th>用途</th><th>包内路径</th><th>字节</th><th>sha256</th></tr></thead>
+      <tbody id="arts"></tbody></table>
+    </section>
+
+    <section>
+      <h2>⑥ 本页实际读了什么（接缝证明）</h2>
+      <ol class="net" id="net"></ol>
+      <div class="note">每一次取数都写在这里。<b>默认</b>（打开本页、以及判据跑的那条路）只读模型包：
+      若出现包外 URL，说明这页<b>没有</b>只依赖模型包，接缝就是假的。<br>
+      ★ 唯一例外是<b>按需</b>切到「参照件·整栋含屋面」时 —— 那一件在 <code>rebuild/</code> 下、**包外**，
+      是重建链出的<b>比对件</b>。它这时会**如实**出现在上面这张清单里（带 <code>rebuild/</code> 前缀），
+      不参与包的任何判据。默认路径下清单里**一条包外 URL 都没有**。</div>
+    </section>
+
+    <section style="border-bottom:none">
+      <h2>⑦ 量具盲区（看不到的东西）</h2>
+      <div id="blind"></div>
+    </section>
+  </aside>
+</main>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const PACK = '../packs/cdut-main/c006';      // ★ 唯一入口：包目录
+const LOADS = [];                             // ★ 实际取过的 URL（接缝证明）
+
+async function getJSON(url){
+  LOADS.push(url);
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(r.status + ' ' + url);
+  return r.json();
+}
+
+// ── 读包 ───────────────────────────────────────────────
+const man = await getJSON(PACK + '/manifest.json');
+const byRel = Object.fromEntries(man.artifacts.map(a => [a.path, a]));
+function declared(rel){ return Object.prototype.hasOwnProperty.call(byRel, rel); }
+
+const qc = await getJSON(PACK + '/' + man.qc.path);
+const ids = await getJSON(PACK + '/ledger/c006-ids.json');
+const lay = await getJSON(PACK + '/meta/layering.json');
+// ★ 逐块清单（2026-10-14，答用户「**给每各块一个名字，我就可以快速定位和你说**」）：
+//   包内件里**每层每类只合成一个 mesh**（`su_obj_to_glb.py` 按 (node, cls) 合并）⇒ 点在墙上
+//   只知道 `floor5__WALL`、**说不出是第几面**。而「第几块」只有轮廓里有 ⇒ 这份清单把
+//   `contours/*.json` 的 `id`/`name` **原样搬**进包（不另造一套名字，两套必然漂移）。
+//   读不到就 null（老包没有这件）——下面一律按「没有清单」处理，**不假装能点选**。
+const cat = declared('meta/blocks.json') ? await getJSON(PACK + '/meta/blocks.json') : null;
+// 包里的说明串用 markdown 的 **粗体**。先转义再翻译，免得数据里的尖括号当标签跑。
+// ★ 必须定义在**用它的那块之前**：`const` 有暂时性死区，放到后面会让这段直接抛 ReferenceError。
+const md = s => String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))
+                          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+{
+  // ★ 2026-10-14 换链后这里**不能读 `lay.basement`**：新 layering.json 没有那个键
+  //   （旧包那份有，是 libs3d 那条链写的）。读不存在的键 ⇒ 静默变空串、页面上什么都不显示，
+  //   而且**不报错**。改成一律从 `lay.layers` 里按节点名找 B1，层数也现算。
+  const _b1 = (lay.layers || []).find(l => l.node === 'B1');
+  const _nup = (lay.layers || []).filter(l => l.node !== 'B1').length;
+  document.getElementById('flnote').innerHTML = _b1 ? (
+    `★ 这里<b>只有地上 ${_nup} 层</b>：<code>baseline/floors/floor&lt;k&gt;.json</code> 的 k=0..${_nup - 1}
+     对应 <b>F1…F${_nup}</b>（gym3d 的层号是 <b>0 基</b>，原始交付件里没有地下层）。
+     <b>地下一层在三维那边</b>：GLB 节点 <code>${_b1.node}</code>，标高
+     <b>${_b1.lo_m}–${_b1.hi_m} m</b>、${_b1.faces} 面（${Object.keys(_b1.classes).join(' / ')}）。
+     见 <code>meta/layering.json</code>，件来源 <code>${lay.source_model}</code>。`) : '';
+}
+
+// ① 包身份
+document.getElementById('fp').textContent = '包指纹 ' + man.package_sha256.slice(0,16) + '…';
+const bytes = man.artifacts.reduce((s,a)=>s+a.bytes,0);
+document.getElementById('ident').innerHTML = [
+  ['schema', man.schema], ['校区 campus_id', man.campus_id], ['楼栋 building_id', man.building_id],
+  ['打包时刻', man.created_at], ['包内件数', man.artifacts.length + ' 件'],
+  ['包大小', (bytes/1e6).toFixed(1) + ' MB'],
+  ['声明的边界', 'no_raw_imagery = ' + man.no_raw_imagery + '（不含原始影像）'],
+  ['包指纹 package_sha256', man.package_sha256],
+].map(([k,v])=>`<div><b>${k}</b><span>${v}</span></div>`).join('');
+
+// ② 质检
+const g = qc.gauge, pc = qc.positive_control;
+const lvlCls = {PASS:'b-ok', OK:'b-ok', WARN:'b-warn'}[qc.level] || 'b-bad';
+const pct = v => (100*v).toFixed(2) + '%';
+document.getElementById('qc').innerHTML = `
+  <div class="kv" style="margin-bottom:10px">
+    <div><b>结论 level</b><span class="badge ${lvlCls}">${qc.level}</span></div>
+  </div>
+  <h3>判据 gauge</h3>
+  <div class="foot">${md(g.name)}</div>
+  <div class="bar"><i style="width:${100*g.value}%"></i><u style="left:${100*g.threshold}%"></u></div>
+  <div class="barcap">值 <b style="color:var(--ok)">${pct(g.value)}</b> ·
+    阈值 ${pct(g.threshold)}（红线）· 口径：${g.scope}</div>
+
+  <h3>正对照 fired = <span style="color:var(--ok)">${pc.fired}</span></h3>
+  <div class="foot">${md(pc.perturbation)}</div>
+  <div class="bar" style="background:#221f1c">
+    <i style="width:${100*pc.value}%;background:linear-gradient(90deg,#7a4a2a,#c0603a)"></i>
+    <u style="left:${100*g.threshold}%"></u></div>
+  <div class="barcap">假件 ${pct(pc.value)} · 期望：${pc.expect}</div>
+  <div class="note">${md(pc.evidence)}</div>
+
+  <h3>已知缺陷（不是绿）</h3>
+  <table><thead><tr><th>层</th><th>级别</th><th>码</th><th>flags</th></tr></thead><tbody>
+  ${qc.known_defects.map(d=>`<tr><td>F${d.floor+1}</td>
+     <td style="color:var(--warn)">${d.sev}</td><td>${d.code||'—'}</td>
+     <td style="text-align:left">${(d.flags&&d.flags.length)?md(d.flags.join(' · ')):'—'}</td></tr>`).join('')}
+  </tbody></table>`;
+
+// ③ 几何基线层
+const floors = man.artifacts.filter(a=>a.role==='baseline_floor')
+  .map(a=>({rel:a.path, n:+(a.path.match(/floor(\d+)\.json/)||[])[1]}))
+  .sort((x,y)=>x.n-y.n);
+const flBox = document.getElementById('floors');
+const svg = document.getElementById('plan');
+let curFloor = null;
+floors.forEach((f,i)=>{
+  const b = document.createElement('button');
+  // ★ baseline/floors/floor<k>.json = **地上第 k+1 层**（gym3d 的层号是 0 基，原始交付件里
+  //   根本没有地下层 —— 原注释：本模型不建地下层）。地下一层是另一个节点 `B1`。
+  b.textContent = 'F' + (f.n + 1);
+  b.onclick = ()=>showFloor(f, b);
+  flBox.appendChild(b);
+  if(i===0) setTimeout(()=>b.click(), 0);
+});
+async function showFloor(f, btn){
+  [...flBox.children].forEach(c=>c.classList.toggle('on', c===btn));
+  curFloor = f;
+  const d = await getJSON(PACK + '/' + f.rel);
+  const walls = d.walls || [];
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const w of walls) for(const [x,y] of w.poly||[]){
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  const pad = 1.5, w = (x1-x0)+2*pad, h = (y1-y0)+2*pad;
+  const s = Math.max(w,h);
+  svg.setAttribute('viewBox', `${x0-pad-((s-w)/2)} ${-(y1+pad)-((s-h)/2)} ${s} ${s}`);
+  svg.innerHTML = walls.map(ww=>{
+    const pts = (ww.poly||[]).map(([x,y])=>x+','+(-y)).join(' ');
+    const t = ww.type==='outer' ? '#c9a227' : '#5d5952';
+    return `<polygon points="${pts}" fill="${t}" fill-opacity="${ww.type==='outer'?0.85:0.55}"
+             stroke="#0f0e0d" stroke-width="0.06"/>`;
+  }).join('');
+  document.getElementById('plancap').innerHTML =
+    `<b>F${f.n+1}</b>（地上）· 层高 ${d.layer_height} m · 墙 ${walls.length} 条 ·
+     房间 ${(d.rooms||[]).length} 间 · 门 ${(d.doors||[]).length} 樘 · 窗 ${(d.windows||[]).length} 扇 ·
+     柱 ${(d.columns||[]).length} 根 · 来自 <code>${f.rel}</code>`;
+}
+
+// ④ ID 台账
+const kinds = Object.entries(ids.counts).sort((a,b)=>b[1]-a[1]);
+const samples = Object.keys(ids.items).filter(k=>k.includes(':wall:')).slice(0,4);
+document.getElementById('ids').innerHTML = `
+  <div class="kv"><div><b>总条数</b><span>${ids.total_ids} 条 / ${kinds.length} 类</span></div>
+  <div><b>形状</b><span>id → {kind, floor, idx, legacy}，按<b>身份</b>索引，不按位置</span></div></div>
+  <table><thead><tr><th>类型 kind</th><th>条数</th></tr></thead><tbody>
+  ${kinds.map(([k,n])=>`<tr><td>${k}</td><td>${n}</td></tr>`).join('')}</tbody></table>
+  <h3>抽样（墙）</h3>
+  <div class="foot" style="font-family:var(--mono);font-size:11.5px;overflow-wrap:anywhere">
+  ${samples.map(s=>{const v=ids.items[s];
+     return `<div>${s} → 层 F${v.floor} · 位置号 ${v.legacy}</div>`;}).join('')}</div>
+  <div class="note">★ ID = <code>校区:楼栋:类型:sha256(身份)[:16]</code>。<b>不是</b>位置号。
+  用位置号（<code>w0-4</code> 这种）的话，前面插一堵墙，后面 142 条会<b>静默改指</b>，
+  而 id 集合只多一个 —— 集合差看不见脱锚，只能按 id 对齐再比内容。</div>`;
+
+// ⑤ 件清单
+document.getElementById('arts').innerHTML = man.artifacts.map(a=>`
+  <tr><td>${a.role}</td><td style="text-align:left">${a.path}</td>
+      <td>${a.bytes.toLocaleString()}</td>
+      <td>${a.sha256.slice(0,10)}…</td></tr>`).join('');
+
+// ⑦ 盲区
+document.getElementById('blind').innerHTML =
+  '<ul class="blind">' + qc.blind_spots.map(b=>`<li>${md(b)}</li>`).join('') +
+  `<li>本页是<b>演示</b>：只证明「一个包能被独立消费」，<b>没有</b>验证模型几何对不对（那是 §10.1 的活）。</li>
+   <li>三维视图由浏览器实时渲染，<b>量不到</b>帧率与贴地的合规性（WebGL 画布读回是空的，得截屏量）。</li></ul>`;
+
+// ⑧ 接缝证明
+function paintNet(){
+  document.getElementById('net').innerHTML = LOADS.map(u=>{
+    const inPack = u.startsWith(PACK + '/');
+    return `<li>${inPack?'包内 <b>✓</b>':'<b style="color:var(--bad)">包外 ✗</b>'} ${u}</li>`;
+  }).join('');
+}
+
+// ── 三维 ───────────────────────────────────────────────
+const modelArt = man.artifacts.find(a=>a.role==='model');
+document.getElementById('mpath').textContent = modelArt.path;
+document.getElementById('msha').textContent = modelArt.sha256.slice(0,12) + '…';
+
+const cv = document.getElementById('gl');
+// ★ 滚轮的**监听容器**不是 canvas，是两栏的公共容器 <main>。
+//   2026-10-13 实测：canvas 只占左边 810 px、右边 470 px 是图层 <aside> ⇒ 监听从挂在 canvas 上，
+//   指针一旦压到面板，滚轮**一位不动**（r 99.40 进、99.40 出），用户判词「放大缩小不对了」。
+//   提到 <main> 之后面板上也放缩；唯一例外见 wheelScrollHostCanScroll()。
+const MAIN = document.querySelector('main');
+const renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;            // ★ 接地阴影：没有它模型像悬空，转起来分不清上下
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 6000);
+
+// ★ 半球光的**地面色**不能压太暗：它是底面唯一的补光来源，0x2a2620 会让楼底糊成一片黑
+//   （放开 phi 之后立刻现形：绕到楼底看到的是黑块，等于「能转过去但看不见」）。用户判词 2026-10-12。
+scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x6b6459, 0.95));
+const dl = new THREE.DirectionalLight(0xffffff, 1.5);
+// ★ 位置要**放远**（方向不变）：DirectionalLight 的光照忽略距离，但**阴影相机就架在 light.position**上。
+//   原来 (1,1.6,0.8) 离原点 2 个单位 ⇒ 阴影相机等于架在楼**内部**，近平面还会切掉整栋楼。
+dl.position.set(150,240,120); dl.castShadow = true;
+dl.shadow.mapSize.set(2048,2048);
+dl.shadow.camera.near = 1; dl.shadow.camera.far = 1400;
+dl.shadow.bias = -0.0006;
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0xbfd4ff, 0.55); dl2.position.set(-1,0.6,-1); scene.add(dl2);
+// 自下而上的补光：专治「绕到楼底一片黑」。不给它投影（只补光），否则底面会出现假阴影
+const dl3 = new THREE.DirectionalLight(0xa8bcd8, 0.5); dl3.position.set(0.25,-1,0.35); scene.add(dl3);
+
+// 接地阴影面：只吃阴影、不显形。单面材质 ⇒ 从**下方**看自动背面剔除、不挡视线（所以不碍「无死角」）
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),
+                              new THREE.ShadowMaterial({opacity:0.34}));
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+const root = new THREE.Group(); scene.add(root);
+// ⓪ 逐块定位的高亮框。**必须定义在这里**：`loadPiece()` 在 828 行就被调了一次，
+//   它在同步段里要把它藏起来（换件时旧框指的还是上一件的位置）—— 用 const 放晚了会撞暂时性死区。
+//   `depthTest:false` ⇒ 框永远压在几何之上（框住的块在里层时也看得见）；用 `EdgesGeometry` 而不是
+//   `wireframe:true`，后者会把每个面的对角线也画出来，看起来像「块被劈了一刀」。
+const pickBox = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(1,1,1)),
+  new THREE.LineBasicMaterial({color:0xffd24a, depthTest:false, transparent:true, opacity:0.95}));
+pickBox.visible = false; pickBox.renderOrder = 998;
+scene.add(pickBox);
+const LOOK = new THREE.Vector3(0, 18, 0);
+let radius = 130, theta = 0.72, phi = 1.02;
+let vTheta = 0, vPhi = 0;                     // 惯性（松手后继续转一段）
+let rMin = 12, rMax = 900;                    // 随模型尺寸在载入后重设
+// ★ 最近距离 = **墙厚级**（0.6 m），不是按楼尺寸的比例。
+//   原 `rMin = _diag*0.12` ≈ 19.2 m —— 对 129×84 m 的楼只到「一个开间」，**贴不到墙**；
+//   用户判词 2026-10-12「可以无限放大」。★ 不给 0：透视相机 radius→0 时相机与注视点重合，
+//   画面退化成一点（什么都不显示），那是坏件不是「无限」；0.6 m ≈ 两面墙的间距，看得见细部。
+const R_MIN_M = 0.6;
+// ★ 复位基准 = **载入完成那一帧**的四元组（LOOK/theta/phi/radius 一起存）。
+//   原版双击只复位角度与距离，且 radius 取 rMax*0.34 ≠ 载入值 ⇒ 双击**回不到开场的取景**，
+//   平移更是没得复位。有了它，「双击复位」才是可判的（判据 J-09.1.1 的 G 条）。
+let HOME = null;
+
+function apply(){
+  // ★★ 「无死角」的修正在这一行：phi 只避**正上/正下两个奇点**（各 0.06 rad），不再卡 87°。
+  //    原式 `min(1.52, phi)` 把相机锁死在目标平面**以上**（1.52 rad = 87.1° ⇒ 相机 y 恒 > LOOK.y）
+  //    ⇒ 底面与地面视角**永远看不到**，这就是用户说的死角。用户判词 2026-10-12。
+  phi = Math.max(0.06, Math.min(Math.PI - 0.06, phi));
+  radius = Math.max(rMin, Math.min(rMax, radius));
+  // ★ 近平面随距离自适应（配合 R_MIN_M 的放开）：贴近看时若 near 仍固定 0.5 m，
+  //   面前那面墙会被裁掉（画面空）；而一直用极小的 near 又毁掉远距离的深度精度（z-fighting）。
+  //   ⇒ 跟着 radius 走：远处回到 0.5 m，贴墙时收到 0.05 m。只在真变了时重算投影矩阵。
+  const _near = Math.max(0.05, Math.min(0.5, radius * 0.004));
+  if (Math.abs(camera.near - _near) > 1e-6){ camera.near = _near; camera.updateProjectionMatrix(); }
+  camera.position.set(
+    LOOK.x + radius*Math.sin(phi)*Math.sin(theta),
+    LOOK.y + radius*Math.cos(phi),
+    LOOK.z + radius*Math.sin(phi)*Math.cos(theta));
+  camera.lookAt(LOOK);
+}
+function resize(){
+  const w = cv.clientWidth, h = cv.clientHeight;
+  renderer.setSize(w,h,false); camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+// ── 交互：左键拖拽旋转（带惯性）· 中键/右键按住拖 = 平移 · 滚轮/双指缩放 · 双击复位 ──
+//   用 pointer 事件表管理**多指针**：单指 = 转，双指 = 捏合缩放（libs3d 那边由 model-viewer 自带，
+//   本页是手搓的，得自己实现；之前只监听 pointerdown/move 且没有 touch-action:none ⇒ 手机上还会滚页面）。
+//   ★ 2026-10-12 用户判词：「中键滚轮没用好，摁住能拖动就好了」⇒ 补 CAD 习惯的**中键/右键平移**。
+const pts = new Map();
+let drag=null, pinch=null;
+
+// 平移：沿相机右/上轴移动**注视点** LOOK。系数取透视精确解 ——
+// 屏幕 1 px 在「过 LOOK、垂直光轴」的平面上对应 2·radius·tan(fov/2)/视口高，不用手调魔数。
+const _UP = new THREE.Vector3(0,1,0), _f = new THREE.Vector3(),
+      _r = new THREE.Vector3(), _u = new THREE.Vector3();
+// ★ 拾取：滚轮朝指针缩放要锚在**模型表面**上，不是「过 LOOK 的靶平面」上。
+//   量过（_scratch/probe_zoom_cursor.py）：锚在靶平面时，指针指到模型外 ⇒ 相机朝空处飞，
+//   画面里模型占 **0.00%**。改成打射线到模型：打到谁就朝谁缩；**打不到就原地缩放**（不动 LOOK）。
+const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2();
+let _pickMs = 0, _pickN = 0;        // 上一次求交耗时（ms）/ 累计次数 —— 只读诊断，供判据声明盲区与核限流
+function pickAt(clientX, clientY){
+  const rc = cv.getBoundingClientRect();
+  _ndc.set(((clientX - rc.left) / rc.width) * 2 - 1, -((clientY - rc.top) / rc.height) * 2 + 1);
+  _ray.setFromCamera(_ndc, camera);
+  const t0 = performance.now();
+  const hits = _ray.intersectObject(root, true);     // root 里只有模型（灯/地面挂在 scene 上）
+  _pickMs = performance.now() - t0;
+  _pickN++;
+  return hits.length ? hits[0].point.clone() : null;
+}
+// ★ 拾取**必须限流**：量过（_scratch/probe_pick.py，真交付件 37 万面、无 BVH）——
+//   一次**命中**的求交 ~2.4/22.3/29.0 ms（min/avg/max，n=5），**落空**只要 0.1 ms
+//   （three.js 先过物体包围球）。滚轮一次拨动会连发十几个事件 ⇒ 不限流就是
+//   十几 × 25 ms 的主线程阻塞 ⇒ 卡顿。限流规则用**不变量**写，不押在「求交要多久」上：
+//   指针挪动 ≤ 4 px 且距上次拾取 ≤ 150 ms ⇒ 复用上一个锚点（一次拨动只算一次）。
+//   ⇒ 最坏占用 = 25/150 ≈ 17% 单核，且只在滚轮连发时；单格滚轮（一个事件）= 25 ms，无感。
+const PICK_REUSE_MS = 150, PICK_REUSE_PX = 4;
+window.__cdutPickThrottle = { ms: PICK_REUSE_MS, px: PICK_REUSE_PX };   // 判据按**页面自报的常数**造刺激
+let _pickAt = -1e9, _pick = null, _pickX = NaN, _pickY = NaN;
+function anchorAt(clientX, clientY){
+  const now = performance.now();
+  if (now - _pickAt > PICK_REUSE_MS ||
+      Math.abs(clientX - _pickX) > PICK_REUSE_PX || Math.abs(clientY - _pickY) > PICK_REUSE_PX){
+    _pick = pickAt(clientX, clientY);
+    _pickAt = now; _pickX = clientX; _pickY = clientY;
+  }
+  return _pick;                                     // 可能为 null（指针不在模型上）
+}
+function invalidatePick(){ _pickAt = -1e9; }        // 相机一动，旧锚点就不再是「指针下那点」
+window.__cdutPickN = () => _pickN;                 // 只读计数：判据用它核**限流真的生效**（不看墙钟）
+window.__cdutPick = (x, y) => {                    // 只读探针（判据 J-09.1.1 用）
+  const p = pickAt(x, y);
+  return p ? { point: p.toArray(), ms: _pickMs, n: _pickN } : { point: null, ms: _pickMs, n: _pickN };
+};
+function panBy(dxPix, dyPix){
+  const k = 2 * radius * Math.tan(camera.fov * Math.PI / 360) / Math.max(cv.clientHeight, 1);
+  _f.set(-Math.sin(phi)*Math.sin(theta), -Math.cos(phi), -Math.sin(phi)*Math.cos(theta));
+  _r.crossVectors(_f, _UP).normalize();          // 相机右轴 = f × 世界上
+  _u.crossVectors(_r, _f).normalize();           // 相机上轴
+  LOOK.addScaledVector(_r, -dxPix * k)           // 内容跟随指针 ⇒ 注视点反向走
+      .addScaledVector(_u,  dyPix * k);
+}
+
+function applyPinch(){
+  const [a,b] = [...pts.values()];
+  const d = Math.hypot(a.x-b.x, a.y-b.y);
+  if (d > 1) radius = pinch.r * pinch.d / d;      // 张开 = 拉近
+  apply();
+}
+cv.addEventListener('pointerdown', e=>{
+  cv.setPointerCapture(e.pointerId);
+  invalidatePick();            // 相机要动了 ⇒ 复用的锚点已不是「指针下那点」
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pts.size === 1){
+    // ★ 钮位定手势：中键(1)/右键(2) = 平移（CAD 习惯）；左键 / 触摸 = 轨道旋转
+    const pan = e.pointerType === 'mouse' && (e.button === 1 || e.button === 2);
+    drag = {x:e.clientX, y:e.clientY, mode: pan ? 'pan' : 'orbit'};
+    vTheta = vPhi = 0;
+  } else if (pts.size === 2){
+    const [a,b] = [...pts.values()];
+    pinch = {d: Math.hypot(a.x-b.x, a.y-b.y), r: radius}; drag = null;
+  }
+});
+function endPtr(e){
+  pts.delete(e.pointerId);
+  if (pts.size < 2) pinch = null;
+  if (pts.size === 0) drag = null;
+  else if (pts.size === 1){ const p = [...pts.values()][0]; drag = {x:p.x, y:p.y, mode:'orbit'}; }
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('pointermove', e=>{
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pinch && pts.size >= 2){ applyPinch(); return; }
+  if (!drag) return;
+  const mx = e.clientX-drag.x, my = e.clientY-drag.y, mode = drag.mode;
+  if (mode === 'pan'){
+    panBy(mx, my);                    // 平移**不给惯性**：到位就停、不飘（旋转才有惯性）
+  } else {
+    const dx = mx*0.006, dy = my*0.006;
+    theta -= dx; phi -= dy; vTheta = dx; vPhi = dy;
+  }
+  drag = {x:e.clientX, y:e.clientY, mode};
+  apply();
+});
+// ★ 缩放按**滚动量**、用 exp 对数模型：deltaMode 0/1/2 归一到像素，单次钳制防触摸板暴冲。
+//   旧式 `*(1 + Math.sign(deltaY)*0.09)` 两个毛病：① `Math.sign` 丢掉幅度（慢滚与猛滚一格一个样）
+//   ② 不可逆（+9% 再 −9% ⇒ 0.9919，回不到原位）。exp 上下对称、逐步可逆 —— 两条都进判据 J-09.1.1。
+const WHEEL_K = 0.0016, WHEEL_CLAMP = 160;
+if (typeof window !== 'undefined') window.__cdutWheelK = WHEEL_K;   // 判据要按**同一个常数**反算期望
+// ★ 2026-10-12 用户判词「可以无限放大」⇒ 放开下限后**必须**再补这一步，否则放大是「往楼心钻」：
+//   量过（_scratch/probe_zoom_floor2.py，差分口径 · 负对照 全隐vs全隐=0.0000%）——
+//   radius 0.6~4.6 m 时模型占画面 **99.3%**、但前景平均亮度只有 **23/255**：画面**不是空的，是黑的**
+//   （相机站进了楼里、正对着没打光的墙背面）。⇒ 光放开 rMin 只会让人钻进黑屋子。
+//   ⇒ 滚轮改成**朝指针缩放**（zoom-to-cursor）：指针打到模型上哪一点（记作 P），缩放时令 LOOK 向 P 靠，
+//     使 P 在屏幕上**钉住不动** —— 推到哪、看到哪；贴墙看的是**外面那层**。
+//   ★ 锚点取**射线打到的那块表面**（`pickAt`），不是「过 LOOK 的靶平面」上的点：
+//     量过（_scratch/probe_zoom_cursor.py，同一把差分尺）—— 靶平面口径下，指针指到模型外
+//     (+360,−60) 处推近 ⇒ 相机朝空处飞，画面里模型占 **0.00%**；而打在模型上推近 ⇒ 亮度
+//     由 **23.6 → 47.5~70.7/255**（真的走到了打了光的外墙）。
+//   不动点推导：屏幕上某点的位置只由 (Q−LOOK) 在相机右/上轴上的分量决定、尺度 ∝ 1/radius
+//   ⇒ 要让 P 不动，需 (P−LOOK') = (P−LOOK)·(r₂/r₁)，即 LOOK' = LOOK + (P−LOOK)·(1 − r₂/r₁)。
+//   ★ 射线**打不到模型**（指针在天空/地面）⇒ **不动 LOOK**，只原地缩放（就是旧行为）——
+//     宁可「没反应」，也不朝空处飞。
+// ★ 提到 <main> 之后必须回答一个新问题：面板里那些**真能滚**的容器（如 .laylist）怎么办？
+//   全吃掉 ⇒ 层列表滚不动（那是把「滚轮没反应」从一个控件搬到另一个控件，不是修好）。
+//   ⇒ 规则：指针下若有一个**还没滚到头**的**内层**滚动容器，这枚滚轮归它；否则归缩放。
+//   ★ 「内层」是判据的一部分：`<aside>` 自己就是 `overflow:auto`，若它也参与劫持，
+//     面板上一放滚轮就滚面板、**永远轮不到缩放** —— 那就等于用户那句「面板上也放缩」没做。
+//     ⇒ 两栏的外壳（`<main>` 与它的直接子 `#stage`/`aside`）**按定义不算滚动宿主**，
+//       只有嵌在它们**里面**的滚动件（`.laylist{max-height:310px;overflow:auto}` 等）才算。
+function wheelScrollHostCanScroll(t, dy){
+  for(let el = t; el && el !== MAIN; el = el.parentElement){
+    if(el.parentElement === MAIN) continue;                  // 外壳（#stage / aside）不劫持
+    const st = getComputedStyle(el);
+    if(!/(auto|scroll)/.test(st.overflowY)) continue;
+    if(el.scrollHeight - el.clientHeight <= 1) continue;      // 装得下 ⇒ 它本来也没得滚
+    const down = dy > 0;
+    const atTop = el.scrollTop <= 0;
+    const atBot = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    if((down && !atBot) || (!down && !atTop)) return true;    // 这个方向还有余量 ⇒ 让给它
+  }
+  return false;
+}
+MAIN.addEventListener('wheel', e=>{
+  if (wheelScrollHostCanScroll(e.target, e.deltaY)) return;   // 让它滚列表，不 preventDefault
+  e.preventDefault();
+  const per = e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? cv.clientHeight : 1);
+  const d = Math.max(-WHEEL_CLAMP, Math.min(WHEEL_CLAMP, e.deltaY * per));
+  const r1 = radius, r2 = Math.max(rMin, Math.min(rMax, r1 * Math.exp(d * WHEEL_K)));
+  const P = anchorAt(e.clientX, e.clientY);
+  if (P){
+    const a = 1 - r2 / r1;
+    LOOK.x += (P.x - LOOK.x) * a;
+    LOOK.y += (P.y - LOOK.y) * a;
+    LOOK.z += (P.z - LOOK.z) * a;
+  }
+  radius = r2;
+  apply();
+}, {passive:false});
+// 右键拖 = 平移 ⇒ 必须吃掉右键菜单，否则一松手就弹「另存为 / 检查」
+cv.addEventListener('contextmenu', e=>e.preventDefault());
+cv.addEventListener('dblclick', ()=>{
+  if (HOME){ LOOK.copy(HOME.look); theta = HOME.theta; phi = HOME.phi; radius = HOME.radius; }
+  vTheta = vPhi = 0; invalidatePick(); apply();
+});
+// ★ 只读探针（判据 J-09.1.1 用）：交互量的是**相机状态**，而它是本 <script> 的局部量，
+//   页面外取不到。暴露一个**只读**快照函数，让「拖了之后注视图真的移了吗」可被量。
+window.__cdutView = () => ({
+  look: LOOK.toArray(), theta, phi, radius,
+  home: HOME ? {look: HOME.look.toArray(), theta: HOME.theta, phi: HOME.phi, radius: HOME.radius} : null,
+});
+
+// ── 两件可切 ─────────────────────────────────────────────
+// 默认只读**包内** `role=model` 那一件 ⇒ 这页「只读一个模型包」的声明、以及判据 J-09.1.1 走的那条路，
+// **一个字不动**。只有显式给 `?piece=full`（或 `?full=1`）才去读**包外**的参照件。
+// ★ 参照件在 `rebuild/` 下（包外），是重建链出的**比对件**、不是交付件；切过去时 ⑥ 会**如实**
+//   多出一条包外 URL —— 那不是「接缝是假的」，是这一页明说要读它。
+// ★ 朝向必须**当场量**、不许沿用记忆：我上一轮凭记忆写「参照件 Z 朝上、要绕 X 轴 −90°」，
+//   2026-10-14 实测两件的**高度都落在 Y**（平面 129.3 × 84.0 保持不变；高度那个数随层高走）
+//   ⇒ 两件都是 glTF 规范的 Y 朝上，**一个都不许转**。照记忆转 −90° 的后果是整栋躺倒、
+//   而页面照样印出「高 84.00 m」看着还挺像 —— 下面那道朝向自检就是为这一刻加的。
+// ★ 高度这个数**本文件一处都不写**：它由下面 `loadPiece` 里 `box.getSize()` 当场量、
+//   印在左上角 `#dims`（铁律 174：同一个量不许有两个名字 —— 写死的那个迟早跟件脱节）。
+// ★ 2026-10-14 换链：包内件由 **正式件 06_su** 出（`rebuild/06_su/c006_su.glb`，OBJ 转来只转格式）。
+//   换链前那件标高只到 39.72 m、**顶部三样一个没有**（女儿墙 / 顶楼楼梯房 / 7→8 台阶屋面），
+//   与本包 manifest 第 19 行「塔楼 47.5 m …… 均按真实几何表示」的声明不符。
+//   ★ 2026-10-15 用户令层高按 3.5 m 走 ⇒ 现在件顶 = 11 × 3.5 + 楼梯房 3.0 = **41.5 m**
+//     （层高真源 = `构件库/参数.json::共用/层高`；本文件不复制这个数）。
+const MODELS = {
+  // ★★ 2026-10-14：包内件的 URL 后面**必须挂件的 sha256 前 12 位**当版本号。
+  //   换链那次我把 6.5 MB 的旧件换成了 9.8 MB 的新件，**文件名一个字没变**
+  //   （`model/c006-building-floors.glb` —— 该名直到 2026-10-14 傍晚才归正为规范名
+  //   `model/c006-building.glb`，见 `demo/build_pack.py` 的「件名归正」段）⇒ 浏览器拿 HTTP 缓存里那份旧件直接渲染，
+  //   而页面上的字（从**新** meta/layering.json 现算的）却写着「标高 −3.5 → 47 m、顶部三样都在」，
+  //   屏幕上却是顶 39.72 m 的老楼 —— **判据/文字全绿，看到的模型是错的**，最难发现的一种。
+  //   sha256 是包 manifest 自己给的 ⇒ URL 随内容变，缓存再也骗不了人（不是「清缓存就好」那种修法）。
+  pack: {label: '交付包模型',
+    url: () => PACK + '/' + modelArt.path + '?v=' + modelArt.sha256.slice(0, 12), zup: false,
+    note: '包内 <code>role=model</code> 那一件：<b>' + ((lay.layers || []).length) + ' 层</b>'
+        + '（<code>floor0…floor10</code> = F1…F11，加 <code>B1</code>），标高 <b>'
+        + ((lay.elevation_m || []).join(' → ')) + ' m</b>。'
+        + '件来源 = 正式件 <code>' + (lay.source_model || '') + '</code>。'
+        + '<b>顶部三样都在</b>（女儿墙顶 / 顶楼楼梯房顶 / 7→8 台阶屋面），标高见左边分层说明。'},
+  // ★ 这一件**没有**版本号可挂：它是包外件，manifest 里没有它的 sha256。
+  //   所以它仍然可能被浏览器缓存喂旧件（上面那条坑它一样有）。不假装挂了个 `?v=` 就安全了 ——
+  //   要在乎就切过去之后看一眼左上角量到的三轴尺寸，或者干脆换一个文件名出件。
+  full: {label: '参照件·整栋含屋面', url: () => '../rebuild/05_build/c006_white.glb', zup: false,
+    note: '重建链出的<b>比对件</b>（<b>包外</b>：<code>rebuild/05_build/c006_white.glb</code>）：'
+        // ★ 2026-10-15 改口：原写「与电梯机房」—— 当天判词 `本套图无客运电梯井`
+        //   （`rebuild/构件库/参数.json::竖井/判定`），那组闭合矩形是竖井/管井。
+        //   件里确实有它：`rebuild/05_build/build.json` 的 `lifts` 键。
+        // ★ 高度**不在这行写数**：它由 `box.getSize()` 当场量、印在左上角 `#dims`（铁律 174）。
+        //   原先写死「高 50.50 m」「129.3 × 50.5 × 84.0」—— 层高 4.0→3.5 之后它们就成了假数，
+        //   而页面照样绿（正是这一行自己要防的那种「看着还挺像」）。
+        + '含屋面 / 女儿墙 / 出屋面的楼梯间与贯穿各层的竖井筒。'
+        + '高度与三轴尺寸见<b>左上角那一行</b>（当场量的，不是这里抄的）。'
+        + '它的 76 个节点是<b>层×构件</b>（<code>1层_wall</code>…），不是楼层。'
+        + '★ 件本身就是 glTF 规范的 <b>Y 朝上</b>（高度落在三轴里最小的那个），不转。'},
+};
+const _q = new URLSearchParams(location.search);
+let curId = (_q.get('piece') === 'full' || _q.get('full') === '1') ? 'full' : 'pack';
+// ★ 这里**现算**，不读 HTML 里的静态字（铁律 018：两处写同一个数证明不了它是对的）。
+//   数全部取自包内 meta/layering.json —— 那份就是**落盘件的量测**（build_pack.py 逐 (层,类)
+//   子节点包围盒算出来的），所以页面上印的是件自己的数，不是声明里的数。
+const _tf = lay.top_features || {};
+
+// ── 按 (层,类) 上色 ────────────────────────────────────
+// ★ 2026-10-14 换链后包内件是**正式件 06_su**：这件**没有材质**（GLB 的 `materials` 长度 = 0
+//   —— su_obj_to_glb.py 只转格式、不造材质），整件一个默认灰 ⇒ 屏幕上分不出哪是墙、哪是板、
+//   哪是楼梯。而**类名本来就在节点名上**（`floor7__WALL`、`floor10__ROOF_STAIR`…，
+//   正是 build_pack.py 写进 meta/layering.json 的 `layers[*].classes`）⇒ 不用改件，
+//   页面上按类给色即可。配色是**语义**的（主体灰白 → 楼板压一档 → 柱再压一档，
+//   交通核给点缀色，门洞压暗把洞口读出来），不是彩虹。
+const CLASS_STYLE = {
+  WALL:       {color: 0xbfbcb4, rough: 0.85},   // 主体墙
+  SLAB:       {color: 0x9d9a93, rough: 0.92},   // 楼板（压一档，水平面读得出来）
+  COL:        {color: 0x807d77, rough: 0.92},   // 柱（再压一档）
+  PARAPET:    {color: 0xd6d3ca, rough: 0.80},   // 女儿墙（略亮，把顶圈出来）
+  ROOF_STEP:  {color: 0x6f6c66, rough: 0.92},   // 台阶屋面
+  ROOF_STAIR: {color: 0x8a6f45, rough: 0.80},   // 出屋面的楼梯间
+  STAIR:      {color: 0xb08243, rough: 0.80},   // 楼梯（琥珀）
+  LIFT:       {color: 0x4d8f96, rough: 0.70},   // 竖井（青）—— 键名沿用 LIFT，件是竖井不是电梯
+  DOOR:       {color: 0x24282a, rough: 0.95},   // 门洞（压暗）
+  // ★ 2026-10-15 补：`LINTEL`（门头墙 = 洞口正上方那段墙）是当天新加的第 10 类。
+  //   它必须先在这张表里**有一行**，否则 `_classOf` 认出类名却查不到样式 ⇒ `sty` 为 undefined
+  //   ⇒ 整段跳过、**保持件自带的灰**（:753 那个 if），跟墙体撞成一个色、又不在图例里（:677 按
+  //   `Object.keys` 现印）⇒ 用户点开「门头墙补上了没有」看不见，且**不报错**。
+  //   取色理由：与 DOOR 同族（门洞压暗）但浅一档 —— 在洞口上沿读得出「这里补过一块」，
+  //   又不会被当成主体墙（WALL 0xbfbcb4 明显更亮）。
+  LINTEL:     {color: 0x565c60, rough: 0.90},   // 门头墙（洞口上方，与门洞同族、浅一档）
+  // ★ 2026-10-15 补：`ROOF`（塔楼屋面板）是同日新加的第 11 类（用户「楼板要画」）。
+  //   与 `LINTEL` 同一条坑：这张表里少一行 ⇒ `_classOf` 认出类名却查不到样式 ⇒
+  //   `sty` 为 undefined ⇒ 整段跳过、保持件自带的灰 ⇒ **跟楼板撞成一个色、还不在图例里**，
+  //   而页面**不报错**。取色理由：与 SLAB 同族（都是水平板）但**亮一档**，
+  //   读成「顶面」而不是某个楼层的楼板；比 WALL 略暗，不与竖墙抢。
+  ROOF:       {color: 0xb0aca3, rough: 0.88},   // 塔楼屋面板（与楼板同族、亮一档）
+};
+// 从 mesh 往上找**第一个带 `__` 的节点名**，取后半段当类名。找不到就返回空串 ⇒ 不上色。
+// （参照件 `rebuild/05_build/c006_white.glb` 的节点名是 `1层_wall` 这种**没有 `__`** 的，
+//  且它自带材质与颜色 ⇒ 这条对它是空操作，一个像素都不动。）
+const _classOf = o => {
+  for(let p = o; p; p = p.parent)
+    if(p.name && p.name.indexOf('__') >= 0) return p.name.split('__')[1];
+  return '';
+};
+
+const LAYNOTE_PACK =
+  `每「层」= 模型包 GLB 里的一个<b>楼层节点</b>（<code>floorK</code> = 第 K+1 层，<code>B1</code> = 地下 1 层），`
+  + `共 <b>${(lay.layers || []).length}</b> 层、面合计 <b>${(lay.lossless_check || {}).faces_sum}</b>。`
+  + `层高 <b>${lay.floor_h_m} m</b>（${md(lay.floor_h_note || '')}），标高 `
+  + `<b>${(lay.elevation_m || []).join(' – ')} m</b>。`
+  + `<br>顶部三样按落盘件的 (层,类) 包围盒现算：台阶屋面 <b>${_tf['台阶屋面_m']} m</b>、`
+  + `主屋面 <b>${_tf['主屋面_m']} m</b>、女儿墙顶 <b>${_tf['女儿墙顶_m']} m</b> / `
+  + `顶楼楼梯房顶 <b>${_tf['顶楼楼梯房顶_m']} m</b>。件来源 <code>${lay.source_model}</code>。`
+  + `<br><b>颜色 = 这一页按 (层,类) 给的</b>（件自己没有材质）：`
+  + Object.keys(CLASS_STYLE).map(k =>
+      `<span style="display:inline-flex;align-items:center;gap:4px;margin:1px 9px 1px 0;white-space:nowrap">`
+      + `<i style="width:10px;height:10px;border-radius:2px;display:inline-block;background:#${
+          CLASS_STYLE[k].color.toString(16).padStart(6, '0')}"></i><code>${k}</code></span>`).join('')
+  + `<br>勾选控制显示；行内滑块控制该层的透明度；<b>双击层名 = 只看这一层</b>。`;
+const LAYNOTE_FULL = '每「行」= GLB 的一个<b>顶层节点</b> = <b>某层的某类构件</b>（<code>1层_wall</code>、'
+                   + '<code>10层_col</code>…），共 <b>76</b> 行 —— 不是楼层。勾选控制显示、行内滑块控制该行透明度。';
+document.getElementById('piece').innerHTML =
+  Object.entries(MODELS).map(([k, m]) => `<button data-pid="${k}">${m.label}</button>`).join('');
+document.getElementById('piece').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b && b.dataset.pid !== curId) loadPiece(b.dataset.pid);
+});
+
+// ── 分层与透明 ─────────────────────────────────────────
+// 每「层」= GLB 顶层节点（建链里 scene.add_geometry(node_name="c{col}r{row}") 一个图幅一个节点）。
+// ★ 材质必须**逐 mesh 克隆**：GLB 里多个 mesh 常共用同一个材质实例，不克隆的话调一层透明度会全变。
+const layerState = [];       // {name, node, mats:[], on, opacity}
+let opAll = 1.0;
+
+function setLayerOpacity(st, v){
+  st.opacity = v;
+  for(const m of st.mats){
+    m.transparent = true;                 // 恒开 transparent：0→1 之间随时可调
+    m.opacity = v;
+    // 近满不透明时才写深度，避免半透明互相盖出「斑马纹」；透明度低时关掉深度写，能看穿
+    m.depthWrite = v > 0.985;
+    m.needsUpdate = true;
+  }
+}
+function applyVisibility(){
+  for(const st of layerState) st.node.visible = st.on && opAll > 0.001;
+  renderer.shadowMap.needsUpdate = true;      // 隐藏/半透的层变了 ⇒ 阴影图得重烘一次（否则冻的是旧影子）
+}
+function isolate(st){
+  layerState.forEach(s => { s.on = (s === st) || !st; });   // st=null ⇒ 全部恢复
+  layerState.forEach(s => { const cb = document.getElementById('cb' + s.i); if(cb) cb.checked = s.on; });
+  applyVisibility();
+}
+
+function buildLayers(rootObj){
+  // ★ 必须在 rootObj 被整体**平移之前**调用 —— 这样量到的世界盒就是模型坐标，
+  //   标高不用再去补偏移（早先在 position.set 之后量，父级矩阵还是旧的，标高整体偏了一个层心）。
+  // 把每个 mesh 归到它在 rootObj 下的**顶层祖先**，一个顶层节点 = 一层
+  const map = new Map();
+  rootObj.traverse(o=>{
+    if(!o.isMesh) return;
+    let p = o; while(p.parent && p.parent !== rootObj) p = p.parent;
+    if(!map.has(p)) map.set(p, []);
+    map.get(p).push(o);
+  });
+  const wrap = document.getElementById('layers');
+  wrap.innerHTML = '';
+  // 层名 `floorK` → F{K+1}，`roof` → 屋面；按**从上到下**排（屋面在最上，与眼睛看到的顺序一致）
+  const items = [...map.entries()].map(([node, meshes])=>{
+    const raw = node.name || '';
+    const mf = /^floor(\d+)$/.exec(raw);
+    const ord = /^roof/i.test(raw) ? 1e6 : (mf ? (+mf[1]) : -1);
+    return {node, meshes, raw, ord};
+  }).sort((a,b)=> b.ord - a.ord);
+
+  items.forEach((it, i)=>{
+    const {node, meshes, raw} = it;
+    const mf = /^floor(\d+)$/.exec(raw);
+    const nm = mf ? ('F' + (+mf[1] + 1)) : (/^roof/i.test(raw) ? '屋面' : (raw || '层' + i));
+    // 高度带：此时 rootObj 还没被平移，世界盒 = 模型坐标盒
+    const bb = new THREE.Box3().setFromObject(node);
+    const lo = bb.min.y, hi = bb.max.y;
+    const tip = `${raw || nm} · 标高 ${lo.toFixed(2)}–${hi.toFixed(2)} m · ${meshes.length} 个网格`;
+
+    const mats = [];
+    for(const me of meshes){
+      if(me.material){
+        me.material = me.material.clone();       // ★ 必须克隆：同一材质实例被多层共用时，调一层会全变
+        me.material.side = THREE.DoubleSide;
+        // 按 (层,类) 上色。认得出类名才动 —— 认不出（参照件那种 `1层_wall`）就保持件自带的材质，
+        // ★ 别「兜底上一个灰」：那样参照件会被我刷成一片灰，还看着像本来就该这样。
+        const sty = CLASS_STYLE[_classOf(me)];
+        if(sty && me.material.color){
+          me.material.color.setHex(sty.color);
+          me.material.roughness = sty.rough;
+          me.material.metalness = 0.0;
+        }
+        mats.push(me.material);
+      }
+    }
+    const st = {name:nm, raw, node, mats, on:true, opacity:1.0, i};
+    layerState.push(st);
+    const row = document.createElement('div'); row.className = 'layrow';
+    row.innerHTML = `<input type="checkbox" id="cb${i}" checked>
+      <span class="nm" title="${tip}">${nm}</span>
+      <span class="rg">${lo.toFixed(1)}–${hi.toFixed(1)}m</span>
+      <input type="range" id="op${i}" min="0" max="100" value="100">
+      <span class="pv" id="pv${i}">100%</span>`;
+    wrap.appendChild(row);
+    row.querySelector('#cb' + i).onchange = e => { st.on = e.target.checked; applyVisibility(); };
+    row.querySelector('#op' + i).oninput = e => {
+      const v = e.target.value/100; setLayerOpacity(st, v);
+      row.querySelector('#pv' + i).textContent = e.target.value + '%';
+      applyVisibility();
+    };
+    row.querySelector('.nm').ondblclick = () => isolate(st);
+  });
+  applyVisibility();
+}
+
+document.getElementById('opAll').oninput = e => {
+  opAll = e.target.value/100; document.getElementById('opAllV').textContent = e.target.value + '%';
+  for(const st of layerState) setLayerOpacity(st, opAll);
+  [...document.querySelectorAll('.laylist .layrow')].forEach((r,k)=>{
+    const s=r.querySelector('input[type=range]'), p=r.querySelector('.pv');
+    if(s){ s.value = e.target.value; } if(p){ p.textContent = e.target.value + '%'; }
+  });
+  applyVisibility();
+};
+document.getElementById('allOn').onclick  = () => { layerState.forEach(s=>{ s.on=true;  const c=document.getElementById('cb'+s.i); if(c) c.checked=true;  }); applyVisibility(); };
+document.getElementById('allOff').onclick = () => { layerState.forEach(s=>{ s.on=false; const c=document.getElementById('cb'+s.i); if(c) c.checked=false; }); applyVisibility(); };
+document.getElementById('soloOff').onclick = () => isolate(null);
+
+let curRoot = null;                       // 当前挂在 root 下的那一件（换件时要摘干净）
+function loadPiece(id){
+  const M = MODELS[id] || MODELS.pack;
+  curId = id;
+  [...document.querySelectorAll('#piece button')].forEach(b => b.classList.toggle('on', b.dataset.pid === id));
+  document.getElementById('mpath').textContent = (id === 'pack') ? modelArt.path : M.url();
+  document.getElementById('msha').textContent  = (id === 'pack') ? (modelArt.sha256.slice(0,12) + '…') : '包外件';
+  document.getElementById('piecenote').innerHTML = M.note;
+  document.getElementById('laynote').innerHTML = (id === 'pack') ? LAYNOTE_PACK : LAYNOTE_FULL;
+  if (curRoot){                           // ★ 不 dispose 几何/材质的话，来回切几趟就把显存吃满
+    root.remove(curRoot);
+    curRoot.traverse(o=>{ if(o.isMesh){ o.geometry.dispose();
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m=>m && m.dispose()); } });
+    curRoot = null;
+  }
+  layerState.length = 0;                  // 上一件的 76/12 行不清掉，会与新件叠成两套控件
+  document.getElementById('layers').innerHTML = '';
+  // ⓪ 换件时把高亮框与上一件的结果清掉（框指的还是上一件的位置，留着就是假读数）
+  pickBox.visible = false;
+  document.getElementById('pickinfo').innerHTML = (id === 'pack')
+    ? '<div><b>怎么用</b><span>在左边模型上<b>单击</b>任意一块 ⇒ 这里报出它的名字（如 <code>6层-门-007</code>）。</span></div>'
+    : '<div><b>这是参照件</b><span>重建链出的<b>包外</b>比对件，<b>不在包内</b> ⇒ 没有 <code>meta/blocks.json</code> '
+      + '那份逐块清单，点选报不出名字。切回「交付包模型」再点。</span></div>';
+  LOADS.push(M.url());                    // ★ ⑥ 接缝证明：默认这条必在包内；切参照件时如实记下包外那条
+  new GLTFLoader().load(M.url(), gltf=>{
+    gltf.scene.traverse(o=>{ if(o.isMesh) o.material.side = THREE.DoubleSide; });
+    // ★ `zup` 是给**真·Z 朝上**的件留的开关。开之前**必须先量三轴**（高度该是三轴最小）：
+    //   照记忆开一次，整栋就躺在屏幕上，而读数照样出数、看着还挺像（2026-10-14 实测过一次）。
+    //   若真要用，**必须先 updateMatrixWorld** —— buildLayers 与 Box3 量的都是**世界盒**。
+    if (M.zup){ gltf.scene.rotation.x = -Math.PI/2; gltf.scene.updateMatrixWorld(true); }
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    const c = box.getCenter(new THREE.Vector3());
+    LOOK.set(c.x, c.y, c.z);
+    buildLayers(gltf.scene);           // ★ 分层与透明（按**件的原始世界标高**分行 —— 件不许先搬）
+    // ★★ 2026-10-14 修：这里原来还有一句 `gltf.scene.position.set(-c.x,-c.y,-c.z)`（把件搬到原点）。
+    //   它和上面 `LOOK.set(c)` **本该互相抵消，实际没有** —— LOOK 记的是**搬之前**的中心，
+    //   件却被搬到了原点 ⇒ 相机绕着**模型外**的一点转。包内件的中心恰在原点附近（y≈17.8 m），
+    //   所以只偏一点、看着还挺像；参照件的中心在 **x≈82 m** ⇒ 整栋被推到画面角上（实测截图）。
+    //   ⇒ 现在**不搬件**：件留在原位，LOOK 就是它的中心，两件同一套逻辑。
+    root.add(gltf.scene); curRoot = gltf.scene;
+    // 投影/受影：不打开的话上面的 shadowMap 什么也不产生
+    gltf.scene.traverse(o=>{ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+    // 阴影面贴到**模型底面**（不是 LOOK 平面）—— LOOK 在腰高，阴影面放那儿会切开模型
+    ground.position.y = box.min.y;         // 件不搬了 ⇒ 直接吃件的底面**绝对标高**（原来要减 c.y 是因为搬过）
+    const _sz = box.getSize(new THREE.Vector3());
+    // 正交阴影相机的半径要装得下「平面半对角 + 楼高按光向投出的偏移」：
+    //   平面 129×84 的半对角 = 77 m，楼高在 (150,240,120) 方向下再投出约楼高的 0.8 倍
+    //   ⇒ 取 1.0 倍留够余量（不写死楼高：它随层高走，见 `构件库/参数.json::共用/层高`）。
+    const _span = Math.max(_sz.x, _sz.z) * 1.0;
+    dl.shadow.camera.left = -_span; dl.shadow.camera.right = _span;
+    dl.shadow.camera.top = _span;   dl.shadow.camera.bottom = -_span;
+    dl.shadow.camera.updateProjectionMatrix();
+    const _diag = _sz.length();
+    rMax = _diag * 2.6; rMin = R_MIN_M;        // ★ 2026-10-12：原 = _diag*0.12 ≈ 19.2 m ⇒ 贴不到墙
+    radius = _diag * 0.62;
+    // ★ 阴影**只烘一次就冻住**：场景是静态的、只有相机在动 ⇒ 每帧重算 2048² 阴影图等于白烧
+    //   63 万面的代价，正好把用户要的「顺畅」赔进去。改了分层可见性/透明度时再手动置 needsUpdate。
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
+    apply();
+    // ★ 复位基准在**这里**存：LOOK 刚被设成模型中心、radius 刚过完 rMin/rMax 钳制 ⇒ 记下的
+    //   就是开场取景本身（不是「另算一个默认值」）。双击复位即回到这一帧。
+    HOME = {look: LOOK.clone(), theta, phi, radius};
+    // ★ 朝向自检（与 `rebuild/tools/render3d.py` 的 ORIENT 同一条判据）：这栋楼平面 129×84、
+    //   高度远小于平面 ⇒ **高度必须是三轴最小**。件躺倒时 y 会被换成 84（或 129），
+    //   而这一行照样印得出数、看着还挺像 ——
+    //   所以判词直接写在读数旁边，不靠人眼。喂给它的必须是**加载完的那一件**，不是记忆里的那件。
+    const _ext = [box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z];
+    const _flat = _ext[1] > Math.min(_ext[0], _ext[2]);
+    document.getElementById('dims').innerHTML =
+      `高 <b>${_ext[1].toFixed(2)}</b> m · 进深 ${_ext[2].toFixed(1)} m ·
+       面宽 ${_ext[0].toFixed(1)} m · <b>${layerState.length}</b> ${id === 'pack' ? '层' : '个构件节点'}`
+      + (_flat ? ` <b style="color:#c62828">⚠ 躺倒了：高度 ${_ext[1].toFixed(2)} m 不是三轴最小`
+                 + `（${_ext[0].toFixed(1)} × ${_ext[1].toFixed(1)} × ${_ext[2].toFixed(1)}）`
+                 + `—— 别开 <code>zup</code>，去量朝向</b>` : '');
+  }, undefined, err=>{
+    document.getElementById('postag').textContent = '模型装载失败：' + err;
+  });
+}
+loadPiece(curId);
+
+// ── ⓪ 逐块定位：点到哪一块，报它的名字 ───────────────────────────────
+// 坐标（**件不搬不转**，见 loadPiece 里那段注释 ⇒ three.js 世界坐标 == GLB 坐标；GLB 是 Y 朝上）：
+//   glb.x = X/1000 · glb.y = Z/1000 · glb.z = −Y/1000   ⇒ 反解 X = 1000x, Y = −1000z, Z = 1000y
+//   （X 平面向右 / Y 平面进深 / Z 竖直，与 contours、与 mk_catalog.py 同一套）
+const BLOCKS = [];
+if (cat){
+  for(const fl of cat.floors) for(const b of fl.blocks){
+    const zlo = fl.z0_mm + b.z, zhi = zlo + b.h;   // ★ `z` 是**相对该层基准**的（实测：多数 0，楼梯层到 3940）
+    BLOCKS.push({fl: fl.name, node: fl.node, id: b.id, name: b.name, layer: b.layer,
+                 zlo, zhi, bb: b.bbox, ring: b.ring,
+                 area: (b.bbox[2] - b.bbox[0]) * (b.bbox[3] - b.bbox[1])});
+  }
+}
+const mm2v = (x, y, z) => new THREE.Vector3(x/1000, z/1000, -y/1000);
+const v2mm = p => [p.x*1000, -p.z*1000, p.y*1000];
+
+// 25 mm 容差 ≈ 半个墙厚的一半。**必须有它**：单击打在**竖直墙面**上时，命中点的 (x,y) 正好落在
+//   该块平面轮廓的**边上** ⇒ 纯「点在多边形内」判据会把这一块判成「不在内」（浮点 + 边界）。
+const RING_TOL_MM = 25, Z_TOL_MM = 25;
+function inRing(x, y, ring, tol){
+  const n = ring.length / 2; let hit = false;
+  for(let i = 0, j = n - 1; i < n; j = i++){
+    const xi = ring[2*i], yi = ring[2*i+1], xj = ring[2*j], yj = ring[2*j+1];
+    const dx = xj-xi, dy = yj-yi, L2 = dx*dx + dy*dy;
+    let t = L2 > 0 ? ((x-xi)*dx + (y-yi)*dy) / L2 : 0;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    const ex = xi + t*dx - x, ey = yi + t*dy - y;
+    if (ex*ex + ey*ey <= tol*tol) return true;                       // 落在边上 ⇒ 算在内
+    if (((yi > y) !== (yj > y)) && (x < (xj-xi)*(y-yi)/(yj-yi) + xi)) hit = !hit;
+  }
+  return hit;
+}
+// ★★ 只按「点在环内」判会**认错名**：实测 8720 块里有 **3987 块**的环边中点被**同类两块同时
+//    盖住**（相邻构件**共一条边**，两侧容差都吃得到）⇒ 靠「报最小那块」是瞎猜。修正用**物理**：
+//    单击打在某个面上，命中点 P 与**面法线 n** 一起给出来了；沿 −n 退 20 mm 就是**钻进这块构件内部**
+//    的点 Q。真正的答案必须同时满足「含 P（容差内）」且「严格含 Q」—— 共边的那块邻块含 P 但**不含 Q**。
+//    （20 mm 的由来：实测最薄的构件是门，环厚 50 mm ⇒ 退 20 mm 仍在它自己里面；墙 125 mm 更宽裕。）
+//    退出来的点若一块都不严格含（法线认错/退化），**退回原判**并如实按多块报，不假装唯一。
+const INSIDE_MM = 20;
+function whoIs(x, y, z, cls, qx, qy){
+  let got = [];
+  for(const b of BLOCKS){
+    if (cls && b.layer !== cls) continue;      // ★ 类名取自**打到的那块 mesh 的节点名**（floor5__WALL）
+    if (z < b.zlo - Z_TOL_MM || z > b.zhi + Z_TOL_MM) continue;
+    const q = b.bb;
+    if (x < q[0]-RING_TOL_MM || x > q[2]+RING_TOL_MM ||
+        y < q[1]-RING_TOL_MM || y > q[3]+RING_TOL_MM) continue;
+    if (inRing(x, y, b.ring, RING_TOL_MM)) got.push(b);
+  }
+  if (qx != null && got.length > 1){
+    const deep = got.filter(b => inRing(qx, qy, b.ring, 2.0));   // 2 mm：只认「明显在里面」，不含共边
+    if (deep.length) got = deep;
+  }
+  got.sort((a, b) => a.area - b.area);         // 仍并列时，报**最小**那块（更具体）
+  return got;                                  // 返回**全部**命中：数量本身就是读数（见下面 ★）
+}
+// 命中面的**世界法线** → 模型 mm 方向（与 v2mm 同一套映射：X=x, Y=−z, Z=y）。
+// 注意法线要过 `getNormalMatrix(obj.matrixWorld)` —— 件没旋转时它与直取 face.normal 同值，
+// 但**别押在这个巧合上**：reference 件若哪天带变换，直取就会静默给出反向的 Q。
+const _nm3 = new THREE.Matrix3(), _nrm = new THREE.Vector3();
+function faceNormalMM(hit){
+  const n = (hit.face && hit.face.normal) ? _nrm.copy(hit.face.normal) : _nrm.set(0, 1, 0);
+  n.applyMatrix3(_nm3.getNormalMatrix(hit.object.matrixWorld)).normalize();
+  return [n.x, -n.z, n.y];
+}
+// 从 mesh 往上找第一个带 `__` 的节点名（`floor5__WALL`）。找不到就报自己的名字 —— 别返回空串，
+// 页面上「打到 ()」这种判词等于什么都没说。
+function nodeOf(o){
+  for(let p = o; p; p = p.parent) if (p.name && p.name.indexOf('__') >= 0) return p.name;
+  return (o && o.name) ? o.name : '(无名节点)';
+}
+const _fmtM = v => (v/1000).toFixed(2);
+
+function showBlock(b, extraHtml){
+  const [x0, y0, x1, y1] = b.bb;
+  pickBox.position.copy(mm2v((x0+x1)/2, (y0+y1)/2, (b.zlo+b.zhi)/2));
+  pickBox.scale.set(Math.max((x1-x0)/1000, 0.12),
+                    Math.max((b.zhi-b.zlo)/1000, 0.12),
+                    Math.max((y1-y0)/1000, 0.12));
+  pickBox.visible = true;
+  document.getElementById('pickinfo').innerHTML = [
+    ['这一块', '<b style="color:var(--hi)">' + b.name + '</b>'],
+    ['编号 id', b.id],
+    ['层 / 类', b.fl + ' · ' + b.layer + '（GLB 节点 ' + b.node + '__' + b.layer + '）'],
+    ['竖直区间', _fmtM(b.zlo) + ' – ' + _fmtM(b.zhi) + ' m（高 ' + ((b.zhi-b.zlo)/1000).toFixed(2) + ' m）'],
+    ['平面包围盒', _fmtM(x0) + ',' + _fmtM(y0) + ' → ' + _fmtM(x1) + ',' + _fmtM(y1) + ' m'],
+  ].map(([k, v]) => '<div><b>' + k + '</b><span>' + v + '</span></div>').join('') + (extraHtml || '');
+}
+function flyTo(b){
+  showBlock(b);
+  const [x0, y0, x1, y1] = b.bb;
+  LOOK.copy(mm2v((x0+x1)/2, (y0+y1)/2, (b.zlo+b.zhi)/2));
+  const s = Math.max(x1-x0, y1-y0, b.zhi-b.zlo) / 1000;
+  radius = Math.max(rMin, Math.min(rMax, Math.max(s*4.5, 6)));
+  vTheta = vPhi = 0; invalidatePick(); apply();
+}
+let _alts = [];                 // 上一次点选命中的**全部**并列候选（供「点名字换一块」用）
+function identifyAt(cx, cy){
+  const IN = document.getElementById('pickinfo');
+  if (!BLOCKS.length){
+    IN.innerHTML = '<div><b>没有逐块清单</b><span>包里没有 <code>meta/blocks.json</code> ⇒ 点选报不出名字。'
+                 + '重出：<code>python rebuild/tools/mk_catalog.py</code> 后重打包。</span></div>';
+    pickBox.visible = false; return;
+  }
+  if (curId !== 'pack'){
+    IN.innerHTML = '<div><b>这是参照件</b><span>重建链出的<b>包外</b>比对件，没有逐块清单。切回「交付包模型」再点。</span></div>';
+    pickBox.visible = false; return;
+  }
+  const rc = cv.getBoundingClientRect();
+  _ndc.set(((cx - rc.left) / rc.width) * 2 - 1, -((cy - rc.top) / rc.height) * 2 + 1);
+  _ray.setFromCamera(_ndc, camera);
+  // ★ 这里**另起一次**求交（不复用 `pickAt`）：`pickAt` 只回传命中点、不回传**命中的那块 mesh**，
+  //   而类名必须从 mesh 的节点名取。也不动 `_pickN` —— J-09.1.1 拿那个计数核「限流生效」，别污染它。
+  const hits = _ray.intersectObject(root, true);
+  if (!hits.length){
+    IN.innerHTML = '<div><b>没点到块</b><span>射线没打到模型（点到天空或地面了）。把指针放到墙、板、楼梯上再单击。</span></div>';
+    pickBox.visible = false; return;
+  }
+  const [X, Y, Z] = v2mm(hits[0].point);
+  const cls = _classOf(hits[0].object);
+  const nm = faceNormalMM(hits[0]);
+  const at = '<div><b>点到的坐标</b><span>' + _fmtM(X) + ', ' + _fmtM(Y) + ', ' + _fmtM(Z) + ' m</span></div>';
+  // ★ 用「沿 −法线退 20 mm 的那点」把共边的邻块排掉（见 whoIs 上面那段）。法线错了就自动退回原判。
+  const got = whoIs(X, Y, Z, cls, X - nm[0]*INSIDE_MM, Y - nm[1]*INSIDE_MM);
+  if (!got.length){
+    IN.innerHTML = '<div><b>这一块没在清单里</b><span>打到 <code>' + nodeOf(hits[0].object) + '</code>（类 '
+      + (cls || '认不出') + '）' + at.replace(/^<div><b>/, '，') + '</span></div>'
+      + '<div class="note" style="margin:6px 0 0">★ <b>报不出名字本身就是读数</b>：清单里没有哪一块 '
+      + (cls || '同类') + ' 盖住这个点 ⇒ 这一处的<b>件与轮廓对不上</b>。把这块的位置说给我，我按它去查。</div>';
+    pickBox.visible = false; return;
+  }
+  const b = got[0];
+  let extra = at;
+  _alts = got;
+  if (got.length > 1){
+    // ★ 并列 = **件本身有重叠**（实测 1946/8720 块在其第一条环边上与同类另一块并存；
+    //   加上「沿 −法线退 20 mm」那条修正后剩下的这些，多半是柱/楼梯条**真的**叠在一起）。
+    //   不假装唯一：报最小那块 + 把其余名字列成**可点的**（点一下换框那一块）。
+    const nm = got.slice(0, 8).map(x =>
+      '<code class="pickalt" data-n="' + x.name + '" style="cursor:pointer">' + x.name + '</code>').join(' ');
+    extra += '<div class="note" style="margin:6px 0 0">★ 这个坐标下有 <b>' + got.length + '</b> 块同类'
+      + '盖在一起（<b>件本身的毛病</b>，不是尺子的错）。报的是其中<b>最小</b>那块；'
+      + '点任一个名字就改框那一块：<br>' + nm + (got.length > 8 ? ' …' : '') + '</div>';
+  }
+  showBlock(b, extra);
+}
+
+// ── 单击 = 点选（与左键拖拽旋转区分：位移 < 5 px 且按下 < 500 ms 才算「单击」）──
+const CLICK_PX = 5, CLICK_MS = 500;
+let _down = null;
+cv.addEventListener('pointerdown', e => {
+  if (e.button === 0) _down = {id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now()};
+  else _down = null;                       // 中/右键是平移，不留「单击候选」
+});
+cv.addEventListener('pointerup', e => {
+  const d = _down; _down = null;
+  if (!d || d.id !== e.pointerId || e.button !== 0) return;
+  if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > CLICK_PX) return;   // 拖过 ⇒ 是旋转
+  if (performance.now() - d.t > CLICK_MS) return;                        // 按住久了 ⇒ 也不是单击
+  identifyAt(e.clientX, e.clientY);
+});
+
+// ── 清单：层/类 快筛 + 名字搜索 + 点一行飞过去 ──────────────
+const qIn = document.getElementById('q'), qList = document.getElementById('qlist'),
+      qCap = document.getElementById('qcap');
+const Q_CAP = 200;
+const matchQ = (b, terms) => terms.every(t =>
+  /^[A-Z_]+$/.test(t) ? b.layer === t : (b.name.indexOf(t) >= 0 || b.id.indexOf(t) >= 0));
+function renderQ(){
+  if (!BLOCKS.length){
+    qCap.innerHTML = '★ 包里没有 <code>meta/blocks.json</code>（跑 <code>rebuild/tools/mk_catalog.py</code> 后重打包）。';
+    qList.innerHTML = ''; return;
+  }
+  const s = qIn.value.trim(), terms = s ? s.split(/\s+/) : [];
+  const idx = [];
+  for(let i = 0; i < BLOCKS.length; i++) if (!terms.length || matchQ(BLOCKS[i], terms)) idx.push(i);
+  const ncls = new Set(BLOCKS.map(b => b.layer)).size;
+  qCap.innerHTML = '清单共 <b>' + BLOCKS.length + '</b> 块（' + (cat.floors.length) + ' 层 · ' + ncls + ' 类）'
+    + (terms.length ? ' · 「<b>' + s + '</b>」筛出 <b>' + idx.length + '</b> 块' : '')
+    + (idx.length > Q_CAP ? ' · 只列前 ' + Q_CAP : '');
+  qList.innerHTML = idx.slice(0, Q_CAP).map(i => {
+    const b = BLOCKS[i];
+    return '<div class="layrow" data-i="' + i + '">'
+      + '<span class="nm" style="min-width:150px">' + b.name + '</span>'
+      + '<span class="rg">' + b.layer + ' · ' + ((b.zhi - b.zlo)/1000).toFixed(2) + ' m</span></div>';
+  }).join('');
+}
+qList.addEventListener('click', e => {
+  const r = e.target.closest('.layrow'); if (!r) return;
+  [...qList.children].forEach(c => { c.style.background = (c === r) ? '#241f12' : ''; });
+  flyTo(BLOCKS[+r.dataset.i]);
+});
+// 并列候选里点一个名字 ⇒ 换成框那一块（**保留**候选名单，好让人接着试下一个）
+document.getElementById('pickinfo').addEventListener('click', e => {
+  const t = e.target.closest('.pickalt'); if (!t) return;
+  const b = _alts.find(x => x.name === t.dataset.n); if (!b) return;
+  const [x0, y0, x1, y1] = b.bb;
+  pickBox.position.copy(mm2v((x0+x1)/2, (y0+y1)/2, (b.zlo+b.zhi)/2));
+  pickBox.scale.set(Math.max((x1-x0)/1000, 0.12), Math.max((b.zhi-b.zlo)/1000, 0.12),
+                    Math.max((y1-y0)/1000, 0.12));
+  pickBox.visible = true;
+  document.getElementById('pickinfo').innerHTML = [
+    ['这一块', '<b style="color:var(--hi)">' + b.name + '</b>'],
+    ['编号 id', b.id + '（从并列候选里手选的）'],
+    ['层 / 类', b.fl + ' · ' + b.layer],
+    ['竖直区间', _fmtM(b.zlo) + ' – ' + _fmtM(b.zhi) + ' m'],
+  ].map(([k, v]) => '<div><b>' + k + '</b><span>' + v + '</span></div>').join('')
+  + '<div class="note" style="margin:6px 0 0">★ 这一块是<b>手选</b>的（同一坐标下有 '
+  + _alts.length + ' 块并列）。' + _alts.slice(0, 8).map(x =>
+    '<code class="pickalt" data-n="' + x.name + '" style="cursor:pointer">' + x.name + '</code>').join(' ')
+  + '</div>';
+});
+qIn.addEventListener('input', renderQ);
+document.getElementById('qclear').onclick = () => { qIn.value = ''; renderQ(); };
+{
+  // 层 / 类 的按钮**从清单现算**（不手打：两处写同一个名单，证明不了哪个对 —— 铁律 018）
+  const flr = document.getElementById('qflr'), cls = document.getElementById('qcls');
+  flr.innerHTML = (cat ? cat.floors.map(f => f.name) : [])
+    .map(n => '<button data-q="' + n + '-">' + n + '</button>').join('');
+  cls.innerHTML = [...new Set(BLOCKS.map(b => b.layer))]
+    .map(c => '<button data-q="' + c + '">' + c + '</button>').join('');
+  const pick = e => { const b = e.target.closest('button'); if (b){ qIn.value = b.dataset.q; renderQ(); } };
+  flr.addEventListener('click', pick); cls.addEventListener('click', pick);
+}
+renderQ();
+// 只读探针（判据用）：清单条数、以及「给一个模型坐标能报出哪些块名」—— 让上面这套可被外部量
+window.__cdutBlocks = () => BLOCKS.length;
+window.__cdutWho = (x, y, z, cls) => whoIs(x, y, z, cls || '').map(b => b.name);
+// 只读探针：走**和单击完全相同**的那段（射线→法线→whoIs→渲染），返回面板上的判词。
+// 判据用它造刺激（真点一次要占鼠标、还可能被浮层挡住），不必手点。
+window.__cdutIdentify = (x, y) => {
+  identifyAt(x, y);
+  return document.getElementById('pickinfo').textContent.replace(/\s+/g, ' ').trim();
+};
+// 带面法线的版本：判据按「打在面上的点 + 面法线」走**页面同一条**路径（含 −n·20 mm 那一步）
+window.__cdutWhoN = (x, y, z, cls, nx, ny) =>
+  whoIs(x, y, z, cls || '', x - nx*INSIDE_MM, y - ny*INSIDE_MM).map(b => b.name);
+
+function tick(){
+  // 惯性：松手后按上一步的速度继续转、每帧衰减 8%。没有这一条，拖拽是「一松就死」的僵硬感
+  if (!drag && !pinch && (Math.abs(vTheta) > 1e-4 || Math.abs(vPhi) > 1e-4)){
+    theta -= vTheta; phi -= vPhi; vTheta *= 0.92; vPhi *= 0.92; apply();
+  }
+  renderer.render(scene,camera); requestAnimationFrame(tick);
+}
+resize(); apply(); tick(); paintNet();
+setTimeout(paintNet, 1200);   // 等逐层 JSON 也记进清单
+</script>
+</body></html>

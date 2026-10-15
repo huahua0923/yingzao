@@ -1,0 +1,3 @@
+{"字节": 15308056, "sha256": "80f397101a10", "v": 120297, "f": 95350, "g": 3549}
+contours 逐类合计 {"WALL": 523, "COL": 1310, "LIFT": 72, "SLAB": 53, "DOOR": 1014, "STAIR": 4746, "LINTEL": 955, "PARAPET": 2, "ROOF_STAIR": 2, "ROOF_STEP": 2}
+LAYERSUM 8679

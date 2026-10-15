@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>外部复核 · 成品件由别的软件量一遍 — 第六教学楼 cdut3d</title>
+<style>
+  :root{
+    --ground:#0c0f14; --panel:#141a23; --panel2:#1b2230; --line:#28313f;
+    --ink:#e9edf4; --dim:#8b95a6; --dim2:#5d6778;
+    --amber:#e0a458; --mint:#57c98a; --coral:#f2705e; --sky:#6fb2e8;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+    --cjk:"Source Han Sans SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--cjk);
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--sky);text-decoration:none;border-bottom:1px dotted #3d5266}
+  a:hover{color:#a9d3f5;border-bottom-color:#a9d3f5}
+  code{font-family:var(--mono);font-size:12.5px;background:#0a0d12;border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;color:#c8d3e2}
+  .wrap{max-width:1560px;margin:0 auto;padding:0 22px 90px}
+  header{padding:40px 0 20px;border-bottom:1px solid var(--line);margin-bottom:22px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:12px}
+  h1{margin:0 0 10px;font-size:30px;line-height:1.25;letter-spacing:-.01em;font-weight:700}
+  h1 em{font-style:normal;color:var(--amber)}
+  .lede{color:var(--dim);margin:0;max-width:92ch;font-size:14.5px}
+  .lede strong{color:var(--ink)}
+  .bar{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;margin:20px 0 0;background:var(--panel)}
+  .bar>div{flex:1 1 150px;padding:11px 15px;border-right:1px solid var(--line)}
+  .bar>div:last-child{border-right:0}
+  .bar .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2)}
+  .bar .v{font-family:var(--mono);font-size:16.5px;font-variant-numeric:tabular-nums;margin-top:3px}
+  .ok{color:var(--mint)} .no{color:var(--coral)} .wr{color:var(--amber)} .mut{color:var(--dim2)}
+  h2.bandtitle{margin:40px 0 12px;font-size:19px;font-weight:600;letter-spacing:-.005em;
+    padding-bottom:9px;border-bottom:1px solid var(--line)}
+  h2.bandtitle span{font-family:var(--mono);font-size:11.5px;color:var(--dim2);margin-left:10px;
+    letter-spacing:.06em}
+  .panel{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;margin-top:14px}
+  table{width:100%;border-collapse:collapse;font-size:12.8px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #1c232e;vertical-align:top}
+  th{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--dim2);font-weight:500;background:var(--panel2)}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  td.tri b{color:var(--ink);font-weight:600}
+  tr.redrow td{background:#1d1417}
+  .pill{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 7px;border-radius:20px;
+    border:1px solid currentColor;letter-spacing:.04em}
+  .note{color:var(--dim);font-size:13px;margin:12px 0 0;max-width:110ch}
+  .note b{color:var(--ink)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+  @media(max-width:1000px){.two{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:14px 16px;margin-top:14px}
+  .card h3{margin:0 0 8px;font-size:13.5px}
+  .card ul{margin:0;padding-left:20px;color:var(--dim);font-size:13.2px}
+  .card li{margin:6px 0}
+  .card li b{color:var(--ink)}
+  pre{background:#0a0d12;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:var(--mono);font-size:12.2px;color:#c8d3e2;margin:10px 0 0}
+  .fail{padding:26px;border:1px solid var(--coral);border-radius:10px;background:#1d1417;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">J-10.9-06 · 外部复核 · 成品件 c006_su.obj</div>
+  <h1>成品件，交给<em>别的软件</em>量一遍</h1>
+  <p class="lede">
+    本仓二十多条判据绝大多数是<strong>自己量自己</strong>：几何是 Python 生成的，判据也是 Python 写的 ——
+    同一个约定错了两边一起错，全绿也证明不了件是对的。这一页的数，全部出自<strong>别的软件</strong>
+    读<strong>同一份 OBJ</strong>：Blender（另一套内核）、three.js 的 OBJLoader（另一门语言、另一份实现），
+    外加一把只数行、不 import 任何三维库的「文本尺子」。下面每一个数字都是它们当场读出来的，
+    页面上没有一个是手写的。
+  </p>
+  <div class="bar" id="bar"></div>
+</header>
+<main id="main"></main>
+</div>
+
+<script>
+const esc = s => String(s == null ? '' : s)
+  .replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = xs => '[' + xs.map(x => x == null ? '—' : (Math.round(x * 1e6) / 1e6)).join(', ') + ']';
+const cmp = v => Array.isArray(v) ? esc(num(v)) : esc(v);
+
+// 一个格：✓ / ✗ / —（null = 本条**未声明**：我们不假装它验过）
+function verdict(c){
+  if (c['对'] === true)  return '<span class="ok">✓</span>';
+  if (c['对'] === false) return '<span class="no">✗</span>';
+  return '<span class="mut">—</span>';
+}
+
+fetch('./../rebuild/模型库/复核.json?v=' + Date.now())
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(render)
+  .catch(e => {
+    document.getElementById('main').innerHTML =
+      '<div class="fail"><b>读不到复核报告</b>（' + esc(e.message) + '）<br><br>' +
+      '先跑这一条（单行，直接粘）：<pre>python D:\\项目\\cdut3d\\gates\\J-10.9-06_外部复核.py</pre></div>';
+  });
+
+function render(d){
+  const rows = d['行'] || [], rulers = d['尺子'] || {};
+  const nRed = rows.reduce((a, r) => a + (r['检查'] || []).filter(c => c['对'] === false).length, 0);
+
+  document.getElementById('bar').innerHTML = [
+    ['红条数', nRed === 0 ? '<span class="ok">0</span>' : '<span class="no">' + nRed + '</span>'],
+    ['件数', esc(rows.length)],
+    ['Blender', '<span class="mut">' + esc(rulers.blender && rulers.blender['版本'] || '—') + '</span>'],
+    ['three.js', '<span class="mut">r' + esc(rulers.three && rulers.three['版本'] || '—') + '</span>'],
+    ['模型库生成', '<span class="mut">' + esc(d['件_json_生成时刻'] || '—') + '</span>'],
+    ['复核时刻', '<span class="mut">' + esc(d['时刻'] || '—') + '</span>'],
+  ].map(kv => '<div><div class="k">' + kv[0] + '</div><div class="v">' + kv[1] + '</div></div>').join('');
+
+  const M = document.getElementById('main');
+  let h = '';
+
+  // ── 一、三把尺子读同一份件
+  h += '<h2 class="bandtitle">一 · 三把尺子，同一份 OBJ<span>同一个文件、同一个下标 —— 不是「两个件比大小」</span></h2>';
+  h += '<div class="panel"><table><thead><tr><th>件</th><th class="num">文本尺子 size</th>' +
+       '<th class="num">Blender size</th><th class="num">three.js size</th><th class="num">文本 v</th>' +
+       '<th class="num">three mesh</th><th class="num">Blender 顶点</th><th>结论</th></tr></thead><tbody>';
+  for (const r of rows){
+    const red = (r['检查'] || []).some(c => c['对'] === false);
+    const t = r['文本'] || {}, b = r['blender'] || {}, x = r['three'] || {};
+    h += '<tr class="' + (red ? 'redrow' : '') + '">' +
+      '<td class="tri"><b>' + esc(r['件']) + '</b></td>' +
+      '<td class="num">' + num(t.size) + '</td>' +
+      '<td class="num">' + num(b.size) + '</td>' +
+      '<td class="num">' + num(x.size) + '</td>' +
+      '<td class="num">' + esc(t.n_v) + '</td>' +
+      '<td class="num">' + esc(x.n_mesh) + '</td>' +
+      '<td class="num">' + esc(b.n_vert) + '</td>' +
+      '<td>' + (red ? '<span class="pill no">红</span>' : '<span class="pill ok">OK</span>') + '</td></tr>';
+  }
+  h += '</tbody></table></div>';
+  h += '<p class="note"><b>三列写法不一样是对的：</b>文本尺子与 three.js 报的是<strong>文件原样</strong>的轴（高在 Y）；' +
+       'Blender 的 OBJ 导入自带 Y-up→Z-up 换算，报的是 <code>(fx, fz, fy)</code>。闸按每把尺子各自的约定换算后再比 —— ' +
+       '不换算直接比大小，会把同一个件判成对不上（那是换主语）。换算规则是<strong>拿好件实测反推</strong>的，不是照抄文档。</p>';
+
+  // ── 二、断言表
+  h += '<h2 class="bandtitle">二 · 我们对尺子说的话，逐条验真伪<span>声明「该变」就必须变；声明「抓不到」就必须真抓不到</span></h2>';
+  h += '<div class="panel"><table><thead><tr><th>件</th><th>检查项</th><th class="num">声明</th>' +
+       '<th class="num">实测</th><th>判定</th></tr></thead><tbody>';
+  for (const r of rows){
+    const cs = r['检查'] || [];
+    cs.forEach((c, i) => {
+      h += '<tr>' +
+        (i === 0 ? '<td rowspan="' + cs.length + '" class="tri"><b>' + esc(r['件']) + '</b></td>' : '') +
+        '<td>' + esc(c['键']) + (c['注'] ? '<br><span class="mut" style="font-size:12px">' + esc(c['注']) + '</span>' : '') + '</td>' +
+        '<td class="num">' + cmp(c['声明']) + '</td>' +
+        '<td class="num">' + cmp(c['实测']) + '</td>' +
+        '<td>' + verdict(c) + '</td></tr>';
+    });
+  }
+  h += '</tbody></table></div>';
+
+  // ── 三、证明了什么 / 看不见什么
+  h += '<h2 class="bandtitle">三 · 这条判据证明了什么<span>以及它看不见什么</span></h2>';
+  h += '<div class="two">' +
+    '<div class="card"><h3 class="ok">证明了</h3><ul>' +
+      '<li><b>件没坏</b>：三个不同实现读同一份 OBJ，包围盒三分量彼此对上（相对 &lt; ' +
+        esc((d['容差'] || {})['长度_mm'] || '1e-6') + '），顶点数与 <code>v</code> 行数相等。</li>' +
+      '<li><b>尺子有分辨力</b>：拿三个<b>已知坏件</b>去喂 —— 放大 25.4 倍、高度轴横过来、丢掉全部门头墙。' +
+        '每一件的读数都先由程序算好期望值（期望值 = 好件实测 × 变换律，不手打），量出来对不上就红。</li>' +
+      '<li><b>尺子不是同一把刷三遍</b>：<b>丢掉门头墙</b>那一件，三把尺子的<b>包围盒一字不变</b>（尺寸抓不到），' +
+        '但组数 / 面数掉了 —— 要靠同一个量具的<b>另一个字段</b>才看得见。缺哪个字段，就是哪种缺陷会漏。</li>' +
+      '<li><b>翻查记录</b>：报告用的正是<b>这次</b>现跑的读数（<code>复核.json</code>），不是旧存档。</li>' +
+    '</ul></div>' +
+    '<div class="card"><h3 class="wr">看不见的（先声明，再判）</h3><ul>' +
+      '<li><b>只量包围盒 + 计数</b>。墙直不直、门开在哪、楼梯对不对，这一页一概看不见 —— ' +
+        '那是 <code>J-09.2-A1*</code> 与 <code>J-10.9-01/02/03</code> 的活。</li>' +
+      '<li><b>丢面件的 Blender 顶点数记「未声明」</b>：面没了以后 Blender 会不会连失去引用的顶点一起丢，' +
+        '我没量过，就不写进判据 —— 表里那一格是 <span class="mut">—</span>，不是 ✓。</li>' +
+      '<li><b>体积 / 非流形边只有 Blender 报</b>，另两把量不到 —— 比不了的就是不能比，所以不列。</li>' +
+      '<li><b>没量到 ≠ 坏了</b>：Blender 或 node 不在时报 <code>rc=4</code>，不是 <code>rc=1</code>。' +
+        '这条本身是跑出来的：第一版 SKIP 路径印了个 GBK 编不出的 <code>⇒</code>，异常把退出码从 4 摔成 1 —— ' +
+        '正对照当场抓到，已修。</li>' +
+    '</ul></div></div>';
+
+  // ── 四、复现
+  const root = 'D:\\项目\\cdut3d';
+  h += '<h2 class="bandtitle">四 · 怎么自己跑一遍<span>单行，直接粘</span></h2>';
+  h += '<div class="card"><h3>造库 / 复核 / 正对照</h3><pre>' +
+    esc('python ' + root + '\\rebuild\\模型库\\make_lib.py') + '\n' +
+    esc('python ' + root + '\\gates\\J-10.9-06_外部复核.py') + '\n' +
+    esc('python ' + root + '\\gates\\J-10.9-06_外部复核.py --bad-sha') + '    ' + esc('（正对照：sha 那条必须红）') +
+    '</pre><p class="note">库清单与期望值：<code>rebuild/模型库/件.json</code>；本次复核报告：' +
+    '<code>rebuild/模型库/复核.json</code>（本页只读它，数全部现算）。' +
+    '件本身 <code>rebuild/06_su/c006_su.obj</code> 的 sha256 钉在清单里，件一漂就红。<br><br>' +
+    '<b>判据凭什么这么判、允许多大差</b> —— 逐条写在 ' +
+    '<a href="./../rebuild/模型库/标准.md"><code>rebuild/模型库/标准.md</code></a>：' +
+    '三把尺子各自报哪根轴、每个检查项的允差与出处、哪几件是已知坏件、' +
+    '以及<b>还没坐实的四条</b>（Blender 丢面件的顶点数只量到一次、3ds Max 那把尺子还没量到、' +
+    '体积/非流形边另两把量不到、几何内容对不对本闸一概不管）。' +
+    '（点开是 Markdown 源码，不是渲染页。）</p></div>';
+
+  M.innerHTML = h;
+}
+</script>
+</body>
+</html>
