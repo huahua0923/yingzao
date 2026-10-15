@@ -208,9 +208,17 @@ const lay = await getJSON(PACK + '/meta/layering.json');
 //   读不到就 null（老包没有这件）——下面一律按「没有清单」处理，**不假装能点选**。
 const cat = declared('meta/blocks.json') ? await getJSON(PACK + '/meta/blocks.json') : null;
 // 包里的说明串用 markdown 的 **粗体**。先转义再翻译，免得数据里的尖括号当标签跑。
-// ★ 必须定义在**用它的那块之前**：`const` 有暂时性死区，放到后面会让这段直接抛 ReferenceError。
-const md = s => String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))
-                          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+// ★ 这三个必须定义在**用它们的那块之前**：`const` 有暂时性死区，放到后面会让那段直接抛 ReferenceError。
+//
+// ★★ 2026-10-16（安全审查）：原来**只有 md() 一处转义**，其余二十多处是把 JSON 里的串
+//    裸拼进 innerHTML。包是本地生成的、页面只在 127.0.0.1 上跑，所以**当前不可利用**；
+//    但这是**潜伏**的 —— 一旦把这页拿去对外（规划中的 Web 大屏），件名 / 图层名 / 清单串
+//    就成了注入口（而图层名直接从 DXF 来）。
+//    ⇒ **文本位用 `esc`、属性位用 `attr`**（属性位必须多转 `"` / `'` —— 否则一个带引号的
+//    名字就能闭合属性、跑出标签）。`md` = `esc` + 翻粗体，**由 `esc` 派生**，两条路不会走岔。
+const esc  = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const attr = s => esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const md   = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 {
   // ★ 2026-10-14 换链后这里**不能读 `lay.basement`**：新 layering.json 没有那个键
   //   （旧包那份有，是 libs3d 那条链写的）。读不存在的键 ⇒ 静默变空串、页面上什么都不显示，
@@ -220,9 +228,9 @@ const md = s => String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt
   document.getElementById('flnote').innerHTML = _b1 ? (
     `★ 这里<b>只有地上 ${_nup} 层</b>：<code>baseline/floors/floor&lt;k&gt;.json</code> 的 k=0..${_nup - 1}
      对应 <b>F1…F${_nup}</b>（gym3d 的层号是 <b>0 基</b>，原始交付件里没有地下层）。
-     <b>地下一层在三维那边</b>：GLB 节点 <code>${_b1.node}</code>，标高
-     <b>${_b1.lo_m}–${_b1.hi_m} m</b>、${_b1.faces} 面（${Object.keys(_b1.classes).join(' / ')}）。
-     见 <code>meta/layering.json</code>，件来源 <code>${lay.source_model}</code>。`) : '';
+     <b>地下一层在三维那边</b>：GLB 节点 <code>${esc(_b1.node)}</code>，标高
+     <b>${_b1.lo_m}–${_b1.hi_m} m</b>、${_b1.faces} 面（${esc(Object.keys(_b1.classes).join(' / '))}）。
+     见 <code>meta/layering.json</code>，件来源 <code>${esc(lay.source_model)}</code>。`) : '';
 }
 
 // ① 包身份
@@ -234,7 +242,7 @@ document.getElementById('ident').innerHTML = [
   ['包大小', (bytes/1e6).toFixed(1) + ' MB'],
   ['声明的边界', 'no_raw_imagery = ' + man.no_raw_imagery + '（不含原始影像）'],
   ['包指纹 package_sha256', man.package_sha256],
-].map(([k,v])=>`<div><b>${k}</b><span>${v}</span></div>`).join('');
+].map(([k,v])=>`<div><b>${k}</b><span>${esc(v)}</span></div>`).join('');
 
 // ② 质检
 const g = qc.gauge, pc = qc.positive_control;
@@ -248,20 +256,20 @@ document.getElementById('qc').innerHTML = `
   <div class="foot">${md(g.name)}</div>
   <div class="bar"><i style="width:${100*g.value}%"></i><u style="left:${100*g.threshold}%"></u></div>
   <div class="barcap">值 <b style="color:var(--ok)">${pct(g.value)}</b> ·
-    阈值 ${pct(g.threshold)}（红线）· 口径：${g.scope}</div>
+    阈值 ${pct(g.threshold)}（红线）· 口径：${esc(g.scope)}</div>
 
   <h3>正对照 fired = <span style="color:var(--ok)">${pc.fired}</span></h3>
   <div class="foot">${md(pc.perturbation)}</div>
   <div class="bar" style="background:#221f1c">
     <i style="width:${100*pc.value}%;background:linear-gradient(90deg,#7a4a2a,#c0603a)"></i>
     <u style="left:${100*g.threshold}%"></u></div>
-  <div class="barcap">假件 ${pct(pc.value)} · 期望：${pc.expect}</div>
+  <div class="barcap">假件 ${pct(pc.value)} · 期望：${esc(pc.expect)}</div>
   <div class="note">${md(pc.evidence)}</div>
 
   <h3>已知缺陷（不是绿）</h3>
   <table><thead><tr><th>层</th><th>级别</th><th>码</th><th>flags</th></tr></thead><tbody>
   ${qc.known_defects.map(d=>`<tr><td>F${d.floor+1}</td>
-     <td style="color:var(--warn)">${d.sev}</td><td>${d.code||'—'}</td>
+     <td style="color:var(--warn)">${esc(d.sev)}</td><td>${esc(d.code||'—')}</td>
      <td style="text-align:left">${(d.flags&&d.flags.length)?md(d.flags.join(' · ')):'—'}</td></tr>`).join('')}
   </tbody></table>`;
 
@@ -299,9 +307,9 @@ async function showFloor(f, btn){
              stroke="#0f0e0d" stroke-width="0.06"/>`;
   }).join('');
   document.getElementById('plancap').innerHTML =
-    `<b>F${f.n+1}</b>（地上）· 层高 ${d.layer_height} m · 墙 ${walls.length} 条 ·
+    `<b>F${f.n+1}</b>（地上）· 层高 ${esc(d.layer_height)} m · 墙 ${walls.length} 条 ·
      房间 ${(d.rooms||[]).length} 间 · 门 ${(d.doors||[]).length} 樘 · 窗 ${(d.windows||[]).length} 扇 ·
-     柱 ${(d.columns||[]).length} 根 · 来自 <code>${f.rel}</code>`;
+     柱 ${(d.columns||[]).length} 根 · 来自 <code>${esc(f.rel)}</code>`;
 }
 
 // ④ ID 台账
@@ -311,20 +319,20 @@ document.getElementById('ids').innerHTML = `
   <div class="kv"><div><b>总条数</b><span>${ids.total_ids} 条 / ${kinds.length} 类</span></div>
   <div><b>形状</b><span>id → {kind, floor, idx, legacy}，按<b>身份</b>索引，不按位置</span></div></div>
   <table><thead><tr><th>类型 kind</th><th>条数</th></tr></thead><tbody>
-  ${kinds.map(([k,n])=>`<tr><td>${k}</td><td>${n}</td></tr>`).join('')}</tbody></table>
+  ${kinds.map(([k,n])=>`<tr><td>${esc(k)}</td><td>${n}</td></tr>`).join('')}</tbody></table>
   <h3>抽样（墙）</h3>
   <div class="foot" style="font-family:var(--mono);font-size:11.5px;overflow-wrap:anywhere">
   ${samples.map(s=>{const v=ids.items[s];
-     return `<div>${s} → 层 F${v.floor} · 位置号 ${v.legacy}</div>`;}).join('')}</div>
+     return `<div>${esc(s)} → 层 F${v.floor} · 位置号 ${esc(v.legacy)}</div>`;}).join('')}</div>
   <div class="note">★ ID = <code>校区:楼栋:类型:sha256(身份)[:16]</code>。<b>不是</b>位置号。
   用位置号（<code>w0-4</code> 这种）的话，前面插一堵墙，后面 142 条会<b>静默改指</b>，
   而 id 集合只多一个 —— 集合差看不见脱锚，只能按 id 对齐再比内容。</div>`;
 
 // ⑤ 件清单
 document.getElementById('arts').innerHTML = man.artifacts.map(a=>`
-  <tr><td>${a.role}</td><td style="text-align:left">${a.path}</td>
+  <tr><td>${esc(a.role)}</td><td style="text-align:left">${esc(a.path)}</td>
       <td>${a.bytes.toLocaleString()}</td>
-      <td>${a.sha256.slice(0,10)}…</td></tr>`).join('');
+      <td>${esc(a.sha256.slice(0,10))}…</td></tr>`).join('');
 
 // ⑦ 盲区
 document.getElementById('blind').innerHTML =
@@ -336,7 +344,7 @@ document.getElementById('blind').innerHTML =
 function paintNet(){
   document.getElementById('net').innerHTML = LOADS.map(u=>{
     const inPack = u.startsWith(PACK + '/');
-    return `<li>${inPack?'包内 <b>✓</b>':'<b style="color:var(--bad)">包外 ✗</b>'} ${u}</li>`;
+    return `<li>${inPack?'包内 <b>✓</b>':'<b style="color:var(--bad)">包外 ✗</b>'} ${esc(u)}</li>`;
   }).join('');
 }
 
@@ -701,12 +709,12 @@ const LAYNOTE_PACK =
   + Object.keys(CLASS_STYLE).map(k =>
       `<span style="display:inline-flex;align-items:center;gap:4px;margin:1px 9px 1px 0;white-space:nowrap">`
       + `<i style="width:10px;height:10px;border-radius:2px;display:inline-block;background:#${
-          CLASS_STYLE[k].color.toString(16).padStart(6, '0')}"></i><code>${k}</code></span>`).join('')
+          CLASS_STYLE[k].color.toString(16).padStart(6, '0')}"></i><code>${esc(k)}</code></span>`).join('')
   + `<br>勾选控制显示；行内滑块控制该层的透明度；<b>双击层名 = 只看这一层</b>。`;
 const LAYNOTE_FULL = '每「行」= GLB 的一个<b>顶层节点</b> = <b>某层的某类构件</b>（<code>1层_wall</code>、'
                    + '<code>10层_col</code>…），共 <b>76</b> 行 —— 不是楼层。勾选控制显示、行内滑块控制该行透明度。';
 document.getElementById('piece').innerHTML =
-  Object.entries(MODELS).map(([k, m]) => `<button data-pid="${k}">${m.label}</button>`).join('');
+  Object.entries(MODELS).map(([k, m]) => `<button data-pid="${attr(k)}">${esc(m.label)}</button>`).join('');
 document.getElementById('piece').addEventListener('click', e => {
   const b = e.target.closest('button'); if (b && b.dataset.pid !== curId) loadPiece(b.dataset.pid);
 });
@@ -1022,10 +1030,10 @@ function identifyAt(cx, cy){
   // ★ 用「沿 −法线退 20 mm 的那点」把共边的邻块排掉（见 whoIs 上面那段）。法线错了就自动退回原判。
   const got = whoIs(X, Y, Z, cls, X - nm[0]*INSIDE_MM, Y - nm[1]*INSIDE_MM);
   if (!got.length){
-    IN.innerHTML = '<div><b>这一块没在清单里</b><span>打到 <code>' + nodeOf(hits[0].object) + '</code>（类 '
-      + (cls || '认不出') + '）' + at.replace(/^<div><b>/, '，') + '</span></div>'
+    IN.innerHTML = '<div><b>这一块没在清单里</b><span>打到 <code>' + esc(nodeOf(hits[0].object)) + '</code>（类 '
+      + esc(cls || '认不出') + '）' + at.replace(/^<div><b>/, '，') + '</span></div>'
       + '<div class="note" style="margin:6px 0 0">★ <b>报不出名字本身就是读数</b>：清单里没有哪一块 '
-      + (cls || '同类') + ' 盖住这个点 ⇒ 这一处的<b>件与轮廓对不上</b>。把这块的位置说给我，我按它去查。</div>';
+      + esc(cls || '同类') + ' 盖住这个点 ⇒ 这一处的<b>件与轮廓对不上</b>。把这块的位置说给我，我按它去查。</div>';
     pickBox.visible = false; return;
   }
   const b = got[0];
@@ -1036,7 +1044,7 @@ function identifyAt(cx, cy){
     //   加上「沿 −法线退 20 mm」那条修正后剩下的这些，多半是柱/楼梯条**真的**叠在一起）。
     //   不假装唯一：报最小那块 + 把其余名字列成**可点的**（点一下换框那一块）。
     const nm = got.slice(0, 8).map(x =>
-      '<code class="pickalt" data-n="' + x.name + '" style="cursor:pointer">' + x.name + '</code>').join(' ');
+      '<code class="pickalt" data-n="' + attr(x.name) + '" style="cursor:pointer">' + esc(x.name) + '</code>').join(' ');
     extra += '<div class="note" style="margin:6px 0 0">★ 这个坐标下有 <b>' + got.length + '</b> 块同类'
       + '盖在一起（<b>件本身的毛病</b>，不是尺子的错）。报的是其中<b>最小</b>那块；'
       + '点任一个名字就改框那一块：<br>' + nm + (got.length > 8 ? ' …' : '') + '</div>';
@@ -1075,13 +1083,13 @@ function renderQ(){
   for(let i = 0; i < BLOCKS.length; i++) if (!terms.length || matchQ(BLOCKS[i], terms)) idx.push(i);
   const ncls = new Set(BLOCKS.map(b => b.layer)).size;
   qCap.innerHTML = '清单共 <b>' + BLOCKS.length + '</b> 块（' + (cat.floors.length) + ' 层 · ' + ncls + ' 类）'
-    + (terms.length ? ' · 「<b>' + s + '</b>」筛出 <b>' + idx.length + '</b> 块' : '')
+    + (terms.length ? ' · 「<b>' + esc(s) + '</b>」筛出 <b>' + idx.length + '</b> 块' : '')
     + (idx.length > Q_CAP ? ' · 只列前 ' + Q_CAP : '');
   qList.innerHTML = idx.slice(0, Q_CAP).map(i => {
     const b = BLOCKS[i];
     return '<div class="layrow" data-i="' + i + '">'
-      + '<span class="nm" style="min-width:150px">' + b.name + '</span>'
-      + '<span class="rg">' + b.layer + ' · ' + ((b.zhi - b.zlo)/1000).toFixed(2) + ' m</span></div>';
+      + '<span class="nm" style="min-width:150px">' + esc(b.name) + '</span>'
+      + '<span class="rg">' + esc(b.layer) + ' · ' + ((b.zhi - b.zlo)/1000).toFixed(2) + ' m</span></div>';
   }).join('');
 }
 qList.addEventListener('click', e => {
@@ -1099,14 +1107,14 @@ document.getElementById('pickinfo').addEventListener('click', e => {
                     Math.max((y1-y0)/1000, 0.12));
   pickBox.visible = true;
   document.getElementById('pickinfo').innerHTML = [
-    ['这一块', '<b style="color:var(--hi)">' + b.name + '</b>'],
-    ['编号 id', b.id + '（从并列候选里手选的）'],
-    ['层 / 类', b.fl + ' · ' + b.layer],
+    ['这一块', '<b style="color:var(--hi)">' + esc(b.name) + '</b>'],
+    ['编号 id', esc(b.id) + '（从并列候选里手选的）'],
+    ['层 / 类', esc(b.fl) + ' · ' + esc(b.layer)],
     ['竖直区间', _fmtM(b.zlo) + ' – ' + _fmtM(b.zhi) + ' m'],
   ].map(([k, v]) => '<div><b>' + k + '</b><span>' + v + '</span></div>').join('')
   + '<div class="note" style="margin:6px 0 0">★ 这一块是<b>手选</b>的（同一坐标下有 '
   + _alts.length + ' 块并列）。' + _alts.slice(0, 8).map(x =>
-    '<code class="pickalt" data-n="' + x.name + '" style="cursor:pointer">' + x.name + '</code>').join(' ')
+    '<code class="pickalt" data-n="' + attr(x.name) + '" style="cursor:pointer">' + esc(x.name) + '</code>').join(' ')
   + '</div>';
 });
 qIn.addEventListener('input', renderQ);
@@ -1115,9 +1123,9 @@ document.getElementById('qclear').onclick = () => { qIn.value = ''; renderQ(); }
   // 层 / 类 的按钮**从清单现算**（不手打：两处写同一个名单，证明不了哪个对 —— 铁律 018）
   const flr = document.getElementById('qflr'), cls = document.getElementById('qcls');
   flr.innerHTML = (cat ? cat.floors.map(f => f.name) : [])
-    .map(n => '<button data-q="' + n + '-">' + n + '</button>').join('');
+    .map(n => '<button data-q="' + attr(n) + '-">' + esc(n) + '</button>').join('');
   cls.innerHTML = [...new Set(BLOCKS.map(b => b.layer))]
-    .map(c => '<button data-q="' + c + '">' + c + '</button>').join('');
+    .map(c => '<button data-q="' + attr(c) + '">' + esc(c) + '</button>').join('');
   const pick = e => { const b = e.target.closest('button'); if (b){ qIn.value = b.dataset.q; renderQ(); } };
   flr.addEventListener('click', pick); cls.addEventListener('click', pick);
 }
