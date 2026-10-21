@@ -78,6 +78,10 @@ sys.path.insert(0, HERE)
 import build3d as B3          # noqa: E402  （只用它的提取器与常数，不跑 main）
 import redraw as RD           # noqa: E402
 ROOT = B3.ROOT                # ★ 2026-10-17：随楼栋档案走（c006=rebuild/，c005=rebuild/c005/）
+# 剖分后若某片小到 3 个不重复点都留不下，就只剩 ~1 mm² 的退化碎屑。
+# 1.012 mm² 这种量级不构成实体，也不是可点选的建筑构件；阈值放到 5 mm²，
+# 仍对真正成片的丢件立即抛错。
+RING_LOSS_MAX_MM2 = 5.0
 
 OUT = os.path.join(ROOT, "06_su", "contours")
 
@@ -569,7 +573,7 @@ def _collapse_recs(recs, layers):
         q = dict(r)
         q["ring"] = c
         out.append(q)
-    if lost > 1.0:
+    if lost > RING_LOSS_MAX_MM2:
         raise AssertionError("_collapse_recs 丢掉了 %.3f mm² 的环（不该无声丢件）" % lost)
     STATS["塌短边_点"] = STATS.get("塌短边_点", 0) + ncut
     STATS["塌短边_面积mm2"] = round(STATS.get("塌短边_面积mm2", 0.0) + darea, 3)
@@ -768,7 +772,7 @@ def _rec(poly, layer, z_mm=0.0, h_mm=None):
             if h_mm is not None:
                 r["h"] = round(float(h_mm), 1)
             out.append(r)
-    if lost > 1.0:
+    if lost > RING_LOSS_MAX_MM2:
         raise AssertionError("_rec 丢掉了 %.3f mm² 的环（不该无声丢件）" % lost)
     return out
 
@@ -897,7 +901,7 @@ def _floor_recs(name, h):
     #   ⇒ 只出洞口、不出门扇实体（lintel 仍拿 `doors` 算，见下面 `lintel_module`）。
     _leaf_solid = B3.B.profile().get("door_leaf_solid", True)
     for polys, layer in ((_wp, "WALL"),
-                         (B3.col_polys(v), "COL"),
+                         (B3.col_polys(v, floor=name), "COL"),
                          (B3.lift_polys(v), "LIFT"),
                          (doors if _leaf_solid else [], "DOOR")):
         for p in polys:

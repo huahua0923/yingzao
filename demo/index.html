@@ -84,6 +84,22 @@
  .layrow .pv{width:38px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
  .laybar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0}
  .laybar input[type=range]{flex:1;accent-color:var(--hi)}
+
+/* 2026-10-21：嵌入首页时去掉重复的查看器顶栏，并提高剩余文字的可读性。 */
+.embed header{display:none}
+.embed main{height:100%}
+.embed #postag{display:none}
+header h1{font-size:20px;font-weight:700}
+header .sub{font-size:13px;color:#a29d94}
+.fp{font-size:12.5px}
+h2{font-size:12.5px;font-weight:700;letter-spacing:1px}
+table{font-size:12.5px}
+.kv{font-size:13px}
+.foot,.note,.blind{font-size:12.5px;line-height:1.75}
+.badge{font-size:12px;font-weight:700}
+.barcap{font-size:12.5px}
+.layrow{font-size:12.5px}
+.layrow .rg{font-size:12px}
 </style>
 <!-- 嵌入模式：写在 <head> 里（**必须早于首次绘制**，放到 <body> 后面会先照原样闪一帧再收，
      那一下正是「版面在跳」的样子）。只认参数、不认来源 —— 谁带 embed 就收谁的右侧栏。 -->

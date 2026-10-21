@@ -2,7 +2,7 @@
  "schema": "cdut3d-modelpack/1",
  "campus_id": "cdut-main",
  "building_id": "c006",
- "created_at": "2026-10-21T08:45:46+08:00",
+ "created_at": "2026-10-21T10:26:29+08:00",
  "no_raw_imagery": true,
  "lod": {
   "schema": "cdut3d-lod/1",
@@ -37,8 +37,8 @@
   {
    "role": "model",
    "path": "model/c006-building.glb",
-   "bytes": 6981624,
-   "sha256": "a1d7f971092e6fe613814f8f4e2fe073fde118a8a0cb18c5540b9bff9a58f877"
+   "bytes": 5242700,
+   "sha256": "a769f07c04eafa7b78cb1fb1673a8edb5c0fad2436aa64213b9c505f26c44825"
   },
   {
    "role": "ledger",
@@ -61,109 +61,109 @@
   {
    "role": "meta",
    "path": "meta/layering.json",
-   "bytes": 7406,
-   "sha256": "eac30c750f1272d2bb000c89b3b577a8e70f2b8190aafc4a5e5ffd0cc96a3ab3"
+   "bytes": 7403,
+   "sha256": "d1d75591a3508cd8060fbb0672e11b2dca919971235f7f4ddd3402efc878f1c5"
   },
   {
    "role": "catalog",
    "path": "meta/blocks.json",
-   "bytes": 1280807,
-   "sha256": "d52b06ff23816e32b22d062418371e4cf3cde9bacf0c54b367218cf2698d2d6e"
+   "bytes": 1105289,
+   "sha256": "ae414b5895b9aab941329b2aa316c98cd34112579fdfeb1ac0cd6ab0d6a542b1"
   },
   {
    "role": "evidence",
    "path": "evidence/c006-qc-control.json",
    "bytes": 1096,
-   "sha256": "ba673de786977a828f27e3b3e9c681fdb66cb7c39cc696210fa03cfe7c1b963e"
+   "sha256": "6589df82a02c9366ad0df240eda13a34663091d3d6066c63e48412b7f1a57960"
   },
   {
    "role": "evidence",
    "path": "evidence/c006-chain.json",
-   "bytes": 4436,
-   "sha256": "d0e1bd06e37400c1920be5c113d155115474855f6491e29af530d786d4623a4a"
+   "bytes": 4435,
+   "sha256": "49c251fcf8798c23fb6b3635128959267c991bdc0b5456346f1a5dc16024cfc4"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor0.json",
-   "bytes": 37895,
-   "sha256": "4910efa6ca88e4d58604f3a2e21221727da2a32d89e890bcea06ed726026b367",
+   "bytes": 38038,
+   "sha256": "dff9a4954b6a716d7de471b93cb68b4898cad63474b55535e335c85370403c71",
    "node": "B1"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor1.json",
-   "bytes": 358015,
-   "sha256": "501c785646b23ae8eea4c3789da3406d01c746386aa4b8d0e78ac7309aee21ea",
+   "bytes": 260005,
+   "sha256": "23a7eeaf3de9ce50b28110be4bc574a6458d0fb8a0601e2d773afc5d746cf70a",
    "node": "floor0"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor2.json",
-   "bytes": 252093,
-   "sha256": "caecfee9c79f52c27225ffee83f77ede17eba1cb59d5994953d84c99c8289b08",
+   "bytes": 212990,
+   "sha256": "bfea4756c936c2aa4d6b609fed92ee6cdf96dcccdacb19ee89746ff2f2db6fa6",
    "node": "floor1"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor3.json",
-   "bytes": 245967,
-   "sha256": "5d97a888baec72a354f7a7df034f7473a57a9cdadc8d86e76ce4ea95a3495a03",
+   "bytes": 207008,
+   "sha256": "77f02086b2361dbcf59bb892e45630af68db47b5e423b602b5d53da8436a0178",
    "node": "floor2"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor4.json",
-   "bytes": 245859,
-   "sha256": "1d3bbe14ec673a262b173f31d1782b29f1aedeaa1abaefa557f119a99aab8ca1",
+   "bytes": 206900,
+   "sha256": "4ee9f009c09da7c1d920ea5f93fa8fda0e876994bcc7f3538293f4025e08aa56",
    "node": "floor3"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor5.json",
-   "bytes": 224019,
-   "sha256": "7c0e55f5da65832014a157c57c218e37b04af04e2f49942332cfe81b151afa59",
+   "bytes": 187040,
+   "sha256": "4bf606c226f26c43db4b2af9361bc6e9bc7782c88525a5e58f7c2881221a87c0",
    "node": "floor4"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor6.json",
-   "bytes": 224618,
-   "sha256": "55c521990022bc689188d6f11f8d352d6eca2c63e02ec7126d99eeaf0ea7982b",
+   "bytes": 187642,
+   "sha256": "ee365ebb27fa58475ece61ff45d28cdc186cee29d8d9e617264317022167a57d",
    "node": "floor5"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor7.json",
-   "bytes": 58431,
-   "sha256": "bd29b3b478d6314e4bcea6acf7f5ef262b9e63354020e42b01d57dc49b93b504",
+   "bytes": 58708,
+   "sha256": "42ae8c07cc7bb5b9b70bff9d025e6cbd8c412ccc9e97d6182f7e66b628c33424",
    "node": "floor6"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor8.json",
-   "bytes": 53883,
-   "sha256": "52b214390c69f03547e80d050d11ae6d2c36b4c3558022eefb3233726765f35e",
+   "bytes": 54162,
+   "sha256": "8b8901e595d925232a0cb9d4cfc4e2d01d64a91a3dfcb0d38a32e7310643248e",
    "node": "floor7"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor9.json",
-   "bytes": 54325,
-   "sha256": "7abb9f4f1bf4a9abd46be0c448e7a9f016a5dbc0eb8f8592684300b74f70d7bb",
+   "bytes": 54606,
+   "sha256": "f15f7bfb834527dee4a3f703215b44945b64dd44f3598ee10768cb150bae1cd6",
    "node": "floor8"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor10.json",
-   "bytes": 53897,
-   "sha256": "c3fe73673ada1e130370532caaebdeb2f6b1928710b4817344816245def9fad9",
+   "bytes": 54176,
+   "sha256": "1ff97743da749cb5ee68dab67a9b287acb65282b306f149befe5d05759f6ac5d",
    "node": "floor9"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor11.json",
-   "bytes": 54306,
-   "sha256": "83e7e510ffe961c4e6b15cf8b5a3bd88e4badbce4614d91d09b2c74c8d5ca3c7",
+   "bytes": 54585,
+   "sha256": "ed6743db77c511f118595aac7c6494feb931362ba7f0e5ee4046026a2836676b",
    "node": "floor10"
   }
  ],
@@ -174,5 +174,5 @@
   "bytes": 1454,
   "sha256": "cf4185ec9d0773a84de5597a519cc31910f7593adb0c2f083a082ab3435d3505"
  },
- "package_sha256": "09879b9e16affbaa5d71ace83871c9055e27801b9cffa35c6a7b489a69a7eda4"
+ "package_sha256": "ae81630c1047c504731ae94b8e203b10c850e196d00a1baebe11f269b2eaff2a"
 }

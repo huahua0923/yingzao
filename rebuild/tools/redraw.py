@@ -61,6 +61,9 @@ DOOR_OPEN_MM = tuple(float(x) for x in _DRAW.get("doors_open_mm", [1100.0, 2400.
 DOOR_OPEN_TOL = float(_DRAW.get("doors_open_tol", 60.0))
 # 门候选的「等墙向长边」窗口（mm，扣门框之前）；空 = 不筛（c001/c005 的既有读数不变）
 DOOR_WIDTH_MM = tuple(float(x) for x in _DRAW.get("doors_width_mm") or ()) or None
+# 栅格墙带斜边的台阶幅值约半个像素；20 mm 可把 25 mm 栅格的斜边拉直，
+# 同时不改变 90° 墙角和门洞位置。只作用于栅格轮廓，不碰源图多段线。
+WALL_STRAIGHTEN_MM = 20.0
 # ★★ 2026-10-17 剩下 60 多栋楼的实测：门符号是**近方形**的（含门扇+开启弧），
 #   而**窗**符号是**贴墙的长条**（C025/C028 实测 2250×250、C114 2100×300 = 墙厚带）。
 #   只按点数筛会把这批窗当门抠出全高洞口 ⇒ 用「短边/长边」下限再筛一道。
@@ -626,14 +629,41 @@ def _column_loop(pts):
     return [(float(x), float(y)) for x, y in best.exterior.coords[:-1]]
 
 
-def _square_pixel_steps(pts, res):
-    """把栅格描边留下的 1~2 px 45° 台阶折成直角（2026-10-19 用户「墙和墙接触的地方为啥不是直角」）。
+def _straighten_wall_ring(pts, res):
+    """把栅格化墙带留下的阶梯斜边拉成直线。
 
-    cv2 的 8 连通轮廓在两行错开一格处走一步 45°（25 mm，或 2 格 50 mm）——
-    墙与墙相接的丁字/转角因此成了小倒角。这里**只**处理短 45° 段，且要求**前后两段
-    都轴对齐**：把段的两端换成交点 ⇒ 拐点回到 90°。真斜墙的长 45° 边、以及前后
-    有斜边的段一律不动（避免把斜墙改成锯齿）。
-    返回 `(新点列, 折了几处)`。
+    c001 的斜墙在 5 层图上表现为 75 mm 横步 + 25 mm 竖步的连续阶梯：
+    20 mm 容差可把轮廓点从 14,583 个降到约 7,900 个并拉直斜边，同时保留直墙拐角。
+    只对栅格轮廓使用；源图 LWPOLYLINE 墙不走这里。
+    """
+    if len(pts) < 8:
+        return pts, 0
+    from shapely.geometry import Polygon
+
+    try:
+        poly = Polygon(pts)
+        if not poly.is_valid or poly.area <= 0:
+            return pts, 0
+        tol = max(12.0, min(WALL_STRAIGHTEN_MM, float(res) * 0.8))
+        simplified = poly.simplify(tol, preserve_topology=True)
+        if simplified.geom_type != "Polygon" or simplified.is_empty:
+            return pts, 0
+        q = [(float(x), float(y)) for x, y in simplified.exterior.coords[:-1]]
+        if len(q) < 3 or abs(_ring_area(q)) <= 0:
+            return pts, 0
+        return q, max(0, len(pts) - len(q))
+    except Exception:
+        return pts, 0
+
+
+def _square_pixel_steps(pts, res):
+    """把栅格描边留下的 1~2 px 45° 台阶折成直角。
+
+    只处理短 45° 段，且要求前后两段都轴对齐：把段的两端换成交点 ⇒ 拐点回到 90°。
+    真斜墙的长 45° 边、以及前后有斜边的段一律不动。
+
+    ★ 2026-10-21 性能修复：旧版每修一处都从环起点重新扫描，c105 的 2 万处修改
+      退化成 O(n²)，单层卡住 20 分钟以上。现在只回看两个相邻位置，线性扫描。
     """
     if len(pts) < 4:
         return pts, 0
@@ -642,40 +672,42 @@ def _square_pixel_steps(pts, res):
     eps = res * 0.25
     cap = res * 2.0 + 1e-6
     fixed = 0
-    changed = True
-    while changed and len(q) >= 4:
-        changed = False
+    i = 0
+    while len(q) >= 4 and i < len(q):
         m = len(q)
-        for i in range(m):
-            a, b = q[i], q[(i + 1) % m]
-            dx, dy = b[0] - a[0], b[1] - a[1]
-            if max(abs(dx), abs(dy)) > cap or min(abs(dx), abs(dy)) <= eps:
-                continue
-            if abs(abs(dx) - abs(dy)) > eps:                 # 不是 45°
-                continue
-            p0 = q[(i - 1) % m]
-            p2 = q[(i + 2) % m]
-            pv = (a[0] - p0[0], a[1] - p0[1])
-            nv = (p2[0] - b[0], p2[1] - b[1])
-            ph, pvv = abs(pv[1]) <= eps, abs(pv[0]) <= eps    # 前一段 横 / 竖
-            nh, nvv = abs(nv[1]) <= eps, abs(nv[0]) <= eps    # 后一段 横 / 竖
-            if not ((ph or pvv) and (nh or nvv)):
-                continue
-            j = (i + 1) % m
-            if pvv and nvv:                                   # 两段都竖（平行）：在 y=a.y 处横一步
-                q[j] = (b[0], a[1])
-            elif ph and nh:                                   # 两段都横（平行）：在 x=a.x 处竖一步
-                q[j] = (a[0], b[1])
-            else:                                             # 垂直相交：两端并成一个交点
-                corner = (a[0], b[1]) if pvv else (b[0], a[1])
-                q[i] = corner
-                if j == 0:                                    # 收尾那一段（b 是首点）
-                    del q[0]
-                else:
-                    del q[j]
-            fixed += 1
-            changed = True
-            break
+        a, b = q[i], q[(i + 1) % m]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        short_45 = (
+            max(abs(dx), abs(dy)) <= cap
+            and min(abs(dx), abs(dy)) > eps
+            and abs(abs(dx) - abs(dy)) <= eps
+        )
+        if not short_45:
+            i += 1
+            continue
+        p0 = q[(i - 1) % m]
+        p2 = q[(i + 2) % m]
+        pv = (a[0] - p0[0], a[1] - p0[1])
+        nv = (p2[0] - b[0], p2[1] - b[1])
+        ph, pvv = abs(pv[1]) <= eps, abs(pv[0]) <= eps
+        nh, nvv = abs(nv[1]) <= eps, abs(nv[0]) <= eps
+        if not ((ph or pvv) and (nh or nvv)):
+            i += 1
+            continue
+        j = (i + 1) % m
+        if pvv and nvv:
+            q[j] = (b[0], a[1])
+        elif ph and nh:
+            q[j] = (a[0], b[1])
+        else:
+            corner = (a[0], b[1]) if pvv else (b[0], a[1])
+            q[i] = corner
+            if j == 0:
+                del q[0]
+            else:
+                del q[j]
+        fixed += 1
+        i = max(0, i - 2)
     if not q:
         return pts, 0
     if closed:
@@ -1147,6 +1179,14 @@ def geometry(floor):
     lifts_all = lift_rects(doc)
     lifts, lift_dropped = _keep_vertical_lifts(lifts_all, floor)
     steps.extend(lift_dropped)
+    # 人工指认的花台/台阶（坐标来自已复核的 WALL 块）：同样先从墙掩膜剔除，
+    # 再按 STEP_H_M 统一出件。数据写在楼栋档案 `planter_walls`，不改代码常量。
+    _manual_steps = (B.profile().get("planter_walls") or []) if floor == B.floor_names()[0] else []
+    for ring in _manual_steps:
+        if isinstance(ring, list) and len(ring) >= 3:
+            steps.append([[float(pt[0]), float(pt[1])] for pt in ring])
+    if _manual_steps:
+        print("  ▷ %s 人工花台/平台：%d 组" % (floor, len(_manual_steps)))
     for rect in steps:
         pts = np.asarray([[(round((x - ox) / res), round((y - oy) / res))
                            for x, y in rect]], dtype=np.int32)
@@ -1218,23 +1258,33 @@ def geometry(floor):
     cnts, hier = cv2.findContours(wmask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     walls = []
     n_sq = 0
+    n_straight = 0
     for j in range(len(cnts)):
         if hier[0][j][3] != -1:                          # 只取外环
             continue
         shell = _contour_mm(cnts[j], res, ox, oy)
         if len(shell) < 3:
             continue
+        # ★ 2026-10-21 用户「斜的墙面不是直线，c001 比较明显」：
+        #   栅格斜边是一条条 25 mm 台阶；先用容差化简拉直，再处理丁字口的小 45° 台阶。
+        shell, _n_straight = _straighten_wall_ring(shell, res)
+        n_straight += _n_straight
         # ★ 2026-10-19 用户「墙和墙接触的地方为啥不是直角」：栅格 8 连通描边留下的
         #   1~2 px 45° 台阶在这里折成直角。墙与墙相接的丁字口全部落在这条路上。
         shell, _n1 = _square_pixel_steps(shell, res)
         n_sq += _n1
         holes = []
         for k in R._children(hier, j):
-            h, _n2 = _square_pixel_steps(_contour_mm(cnts[k], res, ox, oy), res)
+            _h0 = _contour_mm(cnts[k], res, ox, oy)
+            _h1, _n_h_straight = _straighten_wall_ring(_h0, res)
+            n_straight += _n_h_straight
+            h, _n2 = _square_pixel_steps(_h1, res)
             n_sq += _n2
             if len(h) >= 3:
                 holes.append(h)
         walls.append((shell, holes))
+    if n_straight:
+        print("  ▷ %s 墙轮廓斜边拉直：%d 个栅格台阶点" % (floor, n_straight))
     if n_sq:
         print("  ▷ %s 墙轮廓像素台阶折直角：%d 处" % (floor, n_sq))
 

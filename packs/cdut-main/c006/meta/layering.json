@@ -16,13 +16,13 @@
  "layers": [
   {
    "node": "B1",
-   "faces": 2956,
+   "faces": 2980,
    "classes": {
     "COL": 528,
     "DOOR": 156,
     "LIFT": 60,
-    "LINTEL": 68,
-    "SLAB": 288,
+    "LINTEL": 96,
+    "SLAB": 284,
     "STAIR": 648,
     "WALL": 1208
    },
@@ -31,7 +31,7 @@
     "DOOR": -1.4,
     "LIFT": 0.0,
     "LINTEL": 0.0,
-    "SLAB": -3.38,
+    "SLAB": -3.3,
     "STAIR": 0.0,
     "WALL": 0.0
    },
@@ -44,17 +44,17 @@
   },
   {
    "node": "floor0",
-   "faces": 28290,
+   "faces": 18618,
    "classes": {
     "COL": 3996,
     "DOOR": 684,
     "LIFT": 60,
-    "LINTEL": 476,
+    "LINTEL": 744,
     "PARAPET": 360,
     "ROOF": 148,
     "SLAB": 890,
-    "STAIR": 3420,
-    "WALL": 18256
+    "STAIR": 3408,
+    "WALL": 8328
    },
    "class_hi": {
     "COL": 4.0,
@@ -76,15 +76,15 @@
   },
   {
    "node": "floor1",
-   "faces": 19532,
+   "faces": 15206,
    "classes": {
     "COL": 4068,
     "DOOR": 588,
     "LIFT": 60,
-    "LINTEL": 352,
+    "LINTEL": 410,
     "SLAB": 1000,
-    "STAIR": 3848,
-    "WALL": 9616
+    "STAIR": 3844,
+    "WALL": 5236
    },
    "class_hi": {
     "COL": 8.0,
@@ -104,15 +104,15 @@
   },
   {
    "node": "floor2",
-   "faces": 19328,
+   "faces": 14938,
    "classes": {
     "COL": 4068,
     "DOOR": 636,
     "LIFT": 60,
-    "LINTEL": 352,
+    "LINTEL": 410,
     "SLAB": 996,
-    "STAIR": 3848,
-    "WALL": 9368
+    "STAIR": 3844,
+    "WALL": 4924
    },
    "class_hi": {
     "COL": 12.0,
@@ -132,16 +132,16 @@
   },
   {
    "node": "floor3",
-   "faces": 19424,
+   "faces": 15034,
    "classes": {
     "COL": 4068,
     "DOOR": 636,
     "LIFT": 60,
-    "LINTEL": 352,
+    "LINTEL": 410,
     "ROOF": 96,
     "SLAB": 996,
-    "STAIR": 3848,
-    "WALL": 9368
+    "STAIR": 3844,
+    "WALL": 4924
    },
    "class_hi": {
     "COL": 16.0,
@@ -162,15 +162,15 @@
   },
   {
    "node": "floor4",
-   "faces": 16360,
+   "faces": 12012,
    "classes": {
     "COL": 3024,
     "DOOR": 456,
     "LIFT": 60,
-    "LINTEL": 208,
+    "LINTEL": 270,
     "SLAB": 860,
     "STAIR": 2992,
-    "WALL": 8760
+    "WALL": 4350
    },
    "class_hi": {
     "COL": 20.0,
@@ -190,15 +190,15 @@
   },
   {
    "node": "floor5",
-   "faces": 16356,
+   "faces": 12014,
    "classes": {
     "COL": 3024,
     "DOOR": 468,
     "LIFT": 60,
-    "LINTEL": 180,
+    "LINTEL": 248,
     "SLAB": 860,
     "STAIR": 2992,
-    "WALL": 8772
+    "WALL": 4362
    },
    "class_hi": {
     "COL": 24.0,
@@ -218,17 +218,17 @@
   },
   {
    "node": "floor6",
-   "faces": 21026,
+   "faces": 10658,
    "classes": {
     "COL": 480,
     "DOOR": 228,
     "LIFT": 60,
-    "LINTEL": 352,
-    "PARAPET": 15810,
+    "LINTEL": 292,
+    "PARAPET": 5470,
     "ROOF": 524,
     "SLAB": 236,
     "STAIR": 2040,
-    "WALL": 1296
+    "WALL": 1328
    },
    "class_hi": {
     "COL": 28.0,
@@ -250,12 +250,12 @@
   },
   {
    "node": "floor7",
-   "faces": 2400,
+   "faces": 2456,
    "classes": {
     "COL": 384,
     "DOOR": 96,
     "LIFT": 60,
-    "LINTEL": 28,
+    "LINTEL": 84,
     "SLAB": 252,
     "STAIR": 356,
     "WALL": 1224
@@ -278,12 +278,12 @@
   },
   {
    "node": "floor8",
-   "faces": 2420,
+   "faces": 2476,
    "classes": {
     "COL": 384,
     "DOOR": 96,
     "LIFT": 60,
-    "LINTEL": 28,
+    "LINTEL": 84,
     "SLAB": 252,
     "STAIR": 356,
     "WALL": 1244
@@ -306,12 +306,12 @@
   },
   {
    "node": "floor9",
-   "faces": 2400,
+   "faces": 2456,
    "classes": {
     "COL": 384,
     "DOOR": 96,
     "LIFT": 60,
-    "LINTEL": 28,
+    "LINTEL": 84,
     "SLAB": 252,
     "STAIR": 356,
     "WALL": 1224
@@ -334,12 +334,12 @@
   },
   {
    "node": "floor10",
-   "faces": 3416,
+   "faces": 3472,
    "classes": {
     "COL": 384,
     "DOOR": 96,
     "LIFT": 60,
-    "LINTEL": 28,
+    "LINTEL": 84,
     "PARAPET": 452,
     "ROOF": 252,
     "ROOF_ROOM": 280,
@@ -368,8 +368,8 @@
   }
  ],
  "lossless_check": {
-  "faces_sum": 153908,
-  "faces_all_in_glb": 153908,
+  "faces_sum": 112320,
+  "faces_all_in_glb": 112320,
   "unmatched_meshes": [],
   "note": "面数直接从落盘件逐 (层,类) 取、再相加；unmatched_meshes 为空才说明**没有几何落在层节点之外**。上游转格式那一步（su_obj_to_glb / fc_obj_to_glb）另有一条 polys_in == polys_out 断言。"
  },

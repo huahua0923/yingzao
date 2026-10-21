@@ -69,15 +69,15 @@ def _steps(bid, root):
         #   档案里没有 `对照件` 的楼栋：本步 rc=2，链停在这里（不许静默当「没有挑空」）。
         ("挑空识别", py + ["recognize_voids.py"],
          os.path.join(root, "02_recognize", "挑空.json")),
-        # ★ 2026-10-19：楼梯方向**只报不翻**。c006 有 136 条 `上/下` 文字、c001 一条没有；
-        #   本步把文字锚与已建梯的几何方向逐座对账并落盘，**不参与建件**。
-        #   没有文字时也 rc=0（如实写「无文字 全座」），不许因为「没锚」卡死整条链。
-        ("楼梯方向", py + ["report_stair_direction.py"],
-         os.path.join(root, "02_recognize", "楼梯方向.json")),
         ("建件", py + ["build3d.py"],
          os.path.join(root, "05_build", "build.json")),
         ("轮廓", py + ["export_contours.py"],
          os.path.join(root, "06_su", "contours", "index.json")),
+        # ★ 2026-10-21：楼梯方向报告要读 `06_su/contours/index.json`，因此必须排在轮廓之后。
+        #   原先排在“建件”之前，全新楼栋没有旧轮廓时会在这一步假失败（c103/c104/c105 实测）。
+        #   本步仍然只报不翻，不参与建件。
+        ("楼梯方向", py + ["report_stair_direction.py"],
+         os.path.join(root, "02_recognize", "楼梯方向.json")),
         ("FreeCAD", py + ["run_freecad.py"],
          os.path.join(root, "06_su", "%s_fc.obj" % name)),
         ("GLB", py + ["fc_obj_to_glb.py"],

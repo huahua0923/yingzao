@@ -7,7 +7,7 @@
   "passed": 37,
   "total": 37,
   "glb": "D:\\项目\\cdut3d\\rebuild\\06_su\\c006_fc.glb",
-  "sha256": "a1d7f971092e6fe613814f8f4e2fe073fde118a8a0cb18c5540b9bff9a58f877"
+  "sha256": "a769f07c04eafa7b78cb1fb1673a8edb5c0fad2436aa64213b9c505f26c44825"
  },
  "perturbation": {
   "kind": "整层平移",
@@ -15,7 +15,7 @@
   "shift_m": 2.0,
   "meshes_moved": 7,
   "glb": "D:\\项目\\cdut3d\\demo\\_gen\\c006_ctrl_floor1_plus2m.glb",
-  "sha256": "204c6895a6414f542177aba339fec7590937656dff15774165b6e6d383b3a3ec"
+  "sha256": "98adf6eeaeafc194e81e5de6eb7dae75f656685b277b94c2a7c9598c004eefb8"
  },
  "control": {
   "score": 0.945946,

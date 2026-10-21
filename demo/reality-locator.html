@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>实景定位 · 营造</title>
+<link rel="stylesheet" href="/cesium/Widgets/widgets.css">
+<script src="/cesium/Cesium.js"></script>
+<style>
+  :root{
+    --bg:#070c11;--panel:rgba(9,16,22,.9);--line:rgba(228,211,176,.18);
+    --ink:#f1ebdf;--dim:#a2b0ba;--acc:#d8b06a;--ok:#78b99a;--bad:#df8875;
+    --ui:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+    --mono:Consolas,"Cascadia Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font:14px/1.6 var(--ui)}
+  #cesium{position:fixed;inset:0;background:var(--bg)}
+  .cesium-viewer-bottom,.cesium-viewer-toolbar,.cesium-viewer-animationContainer,
+  .cesium-viewer-timelineContainer{display:none!important}
+  .shade{position:fixed;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(4,8,12,.72),transparent 18%,transparent 70%,rgba(4,8,12,.76))}
+  .brand{position:fixed;left:26px;top:22px;z-index:5;pointer-events:none}
+  .brand span{display:block;color:rgba(216,176,106,.9);font-size:10px;font-weight:700;letter-spacing:.22em}
+  .brand h1{margin:4px 0 0;font-size:24px;line-height:1.2;letter-spacing:.04em;color:#fff8eb}
+  .brand p{margin:4px 0 0;color:#a9b5bd;font-size:12px}
+  .panel{
+    position:fixed;left:24px;top:112px;z-index:6;width:min(390px,calc(100vw - 48px));
+    padding:18px 18px 16px;border:1px solid var(--line);border-left:2px solid var(--acc);
+    border-radius:3px;background:linear-gradient(150deg,rgba(15,25,33,.95),rgba(7,13,18,.93));
+    box-shadow:0 22px 60px rgba(0,0,0,.42);backdrop-filter:blur(18px) saturate(115%);
+  }
+  .panel h2{margin:0 0 4px;font-size:15px;color:#f3eadb}
+  .panel .lead{margin:0 0 14px;color:#8f9da7;font-size:12px}
+  label{display:block;margin-top:12px;color:#aebac2;font-size:12px;font-weight:700}
+  input[type=text]{width:100%;height:38px;margin-top:5px;padding:0 11px;border-radius:2px;
+    border:1px solid rgba(228,211,176,.2);background:rgba(3,9,13,.76);color:#fff7e9;
+    font:13px var(--ui);outline:none}
+  input[type=text]:focus{border-color:rgba(216,176,106,.62);box-shadow:0 0 0 3px rgba(216,176,106,.07)}
+  .row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  button{height:36px;padding:0 14px;border:1px solid rgba(228,211,176,.2);border-radius:2px;
+    background:rgba(255,255,255,.025);color:#d7e0e6;font:700 12px var(--ui);cursor:pointer}
+  button:hover{border-color:rgba(216,176,106,.52);color:#f5dfb8}
+  button.primary{border-color:transparent;background:linear-gradient(135deg,#e0bf7a,#b9893f);
+    color:#1a130a}
+  button.primary:hover{color:#100b06;filter:brightness(1.06)}
+  button:disabled{opacity:.42;cursor:not-allowed}
+  .readout{margin-top:14px;padding-top:12px;border-top:1px solid rgba(228,211,176,.12);
+    color:#b8c4cc;font-size:12px}
+  .readout div{display:flex;gap:10px;padding:2px 0}
+  .readout b{min-width:74px;color:#8f9da7;font-weight:400}
+  .readout code{font:12px var(--mono);color:#f0ce8f;overflow-wrap:anywhere}
+  .status{margin-top:12px;min-height:20px;color:#9fadb6;font-size:12px}
+  .status.ok{color:var(--ok)}.status.bad{color:var(--bad)}
+  .crosshair{position:fixed;left:50%;top:50%;z-index:4;width:38px;height:38px;
+    transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 7px rgba(0,0,0,.8))}
+  .crosshair::before,.crosshair::after{content:"";position:absolute;background:#f0ce8f;opacity:.9}
+  .crosshair::before{left:50%;top:0;width:1px;height:100%;transform:translateX(-50%)}
+  .crosshair::after{left:0;top:50%;height:1px;width:100%;transform:translateY(-50%)}
+  .crosshair i{position:absolute;inset:13px;border:1px solid rgba(240,206,143,.72);border-radius:50%}
+  .hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:4;
+    color:rgba(240,233,220,.58);font-size:11px;letter-spacing:.12em;pointer-events:none}
+  .saved{position:fixed;right:24px;top:24px;z-index:6;width:260px;padding:14px 15px;
+    border:1px solid var(--line);border-radius:3px;background:rgba(8,14,20,.82);
+    backdrop-filter:blur(14px);font-size:12px;color:#aebac2}
+  .saved h3{margin:0 0 8px;color:#e4d1aa;font-size:12px;letter-spacing:.1em}
+  .saved div{padding:4px 0;border-bottom:1px solid rgba(228,211,176,.08)}
+  .saved code{color:#f0ce8f;font:11.5px var(--mono)}
+  @media(max-width:760px){
+    .brand{left:14px;top:14px}.brand h1{font-size:20px}
+    .panel{left:12px;top:92px;width:calc(100vw - 24px)}
+    .saved{display:none}.hint{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="cesium"></div>
+<div class="shade"></div>
+<div class="crosshair" aria-hidden="true"><i></i></div>
+<header class="brand">
+  <span>YINGZAO · REALITY LOCATOR</span>
+  <h1>实景定位台</h1>
+  <p>在倾斜摄影中定位楼栋，记录经纬度与 EPSG:4544 坐标</p>
+</header>
+
+<section class="panel">
+  <h2>楼栋定位</h2>
+  <p class="lead">选择楼栋，把十字中心对准建筑主体，再记录当前中心点。</p>
+  <label for="building">楼栋编号 / 名称</label>
+  <input id="building" type="text" list="building-options" autocomplete="off"
+         placeholder="例如 c001 或 砚湖图书馆">
+  <datalist id="building-options"></datalist>
+  <div class="row">
+    <button id="fly" type="button">飞到已记录位置</button>
+    <button id="capture" class="primary" type="button">记录当前中心点</button>
+  </div>
+  <div class="readout">
+    <div><b>经度</b><code id="lon">—</code></div>
+    <div><b>纬度</b><code id="lat">—</code></div>
+    <div><b>椭球高</b><code id="height">—</code></div>
+    <div><b>EPSG:4544</b><code id="en">—</code></div>
+    <div><b>相机方位</b><code id="heading">—</code></div>
+  </div>
+  <div id="status" class="status" role="status">正在加载倾斜摄影…</div>
+</section>
+
+<aside class="saved">
+  <h3>已记录</h3>
+  <div id="saved-list">暂无记录</div>
+</aside>
+<div class="hint">左键旋转 · 右键平移 · 滚轮缩放 · 十字中心为记录点</div>
+
+<script>
+const viewer = new Cesium.Viewer("cesium", {
+  animation: false,
+  baseLayerPicker: false,
+  fullscreenButton: false,
+  geocoder: false,
+  homeButton: false,
+  infoBox: false,
+  navigationHelpButton: false,
+  sceneModePicker: false,
+  selectionIndicator: false,
+  timeline: false,
+  scene3DOnly: true,
+  terrainProvider: new Cesium.EllipsoidTerrainProvider()
+});
+viewer.imageryLayers.removeAll();
+viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#0a1117");
+viewer.scene.globe.depthTestAgainstTerrain = false;
+viewer.scene.fog.enabled = true;
+viewer.scene.fog.density = 0.00018;
+
+const $ = id => document.getElementById(id);
+const buildingInput = $("building");
+const statusEl = $("status");
+let tileset = null;
+let marker = null;
+let buildings = [];
+let locations = {};
+let currentRecord = null;
+
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = "status" + (kind ? " " + kind : "");
+}
+
+function norm(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function findBuilding(value) {
+  const q = norm(value);
+  return buildings.find(item =>
+    norm(item.id) === q || norm(item.title) === q || norm(item.id + " " + item.title) === q
+  );
+}
+
+function fmt(value, digits) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : "—";
+}
+
+function updateReadout(data) {
+  $("lon").textContent = data ? fmt(data.lon, 8) : "—";
+  $("lat").textContent = data ? fmt(data.lat, 8) : "—";
+  $("height").textContent = data ? fmt(data.height, 2) + " m" : "—";
+  $("en").textContent = data && data.x_4544 != null
+    ? fmt(data.x_4544, 2) + ", " + fmt(data.y_4544, 2) : "—";
+  $("heading").textContent = data && data.heading_deg != null
+    ? fmt(data.heading_deg, 1) + "°" : "—";
+}
+
+function renderSaved() {
+  const rows = Object.values(locations).sort((a, b) =>
+    String(a.building_id).localeCompare(String(b.building_id))
+  );
+  $("saved-list").innerHTML = rows.length
+    ? rows.map(row => `<div><code>${row.building_id}</code> · ${fmt(row.lon, 6)}, ${fmt(row.lat, 6)}</div>`).join("")
+    : "暂无记录";
+}
+
+function addMarker(data) {
+  if (marker) viewer.entities.remove(marker);
+  const position = Cesium.Cartesian3.fromDegrees(data.lon, data.lat, data.height + 18);
+  marker = viewer.entities.add({
+    position,
+    point: {
+      pixelSize: 13,
+      color: Cesium.Color.fromCssColorString("#df8875"),
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 2,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    },
+    label: {
+      text: data.building_id,
+      font: "700 13px Microsoft YaHei",
+      fillColor: Cesium.Color.WHITE,
+      showBackground: true,
+      backgroundColor: Cesium.Color.fromCssColorString("#0b1218").withAlpha(0.9),
+      pixelOffset: new Cesium.Cartesian2(0, -24),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
+  });
+}
+
+function flyToLocation(data) {
+  if (!data) return;
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(data.lon, data.lat, data.height + 140),
+    orientation: {
+      heading: Cesium.Math.toRadians(Number(data.heading_deg) || 0),
+      pitch: Cesium.Math.toRadians(-42),
+      roll: 0
+    },
+    duration: 1.2
+  });
+  addMarker(data);
+  updateReadout(data);
+}
+
+function selectedBuilding() {
+  return findBuilding(buildingInput.value);
+}
+
+function captureCenter() {
+  const item = selectedBuilding();
+  if (!item) {
+    setStatus("先选择楼栋：输入编号或名称后再记录。", "bad");
+    buildingInput.focus();
+    return;
+  }
+  viewer.scene.render();
+  const center = new Cesium.Cartesian2(
+    viewer.canvas.clientWidth / 2,
+    viewer.canvas.clientHeight / 2
+  );
+  let world = null;
+  try {
+    world = viewer.scene.pickPosition(center);
+  } catch (_error) {
+    world = null;
+  }
+  if (!Cesium.defined(world)) {
+    const ray = viewer.camera.getPickRay(center);
+    world = ray ? viewer.scene.globe.pick(ray, viewer.scene) : null;
+  }
+  if (!Cesium.defined(world)) {
+    setStatus("中心点没有命中模型：请把建筑移到十字中心并放大后再试。", "bad");
+    return;
+  }
+  const carto = Cesium.Cartographic.fromCartesian(world);
+  const data = {
+    building_id: item.id,
+    title: item.title,
+    lon: Cesium.Math.toDegrees(carto.longitude),
+    lat: Cesium.Math.toDegrees(carto.latitude),
+    height: carto.height,
+    heading_deg: Cesium.Math.toDegrees(viewer.camera.heading),
+    pitch_deg: Cesium.Math.toDegrees(viewer.camera.pitch),
+    range_m: Cesium.Cartesian3.distance(viewer.camera.positionWC, world),
+    source: "local-reality-locator"
+  };
+  currentRecord = data;
+  updateReadout(data);
+  addMarker(data);
+  setStatus("正在保存…");
+  fetch("/api/location", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  }).then(async response => {
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || ("HTTP " + response.status));
+    locations[payload.building_id] = payload;
+    updateReadout(payload);
+    renderSaved();
+    setStatus("已记录 " + payload.building_id + "，EPSG:4544 已换算。", "ok");
+  }).catch(error => {
+    setStatus("保存失败：" + error.message, "bad");
+    console.error(error);
+  });
+}
+
+async function loadTileset() {
+  const config = await fetch("/api/config", {cache: "no-store"}).then(r => r.json());
+  if (Cesium.Cesium3DTileset.fromUrl) {
+    tileset = await Cesium.Cesium3DTileset.fromUrl(config.tileset_url, {
+      maximumScreenSpaceError: 8,
+      skipLevelOfDetail: true
+    });
+  } else {
+    tileset = new Cesium.Cesium3DTileset({
+      url: config.tileset_url,
+      maximumScreenSpaceError: 8,
+      skipLevelOfDetail: true
+    });
+    if (tileset.readyPromise) await tileset.readyPromise;
+  }
+  viewer.scene.primitives.add(tileset);
+  await viewer.zoomTo(tileset);
+  viewer.camera.zoomOut(0.8);
+  setStatus("倾斜摄影已加载。选择楼栋后，把建筑主体对准十字中心。", "ok");
+}
+
+async function boot() {
+  try {
+    buildings = await fetch("/api/buildings", {cache: "no-store"}).then(r => r.json());
+    $("building-options").innerHTML = buildings.map(item =>
+      `<option value="${item.id}">${item.title}</option>`
+    ).join("");
+    locations = await fetch("/api/locations", {cache: "no-store"}).then(r => r.json());
+    renderSaved();
+    buildingInput.addEventListener("change", () => {
+      const item = selectedBuilding();
+      const saved = item ? locations[item.id] : null;
+      if (saved) {
+        flyToLocation(saved);
+        setStatus("已飞到 " + item.id + " 的记录位置。", "ok");
+      } else {
+        setStatus(item ? item.id + " 尚无记录，可手动定位。"
+                       : "未匹配到楼栋，请从列表中选择。",
+                  item ? "" : "bad");
+      }
+    });
+    $("capture").addEventListener("click", captureCenter);
+    $("fly").addEventListener("click", () => {
+      const item = selectedBuilding();
+      const saved = item ? locations[item.id] : null;
+      if (saved) flyToLocation(saved);
+      else setStatus("这栋楼还没有记录位置。", "bad");
+    });
+    await loadTileset();
+  } catch (error) {
+    console.error(error);
+    setStatus("加载失败：" + error.message, "bad");
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

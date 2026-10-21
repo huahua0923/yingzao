@@ -5,7 +5,7 @@ r"""cdut3d 建模工作台 —— 本地系统平台（2026-10-19）。
 每个建筑的生成都有依据，有错误可以直接在页面上指出修改、从哪个方向修改。」
 
 **只读优先**：页面上的每个数都现场从盘上读（档案 / 参数 / 判据 verdict / 包 manifest /
-链上产物的存在性与时刻）。写只有两条口：`/api/params/save` 与 `/api/profile/save`，
+链上产物的存在性与时刻）。写入口：`/api/params/save`、`/api/profile/save` 与独立的 `/api/column-adjustments/save`，
 都先**校验**再**备份**再**字节层原子替换**，最后**回读验一遍**。
 
 启动：
@@ -65,6 +65,7 @@ GOUT = os.path.join(CDUT, "gates", "_out")
 DRAW_LIB_JSON = os.path.join(CDUT, "rebuild", "构件库", "图纸库.json")
 ROOM_LIB_JSON = os.path.join(CDUT, "rebuild", "构件库", "房间库.json")
 ROOM_OVR_JSON = os.path.join(CDUT, "rebuild", "构件库", "房间_改动.json")
+COLUMN_ADJ_JSON = os.path.join(CDUT, "rebuild", "构件库", "柱人工校正.json")
 ROOM_TOOL = os.path.join(CDUT, "rebuild", "tools", "build_libraries.py")
 ROOM_EDIT_FIELDS = ("房间号", "用途", "单位", "图上面积_m2", "备注")
 ZHANG = os.path.join(CDUT, "rebuild", "构件库")
@@ -1172,6 +1173,94 @@ def save_param(payload):
             "rerun": "python -X utf8 -I rebuild/tools/run_batch.py --from 建件 <bids>"}
 
 
+def column_adjustments(bid):
+    if not bid or not BID_RE.match(bid) or bid not in _profiles():
+        raise ValueError("楼栋不存在：%r" % (bid,))
+    root = _load_or(COLUMN_ADJ_JSON, {}) or {}
+    row = ((root.get("楼栋") or {}).get(bid) or {})
+    return {
+        "bid": bid,
+        "exclude": list(row.get("exclude") or []),
+        "add": list(row.get("add") or []),
+        "path": COLUMN_ADJ_JSON,
+        "note": "人工调试覆盖；不写入参数.json，也不进入统一需求",
+    }
+
+
+def save_column_adjustments(payload):
+    bid = str(payload.get("bid") or "")
+    if not bid or not BID_RE.match(bid) or bid not in _profiles():
+        raise ValueError("楼栋不存在：%r" % (bid,))
+    valid_floors = set(B.floor_names(bid))
+    if B.profile(bid).get("basement"):
+        valid_floors.add(B.profile(bid)["basement"])
+
+    def clean_point(value):
+        if not isinstance(value, list) or len(value) != 2:
+            raise ValueError("柱中心必须是两个数")
+        x, y = float(value[0]), float(value[1])
+        if not (-1e7 <= x <= 1e7 and -1e7 <= y <= 1e7):
+            raise ValueError("柱坐标超出合理范围")
+        return [round(x, 1), round(y, 1)]
+
+    exclude = []
+    seen = set()
+    for item in (payload.get("exclude") or [])[:5000]:
+        floor = str(item.get("floor") or "")
+        if floor not in valid_floors:
+            raise ValueError("楼层不存在：%r" % (floor,))
+        center = clean_point(item.get("center"))
+        k = (floor, center[0], center[1])
+        if k in seen:
+            continue
+        seen.add(k)
+        exclude.append({
+            "floor": floor,
+            "center": center,
+            "name": str(item.get("name") or "")[:120],
+            "reason": str(item.get("reason") or "人工复核")[:200],
+        })
+
+    add = []
+    seen_add = set()
+    for item in (payload.get("add") or [])[:5000]:
+        floor = str(item.get("floor") or "")
+        if floor not in valid_floors:
+            raise ValueError("楼层不存在：%r" % (floor,))
+        center = clean_point(item.get("center"))
+        size = item.get("size_mm") or [600, 600]
+        if not isinstance(size, list) or len(size) != 2:
+            raise ValueError("新增柱尺寸必须是 [宽, 深]")
+        w, d = float(size[0]), float(size[1])
+        if not (100 <= w <= 5000 and 100 <= d <= 5000):
+            raise ValueError("新增柱尺寸必须在 100~5000 mm")
+        key = (floor, center[0], center[1])
+        if key in seen_add:
+            continue
+        seen_add.add(key)
+        add.append({
+            "id": str(item.get("id") or "")[:120] or ("人工-%s-%s-%s" % (floor, center[0], center[1])),
+            "floor": floor,
+            "center": center,
+            "size_mm": [round(w, 1), round(d, 1)],
+            "reason": str(item.get("reason") or "人工补充")[:200],
+        })
+
+    root = _load_or(COLUMN_ADJ_JSON, {}) or {}
+    root.setdefault("schema", "cdut3d-column-adjustments/1")
+    root["说明"] = "人工调试覆盖，不写入统一参数、不进入统一需求。按楼层+柱中心匹配。"
+    root.setdefault("楼栋", {})[bid] = {"exclude": exclude, "add": add}
+    backup = _write_json_full(COLUMN_ADJ_JSON, root)
+    return {
+        "ok": True,
+        "bid": bid,
+        "exclude": exclude,
+        "add": add,
+        "backup": backup,
+        "rerun": "python -X utf8 -I rebuild/tools/run_chain_bid.py %s --from 建件" % bid,
+    }
+
+
 def save_profile(payload):
     bid = payload.get("bid")
     field = payload.get("字段") or ""
@@ -1624,6 +1713,10 @@ class H(BaseHTTPRequestHandler):
                 return self._page(os.path.join(UI, "criteria.html"))
             if u.path == "/api/criteria":
                 return self._json(criteria_summary())
+            if u.path == "/api/column-adjustments":
+                return self._json(column_adjustments(q.get("bid") or ""))
+            if u.path in ("/column-review", "/column-review/"):
+                return self._page(os.path.join(UI, "column-review.html"))
             if u.path == "/api/state":
                 return self._json(PIPE.collect())
             if u.path.startswith("/files/"):
@@ -1685,6 +1778,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json(save_param(body))
             if u.path == "/api/profile/save":
                 return self._json(save_profile(body))
+            if u.path == "/api/column-adjustments/save":
+                return self._json(save_column_adjustments(body))
             if u.path == "/api/room/save":
                 return self._json(save_room(body))
             if u.path == "/api/run":

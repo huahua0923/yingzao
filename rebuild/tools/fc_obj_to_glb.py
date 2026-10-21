@@ -220,12 +220,16 @@ def main():
         print("★ Blender 不在：%s" % BLENDER)
         return 4
 
-    bp = os.path.join(HERE, "_fc_obj_to_glb.py")
+    # ★ 2026-10-21：Blender 脚本必须按楼栋隔离。原先所有并发进程都写
+    #   `rebuild/tools/_fc_obj_to_glb.py`，A 楼刚写完就被 B 楼覆盖，
+    #   于是 A 的 Blender 会导出 B 的模型（c073 实测导出了 c080）。
+    bp = os.path.join(ROOT, "06_su", "_fc_obj_to_glb_%s.py" % NAME)
     with open(bp, "w", encoding="utf-8", newline="\n") as f:
         f.write(BPY.replace("__SRC__", SRC).replace("__OUT__", OUT)
                    .replace("__NODES__", json.dumps(_nodes())))
 
-    r = subprocess.run([BLENDER, "-b", "-P", bp], capture_output=True, text=True)
+    r = subprocess.run([BLENDER, "-b", "-P", bp], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
     keep = ("BLENDER_IN", "BLENDER_GROUPS", "BLENDER_NODES", "BLENDER_BBOX_M",
             "EXPORTED", "UNMATCHED", "POLY_LOSS", "MESH_LOSS")
     for ln in (r.stdout or "").splitlines():

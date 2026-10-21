@@ -19,6 +19,8 @@ python -X utf8 -I workbench/server.py --host 127.0.0.1 --port 8150
 - 工作台：`http://127.0.0.1:8150/admin`
 - 流程台：`http://127.0.0.1:8150/pipeline`
 - 健康检查：`http://127.0.0.1:8150/live`、`http://127.0.0.1:8150/health`
+- 柱子人工校正（本地调试）：`http://127.0.0.1:8150/column-review?bid=c001`
+- 实景定位台（本地工具）：`python tools/reality_locator_server.py` 后访问 `http://127.0.0.1:8151/`
 
 ## 生产服务器
 

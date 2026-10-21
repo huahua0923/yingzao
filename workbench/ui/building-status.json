@@ -1,15 +1,15 @@
 {
  "schema": "cdut3d-building-status/1",
- "generated_at": "2026-10-21T07:43:26",
- "matrix_generated_at": "2026-10-21T07:32:01",
+ "generated_at": "2026-10-21T11:26:57",
+ "matrix_generated_at": "2026-10-21T08:19:44",
  "summary": {
   "total": 67,
-  "green": 26,
-  "red": 38,
-  "unknown": 3,
-  "overlay_pass": 63,
+  "green": 1,
+  "red": 0,
+  "unknown": 66,
+  "overlay_pass": 1,
   "rooms": 11104,
-  "model_bytes": 362901704
+  "model_bytes": 196648164
  },
  "gates": [
   "J-10.8-00",
@@ -21,17 +21,17 @@
   {
    "id": "c001",
    "title": "砚湖图书馆",
-   "status": "red",
-   "created_at": "2026-10-21T06:59:22+08:00",
+   "status": "unknown",
+   "created_at": "2026-10-21T10:26:34+08:00",
    "floors": 6,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8947,
    "blind_spots": 3,
    "rooms": 78,
-   "model_bytes": 19533924,
-   "pack_bytes": 24487272,
-   "model_sha256": "b5cf6f75f172a17b555f6eefce1aa90ade60d169999cb50dc4d4fd2f36dccb38",
+   "model_bytes": 3632116,
+   "pack_bytes": 4761432,
+   "model_sha256": "c177a739bf697dc83519ce84f4195d8c299ad4e5ba378e9d6c12278f21ea03cb",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
@@ -40,3334 +40,114 @@
     "meshes": 51,
     "materials": 0,
     "images": 0,
-    "triangles": 408913,
+    "triangles": 78414,
     "bounds_v3": 51
    },
    "gates": {
     "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 4层/F04-WALL-016 的环面积 5.640 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；⑪ 4层/F04-WALL-016 的最短边 2.400 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）；⑪ 5层/F05-ROOF_ROOM-004 的最短边 2.500 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）",
-       "fix": "",
-       "floor": "",
-       "evidence": "2.4 / 5.64",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "2.4 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "5.64 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 2层/F02-DOOR-007 与 F02-DOOR-011 重叠 1250.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 2层/F02-DOOR-009 与 F02-DOOR-011 重叠 1250.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 3层/F03-DOOR-007 与 F03-DOOR-011 重叠 1250.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；…共 10 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "10 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "10 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
+   "red_gates": [],
    "audit_issues": []
   },
   {
-   "id": "c005",
-   "title": "理化楼",
-   "status": "red",
-   "created_at": "2026-10-20T18:49:49+08:00",
-   "floors": 5,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.875,
-   "blind_spots": 3,
-   "rooms": 118,
-   "model_bytes": 1163800,
-   "pack_bytes": 1548226,
-   "model_sha256": "96a36ec917f7bc1f8d9f46367b2837c2fa8d518a09daddb4f95fe1b5efc03cc1",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 33,
-    "materials": 0,
-    "images": 0,
-    "triangles": 24800,
-    "bounds_v3": 33
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-01",
-     "label": "白模形体",
-     "items": [
-      {
-       "rule": "⑨",
-       "status": "fail",
-       "text": "竖井：井壁 + 内空在，且抠洞守恒：5层 抠洞守恒破：墙 102.90 + 洞(墙内实扣) 11.07 + 梯间清空 1.00 + 塌短边 0.00 = 114.97 ≠ 抠前 123.94",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "5 层有井道内空",
-       "params": [
-        {
-         "name": "井道内空",
-         "limit": "参与核的层：n_lift_void ≥ 1 且 A_lift_void_m2 > 0；n_lift 可为 0",
-         "source": "05_build/build.json::floors[].n_lift / n_lift_void / A_lift_void_m2",
-         "measured": "5 层有井道内空",
-         "fix": "无电梯楼不因 n_lift=0 判红；有内空但守恒破才查 build3d"
-        },
-        {
-         "name": "墙内实扣 vs 洞∩墙带",
-         "limit": "|A_wall_cut_by_voids_m2 − A_void_in_wall_m2| ≤ TOL_CONS = 0.5 m²",
-         "source": "05_build/build.json::floors[].A_wall_cut_by_voids_m2 / A_void_in_wall_m2",
-         "measured": "1 条违反",
-         "fix": "核 build3d.py 的洞与墙带求交那一步，重跑 build3d 后再重跑本闸"
-        },
-        {
-         "name": "抠洞守恒",
-         "limit": "|A_wall + A_wall_cut_by_voids + 墙带扣掉 + 塌短边 − A_wall_uncarved| ≤ TOL_CONS = 0.5 m²",
-         "source": "05_build/build.json::floors[].A_wall_m2 / A_wall_uncarved_m2 + stair_clear[].墙带扣掉_m2 / 塌墙带.塌短边面积_m2",
-         "measured": "1 条违反",
-         "fix": "核 build.json 各面积账与 stair_clear，重跑 build3d 后再重跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c006",
-   "title": "第六教学楼（逸夫楼）",
-   "status": "red",
-   "created_at": "2026-10-21T06:59:36+08:00",
-   "floors": 12,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9459,
-   "blind_spots": 3,
-   "rooms": 222,
-   "model_bytes": 7939948,
-   "pack_bytes": 11451525,
-   "model_sha256": "679757df858f3b457a64ae30d495734af936e694cf0609a4389b08853b081ca1",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 104,
-    "meshes": 92,
-    "materials": 0,
-    "images": 0,
-    "triangles": 171736,
-    "bounds_v3": 92
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 2层 的 COL 条数 207 ≠ 源图柱数 209（差 -2；源图 块 197 / 多段线 0 / 墙层圆 12）",
-       "fix": "",
-       "floor": "",
-       "evidence": "11/12 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c006 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "11/12 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c007",
-   "title": "综合楼",
-   "status": "red",
-   "created_at": "2026-10-21T06:59:43+08:00",
-   "floors": 5,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.875,
-   "blind_spots": 3,
-   "rooms": 180,
-   "model_bytes": 1738668,
-   "pack_bytes": 2343392,
-   "model_sha256": "fcea10376f6cc43ebb3d86e398acf60aa51695274853e7054a9915a508f20be1",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 39,
-    "meshes": 34,
-    "materials": 0,
-    "images": 0,
-    "triangles": 38164,
-    "bounds_v3": 34
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 49 ≠ 源图柱数 51（差 -2；源图 块 0 / 多段线 48 / 墙层圆 3）",
-       "fix": "",
-       "floor": "",
-       "evidence": "4/5 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c007 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "4/5 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c015",
-   "title": "芙蓉综合楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:00:03+08:00",
+   "id": "c004",
+   "title": "办公楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:39+08:00",
    "floors": 3,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8,
    "blind_spots": 3,
-   "rooms": 65,
-   "model_bytes": 2595124,
-   "pack_bytes": 3408630,
-   "model_sha256": "0a47cd0567db6577b3f7476f30beba63393bd53e5fc270d9614b8dc4540cf450",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 25,
-    "meshes": 22,
-    "materials": 0,
-    "images": 0,
-    "triangles": 58992,
-    "bounds_v3": 22
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 1/F01-WALL-060 的环面积 25.000 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；⑪ 1/F01-WALL-061 的环面积 25.000 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；⑪ 2/F02-WALL-068 的环面积 112.360 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "6.6468 / 25.0",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "6.6468 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "25.0 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-DOOR-031 与 F01-DOOR-034 重叠 141.599 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-DOOR-032 与 F01-DOOR-033 重叠 141.599 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 3/F03-DOOR-044 与 F03-DOOR-047 重叠 141.599 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；…共 4 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "4 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "4 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c022",
-   "title": "第七教学楼（致远楼）",
-   "status": "red",
-   "created_at": "2026-10-21T07:00:41+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 64,
-   "model_bytes": 1108656,
-   "pack_bytes": 1492947,
-   "model_sha256": "191936be3f51c4e68678bc8f46e7bcdd653829dba2b213704ec716b36a80f34b",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 60,
-    "meshes": 53,
-    "materials": 0,
-    "images": 0,
-    "triangles": 23690,
-    "bounds_v3": 53
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 3,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 1/F01-WALL-003 的环面积 54.600 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）",
-       "fix": "",
-       "floor": "",
-       "evidence": "8.6 / 54.6",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "8.6 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "54.6 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ D1 的 COL 条数 36 ≠ 源图柱数 37（差 -1；源图 块 0 / 多段线 37 / 墙层圆 0）；⑬ 1 的 COL 条数 38 ≠ 源图柱数 39（差 -1；源图 块 0 / 多段线 37 / 墙层圆 2）；⑬ 2 的 COL 条数 38 ≠ 源图柱数 39（差 -1；源图 块 0 / 多段线 37 / 墙层圆 2）；…共 7 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/7 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c022 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/7 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c023",
-   "title": "设备楼",
-   "status": "red",
-   "created_at": "2026-10-20T22:12:54+08:00",
-   "floors": 4,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8462,
-   "blind_spots": 3,
-   "rooms": 25,
-   "model_bytes": 374808,
-   "pack_bytes": 512861,
-   "model_sha256": "e1af836bea986dfb0f5f965ed008383bd7cc18a5e83ec9c59c06d2a98c5c7d45",
+   "rooms": 74,
+   "model_bytes": 441164,
+   "pack_bytes": 714576,
+   "model_sha256": "a57f6111b198f1e7032b8e0f86710edacf8aeb37fc52ec8e224a253906cfb1f0",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
     "nodes": 24,
-    "meshes": 20,
+    "meshes": 21,
     "materials": 0,
     "images": 0,
-    "triangles": 8552,
-    "bounds_v3": 20
+    "triangles": 9680,
+    "bounds_v3": 21
    },
    "gates": {
     "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 3/F03-WALL-017 的最短边 5.000 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）",
-       "fix": "",
-       "floor": "",
-       "evidence": "5.0 / 8750.0",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "5.0 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "8750.0 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
+   "red_gates": [],
    "audit_issues": []
   },
   {
-   "id": "c024",
-   "title": "宗岳楼（计算站楼）",
-   "status": "red",
-   "created_at": "2026-10-21T07:00:50+08:00",
-   "floors": 3,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8,
-   "blind_spots": 3,
-   "rooms": 50,
-   "model_bytes": 702504,
-   "pack_bytes": 912923,
-   "model_sha256": "6bf60fa39818b3e8a6533867d8661714cf2a56f15b1f775652d5c7e0a5e69c3c",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 23,
-    "meshes": 20,
-    "materials": 0,
-    "images": 0,
-    "triangles": 15908,
-    "bounds_v3": 20
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 1/F01-WALL-018 的环面积 19.525 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；⑪ 1/F01-WALL-018 的最短边 5.500 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）；⑪ 1/F01-WALL-022 的环面积 40.000 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）",
-       "fix": "",
-       "floor": "",
-       "evidence": "5.5 / 19.525",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "5.5 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "19.525 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    },
-    {
-     "gate": "J-10.9-07",
-     "label": "构件类闭合",
-     "items": [
-      {
-       "rule": "①",
-       "status": "fail",
-       "text": "上游分类集（两处独立生成）：① A1 ≠ A2：只在 build.json 里 [] ／ 只在 contours 里 ['COL']（铁律 174）",
-       "fix": "",
-       "floor": "",
-       "evidence": "A1 8 类 / A2 9 类",
-       "params": [
-        {
-         "name": "A1 build.json 类集",
-         "limit": "= A2（9 类）且 ⊆ STD（12 类：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM）",
-         "source": "D:\\项目\\cdut3d\\rebuild\\c024\\05_build\\build.json::floors[].z_by_class 键 ∪ attach 键机械还原",
-         "measured": "DOOR LIFT LINTEL PARAPET ROOF SLAB STAIR WALL",
-         "fix": "补 build3d.py 漏落的 z_by_class / attach 键，再重跑本闸"
-        },
-        {
-         "name": "A2 contours 类集",
-         "limit": "= A1（8 类）且只数 count>0 的类（STD 12 类：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM）",
-         "source": "D:\\项目\\cdut3d\\rebuild\\c024\\06_su\\contours\\index.json::逐层 per_layer 键并集",
-         "measured": "COL DOOR LIFT LINTEL PARAPET ROOF SLAB STAIR WALL",
-         "fix": "补 export_contours.py 漏发的类，再重跑本闸"
-        },
-        {
-         "name": "标准 STD",
-         "limit": "12 类；A1/A2 只需是其子集：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM",
-         "source": "本判据 STD（唯一一份）·须与 rebuild/构件清单.md §7.2 同步",
-         "measured": "标准外 []",
-         "fix": "加类时同改 STD 与 rebuild/构件清单.md §7.2，再重跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c030",
-   "title": "芙蓉园2号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T08:38:58+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 97,
-   "model_bytes": 1074688,
-   "pack_bytes": 1686640,
-   "model_sha256": "9db10caf27f5a6151bfcdfbfcafdb718e1caf7b79757e40627e1b560b52bea4f",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 51,
-    "meshes": 44,
-    "materials": 0,
-    "images": 0,
-    "triangles": 24704,
-    "bounds_v3": 44
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 7 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/7 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c030 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/7 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c031",
-   "title": "芙蓉园3号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T08:40:11+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 71,
-   "model_bytes": 804804,
-   "pack_bytes": 1261156,
-   "model_sha256": "7558725514cb1cec8a6a13df3d23541d14c0807d13024010c7535ce07b486c06",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 18764,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c031 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c032",
-   "title": "芙蓉园4号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T08:41:36+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 155,
-   "model_bytes": 1524612,
-   "pack_bytes": 2434215,
-   "model_sha256": "4fd76970c1498132fb50ab34237aeace3a711013135a74a7300a6c84a5ba4aed",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 34656,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c032 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c033",
-   "title": "芙蓉园5号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T08:41:22+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 143,
-   "model_bytes": 1433600,
-   "pack_bytes": 2276386,
-   "model_sha256": "cdaa3f80111330056a5fdc9462a1d2beb5fad78a61229bc3ef04ad41132a265a",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 32592,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c033 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c044",
-   "title": "青年教师公寓2号楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:02:17+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 105,
-   "model_bytes": 1979620,
-   "pack_bytes": 2669274,
-   "model_sha256": "f46dc3c94936532bd32b0d46a6b35c75dba7e99da6970ab7ef879ab6e9269f61",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 39,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 49684,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-COL-001 与 F01-COL-002 重叠 1620000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-COL-003 与 F01-COL-004 重叠 1620000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-COL-005 与 F01-COL-006 重叠 1620000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）",
-       "fix": "",
-       "floor": "",
-       "evidence": "3 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "3 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c045",
-   "title": "青年教师公寓3号楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:02:25+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 105,
-   "model_bytes": 1883816,
-   "pack_bytes": 2541872,
-   "model_sha256": "2172ee7cf8a5330443c797f4c2a70b7ff32c04d051069168130434afdd1cc233",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 39,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 46316,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-COL-001 与 F01-COL-002 重叠 1620000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-COL-003 与 F01-COL-004 重叠 1620000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-COL-005 与 F01-COL-006 重叠 1620000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）",
-       "fix": "",
-       "floor": "",
-       "evidence": "3 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "3 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c046",
-   "title": "榕树园公寓",
-   "status": "red",
-   "created_at": "2026-10-21T07:05:32+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 600,
-   "model_bytes": 7387388,
-   "pack_bytes": 10038057,
-   "model_sha256": "964e3ca24ada66b4051259079f4a95165174c9b0cdf9e26f056abb2069542ce4",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 180544,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 1/F01-SLAB-011 的环面积 18.000 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；⑪ 1/F01-SLAB-011 的最短边 0.800 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）；⑪ 1/F01-SLAB-014 的最短边 5.800 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）；…共 72 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0.8 / 18.0",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "0.8 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "18.0 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c053",
-   "title": "银杏综合楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:03:00+08:00",
+   "id": "c004f1",
+   "title": "办公楼附楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:40+08:00",
    "floors": 4,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8462,
    "blind_spots": 3,
-   "rooms": 143,
-   "model_bytes": 2590488,
-   "pack_bytes": 3481911,
-   "model_sha256": "06a189bd96015c61f518a91a0036e3bc6913eaba533ec214a38a35dd38c0f557",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 34,
-    "materials": 0,
-    "images": 0,
-    "triangles": 56458,
-    "bounds_v3": 34
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 2/F02-ROOF-009 的最短边 3.300 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）；⑪ 2/F02-PARAPET-007 的最短边 3.300 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）；⑪ 2/F02-STAIR-327 的最短边 5.000 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）",
-       "fix": "",
-       "floor": "",
-       "evidence": "3.3 / 785.22",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "3.3 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "785.22 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-DOOR-008 与 F01-DOOR-009 重叠 10000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-LIFT-005 与 F01-LIFT-006 重叠 3170600.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 2/F02-DOOR-030 与 F02-DOOR-031 重叠 10000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "6 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "6 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c056",
-   "title": "银杏园3号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T09:06:47+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 255,
-   "model_bytes": 2794732,
-   "pack_bytes": 4293538,
-   "model_sha256": "e5d94a4e091388c793b793f6012f9dd5f3d612193b6527659a5f16ea8fd8fca5",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 62696,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c056 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c057",
-   "title": "银杏园4号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T09:09:45+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 255,
-   "model_bytes": 2779080,
-   "pack_bytes": 4256154,
-   "model_sha256": "99772ce54e873067180117ba7395907fbab34eb7f56a59123224be2a42acc956",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 61584,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c057 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c059",
-   "title": "珙桐园1号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T09:08:41+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 133,
-   "model_bytes": 1499348,
-   "pack_bytes": 2309873,
-   "model_sha256": "ffcdc5c087600a3f5af6b721e9910693fde13c62f6d87b3e7abdd80ed01a9b9d",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 34168,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 4 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 5 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "1/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c059 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "1/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c061",
-   "title": "珙桐园3号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T09:14:13+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 288,
-   "model_bytes": 3217884,
-   "pack_bytes": 4942124,
-   "model_sha256": "79237a4644a5fa40790aa7fbd2fbf34f5e33803d09e6bcfd1add1e305a07f155",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 73088,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c061 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c062",
-   "title": "珙桐园4号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:13:43+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 257,
-   "model_bytes": 2890940,
-   "pack_bytes": 4414760,
-   "model_sha256": "8f47a2f1e398e2367e7827d39ae06990270a3c23b3f41b2ecec53fdcbdeb1537",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 65904,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 5（差 -5；源图 块 0 / 多段线 0 / 墙层圆 5）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c062 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    },
-    {
-     "gate": "J-10.9-07",
-     "label": "构件类闭合",
-     "items": [
-      {
-       "rule": "①",
-       "status": "fail",
-       "text": "上游分类集（两处独立生成）：① A1 ≠ A2：只在 build.json 里 ['COL'] ／ 只在 contours 里 []（铁律 174）",
-       "fix": "",
-       "floor": "",
-       "evidence": "A1 9 类 / A2 8 类",
-       "params": [
-        {
-         "name": "A1 build.json 类集",
-         "limit": "= A2（8 类）且 ⊆ STD（12 类：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM）",
-         "source": "D:\\项目\\cdut3d\\rebuild\\c062\\05_build\\build.json::floors[].z_by_class 键 ∪ attach 键机械还原",
-         "measured": "COL DOOR LIFT LINTEL PARAPET ROOF SLAB STAIR WALL",
-         "fix": "补 build3d.py 漏落的 z_by_class / attach 键，再重跑本闸"
-        },
-        {
-         "name": "A2 contours 类集",
-         "limit": "= A1（9 类）且只数 count>0 的类（STD 12 类：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM）",
-         "source": "D:\\项目\\cdut3d\\rebuild\\c062\\06_su\\contours\\index.json::逐层 per_layer 键并集",
-         "measured": "DOOR LIFT LINTEL PARAPET ROOF SLAB STAIR WALL",
-         "fix": "补 export_contours.py 漏发的类，再重跑本闸"
-        },
-        {
-         "name": "标准 STD",
-         "limit": "12 类；A1/A2 只需是其子集：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM",
-         "source": "本判据 STD（唯一一份）·须与 rebuild/构件清单.md §7.2 同步",
-         "measured": "标准外 []",
-         "fix": "加类时同改 STD 与 rebuild/构件清单.md §7.2，再重跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c063",
-   "title": "珙桐园5号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:13:49+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 255,
-   "model_bytes": 2825988,
-   "pack_bytes": 4378998,
-   "model_sha256": "c76a8f7a77bc15ffe3aac5c074c6a4475a23ca41a6585866909a98d01e914acc",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 65708,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 5（差 -5；源图 块 0 / 多段线 0 / 墙层圆 5）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c063 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c064",
-   "title": "珙桐园6号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T09:19:03+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 288,
-   "model_bytes": 3182512,
-   "pack_bytes": 4911006,
-   "model_sha256": "15f59b8702f949cf79c81aebb630d1999315d9c380bbae2e79c79b6a156746ea",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 73112,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c064 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c065",
-   "title": "珙桐园7号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T09:19:15+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 288,
-   "model_bytes": 3182732,
-   "pack_bytes": 4907108,
-   "model_sha256": "eca2a2e2e202310bca8244c0b52c8148dd7a1b4f92fa4c4db4370567411f44b9",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 73128,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c065 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c075",
-   "title": "综合实验大楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:04:43+08:00",
-   "floors": 8,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.92,
-   "blind_spots": 3,
-   "rooms": 299,
-   "model_bytes": 9711912,
-   "pack_bytes": 13282371,
-   "model_sha256": "be2d60436e0d25a58a05e5bf9e2f1c7a73f39f3c27feeb948f4240521e909adc",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 68,
-    "meshes": 60,
-    "materials": 0,
-    "images": 0,
-    "triangles": 224356,
-    "bounds_v3": 60
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ D1/B1-WALL-135 的环面积 36.000 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）",
-       "fix": "",
-       "floor": "",
-       "evidence": "6.8 / 36.0",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "6.8 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "36.0 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-LIFT-013 与 F01-LIFT-014 重叠 4290000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 3/F03-COL-043 与 F03-COL-064 重叠 420000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 4/F04-COL-043 与 F04-COL-064 重叠 420000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；…共 4 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "4 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "4 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    },
-    {
-     "gate": "J-10.8-01",
-     "label": "白模形体",
-     "items": [
-      {
-       "rule": "⑤",
-       "status": "fail",
-       "text": "水密：每层墙网格 watertight：3 墙网格不水密",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "7/8 层水密",
-       "params": [
-        {
-         "name": "水密层数",
-         "limit": "全部层 watertight_wall = True",
-         "source": "05_build/build.json::floors[].watertight_wall",
-         "measured": "7/8 层水密",
-         "fix": "查 rebuild/tools/build3d.py 的墙网格封口，重跑 build3d 后再重跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c079",
-   "title": "香樟园1号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:07:07+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 267,
-   "model_bytes": 3723124,
-   "pack_bytes": 5090720,
-   "model_sha256": "ee803443eff4703b0ccf7b7031d6f1fead10d35a94eded92c1084e306a1d6303",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 50,
-    "meshes": 44,
-    "materials": 0,
-    "images": 0,
-    "triangles": 81002,
-    "bounds_v3": 44
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 305 ≠ 源图柱数 313（差 -8；源图 块 0 / 多段线 305 / 墙层圆 8）；⑬ 2 的 COL 条数 310 ≠ 源图柱数 317（差 -7；源图 块 0 / 多段线 310 / 墙层圆 7）；⑬ 3 的 COL 条数 330 ≠ 源图柱数 337（差 -7；源图 块 0 / 多段线 330 / 墙层圆 7）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c079 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c080",
-   "title": "香樟园2号公寓",
-   "status": "red",
-   "created_at": "2026-10-21T07:05:55+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 402,
-   "model_bytes": 5925904,
-   "pack_bytes": 8056030,
-   "model_sha256": "11dc2a013bd7994afa54907e709e9cb5908a6afd2939ae7c14397242d645cdef",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 52,
-    "meshes": 46,
-    "materials": 0,
-    "images": 0,
-    "triangles": 128024,
-    "bounds_v3": 46
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-COL-293 与 F01-COL-456 重叠 37000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）；⑫ 1/F01-COL-294 与 F01-COL-457 重叠 37000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）",
-       "fix": "",
-       "floor": "",
-       "evidence": "2 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "2 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c083",
-   "title": "香樟园3号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:07:23+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 266,
-   "model_bytes": 3717228,
-   "pack_bytes": 5091728,
-   "model_sha256": "08ff5c1f4a1263b354d8449797f55d375658e570424f85308f4d42f223bec86b",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 50,
-    "meshes": 44,
-    "materials": 0,
-    "images": 0,
-    "triangles": 80886,
-    "bounds_v3": 44
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 300 ≠ 源图柱数 309（差 -9；源图 块 0 / 多段线 300 / 墙层圆 9）；⑬ 2 的 COL 条数 310 ≠ 源图柱数 317（差 -7；源图 块 0 / 多段线 310 / 墙层圆 7）；⑬ 3 的 COL 条数 330 ≠ 源图柱数 337（差 -7；源图 块 0 / 多段线 330 / 墙层圆 7）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c083 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c084",
-   "title": "香樟园4号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:07:29+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 266,
-   "model_bytes": 3723228,
-   "pack_bytes": 5094770,
-   "model_sha256": "710d46efc8cd6042b1a67c9983e3a68d21362707679c9d37a4c460807965e937",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 50,
-    "meshes": 44,
-    "materials": 0,
-    "images": 0,
-    "triangles": 80980,
-    "bounds_v3": 44
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 305 ≠ 源图柱数 313（差 -8；源图 块 0 / 多段线 305 / 墙层圆 8）；⑬ 2 的 COL 条数 310 ≠ 源图柱数 317（差 -7；源图 块 0 / 多段线 310 / 墙层圆 7）；⑬ 3 的 COL 条数 330 ≠ 源图柱数 337（差 -7；源图 块 0 / 多段线 330 / 墙层圆 7）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c084 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c085",
-   "title": "香樟园5号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:02:02+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 267,
-   "model_bytes": 3717684,
-   "pack_bytes": 5093348,
-   "model_sha256": "5e10709ee2120734c18bf3f0cb0f4e904ebd7619fd1215c3542072ce646b4cae",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 50,
-    "meshes": 44,
-    "materials": 0,
-    "images": 0,
-    "triangles": 80850,
-    "bounds_v3": 44
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 305 ≠ 源图柱数 314（差 -9；源图 块 0 / 多段线 305 / 墙层圆 9）；⑬ 2 的 COL 条数 310 ≠ 源图柱数 317（差 -7；源图 块 0 / 多段线 310 / 墙层圆 7）；⑬ 3 的 COL 条数 330 ≠ 源图柱数 337（差 -7；源图 块 0 / 多段线 330 / 墙层圆 7）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c085 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c086",
-   "title": "香樟园6号公寓",
-   "status": "red",
-   "created_at": "2026-10-20T22:07:35+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 268,
-   "model_bytes": 3724716,
-   "pack_bytes": 5097428,
-   "model_sha256": "1dbbcb31619f7e3cc0e74bff969ebf7124447f4e69357b9c874ec14697d00cf8",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 50,
-    "meshes": 44,
-    "materials": 0,
-    "images": 0,
-    "triangles": 81020,
-    "bounds_v3": 44
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 301 ≠ 源图柱数 309（差 -8；源图 块 0 / 多段线 301 / 墙层圆 8）；⑬ 2 的 COL 条数 310 ≠ 源图柱数 317（差 -7；源图 块 0 / 多段线 310 / 墙层圆 7）；⑬ 3 的 COL 条数 330 ≠ 源图柱数 338（差 -8；源图 块 0 / 多段线 330 / 墙层圆 8）；…共 6 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/6 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c086 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/6 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c106",
-   "title": "生态楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:05:46+08:00",
-   "floors": 3,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8,
-   "blind_spots": 3,
-   "rooms": 56,
-   "model_bytes": 1103448,
-   "pack_bytes": 1422552,
-   "model_sha256": "d296a9a394ee0216e38f1b5a651e639edb7707bafb371c346ccb0dcb06968a2e",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 27,
-    "meshes": 24,
-    "materials": 0,
-    "images": 0,
-    "triangles": 25448,
-    "bounds_v3": 24
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑫",
-       "status": "fail",
-       "text": "同 (层, 类, z) 内互不重叠：⑫ 1/F01-DOOR-021 与 F01-DOOR-022 重叠 10000.000 mm²（同层同类**同 z=0.0** 共面 ⇒ SU 里会互相切面）",
-       "fix": "",
-       "floor": "",
-       "evidence": "1 对",
-       "params": [
-        {
-         "name": "重叠面积容差",
-         "limit": "≤ 1.00 mm² 不算重叠",
-         "source": "闸内常量 OVERLAP_EPS_MM2（万分之一平米；以下算浮点噪声）",
-         "measured": "1 对重叠",
-         "fix": "改识别 / 建墙那一步：同 (层, 类, z) 的环不许叠（复制件要去重）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c107",
-   "title": "科学楼",
-   "status": "red",
-   "created_at": "2026-10-20T22:13:57+08:00",
-   "floors": 5,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.875,
-   "blind_spots": 3,
-   "rooms": 52,
-   "model_bytes": 502956,
-   "pack_bytes": 699455,
-   "model_sha256": "30e5e8fa307557560652ad5514ea97274a7790306b0cc0dee73da63f6fec6b93",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 32,
-    "meshes": 27,
-    "materials": 0,
-    "images": 0,
-    "triangles": 11016,
-    "bounds_v3": 27
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ D1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 5 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/5 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c107 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/5 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c108",
-   "title": "网安楼",
-   "status": "red",
-   "created_at": "2026-10-20T09:48:12+08:00",
-   "floors": 4,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8462,
-   "blind_spots": 3,
-   "rooms": 32,
-   "model_bytes": 418848,
-   "pack_bytes": 565089,
-   "model_sha256": "ba5d67cedcbadc1a4a9305e37e852c202a16096e0e675c174c7fd100e322c68b",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 30,
-    "meshes": 26,
-    "materials": 0,
-    "images": 0,
-    "triangles": 9234,
-    "bounds_v3": 26
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 1（差 -1；源图 块 0 / 多段线 0 / 墙层圆 1）；…共 4 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/4 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c108 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/4 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      },
-      {
-       "rule": "⑰",
-       "status": "fail",
-       "text": "正对照未全部按预期：12/13 触发",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "J-10.8-00 正对照表"
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c112",
-   "title": "汇智楼",
-   "status": "red",
-   "created_at": "2026-10-21T07:06:09+08:00",
-   "floors": 3,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8,
-   "blind_spots": 3,
-   "rooms": 57,
-   "model_bytes": 1789272,
-   "pack_bytes": 2325770,
-   "model_sha256": "c05b666ff1b7dac50ca1601a7c3806755f14075befcd7aacb425ef97f39bbaba",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 28,
-    "meshes": 25,
-    "materials": 0,
-    "images": 0,
-    "triangles": 40936,
-    "bounds_v3": 25
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑪",
-       "status": "fail",
-       "text": "最短边 ≥ EDGE_MIN、面积 ≥ AREA_MIN：⑪ 1/F01-STAIR-067 的环面积 97.920 mm² < 156.25（阈值 = RES²/4；实测最小 1250.000）；⑪ 1/F01-STAIR-067 的最短边 3.606 mm < 6.25（阈值 = RES/4，不是拿某个实测值推的；docstring ⑪ 里那个「实测最短 12.0000」早于 LINTEL 类，别再引它当依据）",
-       "fix": "",
-       "floor": "",
-       "evidence": "3.6056 / 97.92",
-       "params": [
-        {
-         "name": "最短边下限",
-         "limit": "6.2500 mm",
-         "source": "闸内常量 EDGE_MIN_MM = RES_MM/4（RES_MM=25.0）；真源 参数.json::构件/共用/环_最短边下限（由 ⑯ 现读现比）",
-         "measured": "3.6056 mm",
-         "fix": "改 rebuild/tools/parts_lib.py::heal_short_edges 与 参数.json::构件/共用/环_最短边下限（两边一起改）后重跑 export_contours 与本闸"
-        },
-        {
-         "name": "最小面积下限",
-         "limit": "156.25 mm²",
-         "source": "闸内常量 AREA_MIN_MM2 = RES_MM²/4（RES_MM=25.0）",
-         "measured": "97.92 mm²",
-         "fix": "改识别 / rebuild/tools/export_contours.py 的环生成（碎面要并或丢）后重跑 export_contours 与本闸"
-        }
-       ]
-      }
-     ]
-    },
-    {
-     "gate": "J-10.9-07",
-     "label": "构件类闭合",
-     "items": [
-      {
-       "rule": "①",
-       "status": "fail",
-       "text": "上游分类集（两处独立生成）：① A1 ≠ A2：只在 build.json 里 [] ／ 只在 contours 里 ['COL']（铁律 174）",
-       "fix": "",
-       "floor": "",
-       "evidence": "A1 8 类 / A2 9 类",
-       "params": [
-        {
-         "name": "A1 build.json 类集",
-         "limit": "= A2（9 类）且 ⊆ STD（12 类：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM）",
-         "source": "D:\\项目\\cdut3d\\rebuild\\c112\\05_build\\build.json::floors[].z_by_class 键 ∪ attach 键机械还原",
-         "measured": "DOOR LIFT LINTEL PARAPET ROOF SLAB STAIR WALL",
-         "fix": "补 build3d.py 漏落的 z_by_class / attach 键，再重跑本闸"
-        },
-        {
-         "name": "A2 contours 类集",
-         "limit": "= A1（8 类）且只数 count>0 的类（STD 12 类：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM）",
-         "source": "D:\\项目\\cdut3d\\rebuild\\c112\\06_su\\contours\\index.json::逐层 per_layer 键并集",
-         "measured": "COL DOOR LIFT LINTEL PARAPET ROOF SLAB STAIR WALL",
-         "fix": "补 export_contours.py 漏发的类，再重跑本闸"
-        },
-        {
-         "name": "标准 STD",
-         "limit": "12 类；A1/A2 只需是其子集：WALL COL LIFT SLAB DOOR STAIR LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM",
-         "source": "本判据 STD（唯一一份）·须与 rebuild/构件清单.md §7.2 同步",
-         "measured": "标准外 []",
-         "fix": "加类时同改 STD 与 rebuild/构件清单.md §7.2，再重跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c114",
-   "title": "第十教学楼（启智楼）",
-   "status": "red",
-   "created_at": "2026-10-20T09:50:50+08:00",
-   "floors": 5,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.875,
-   "blind_spots": 3,
-   "rooms": 61,
-   "model_bytes": 625064,
-   "pack_bytes": 808152,
-   "model_sha256": "b880dde786c3116386ef82968ac09633bebf1229f1525e2327e13e4352f562fa",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 32,
-    "meshes": 27,
-    "materials": 0,
-    "images": 0,
-    "triangles": 14032,
-    "bounds_v3": 27
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；…共 5 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/5 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c114 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/5 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
-   "audit_issues": []
-  },
-  {
-   "id": "c117",
-   "title": "商学院楼",
-   "status": "red",
-   "created_at": "2026-10-20T22:14:07+08:00",
-   "floors": 4,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8462,
-   "blind_spots": 3,
-   "rooms": 89,
-   "model_bytes": 468836,
-   "pack_bytes": 671031,
-   "model_sha256": "f93f511976a26b79d84adf87cb1c80b10a16127fc8bcb7bdb267aa1dab5c3e36",
+   "rooms": 21,
+   "model_bytes": 790756,
+   "pack_bytes": 1032225,
+   "model_sha256": "ee162c7151b05e8b2db6bc3821ccc81694f9ae3149726b0489c4ff2f78cd152b",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
@@ -3376,200 +156,1680 @@
     "meshes": 22,
     "materials": 0,
     "images": 0,
-    "triangles": 10316,
+    "triangles": 17688,
     "bounds_v3": 22
    },
    "gates": {
     "J-10.8-00": {
-     "pass": false,
-     "rc": 1,
-     "red": 1,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
-   "red_gates": [
-    {
-     "gate": "J-10.8-00",
-     "label": "轮廓可喂 SU",
-     "items": [
-      {
-       "rule": "⑬",
-       "status": "fail",
-       "text": "每层 COL 条数 == 源图柱数：⑬ 1 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；⑬ 2 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；⑬ 3 的 COL 条数 0 ≠ 源图柱数 2（差 -2；源图 块 0 / 多段线 0 / 墙层圆 2）；…共 4 条",
-       "fix": "",
-       "floor": "",
-       "evidence": "0/4 层",
-       "params": [
-        {
-         "name": "每层 COL 条数",
-         "limit": "== 源图柱数（块 INSERT 与柱层 ≥3 点多段线**取多者**）",
-         "source": "c117 的 01_cad/raw/<层名>.dxf::块 _FZHK/_YZHK + 柱层 LWPOLYLINE",
-         "measured": "0/4 层相等",
-         "fix": "改 rebuild/tools/redraw.py 的柱识别（COL_MODE=auto，两种画法都要数）后重跑识别与 export_contours，再跑本闸"
-        }
-       ]
-      }
-     ]
-    }
-   ],
+   "red_gates": [],
    "audit_issues": []
   },
   {
-   "id": "ny28",
-   "title": "人才公寓2栋",
-   "status": "red",
-   "created_at": "2026-10-20T09:53:10+08:00",
-   "floors": 6,
+   "id": "c005",
+   "title": "理化楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T10:31:33+08:00",
+   "floors": 5,
    "floor_h_m": 4.0,
    "qc": "PASS",
-   "positive_control": 0.8947,
+   "positive_control": 0.875,
    "blind_spots": 3,
-   "rooms": 36,
-   "model_bytes": 980540,
-   "pack_bytes": 1422898,
-   "model_sha256": "72bc03e95e02f3132f3905d964d6a52f8ca734443d21f2f1bcdbe1732361a1cd",
+   "rooms": 118,
+   "model_bytes": 1227040,
+   "pack_bytes": 1623187,
+   "model_sha256": "b51023de4c5e5a7bd8393ef0c67cc733b8e2461c83a385a905c4a31ce7a4d63d",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
-    "nodes": 32,
-    "meshes": 26,
+    "nodes": 38,
+    "meshes": 33,
     "materials": 0,
     "images": 0,
-    "triangles": 23468,
-    "bounds_v3": 26
+    "triangles": 25640,
+    "bounds_v3": 33
    },
    "gates": {
     "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": false,
-     "rc": 1,
-     "red": 2,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
-   "red_gates": [
-    {
-     "gate": "J-10.8-04",
-     "label": "原始 DXF 叠加",
-     "items": [
-      {
-       "rule": "②",
-       "status": "fail",
-       "text": "贴源率 ≥ 阈值：② 1 贴源率 0.534 < 0.95：生成件有 3309 段边落在原始图 300 mm 之外（凭空多出来的墙 / 整体偏移 —— 先看工作台叠加图上的红边）",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "最低 0.534",
-       "params": [
-        {
-         "name": "贴源率下限",
-         "limit": "0.95",
-         "source": "全仓 376 层实测分布（_scratch/overlay_all.json，过程/_scratch/probe_overlay_all.py 2026-10-19）：min 0.956 / p01 0.976 / p05 0.988 / 中位 1.000",
-         "measured": "最低 1 0.534",
-         "fix": "贴源率低了 ⇒ 先查 contours→DXF 的投影/容差，再重跑 J-10.8-01"
-        },
-        {
-         "name": "容差",
-         "limit": "300 mm",
-         "source": "rebuild/tools/overlay_check.py::TOL_MM（与 /api/dxf/compare 共用）",
-         "measured": "1 生成_P95距 1316 mm",
-         "fix": "容差是比对口径，改动必须连读数一起改 ⇒ 只改 TOL_MM 后重跑 J-10.8-01"
-        }
-       ]
-      },
-      {
-       "rule": "③",
-       "status": "fail",
-       "text": "覆盖 ≥ 阈值：③ 1 覆盖 0.541 < 0.85：原始图上有画线没被生成件盖上，缺口聚成 1 处（坐标见证据段）",
-       "fix": "改算法",
-       "floor": "",
-       "evidence": "最低 0.541",
-       "params": [
-        {
-         "name": "覆盖率下限",
-         "limit": "0.85",
-         "source": "全仓 376 层实测分布（_scratch/overlay_all.json，过程/_scratch/probe_overlay_all.py 2026-10-19）：min 0.728 / p01 0.740 / p05 0.862 / 中位 0.936",
-         "measured": "最低 1 0.541",
-         "fix": "覆盖率低了 ⇒ 先查 06_su/contours 出件缺的墙/楼梯/屋面，再重跑 J-10.8-01"
-        },
-        {
-         "name": "覆盖源",
-         "limit": "WALL+COL+STAIR+ROOF+PARAPET",
-         "source": "rebuild/tools/overlay_check.py::COVER_KINDS（原始墙层上还画着踏步线/屋面/女儿墙）",
-         "measured": "1 原始 722 段 / 生成覆盖源 702 段",
-         "fix": "覆盖源变了会整层假低 ⇒ 只认 COVER_KINDS，别在闸里另加图层"
-        },
-        {
-         "name": "容差",
-         "limit": "300 mm",
-         "source": "rebuild/tools/overlay_check.py::TOL_MM（与 /api/dxf/compare 共用）",
-         "measured": "1 原始_P95距 1375 mm",
-         "fix": "容差是比对口径，改动必须连读数一起改 ⇒ 只改 TOL_MM 后重跑 J-10.8-01"
-        }
-       ]
-      }
-     ]
-    }
-   ],
+   "red_gates": [],
    "audit_issues": []
   },
   {
-   "id": "c103",
-   "title": "第十一教学楼（东1教）",
+   "id": "c006",
+   "title": "第六教学楼（逸夫楼）",
    "status": "unknown",
-   "created_at": "2026-10-19T13:44:35+08:00",
+   "created_at": "2026-10-21T10:26:29+08:00",
+   "floors": 12,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9459,
+   "blind_spots": 3,
+   "rooms": 222,
+   "model_bytes": 5242700,
+   "pack_bytes": 7992612,
+   "model_sha256": "a769f07c04eafa7b78cb1fb1673a8edb5c0fad2436aa64213b9c505f26c44825",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 104,
+    "meshes": 92,
+    "materials": 0,
+    "images": 0,
+    "triangles": 112320,
+    "bounds_v3": 92
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c007",
+   "title": "综合楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:20:36+08:00",
+   "floors": 5,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.875,
+   "blind_spots": 3,
+   "rooms": 180,
+   "model_bytes": 1669188,
+   "pack_bytes": 2248307,
+   "model_sha256": "82d1328254d3cf79cfb51d35a352e4df931cf1f7fa9b5a3eba703dbf53def126",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 38,
+    "meshes": 33,
+    "materials": 0,
+    "images": 0,
+    "triangles": 35662,
+    "bounds_v3": 33
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c009",
+   "title": "第九教学楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:30+08:00",
+   "floors": 5,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.875,
+   "blind_spots": 3,
+   "rooms": 189,
+   "model_bytes": 3475376,
+   "pack_bytes": 4705171,
+   "model_sha256": "9c1dbd45cbb6f4b9290cbe38349bcb9fa0f1f1632be50ee831bb0f9282222df7",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 42,
+    "meshes": 37,
+    "materials": 0,
+    "images": 0,
+    "triangles": 75632,
+    "bounds_v3": 37
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c015",
+   "title": "芙蓉综合楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:20:25+08:00",
+   "floors": 3,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8,
+   "blind_spots": 3,
+   "rooms": 65,
+   "model_bytes": 1733564,
+   "pack_bytes": 2288011,
+   "model_sha256": "b8b5affd3c67eddb478c55ede6f16d2f6f7d06d0ab1a2e90d68de67d61bec96b",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 23,
+    "meshes": 20,
+    "materials": 0,
+    "images": 0,
+    "triangles": 37816,
+    "bounds_v3": 20
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c017",
+   "title": "芙蓉园9号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:54+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 254,
+   "model_bytes": 1964020,
+   "pack_bytes": 2748516,
+   "model_sha256": "84ee67fd0259cfa46a58cd4372500da48028022b06658cf42624bf52c621f4d7",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 49,
+    "meshes": 42,
+    "materials": 0,
+    "images": 0,
+    "triangles": 45316,
+    "bounds_v3": 42
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c018",
+   "title": "芙蓉园8号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:59+08:00",
    "floors": 6,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8947,
    "blind_spots": 3,
-   "rooms": 189,
-   "model_bytes": 69635600,
-   "pack_bytes": 88711467,
-   "model_sha256": "5b660a6df697afafff294960f0e986e6d0446e107a6f312b25db175906700a09",
+   "rooms": 179,
+   "model_bytes": 1928976,
+   "pack_bytes": 2579759,
+   "model_sha256": "1a3f57d4c9c4ea307eade6182cfeaf6d629bafabdbd39d9140ba4500347ced78",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 39,
+    "meshes": 33,
+    "materials": 0,
+    "images": 0,
+    "triangles": 44548,
+    "bounds_v3": 33
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c019",
+   "title": "芙蓉园7号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:55+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 183,
+   "model_bytes": 1899036,
+   "pack_bytes": 2590382,
+   "model_sha256": "e4c49e4ed5f08c8107770fadd7a0ff12da5ec85a85a7739dd22570227a51e59b",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 45,
+    "meshes": 38,
+    "materials": 0,
+    "images": 0,
+    "triangles": 42460,
+    "bounds_v3": 38
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c020",
+   "title": "第二办公楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:41+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 46,
+   "model_bytes": 822096,
+   "pack_bytes": 1107755,
+   "model_sha256": "f7df8005a76f47517ed0768df40b2c3b10d4ffb806e6a3dfd553be7b3a000cee",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 43,
+    "meshes": 37,
+    "materials": 0,
+    "images": 0,
+    "triangles": 17598,
+    "bounds_v3": 37
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c022",
+   "title": "第七教学楼（致远楼）",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:22+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 64,
+   "model_bytes": 1117884,
+   "pack_bytes": 1503435,
+   "model_sha256": "e6b8796804410034c0765261f30a4abf73b29a1324d3a51b4b95d00b6ede424b",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 60,
+    "meshes": 53,
+    "materials": 0,
+    "images": 0,
+    "triangles": 23612,
+    "bounds_v3": 53
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c023",
+   "title": "设备楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:22:09+08:00",
+   "floors": 4,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8462,
+   "blind_spots": 3,
+   "rooms": 25,
+   "model_bytes": 359420,
+   "pack_bytes": 491163,
+   "model_sha256": "c34a2014c00bb3b8865b94add62f07757348853df429ee4c83e06d9788494a6e",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 26,
+    "meshes": 22,
+    "materials": 0,
+    "images": 0,
+    "triangles": 7916,
+    "bounds_v3": 22
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c024",
+   "title": "宗岳楼（计算站楼）",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:22:46+08:00",
+   "floors": 3,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8,
+   "blind_spots": 3,
+   "rooms": 50,
+   "model_bytes": 686544,
+   "pack_bytes": 888073,
+   "model_sha256": "a4c76aec7bf29c9edb229b94c74455c032e2fe5bd1bd9e5d38b935a733a9c823",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 23,
+    "meshes": 20,
+    "materials": 0,
+    "images": 0,
+    "triangles": 15260,
+    "bounds_v3": 20
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c025",
+   "title": "第一教学楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:19+08:00",
+   "floors": 3,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8,
+   "blind_spots": 3,
+   "rooms": 48,
+   "model_bytes": 658680,
+   "pack_bytes": 868542,
+   "model_sha256": "568789f8afaccd4cccdc8a61a3bdea615b683db732d03a95128ee69e0086f1b8",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 21,
+    "meshes": 18,
+    "materials": 0,
+    "images": 0,
+    "triangles": 14352,
+    "bounds_v3": 18
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c026",
+   "title": "第四教学楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:22+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 47,
+   "model_bytes": 1012348,
+   "pack_bytes": 1367219,
+   "model_sha256": "b1559b3b2591154b818e68486e6e2cf4602769407ad216a2205f8ddb247cc89d",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 52,
+    "meshes": 46,
+    "materials": 0,
+    "images": 0,
+    "triangles": 21352,
+    "bounds_v3": 46
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c027",
+   "title": "第三教学楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:32+08:00",
+   "floors": 8,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.92,
+   "blind_spots": 3,
+   "rooms": 57,
+   "model_bytes": 1297636,
+   "pack_bytes": 1802842,
+   "model_sha256": "22103bef5807634202782530e6027493a2d7304470af3e19caa1f3c1f99478fb",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 68,
+    "meshes": 60,
+    "materials": 0,
+    "images": 0,
+    "triangles": 28164,
+    "bounds_v3": 60
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c028",
+   "title": "第二教学楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:30+08:00",
+   "floors": 3,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8,
+   "blind_spots": 3,
+   "rooms": 30,
+   "model_bytes": 586020,
+   "pack_bytes": 761326,
+   "model_sha256": "f12a1537809421cd9906cd39f85be5f15097f3e4c2af7989e8204a6cf531d0f1",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 21,
+    "meshes": 18,
+    "materials": 0,
+    "images": 0,
+    "triangles": 12724,
+    "bounds_v3": 18
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c029",
+   "title": "芙蓉园1号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:52+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 91,
+   "model_bytes": 1364464,
+   "pack_bytes": 2090446,
+   "model_sha256": "4cf9552ce21736ef6bf269dd52842a514b7ff5371f48e07d4d35e20926ad7606",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 38,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 32564,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c030",
+   "title": "芙蓉园2号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:03+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 97,
+   "model_bytes": 1133132,
+   "pack_bytes": 1743124,
+   "model_sha256": "78db7880d8d42f83282e77039975c3ba9e9be668ba51f0329cfbbd7e5b3b7979",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 58,
+    "meshes": 51,
+    "materials": 0,
+    "images": 0,
+    "triangles": 26568,
+    "bounds_v3": 51
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c031",
+   "title": "芙蓉园3号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:04+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 71,
+   "model_bytes": 848924,
+   "pack_bytes": 1303680,
+   "model_sha256": "09a061b3ad5806c3a23440d701ec62b8ff0d3d682b69373ae570ac3172a70254",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 50,
+    "meshes": 44,
+    "materials": 0,
+    "images": 0,
+    "triangles": 19918,
+    "bounds_v3": 44
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c032",
+   "title": "芙蓉园4号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:07+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 155,
+   "model_bytes": 1576388,
+   "pack_bytes": 2483022,
+   "model_sha256": "c6d475de95c5eb1d0de2ae25f04ea49a96217cfa41136338d7adc5d16b8f1905",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 50,
+    "meshes": 44,
+    "materials": 0,
+    "images": 0,
+    "triangles": 37498,
+    "bounds_v3": 44
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c033",
+   "title": "芙蓉园5号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:10+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 143,
+   "model_bytes": 1470420,
+   "pack_bytes": 2309595,
+   "model_sha256": "86c6d088d6282168e1b40fb54fc380dc1a5be12e91bec2e45638daf6a4c1a52e",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 50,
+    "meshes": 44,
+    "materials": 0,
+    "images": 0,
+    "triangles": 34972,
+    "bounds_v3": 44
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c034",
+   "title": "芙蓉园6号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:16+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 174,
+   "model_bytes": 2018632,
+   "pack_bytes": 3051232,
+   "model_sha256": "835d3b3e2092d53d6d3ac8fb30cd3f49d88c5d40b5c808af6b241b80861785b5",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 45,
+    "meshes": 39,
+    "materials": 0,
+    "images": 0,
+    "triangles": 45802,
+    "bounds_v3": 39
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c035",
+   "title": "工程楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:21:40+08:00",
+   "floors": 4,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8462,
+   "blind_spots": 3,
+   "rooms": 35,
+   "model_bytes": 428048,
+   "pack_bytes": 626883,
+   "model_sha256": "e77adc8b72d0e3f365e826d9aaea4955eede2564b8213f74e5cbd68943440bd5",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 30,
+    "meshes": 26,
+    "materials": 0,
+    "images": 0,
+    "triangles": 8984,
+    "bounds_v3": 26
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c036",
+   "title": "理工宾馆",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:26:19+08:00",
+   "floors": 5,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.875,
+   "blind_spots": 3,
+   "rooms": 54,
+   "model_bytes": 874840,
+   "pack_bytes": 1238869,
+   "model_sha256": "aea320b06479169c98adbc2dc1394d85440afad180bbf23a2626d88984a8e634",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 33,
+    "meshes": 28,
+    "materials": 0,
+    "images": 0,
+    "triangles": 20120,
+    "bounds_v3": 28
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c041",
+   "title": "第八教学楼（学研楼）",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:31+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 49,
+   "model_bytes": 1336608,
+   "pack_bytes": 1772269,
+   "model_sha256": "1ea9171aa276f4ae4114b893dabe5dc7205aa2aa0ad3d207593e32248f1537d4",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 54,
+    "meshes": 48,
+    "materials": 0,
+    "images": 0,
+    "triangles": 28908,
+    "bounds_v3": 48
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c043",
+   "title": "青年教师公寓1号楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:17+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 154,
+   "model_bytes": 2225920,
+   "pack_bytes": 3122867,
+   "model_sha256": "3ddfc77cebab7a75e412c5789ef20be723c477605e8d5363a7c4a01388689bc2",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 44,
+    "meshes": 37,
+    "materials": 0,
+    "images": 0,
+    "triangles": 51772,
+    "bounds_v3": 37
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c044",
+   "title": "青年教师公寓2号楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:19+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 105,
+   "model_bytes": 2037376,
+   "pack_bytes": 2751020,
+   "model_sha256": "d5f49096188c0b7780d91e875d98589410da876eb6ff441ae39b86b7bafc54fb",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 39,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 50776,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c045",
+   "title": "青年教师公寓3号楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:22+08:00",
+   "floors": 7,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.9091,
+   "blind_spots": 3,
+   "rooms": 105,
+   "model_bytes": 1943316,
+   "pack_bytes": 2617127,
+   "model_sha256": "c4b25f26007010adb6eb1fdf9554f397caace89358e61ddc637a96b3aaecd025",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 39,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 47432,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c046",
+   "title": "榕树园公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:46+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 600,
+   "model_bytes": 7154496,
+   "pack_bytes": 9760712,
+   "model_sha256": "eccdab5b84e95658009911d4515bfee69a627ec1d6fb8dd12a2296cde5fc86e0",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
@@ -3578,36 +1838,1312 @@
     "meshes": 38,
     "materials": 0,
     "images": 0,
-    "triangles": 1520218,
+    "triangles": 166896,
     "bounds_v3": 38
    },
    "gates": {
     "J-10.8-00": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 1,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 0,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 3,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 2,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c053",
+   "title": "银杏综合楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:21:02+08:00",
+   "floors": 4,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8462,
+   "blind_spots": 3,
+   "rooms": 143,
+   "model_bytes": 2186392,
+   "pack_bytes": 2939849,
+   "model_sha256": "895cabfd52fc7e3931e8c09f5c0c8ebfcdaecb99c0fa65e8fe76782e4e4eb64c",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 40,
+    "meshes": 36,
+    "materials": 0,
+    "images": 0,
+    "triangles": 46010,
+    "bounds_v3": 36
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c054",
+   "title": "银杏园1号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:38+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 480,
+   "model_bytes": 5304840,
+   "pack_bytes": 8141738,
+   "model_sha256": "44d7ef9f938f6d85e6176a5fee515e70d55bbba25852b61e551ce5d709658baf",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 38,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 118388,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c055",
+   "title": "银杏园2号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:41+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 480,
+   "model_bytes": 5285716,
+   "pack_bytes": 8116593,
+   "model_sha256": "492e65a51ba1e6f1719af947c2c4253f4d0fd42ca2fb6a11e91be594ca531243",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 38,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 118258,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c056",
+   "title": "银杏园3号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:35+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 255,
+   "model_bytes": 2833932,
+   "pack_bytes": 4335298,
+   "model_sha256": "92201c3f75623f91917caebdbdcfacc7ee1568ff75ec7deecef0982756c1a66f",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 44,
+    "meshes": 38,
+    "materials": 0,
+    "images": 0,
+    "triangles": 63728,
+    "bounds_v3": 38
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c057",
+   "title": "银杏园4号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:47+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 255,
+   "model_bytes": 2806340,
+   "pack_bytes": 4294334,
+   "model_sha256": "86237a49ae959b12448a021bd074019e245a73b0f71a0ff23d1b9cbdcd899bae",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 44,
+    "meshes": 38,
+    "materials": 0,
+    "images": 0,
+    "triangles": 63652,
+    "bounds_v3": 38
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c059",
+   "title": "珙桐园1号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:48+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 133,
+   "model_bytes": 1462852,
+   "pack_bytes": 2286803,
+   "model_sha256": "c45cdb1993fe8050e340782e84fcca61da32d9999d7f04adaead5d66322953c8",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 43,
+    "meshes": 37,
+    "materials": 0,
+    "images": 0,
+    "triangles": 34324,
+    "bounds_v3": 37
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c060",
+   "title": "珙桐园2号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:53+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 264,
+   "model_bytes": 2745376,
+   "pack_bytes": 4314738,
+   "model_sha256": "7b782ce70b84c7d130bfb7449d188036d06316a615f9729f1aea45a4a459bbfd",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 38,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 62732,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c061",
+   "title": "珙桐园3号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:17:59+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 288,
+   "model_bytes": 2933412,
+   "pack_bytes": 4646276,
+   "model_sha256": "214c85fafee38503f643b9a9b843300ca4de46788c6d79b29466f58405169ba1",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 44,
+    "meshes": 38,
+    "materials": 0,
+    "images": 0,
+    "triangles": 69356,
+    "bounds_v3": 38
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c062",
+   "title": "珙桐园4号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:00+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 257,
+   "model_bytes": 2669732,
+   "pack_bytes": 4179691,
+   "model_sha256": "e0caf977ee4893a44e2502b7cd028e98866f5b3c564628603d3f54422799726d",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 46,
+    "meshes": 40,
+    "materials": 0,
+    "images": 0,
+    "triangles": 62436,
+    "bounds_v3": 40
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c063",
+   "title": "珙桐园5号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:01+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 255,
+   "model_bytes": 2659116,
+   "pack_bytes": 4201809,
+   "model_sha256": "ef3437cccce54ae91f77dce7ac29cefcc33ab048d361c107c4424cc2ff6ddac8",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 46,
+    "meshes": 40,
+    "materials": 0,
+    "images": 0,
+    "triangles": 62456,
+    "bounds_v3": 40
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c064",
+   "title": "珙桐园6号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:08+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 288,
+   "model_bytes": 3012580,
+   "pack_bytes": 4749141,
+   "model_sha256": "8b1970b0109ab127bef44d0c3a493932417315d22cd102ca6d1d517aa9303a08",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 44,
+    "meshes": 38,
+    "materials": 0,
+    "images": 0,
+    "triangles": 70240,
+    "bounds_v3": 38
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c065",
+   "title": "珙桐园7号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:14+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 288,
+   "model_bytes": 3034656,
+   "pack_bytes": 4768835,
+   "model_sha256": "5e6fa4bb599c41c14c66ab1890183928eeaf37af6a72b136599dbad3fae3faff",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 44,
+    "meshes": 38,
+    "materials": 0,
+    "images": 0,
+    "triangles": 70700,
+    "bounds_v3": 38
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c072",
+   "title": "松林园1号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:18+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 402,
+   "model_bytes": 3905192,
+   "pack_bytes": 6083209,
+   "model_sha256": "1c99e1e4f3031657aa1148ff849acac6e6c36946bcd6747dbdf6a10d294ecbb6",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 40,
+    "meshes": 34,
+    "materials": 0,
+    "images": 0,
+    "triangles": 86516,
+    "bounds_v3": 34
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c073",
+   "title": "松林园2号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:34+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 402,
+   "model_bytes": 3908024,
+   "pack_bytes": 6085292,
+   "model_sha256": "bd7ac5ea408692afee42fa16842aee49a5083c66c66be54ddd5ab07e7cfd85d1",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 40,
+    "meshes": 34,
+    "materials": 0,
+    "images": 0,
+    "triangles": 86572,
+    "bounds_v3": 34
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c075",
+   "title": "综合实验大楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:24:45+08:00",
+   "floors": 8,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.92,
+   "blind_spots": 3,
+   "rooms": 299,
+   "model_bytes": 7330892,
+   "pack_bytes": 10215231,
+   "model_sha256": "4b5a51fd0f9582a99d365be73bd90c81221be5d800261b967a1bf3b0db98755f",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 69,
+    "meshes": 61,
+    "materials": 0,
+    "images": 0,
+    "triangles": 163634,
+    "bounds_v3": 61
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c079",
+   "title": "香樟园1号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:18+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 267,
+   "model_bytes": 4002176,
+   "pack_bytes": 5424208,
+   "model_sha256": "e4509e119426f69fd6f79dea45d6d63a87c300e3819e3c8745ebfa48e9e75c2d",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 53,
+    "meshes": 47,
+    "materials": 0,
+    "images": 0,
+    "triangles": 85972,
+    "bounds_v3": 47
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c080",
+   "title": "香樟园2号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:29+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 402,
+   "model_bytes": 6191980,
+   "pack_bytes": 8394074,
+   "model_sha256": "09014f285722ecc6b20e94561f19ba1a567a6c5c9843c06147d2e94fbb9e48fe",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 53,
+    "meshes": 47,
+    "materials": 0,
+    "images": 0,
+    "triangles": 132444,
+    "bounds_v3": 47
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c083",
+   "title": "香樟园3号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:32+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 266,
+   "model_bytes": 3997772,
+   "pack_bytes": 5425919,
+   "model_sha256": "14718e6c8225f842fddac05d0a80c5973c89e10a982f5295afe65873427e77c4",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 53,
+    "meshes": 47,
+    "materials": 0,
+    "images": 0,
+    "triangles": 85884,
+    "bounds_v3": 47
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c084",
+   "title": "香樟园4号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:24:50+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 266,
+   "model_bytes": 4006536,
+   "pack_bytes": 5432978,
+   "model_sha256": "3ef1788bebde10e48957b1d9322926584efae016378afb3bf9bb6572d32842a4",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 53,
+    "meshes": 47,
+    "materials": 0,
+    "images": 0,
+    "triangles": 86056,
+    "bounds_v3": 47
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c085",
+   "title": "香樟园5号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:24:54+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 267,
+   "model_bytes": 4000400,
+   "pack_bytes": 5429405,
+   "model_sha256": "fd86eb4e2edc7c712dd3204afc144035f4e189a67016cbdfdd029f8aa0d2d8e5",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 53,
+    "meshes": 47,
+    "materials": 0,
+    "images": 0,
+    "triangles": 85912,
+    "bounds_v3": 47
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c086",
+   "title": "香樟园6号公寓",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:25:29+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 268,
+   "model_bytes": 4010784,
+   "pack_bytes": 5438544,
+   "model_sha256": "3066c01204039f903fe4e8a90fb0080aed528091b58a45fe53b9353de7805862",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 53,
+    "meshes": 47,
+    "materials": 0,
+    "images": 0,
+    "triangles": 86140,
+    "bounds_v3": 47
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c103",
+   "title": "第十一教学楼（东1教）",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:57+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 189,
+   "model_bytes": 11372916,
+   "pack_bytes": 14850305,
+   "model_sha256": "8c06756517bc00ac886443582aec69c5a273fde56a6b99314d092fc79e0c2517",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 49,
+    "meshes": 43,
+    "materials": 0,
+    "images": 0,
+    "triangles": 246686,
+    "bounds_v3": 43
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -3618,54 +3154,54 @@
    "id": "c104",
    "title": "第十二教学楼（东2教）",
    "status": "unknown",
-   "created_at": "2026-10-19T13:26:15+08:00",
+   "created_at": "2026-10-21T11:18:50+08:00",
    "floors": 5,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.875,
    "blind_spots": 3,
    "rooms": 107,
-   "model_bytes": 32238592,
-   "pack_bytes": 40400514,
-   "model_sha256": "a6e4361d6882b67e26c82ae66ce481f368e7b8443cbe474cf18d3508f19c8213",
+   "model_bytes": 5734284,
+   "pack_bytes": 7379833,
+   "model_sha256": "21957b56b3addd3b17a064a96424d832384665cb31c9ac1ea5a3fea7eb92b3ae",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
-    "nodes": 37,
-    "meshes": 32,
+    "nodes": 45,
+    "meshes": 40,
     "materials": 0,
     "images": 0,
-    "triangles": 677208,
-    "bounds_v3": 32
+    "triangles": 125214,
+    "bounds_v3": 40
    },
    "gates": {
     "J-10.8-00": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 1,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 0,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 3,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 2,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -3676,54 +3212,54 @@
    "id": "c105",
    "title": "图书馆（C105）",
    "status": "unknown",
-   "created_at": "2026-10-19T15:03:00+08:00",
+   "created_at": "2026-10-21T11:23:01+08:00",
    "floors": 6,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8947,
    "blind_spots": 3,
    "rooms": 147,
-   "model_bytes": 91961624,
-   "pack_bytes": 117990243,
-   "model_sha256": "6202b0134e70ab5e6cb56f8342500e67ef5ae3e9188d98c46bb3426ac0a9b9de",
+   "model_bytes": 37999288,
+   "pack_bytes": 50065188,
+   "model_sha256": "cd1a526dc4131fc3a4bbda1e5b63463e1221995a3d8e201c12eb1ed1fce49b47",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
-    "nodes": 38,
-    "meshes": 32,
+    "nodes": 47,
+    "meshes": 41,
     "materials": 0,
     "images": 0,
-    "triangles": 1916946,
-    "bounds_v3": 32
+    "triangles": 785614,
+    "bounds_v3": 41
    },
    "gates": {
     "J-10.8-00": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 1,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 0,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
      "pass": null,
-     "rc": 4,
-     "red": 0,
-     "unmeasured": 3,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 2,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -3731,57 +3267,57 @@
    "audit_issues": []
   },
   {
-   "id": "c004",
-   "title": "办公楼",
-   "status": "green",
-   "created_at": "2026-10-21T06:57:44+08:00",
+   "id": "c106",
+   "title": "生态楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:21:00+08:00",
    "floors": 3,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8,
    "blind_spots": 3,
-   "rooms": 74,
-   "model_bytes": 578676,
-   "pack_bytes": 910136,
-   "model_sha256": "173bfa91904daead21bb32fab3a15f0df4e0b3e732fa0b9971d12c915b1686ef",
+   "rooms": 56,
+   "model_bytes": 620872,
+   "pack_bytes": 823478,
+   "model_sha256": "914b4804d45fdb4d113d714db76a08f5f5a761e1922083c257a7954da5f67328",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
-    "nodes": 26,
-    "meshes": 23,
+    "nodes": 27,
+    "meshes": 24,
     "materials": 0,
     "images": 0,
-    "triangles": 12492,
-    "bounds_v3": 23
+    "triangles": 13876,
+    "bounds_v3": 24
    },
    "gates": {
     "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -3789,637 +3325,57 @@
    "audit_issues": []
   },
   {
-   "id": "c004f1",
-   "title": "办公楼附楼",
-   "status": "green",
-   "created_at": "2026-10-20T22:40:40+08:00",
-   "floors": 4,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8462,
-   "blind_spots": 3,
-   "rooms": 21,
-   "model_bytes": 850376,
-   "pack_bytes": 1118471,
-   "model_sha256": "dc6371970e38dd7c94db954b46f7554c52035d39424f475e8c34eff09870aadf",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 26,
-    "meshes": 22,
-    "materials": 0,
-    "images": 0,
-    "triangles": 19388,
-    "bounds_v3": 22
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c009",
-   "title": "第九教学楼",
-   "status": "green",
-   "created_at": "2026-10-21T06:51:39+08:00",
+   "id": "c107",
+   "title": "科学楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:21:11+08:00",
    "floors": 5,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.875,
    "blind_spots": 3,
-   "rooms": 189,
-   "model_bytes": 4419364,
-   "pack_bytes": 5958874,
-   "model_sha256": "8c9b71696efaa3170055e5f123c2994152289ea5262fc4c327013a275a56e27e",
+   "rooms": 52,
+   "model_bytes": 472124,
+   "pack_bytes": 654204,
+   "model_sha256": "aaa10d6c1f8c558cb4e5b6dbd8a9cc86704e0cdcf51df6129223423deb813352",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
-    "nodes": 42,
-    "meshes": 37,
-    "materials": 0,
-    "images": 0,
-    "triangles": 98884,
-    "bounds_v3": 37
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c017",
-   "title": "芙蓉园9号公寓",
-   "status": "green",
-   "created_at": "2026-10-21T07:00:26+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 254,
-   "model_bytes": 2445860,
-   "pack_bytes": 3385974,
-   "model_sha256": "ab4f32bff0f3c1f9a8d8f1bfa69c4a497e20fee6e746596ef108bb839961f2ff",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 49,
-    "meshes": 42,
-    "materials": 0,
-    "images": 0,
-    "triangles": 58252,
-    "bounds_v3": 42
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c018",
-   "title": "芙蓉园8号公寓",
-   "status": "green",
-   "created_at": "2026-10-21T07:00:37+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 179,
-   "model_bytes": 2576740,
-   "pack_bytes": 3375470,
-   "model_sha256": "63fbd7d9a175e3b109f279b2637334cd1c858ccc0bdbce68582cabae561fa36a",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 39,
-    "meshes": 33,
-    "materials": 0,
-    "images": 0,
-    "triangles": 60844,
-    "bounds_v3": 33
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c019",
-   "title": "芙蓉园7号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T22:06:36+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 183,
-   "model_bytes": 2118344,
-   "pack_bytes": 2887696,
-   "model_sha256": "8a9b3e9a28d7e4e54942671ee37d2ac7ac2ff498120fca346219a2daf23ca2ca",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 45,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 48556,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c020",
-   "title": "第二办公楼",
-   "status": "green",
-   "created_at": "2026-10-20T23:07:52+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 46,
-   "model_bytes": 1007964,
-   "pack_bytes": 1350691,
-   "model_sha256": "b8df7dbfa9b20fdde987872498b9b24fbe10137fa3052a8dd38616862e39ad99",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 43,
-    "meshes": 37,
-    "materials": 0,
-    "images": 0,
-    "triangles": 22386,
-    "bounds_v3": 37
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c025",
-   "title": "第一教学楼",
-   "status": "green",
-   "created_at": "2026-10-21T07:00:53+08:00",
-   "floors": 3,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8,
-   "blind_spots": 3,
-   "rooms": 48,
-   "model_bytes": 619136,
-   "pack_bytes": 822125,
-   "model_sha256": "db75c2085577d8ff727513c237cf88a2afb6ee5ef9c3fd783cb5bf8f2b659959",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 21,
-    "meshes": 18,
-    "materials": 0,
-    "images": 0,
-    "triangles": 13864,
-    "bounds_v3": 18
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c026",
-   "title": "第四教学楼",
-   "status": "green",
-   "created_at": "2026-10-20T23:03:10+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 47,
-   "model_bytes": 1048812,
-   "pack_bytes": 1417788,
-   "model_sha256": "30c9b26e2371ca26fa06e932c87cd93f1ebcc8765431c05c67d9a397d5880047",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 52,
-    "meshes": 46,
-    "materials": 0,
-    "images": 0,
-    "triangles": 22478,
-    "bounds_v3": 46
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c027",
-   "title": "第三教学楼",
-   "status": "green",
-   "created_at": "2026-10-21T07:01:11+08:00",
-   "floors": 8,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.92,
-   "blind_spots": 3,
-   "rooms": 57,
-   "model_bytes": 1425340,
-   "pack_bytes": 1962015,
-   "model_sha256": "eaf1229561d3dfed9c2f01c94157011b3c9c28c78eacc5b5c8167f027f80d1dc",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 68,
-    "meshes": 60,
-    "materials": 0,
-    "images": 0,
-    "triangles": 31304,
-    "bounds_v3": 60
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c028",
-   "title": "第二教学楼",
-   "status": "green",
-   "created_at": "2026-10-21T07:01:04+08:00",
-   "floors": 3,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8,
-   "blind_spots": 3,
-   "rooms": 30,
-   "model_bytes": 569380,
-   "pack_bytes": 743038,
-   "model_sha256": "33407cb1b5797ba180625b3651684d35a8180237316237c5fd5fb8de88c00faa",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 21,
-    "meshes": 18,
-    "materials": 0,
-    "images": 0,
-    "triangles": 12708,
-    "bounds_v3": 18
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c029",
-   "title": "芙蓉园1号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T08:38:57+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 91,
-   "model_bytes": 1320232,
-   "pack_bytes": 2042833,
-   "model_sha256": "9ca24a81d9de75f29cccbb77f9c26ecd4dc4c0bfbb0493f3a34bf535e0c09e16",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
+    "nodes": 37,
     "meshes": 32,
     "materials": 0,
     "images": 0,
-    "triangles": 30260,
+    "triangles": 10144,
     "bounds_v3": 32
    },
    "gates": {
     "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -4427,579 +3383,57 @@
    "audit_issues": []
   },
   {
-   "id": "c034",
-   "title": "芙蓉园6号公寓",
-   "status": "green",
-   "created_at": "2026-10-21T07:01:40+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 174,
-   "model_bytes": 1937708,
-   "pack_bytes": 2975246,
-   "model_sha256": "b638ae82919b98ba15634f61b077ad5f8b036727b172e0ef174b3a90019f45b6",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 45,
-    "meshes": 39,
-    "materials": 0,
-    "images": 0,
-    "triangles": 44226,
-    "bounds_v3": 39
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c035",
-   "title": "工程楼",
-   "status": "green",
-   "created_at": "2026-10-20T23:04:56+08:00",
+   "id": "c108",
+   "title": "网安楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:21:30+08:00",
    "floors": 4,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8462,
    "blind_spots": 3,
-   "rooms": 35,
-   "model_bytes": 529392,
-   "pack_bytes": 759856,
-   "model_sha256": "8c34659c99e3a0c35706a12d00f8832400f34b8a67999d67dd0cf93a7838f4b2",
+   "rooms": 32,
+   "model_bytes": 433228,
+   "pack_bytes": 583492,
+   "model_sha256": "63fe868c9b72b011aeedd8ccd68f40e977d3bdf73818bec1b5588d495afe07e1",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
     "version": 2,
-    "nodes": 30,
-    "meshes": 26,
+    "nodes": 34,
+    "meshes": 30,
     "materials": 0,
     "images": 0,
-    "triangles": 11488,
-    "bounds_v3": 26
+    "triangles": 9476,
+    "bounds_v3": 30
    },
    "gates": {
     "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c036",
-   "title": "理工宾馆",
-   "status": "green",
-   "created_at": "2026-10-20T23:05:22+08:00",
-   "floors": 5,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.875,
-   "blind_spots": 3,
-   "rooms": 54,
-   "model_bytes": 877404,
-   "pack_bytes": 1250827,
-   "model_sha256": "79e1e59337ede647db345621e16eaa6e7ed6781090b607353de2bde40c2543ef",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 33,
-    "meshes": 28,
-    "materials": 0,
-    "images": 0,
-    "triangles": 20108,
-    "bounds_v3": 28
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c041",
-   "title": "第八教学楼（学研楼）",
-   "status": "green",
-   "created_at": "2026-10-21T07:01:31+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 49,
-   "model_bytes": 2076756,
-   "pack_bytes": 2695894,
-   "model_sha256": "239eda4f4a042a757c50e05571f56f794f03ebdc87dc69bbb10ef974c53e26f7",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 54,
-    "meshes": 48,
-    "materials": 0,
-    "images": 0,
-    "triangles": 46794,
-    "bounds_v3": 48
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c043",
-   "title": "青年教师公寓1号楼",
-   "status": "green",
-   "created_at": "2026-10-20T23:07:01+08:00",
-   "floors": 7,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.9091,
-   "blind_spots": 3,
-   "rooms": 154,
-   "model_bytes": 2409884,
-   "pack_bytes": 3315716,
-   "model_sha256": "17535e7d604432b84b690c1f7b19ae980f4ee13603f851e0fbae9b2c8008bde4",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 37,
-    "materials": 0,
-    "images": 0,
-    "triangles": 56664,
-    "bounds_v3": 37
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c054",
-   "title": "银杏园1号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T09:00:31+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 480,
-   "model_bytes": 5320380,
-   "pack_bytes": 8134922,
-   "model_sha256": "fb2ca9467b433eb2e52af255a14e25f9c72a1400762de930778400966727f23b",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 117832,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c055",
-   "title": "银杏园2号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T09:05:19+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 480,
-   "model_bytes": 5362140,
-   "pack_bytes": 8176588,
-   "model_sha256": "16ecd9a731ed4e57731579f0c3868681b77cf89ee997cb350b2b1ca34839da7d",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 117772,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c060",
-   "title": "珙桐园2号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T09:13:08+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 264,
-   "model_bytes": 2945312,
-   "pack_bytes": 4532883,
-   "model_sha256": "eff88e5438c96260ffcf4b5b95dc480f9813120f8f6097f8e1ef7db8586ceb3b",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 44,
-    "meshes": 38,
-    "materials": 0,
-    "images": 0,
-    "triangles": 67448,
-    "bounds_v3": 38
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c072",
-   "title": "松林园1号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T09:40:11+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 402,
-   "model_bytes": 4203920,
-   "pack_bytes": 6503773,
-   "model_sha256": "0ded47ca417d0acfeaaac60e705a877a61aad09e04e8566f23a8e444d6fc01ee",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 94928,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "c073",
-   "title": "松林园2号公寓",
-   "status": "green",
-   "created_at": "2026-10-20T09:41:22+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 402,
-   "model_bytes": 4202864,
-   "pack_bytes": 6507879,
-   "model_sha256": "f1761f900f8086bd2dc93e4e69c8c5ec104540a79af3219da01768dfcc583655",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 38,
-    "meshes": 32,
-    "materials": 0,
-    "images": 0,
-    "triangles": 94832,
-    "bounds_v3": 32
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -5009,17 +3443,17 @@
   {
    "id": "c109",
    "title": "十公寓",
-   "status": "green",
-   "created_at": "2026-10-20T09:48:57+08:00",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:18:26+08:00",
    "floors": 5,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.875,
    "blind_spots": 3,
    "rooms": 117,
-   "model_bytes": 1017304,
-   "pack_bytes": 1525241,
-   "model_sha256": "dda2fc4d84a35c79ec5edd67ea642de5a4443493d0c942121ccf37136385b76e",
+   "model_bytes": 915264,
+   "pack_bytes": 1400321,
+   "model_sha256": "95069ce4952fab078e0099e941b26f2b7a47fb7b48330e477084f2ca65a5fb4b",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
@@ -5028,36 +3462,384 @@
     "meshes": 28,
     "materials": 0,
     "images": 0,
-    "triangles": 24132,
+    "triangles": 21228,
     "bounds_v3": 28
    },
    "gates": {
     "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     },
     "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c112",
+   "title": "汇智楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:21:59+08:00",
+   "floors": 3,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8,
+   "blind_spots": 3,
+   "rooms": 57,
+   "model_bytes": 1301052,
+   "pack_bytes": 1699937,
+   "model_sha256": "b446a188d8edaf1deb6127e02542393d47c0bd459089e35eaa53bc30f50ff3ce",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 26,
+    "meshes": 23,
+    "materials": 0,
+    "images": 0,
+    "triangles": 28992,
+    "bounds_v3": 23
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c114",
+   "title": "第十教学楼（启智楼）",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:16:39+08:00",
+   "floors": 5,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.875,
+   "blind_spots": 3,
+   "rooms": 61,
+   "model_bytes": 697484,
+   "pack_bytes": 897808,
+   "model_sha256": "88bc6f5854e2750fcc5dcdfabfb38e3c268807d8679ef49cb60acc13e7202752",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 37,
+    "meshes": 32,
+    "materials": 0,
+    "images": 0,
+    "triangles": 15238,
+    "bounds_v3": 32
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "c117",
+   "title": "商学院楼",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:22:14+08:00",
+   "floors": 4,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8462,
+   "blind_spots": 3,
+   "rooms": 89,
+   "model_bytes": 472832,
+   "pack_bytes": 673564,
+   "model_sha256": "51de06dbed3939fed5c8ef150caacb77c30d675cf12158dbfb8981ff4a66dced",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 30,
+    "meshes": 26,
+    "materials": 0,
+    "images": 0,
+    "triangles": 10258,
+    "bounds_v3": 26
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "ny27",
+   "title": "人才公寓1栋",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:25:50+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 36,
+   "model_bytes": 827560,
+   "pack_bytes": 1234554,
+   "model_sha256": "9bd0f75ed73122b733a414b5b3b8c7160111f66c4dd22e6b31cf57af1f92b173",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 32,
+    "meshes": 26,
+    "materials": 0,
+    "images": 0,
+    "triangles": 21164,
+    "bounds_v3": 26
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "ny28",
+   "title": "人才公寓2栋",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:25:58+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 36,
+   "model_bytes": 827564,
+   "pack_bytes": 1234126,
+   "model_sha256": "145e2675f54bfc2b567651ec00d49ec4eed005b2adb9c23e479c88fd2b9568a4",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 32,
+    "meshes": 26,
+    "materials": 0,
+    "images": 0,
+    "triangles": 21164,
+    "bounds_v3": 26
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    }
+   },
+   "red_gates": [],
+   "audit_issues": []
+  },
+  {
+   "id": "ny29",
+   "title": "人才公寓3栋",
+   "status": "unknown",
+   "created_at": "2026-10-21T11:26:33+08:00",
+   "floors": 6,
+   "floor_h_m": 4.0,
+   "qc": "PASS",
+   "positive_control": 0.8947,
+   "blind_spots": 3,
+   "rooms": 48,
+   "model_bytes": 1210604,
+   "pack_bytes": 1773799,
+   "model_sha256": "55a07e4f856d7c8f48bccdce881052cca848511bd90cb033071ff9c7904089f1",
+   "model_sha_ok": true,
+   "glb": {
+    "ok": true,
+    "version": 2,
+    "nodes": 33,
+    "meshes": 27,
+    "materials": 0,
+    "images": 0,
+    "triangles": 29852,
+    "bounds_v3": 27
+   },
+   "gates": {
+    "J-10.8-00": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-01": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.8-04": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
+     "note": ""
+    },
+    "J-10.9-07": {
+     "pass": null,
+     "rc": null,
+     "red": null,
+     "unmeasured": null,
      "note": ""
     }
    },
@@ -5068,16 +3850,16 @@
    "id": "c116",
    "title": "筇竹园公寓",
    "status": "green",
-   "created_at": "2026-10-21T07:31:31+08:00",
+   "created_at": "2026-10-21T11:25:21+08:00",
    "floors": 4,
    "floor_h_m": 4.0,
    "qc": "PASS",
    "positive_control": 0.8462,
    "blind_spots": 3,
    "rooms": 89,
-   "model_bytes": 514804,
-   "pack_bytes": 732792,
-   "model_sha256": "83ebe2229d9f59d31c045c0fd5a23539eb5a81439a900a32a454367d8a1fed46",
+   "model_bytes": 517264,
+   "pack_bytes": 736270,
+   "model_sha256": "93f67a9a8f756effbc7485c472e31cef26bc24135495d2e64664a7c169bcd2fd",
    "model_sha_ok": true,
    "glb": {
     "ok": true,
@@ -5086,124 +3868,8 @@
     "meshes": 29,
     "materials": 0,
     "images": 0,
-    "triangles": 11778,
+    "triangles": 11812,
     "bounds_v3": 29
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "ny27",
-   "title": "人才公寓1栋",
-   "status": "green",
-   "created_at": "2026-10-20T09:52:41+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 36,
-   "model_bytes": 965980,
-   "pack_bytes": 1408986,
-   "model_sha256": "684316be33665f425e5afe753b35ce68516904f5c5040a9fcf9dfd31e19be3af",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 32,
-    "meshes": 26,
-    "materials": 0,
-    "images": 0,
-    "triangles": 23516,
-    "bounds_v3": 26
-   },
-   "gates": {
-    "J-10.8-00": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-01": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.8-04": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    },
-    "J-10.9-07": {
-     "pass": true,
-     "rc": 0,
-     "red": 0,
-     "unmeasured": 0,
-     "note": ""
-    }
-   },
-   "red_gates": [],
-   "audit_issues": []
-  },
-  {
-   "id": "ny29",
-   "title": "人才公寓3栋",
-   "status": "green",
-   "created_at": "2026-10-20T09:54:36+08:00",
-   "floors": 6,
-   "floor_h_m": 4.0,
-   "qc": "PASS",
-   "positive_control": 0.8947,
-   "blind_spots": 3,
-   "rooms": 48,
-   "model_bytes": 1379392,
-   "pack_bytes": 1994362,
-   "model_sha256": "7edf50018a6d33abca43817c2191cb24cd935d18f834da23149229fa9a394daa",
-   "model_sha_ok": true,
-   "glb": {
-    "ok": true,
-    "version": 2,
-    "nodes": 33,
-    "meshes": 27,
-    "materials": 0,
-    "images": 0,
-    "triangles": 33284,
-    "bounds_v3": 27
    },
    "gates": {
     "J-10.8-00": {

@@ -339,6 +339,8 @@
     const p = b.pack || {};
     main.innerHTML = `
       <a class="back" href="#/">← 总览</a>
+      <a class="btn ghost" style="float:right;margin-top:-30px"
+         href="/column-review?bid=${encodeURIComponent(b.bid)}">柱子人工校正</a>
       ${head(`楼栋 ${b.bid} · 现场读数`,
         `${esc(bname(b.bid, b.title))}<span class="thin"> · ${b.floors.length} 层${b.profile.basement ? " + " + esc(b.profile.basement) : ""}</span>`,
         `<b>数据根</b>${esc(b.root)}<br><b>出件名</b>${esc(b.out_name)}<br>

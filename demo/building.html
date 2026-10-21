@@ -251,10 +251,72 @@ body{background:var(--bg);font-family:"Microsoft YaHei","Segoe UI",system-ui,san
 #bar label{
   margin-top:17px;color:#778894;font-size:8px;letter-spacing:.18em;
 }
-#bar select{
-  margin-top:17px;min-width:220px;background:rgba(4,10,15,.72);
-  border-color:rgba(228,211,176,.16);border-radius:2px;padding:5px 8px;
-  color:#d9d2c5;font-size:11px;
+#bar .bselect{
+  position:relative;margin-top:17px;width:330px;min-width:220px;flex:0 1 330px;
+}
+#bar .bsearch{
+  width:100%;height:31px;padding:5px 35px 5px 31px;
+  background:rgba(4,10,15,.72);border:1px solid rgba(228,211,176,.16);
+  border-radius:2px;color:#e6ded0;font:11px var(--ui);outline:none;
+  transition:border-color .16s,box-shadow .16s,background .16s;
+}
+#bar .bsearch::placeholder{color:#61717d}
+#bar .bsearch:hover{border-color:rgba(216,176,106,.32)}
+#bar .bsearch:focus{
+  border-color:rgba(216,176,106,.58);background:rgba(4,10,15,.9);
+  box-shadow:0 0 0 3px rgba(216,176,106,.07);
+}
+#bar .bico{
+  position:absolute;left:10px;top:50%;width:14px;height:14px;
+  transform:translateY(-50%);color:#7e8d98;pointer-events:none;
+}
+#bar .btoggle{
+  position:absolute;right:1px;top:1px;width:30px;height:29px;
+  display:grid;place-items:center;border:0;border-left:1px solid rgba(228,211,176,.1);
+  background:transparent;color:#9eaab3;cursor:pointer;
+}
+#bar .btoggle:hover{color:var(--acc);background:rgba(216,176,106,.05)}
+#bar .btoggle svg{width:12px;height:12px;transition:transform .16s}
+#bar .bselect.open .btoggle svg{transform:rotate(180deg)}
+#bar .bpicklist{
+  position:absolute;left:0;top:calc(100% + 7px);z-index:80;
+  width:min(390px,calc(100vw - 44px));max-height:min(440px,58vh);
+  overflow:auto;padding:5px;
+  background:linear-gradient(150deg,rgba(16,26,34,.98),rgba(7,13,18,.98));
+  border:1px solid rgba(228,211,176,.2);border-radius:3px;
+  box-shadow:0 22px 56px rgba(0,0,0,.56),inset 0 1px 0 rgba(255,255,255,.04);
+}
+#bar .bpicklist[hidden]{display:none}
+#bar .bpicklist::-webkit-scrollbar{width:7px}
+#bar .bpicklist::-webkit-scrollbar-thumb{background:#28333c;border-radius:4px}
+#bar .bopt{
+  width:100%;display:grid;grid-template-columns:3px 1fr 18px;align-items:center;
+  gap:10px;padding:8px 9px;border:1px solid transparent;border-radius:2px;
+  background:transparent;color:#d9d2c5;text-align:left;cursor:pointer;
+}
+#bar .bopt + .bopt{margin-top:1px}
+#bar .bopt:hover,#bar .bopt.active{
+  background:rgba(216,176,106,.075);border-color:rgba(216,176,106,.18);
+}
+#bar .bopt.on{background:rgba(216,176,106,.11);border-color:rgba(216,176,106,.28)}
+#bar .bmark{width:3px;height:28px;background:transparent;border-radius:2px}
+#bar .bopt.on .bmark{background:var(--acc)}
+#bar .bmain{min-width:0}
+#bar .bmain b{
+  display:inline-block;margin-right:8px;color:var(--acc);font:600 9px var(--mono);
+  letter-spacing:.1em;
+}
+#bar .bmain strong{
+  color:#eee7da;font:600 12px var(--ui);letter-spacing:.02em;
+}
+#bar .bmain small{
+  display:block;margin-top:2px;color:#71818d;font:9px var(--ui);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#bar .bcheck{color:var(--acc);font:12px var(--ui);opacity:0;text-align:right}
+#bar .bopt.on .bcheck{opacity:1}
+#bar .bnoresult{
+  padding:18px 12px;color:#778793;font:11px var(--ui);text-align:center;
 }
 #bar b#bname{
   margin-top:17px;font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
@@ -327,12 +389,73 @@ body::after{
 @media (max-width:900px){
   #bar{left:12px;top:12px;min-width:0;max-width:calc(100vw - 24px)}
   #bar::before{display:none}#bar label{display:none}
-  #bar select,#bar b#bname{margin-top:0}
+  #bar .bselect,#bar b#bname{margin-top:0}
   #floorbar{left:12px;top:76px;max-width:calc(100vw - 24px)}
   #info{right:12px;top:12px;width:240px}
   #rightcol{right:12px;bottom:12px;width:240px}
   #footline{left:12px;bottom:12px;max-width:calc(100vw - 280px)}
   body::after{display:none}
+}
+
+/* ── 2026-10-21 1080P 可读性定稿 ─────────────────────────────────────────
+   之前大量正文使用 7.5–11 px，在 1080P / Windows 缩放环境下会明显发虚。
+   这里统一提高字号、字重与前景对比度；不再依赖极小字号和低透明度制造“精致感”。 */
+body{
+  font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+  font-size:14px;color:#f1ebdf;text-rendering:auto;
+}
+#bar{padding:13px 17px 12px;gap:11px;min-width:min(760px,calc(100vw - 44px))}
+#bar::before{font-size:9px;color:rgba(231,201,141,.86);letter-spacing:.16em;top:7px}
+#bar label{font-size:11.5px;font-weight:700;color:#aab7c0;letter-spacing:.1em}
+#bar .bsearch{height:34px;font-size:13px;font-weight:500;color:#f3ecdf;padding-left:33px}
+#bar .bsearch::placeholder{color:#8a9aa5}
+#bar .bico{width:16px;height:16px;left:10px;color:#9eabb4}
+#bar .btoggle{height:32px;width:32px}
+#bar .bmain b{font-size:10.5px;font-weight:700}
+#bar .bmain strong{font-size:13px;font-weight:700}
+#bar .bmain small{font-size:11px;color:#95a4ae;margin-top:3px}
+#bar .bnoresult{font-size:12.5px;color:#a1afb8}
+#bar b#bname{font-size:20px;font-weight:700;color:#fff7e9}
+#bar #chainTag{font-size:11.5px!important;color:#a9b5bd!important}
+
+#floorbar{padding:7px 9px;gap:7px}
+.flrow button{font-size:12px;font-weight:600;color:#b8c2c9;padding:6px 11px}
+.flrow button.on{color:#1a130a;font-weight:700}
+.sw{font-size:12px;font-weight:600;color:#b8c2c9;padding:6px 11px}
+.sw b{font-size:11px;font-weight:700}
+
+.fl h3{font-size:12px;font-weight:700;color:#ddd1bb;letter-spacing:.1em}
+.fl h3 .n{font-size:12px;font-weight:700}
+#info{font-size:13px;line-height:1.7;color:#b8c4cc}
+#info .t{font-size:18px;font-weight:700}
+#info b{font-size:12.5px;color:#a8b6bf}
+#info span{color:#f0eadf}
+#info code{font-size:12px;color:#f0ce8f}
+#infoIdle{font-size:12.5px;color:#9eacb5}
+#panelBox summary{font-size:12px;font-weight:700;color:#e3c78f}
+#panelBox summary .n{font-size:11.5px;font-weight:700}
+.rrow .nm{font-size:12px;font-weight:600;color:#f0eadf}
+.rrow .pu{font-size:11.5px;color:#a3b0b9}
+.rrow .ar{font-size:12px;color:#cdbfa2}
+.lgd span{font-size:12px;color:#aeb9c1;padding:5px 6px}
+#legendBox .rtag{font-size:11.5px;color:#aeb9c1}
+#legendBox .rtag.on{color:#efcf95}
+#footline{font-size:11.5px;color:#a3b0b9;padding:10px 13px}
+.bar-btn{font-size:12px;font-weight:600;color:#c4ced4;padding:6px 11px}
+#chainTag{color:#aeb9c1}
+body::after{font-size:10.5px;color:rgba(235,227,213,.58);letter-spacing:.14em}
+
+/* 1080P 下浮层文字发虚：backdrop-filter 会把含文字的整个层送进离屏合成，
+   在 Windows 125%/150% 缩放下产生二次采样。改用高不透明度实色渐变，只留边框与阴影。 */
+.fl{
+  background:linear-gradient(145deg,rgba(13,22,29,.975),rgba(7,13,18,.975))!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+
+@media (max-width:900px){
+  #bar{min-width:0;padding:12px 13px}
+  #bar .bsearch{font-size:12.5px}
+  #info{font-size:12.5px}
 }
 </style>
 </head><body>
@@ -342,8 +465,25 @@ body::after{
 
 <!-- 左上：建筑 + 栋名 -->
 <div class="fl" id="bar">
-  <label for="pick">建筑</label>
-  <select id="pick" title="清单来自 packs/index.json（demo/build_index.py 从盘上现算）"></select>
+  <label for="pickSearch">建筑</label>
+  <div class="bselect" id="bselect">
+    <svg class="bico" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+         stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <circle cx="10.5" cy="10.5" r="6.2"></circle><path d="m15.2 15.2 4.3 4.3"></path>
+    </svg>
+    <input class="bsearch" id="pickSearch" type="text" role="combobox"
+           aria-autocomplete="list" aria-controls="pickList" aria-expanded="false"
+           aria-label="搜索并选择建筑" placeholder="搜索楼名或编号"
+           autocomplete="off" spellcheck="false">
+    <button class="btoggle" id="pickToggle" type="button" aria-label="展开楼栋列表"
+            aria-controls="pickList" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
+    </button>
+    <div class="bpicklist" id="pickList" role="listbox" aria-label="建筑列表" hidden></div>
+  </div>
   <b id="bname">—</b>
   <span id="chainTag" style="font:11px var(--mono);color:var(--dim);white-space:nowrap"></span>
 </div>
@@ -471,8 +611,10 @@ const READY_TIMEOUT_MS = 60000; // 12 MB 本地件：60 s 还没 'ready' 就当�
 const PACKS_INDEX = '../packs/index.json';
 
 const $ = id => document.getElementById(id);
-const stage = $('stage'), pick = $('pick'), chips = $('chips'), veil = $('veil'),
+const stage = $('stage'), chips = $('chips'), veil = $('veil'),
       veilBox = $('veilBox'), statusEl = $('status'), alertsEl = $('alerts'),
+      bselect = $('bselect'), pickSearch = $('pickSearch'), pickToggle = $('pickToggle'),
+      pickList = $('pickList'),
       rnum = $('rnum'), rfloors = $('rfloors'), rlegend = $('rlegend'), rlegendN = $('rlegendN'),
       rlist = $('rlist'), rcard = $('rcard'), pickcard = $('pickcard'), infoIdle = $('infoIdle'),
       bname = $('bname'), hint3 = $('hint3'),   // ★ hint3 已随 `#hint` 浮层删除 ⇒ 恒为 null（写入处有守卫）
@@ -483,6 +625,8 @@ const stage = $('stage'), pick = $('pick'), chips = $('chips'), veil = $('veil')
 
 let currentId = null;      // 当前楼栋「<场区>/<楼栋>」
 let frame = null;          // 当前 iframe
+let pickerMatches = [];    // 建筑搜索当前命中行
+let pickerActive = -1;     // 键盘当前高亮项
 let pollTimer = null, deadline = 0, lastPhase = '', liveTris = null;
 let rows = [];             // packs/index.json 的 packs[]
 
@@ -593,7 +737,7 @@ function load(id, opts){
   }
   currentId = id;
   if (opts.push) setHash(id);
-  pick.value = id;
+  setPickerSelection(id);
   document.title = 'cdut3d · ' + row.title;
   liveTris = null; lastPhase = '';
   chainTag.textContent = '· cdut3d 链';
@@ -604,8 +748,8 @@ function load(id, opts){
   //   数不丢：它仍挂在建筑下拉的 `title` 上（悬停可见），不占屏幕。
   const _f = row.floors || {};
   if (hint3) hint3.textContent = '本楼 ' + dash(_f.n_floors) + ' 层 × 层高 ' + dash(_f.floor_h_m) + ' m';
-  pick.title = dash(_f.n_floors) + ' 层 × 层高 ' + dash(_f.floor_h_m) + ' m · '
-             + '3D 件 ' + (row.model ? mb(row.model.bytes) : '—');
+  pickSearch.title = dash(_f.n_floors) + ' 层 × 层高 ' + dash(_f.floor_h_m) + ' m · '
+                 + '3D 件 ' + (row.model ? mb(row.model.bytes) : '—');
   loadRooms(id);                                   // 房间面板：与装载并行，各读各的件
   packFloorNodes = [];                             // 换栋先清：上一栋的节点名不许留在这一栋上用
   // 包路径不再上屏（2026-10-20 用户令）—— 维护信息只留在清单/日志里
@@ -715,7 +859,153 @@ $('bFull').onclick = () => {
 document.addEventListener('fullscreenchange', () => {
   $('bFull').textContent = document.fullscreenElement ? '退出全屏' : '全屏';
 });
-pick.onchange = () => { hideVeil(); load(pick.value, {push: true}); };
+// ── 建筑搜索选择器 ────────────────────────────────────────────────────────
+// 原生 select 只能逐项翻找；楼栋到 60+ 之后必须支持按编号、楼名、校区即时搜索。
+// 输入框始终显示当前楼栋，聚焦即展开全量列表，键入即过滤，键盘可完整操作。
+const pickerLabel = row => row ? row.campus + ' / ' + row.id + ' · ' + row.title : '';
+const pickerKey = row => (row.campus + ' ' + row.id + ' ' + row.title).toLowerCase();
+const pickerOpen = () => bselect.classList.contains('open');
+
+function setPickerSelection(id){
+  const row = rows[indexOf(id)];
+  pickSearch.value = pickerLabel(row);
+  renderBuildingPicker('', id);
+}
+
+function renderBuildingPicker(query, selectedId){
+  const selected = selectedId || currentId;
+  const words = String(query || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  pickerMatches = rows.filter(row => {
+    const key = pickerKey(row);
+    return words.every(word => key.includes(word));
+  });
+  pickerActive = Math.max(0, pickerMatches.findIndex(row => row.campus + '/' + row.id === selected));
+  if (!pickerMatches.length){
+    pickList.innerHTML = '<div class="bnoresult">没有匹配的建筑</div>';
+    pickSearch.setAttribute('aria-expanded', String(!pickList.hidden));
+    pickSearch.removeAttribute('aria-activedescendant');
+    return;
+  }
+  pickList.innerHTML = pickerMatches.map((row, index) => {
+    const id = row.campus + '/' + row.id;
+    const floors = (row.floors && row.floors.n_floors) || '—';
+    return '<button type="button" class="bopt' + (id === selected ? ' on' : '')
+      + (index === pickerActive ? ' active' : '') + '" id="bopt-' + index + '"'
+      + ' role="option" aria-selected="' + (id === selected ? 'true' : 'false') + '"'
+      + ' data-id="' + attr(id) + '">'
+      + '<span class="bmark"></span>'
+      + '<span class="bmain"><b>' + esc(String(row.id).toUpperCase()) + '</b>'
+      + '<strong>' + esc(row.title || row.id) + '</strong>'
+      + '<small>' + esc(row.campus + ' · ' + floors + ' 层 · '
+      + (row.model ? mb(row.model.bytes) : '无模型件')) + '</small></span>'
+      + '<span class="bcheck">✓</span></button>';
+  }).join('');
+  pickSearch.setAttribute('aria-expanded', String(!pickList.hidden));
+  syncPickerActive();
+}
+
+function syncPickerActive(){
+  pickList.querySelectorAll('.bopt').forEach((el, index) => {
+    const on = index === pickerActive;
+    el.classList.toggle('active', on);
+  });
+  const active = pickerMatches[pickerActive];
+  if (active && pickerOpen()){
+    pickSearch.setAttribute('aria-activedescendant', 'bopt-' + pickerActive);
+    const el = $('bopt-' + pickerActive);
+    if (el) el.scrollIntoView({block: 'nearest'});
+  } else {
+    pickSearch.removeAttribute('aria-activedescendant');
+  }
+}
+
+function openPicker(){
+  bselect.classList.add('open');
+  pickList.hidden = false;
+  pickToggle.setAttribute('aria-expanded', 'true');
+  renderBuildingPicker('', currentId);
+}
+
+function closePicker(restore){
+  bselect.classList.remove('open');
+  pickList.hidden = true;
+  pickToggle.setAttribute('aria-expanded', 'false');
+  pickSearch.setAttribute('aria-expanded', 'false');
+  pickSearch.removeAttribute('aria-activedescendant');
+  if (restore) setPickerSelection(currentId);
+}
+
+function choosePicker(index){
+  const row = pickerMatches[index];
+  if (!row) return;
+  const id = row.campus + '/' + row.id;
+  closePicker(false);
+  pickSearch.blur();
+  hideVeil();
+  load(id, {push: true});
+}
+
+pickSearch.addEventListener('focus', () => {
+  openPicker();
+  pickSearch.select();
+});
+pickSearch.addEventListener('click', () => {
+  if (!pickerOpen()) openPicker();
+});
+pickSearch.addEventListener('input', () => {
+  if (!pickerOpen()) openPicker();
+  renderBuildingPicker(pickSearch.value, currentId);
+});
+pickSearch.addEventListener('keydown', event => {
+  if (event.key === 'Escape'){
+    event.preventDefault();
+    closePicker(true);
+    pickSearch.blur();
+    return;
+  }
+  if (!pickerOpen()) openPicker();
+  if (event.key === 'ArrowDown'){
+    event.preventDefault();
+    if (pickerMatches.length){
+      pickerActive = (pickerActive + 1) % pickerMatches.length;
+      syncPickerActive();
+    }
+  } else if (event.key === 'ArrowUp'){
+    event.preventDefault();
+    if (pickerMatches.length){
+      pickerActive = (pickerActive - 1 + pickerMatches.length) % pickerMatches.length;
+      syncPickerActive();
+    }
+  } else if (event.key === 'Home'){
+    event.preventDefault();
+    pickerActive = 0; syncPickerActive();
+  } else if (event.key === 'End'){
+    event.preventDefault();
+    pickerActive = Math.max(0, pickerMatches.length - 1); syncPickerActive();
+  } else if (event.key === 'Enter'){
+    event.preventDefault();
+    choosePicker(pickerActive);
+  }
+});
+pickToggle.addEventListener('click', event => {
+  event.preventDefault();
+  if (pickerOpen()){
+    closePicker(true);
+  } else {
+    pickSearch.focus();
+  }
+});
+pickList.addEventListener('pointerdown', event => {
+  const option = event.target.closest('.bopt');
+  if (!option) return;
+  event.preventDefault();
+  const index = pickerMatches.findIndex(row => row.campus + '/' + row.id === option.dataset.id);
+  if (index >= 0) choosePicker(index);
+});
+document.addEventListener('pointerdown', event => {
+  if (!bselect.contains(event.target)) closePicker(true);
+});
+
 addEventListener('hashchange', () => {
   const id = parseHash();
   if (id && id !== currentId){ hideVeil(); load(id, {push: false}); }
@@ -1216,9 +1506,7 @@ rlist.onclick = e => {
     showVeil('<h2>盘上一个包都没有</h2><p>先跑 <code>demo/build_pack.py</code>。</p>');
     return;
   }
-  pick.innerHTML = rows.map(r => '<option value="' + attr(r.campus + '/' + r.id) + '">'
-    + esc(r.campus + ' / ' + r.id + ' · ' + r.title)
-    + '</option>').join('');
+  renderBuildingPicker('', '');
 
   const fromHash = parseHash();
   const fromQuery = new URLSearchParams(location.search).get('pack');

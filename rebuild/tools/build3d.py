@@ -321,10 +321,23 @@ def _poly(pts):
 
 
 def _split(p):
-    """任意多边形 → 单块列表（MultiPolygon 摊平）。"""
+    """任意几何 → 单块 Polygon 列表。
+
+    ★ 2026-10-21：墙轮廓拉直后，布尔差集可能返回 Polygon / MultiPolygon /
+    GeometryCollection 的混合。旧版只摊平 MultiPolygon，GeometryCollection
+    会原样流进 `_drop_short_edges`，随后读 `.exterior` 当场崩溃。
+    这里递归摊平，只保留有面积的 Polygon；非面几何明确丢弃。
+    """
     if p is None or p.is_empty:
         return []
-    return list(p.geoms) if p.geom_type == "MultiPolygon" else [p]
+    if p.geom_type == "Polygon":
+        return [p] if p.area > 0 else []
+    if p.geom_type in ("MultiPolygon", "GeometryCollection"):
+        out = []
+        for part in p.geoms:
+            out.extend(_split(part))
+        return out
+    return []
 
 
 _TERRACE_CACHE = None
@@ -465,13 +478,69 @@ def wall_polys(v):
     return out
 
 
-def col_polys(v):
-    """柱块折线 → 多边形列表（只留闭合出面的）。"""
+_COLUMN_MANUAL_CACHE = {"mtime": None, "data": None}
+
+
+def _column_manual(bid=None):
+    import building as _B
+    path = os.path.join(os.path.dirname(_B.PROFILE), "柱人工校正.json")
+    try:
+        mtime = os.path.getmtime(path)
+        if _COLUMN_MANUAL_CACHE["mtime"] != mtime:
+            with open(path, encoding="utf-8") as source:
+                _COLUMN_MANUAL_CACHE["data"] = json.load(source)
+            _COLUMN_MANUAL_CACHE["mtime"] = mtime
+    except OSError:
+        return {}
+    root = _COLUMN_MANUAL_CACHE["data"] or {}
+    return ((root.get("楼栋") or {}).get(bid or _B.BID) or {})
+
+
+def col_polys(v, floor=None):
+    """柱块折线 → 多边形列表，并应用**独立的**人工校正表。
+
+    自动规则不猜“哪根柱不存在”。人工调试表只记录人工决定：
+      · exclude：按楼层 + 柱中心 20 mm 容差排除；
+      · add：人工补一个矩形柱。
+    该表不写入参数.json，也不进入统一需求。
+    """
     out = []
     for pts, _cl in v["cols"]:
         p = _poly(pts)
         if p is not None:
             out.append(p)
+    if not floor:
+        return out
+    manual = _column_manual()
+    excluded = 0
+    if manual.get("exclude"):
+        kept = []
+        rows = [r for r in manual["exclude"] if str(r.get("floor")) == str(floor)]
+        for poly in out:
+            c = poly.centroid
+            hit = any(
+                math.hypot(c.x - float(row["center"][0]), c.y - float(row["center"][1])) <= 20.0
+                for row in rows
+                if isinstance(row.get("center"), list) and len(row["center"]) == 2
+            )
+            if hit:
+                excluded += 1
+            else:
+                kept.append(poly)
+        out = kept
+    added = 0
+    for row in manual.get("add") or []:
+        if str(row.get("floor")) != str(floor):
+            continue
+        try:
+            cx, cy = float(row["center"][0]), float(row["center"][1])
+            w, d = float(row["size_mm"][0]), float(row["size_mm"][1])
+            out.append(sg.box(cx - w / 2, cy - d / 2, cx + w / 2, cy + d / 2))
+            added += 1
+        except (KeyError, TypeError, ValueError, IndexError):
+            print("  ★ 柱人工新增记录不完整，已跳过：%r" % (row,))
+    if excluded or added:
+        print("  ▷ %s 柱人工校正：排除 %d 根 / 新增 %d 根" % (floor, excluded, added))
     return out
 
 
@@ -2767,7 +2836,7 @@ def main():
         _void = _cut or []          # None（本层没梯）/ []（有梯没清到）都退化成「不扣」
         _wp1 = carve(wp0, voids)
         _cwp = carve(_wp1, _void)
-        cp = col_polys(v)
+        cp = col_polys(v, floor=name)
         lp = lift_polys(v)
         stp = step_polys(v)
         _sp0 = slab_polys(v)
@@ -3498,7 +3567,8 @@ def main():
                     "bpy.ops.import_scene.gltf(filepath=r'%s')\n"
                     "bpy.ops.wm.save_as_mainfile(filepath=r'%s')\n"
                     % (glb, os.path.join(OUT, "%s_white.blend" % OUT_NAME)))
-        r = subprocess.run([BLENDER, "-b", "-P", bp], capture_output=True, text=True)
+        r = subprocess.run([BLENDER, "-b", "-P", bp], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
         tail = (r.stdout or "")[-400:]
         print("Blender rc=%d %s" % (r.returncode, "OK" if r.returncode == 0 else tail))
     else:

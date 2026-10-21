@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>柱子人工校正 · 营造</title>
+<link rel="stylesheet" href="/column-review.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <div class="kicker">MANUAL COLUMN REVIEW</div>
+    <h1>柱子人工校正</h1>
+    <p>临时调试页。只写独立的《柱人工校正.json》，不进入统一参数和统一需求。</p>
+  </div>
+  <a id="back" class="btn ghost" href="/admin">返回工作台</a>
+</header>
+
+<main class="layout">
+  <section class="toolbar panel">
+    <label>楼栋<select id="bid"></select></label>
+    <label>楼层<select id="floor"></select></label>
+    <label class="grow">搜索柱<input id="search" type="search" placeholder="编号或坐标"></label>
+    <label class="check"><input id="addMode" type="checkbox"> 新增柱模式</label>
+    <label class="size">宽<input id="addW" type="number" min="100" max="3000" value="600"></label>
+    <label class="size">深<input id="addD" type="number" min="100" max="3000" value="600"></label>
+    <button id="save" class="btn primary">保存校正</button>
+  </section>
+
+  <section class="workspace">
+    <div class="panel plan-card">
+      <div class="card-head">
+        <div><h2>平面核对</h2><p id="plan-sub">—</p></div>
+        <div class="legend">
+          <span><i class="sw wall"></i>墙</span>
+          <span><i class="sw col"></i>柱</span>
+          <span><i class="sw off"></i>已排除</span>
+          <span><i class="sw add"></i>人工新增</span>
+        </div>
+      </div>
+      <div class="plan-wrap"><svg id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <p class="hint">点柱子切换“保留 / 排除”。勾选“新增柱模式”后，在平面内单击落一个柱。</p>
+    </div>
+
+    <aside class="panel list-card">
+      <div class="card-head"><div><h2>柱清单</h2><p id="count">—</p></div></div>
+      <div id="rows" class="rows"></div>
+    </aside>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/column-review.js"></script>
+</body>
+</html>
