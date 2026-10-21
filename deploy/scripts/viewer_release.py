@@ -107,6 +107,31 @@ def verify(dst: Path):
     return 0
 
 
+def refresh(dst: Path):
+    """重算现有发布目录的清单；用于只替换少量代码/模型包的增量上传。"""
+    rows = []
+    for p in sorted(dst.rglob("*")):
+        if p.is_file() and p.name != MANIFEST:
+            rows.append({
+                "path": p.relative_to(dst).as_posix(),
+                "bytes": p.stat().st_size,
+                "sha256": sha256(p),
+            })
+    manifest = {
+        "schema": "cdut3d-viewer-release/1",
+        "built_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "mode": "viewer",
+        "files": rows,
+        "total_files": len(rows),
+        "total_bytes": sum(x["bytes"] for x in rows),
+    }
+    (dst / MANIFEST).write_text(json.dumps(manifest, ensure_ascii=False, indent=1),
+                                encoding="utf-8")
+    print(json.dumps({"refreshed": True, "files": len(rows),
+                      "total_bytes": manifest["total_bytes"]}, ensure_ascii=False))
+    return 0
+
+
 def archive(src: Path, out: Path):
     with tarfile.open(out, "w:gz", compresslevel=1) as tf:
         for p in sorted(src.rglob("*")):
@@ -122,6 +147,8 @@ def main(argv=None):
     b.add_argument("dest")
     v = sub.add_parser("verify")
     v.add_argument("dest")
+    r = sub.add_parser("refresh")
+    r.add_argument("dest")
     a = sub.add_parser("archive")
     a.add_argument("src")
     a.add_argument("out")
@@ -131,6 +158,8 @@ def main(argv=None):
         return 0
     if ns.cmd == "verify":
         return verify(Path(ns.dest).resolve())
+    if ns.cmd == "refresh":
+        return refresh(Path(ns.dest).resolve())
     archive(Path(ns.src).resolve(), Path(ns.out).resolve())
     return 0
 
