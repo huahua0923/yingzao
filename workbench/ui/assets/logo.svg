@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="营造校徽">
+  <defs>
+    <linearGradient id="seal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d8b06a"/>
+      <stop offset="1" stop-color="#9a6b2f"/>
+    </linearGradient>
+  </defs>
+  <circle cx="36" cy="36" r="33" fill="rgba(8,15,22,.78)" stroke="url(#seal)" stroke-width="1.5"/>
+  <circle cx="36" cy="36" r="27.5" fill="none" stroke="rgba(216,176,106,.34)" stroke-width=".8"/>
+  <path d="M17 34.5 36 18l19 16.5" fill="none" stroke="#e7c98d" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21.5 33.5v19.2M50.5 33.5v19.2M21.5 52.7h29" fill="none" stroke="#e7c98d" stroke-width="1.7" stroke-linecap="round"/>
+  <path d="M28 36v12.8M36 33.5v15.3M44 36v12.8" fill="none" stroke="rgba(231,201,141,.9)" stroke-width="1.1"/>
+  <path d="M25.5 49h21" stroke="rgba(231,201,141,.45)" stroke-width=".8"/>
+  <path d="M18 57.5h36" stroke="rgba(216,176,106,.6)" stroke-width=".8"/>
+</svg>

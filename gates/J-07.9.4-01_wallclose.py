@@ -68,7 +68,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import cad_close_walls as CC      # noqa: E402
 
 SRC = r"D:\项目\gym3d\材料\dxf_output\C006-第六教学楼（逸夫楼）.dxf"
-WORK = os.path.join(ROOT, "_out", "J-07.9.4-01")
+WORK = os.path.join(ROOT, "过程/_out", "J-07.9.4-01")
 TOL = 480.0
 PREFIX = "4.2"
 SEC_BUDGET = 120.0

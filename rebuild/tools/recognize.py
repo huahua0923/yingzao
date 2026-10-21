@@ -43,14 +43,29 @@ from ezdxf.math import bulge_to_arc
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import building as B                                                    # noqa: E402
+import door_rule as DR                                                  # noqa: E402
+
+# ★ 2026-10-17：数据根与「源图怎么画」改从楼栋档案读（不设环境变量 = c006，行为不变）。
+ROOT = B.ROOT
 RAW = os.path.join(ROOT, "01_cad", "raw")
 OUT_REC = os.path.join(ROOT, "02_recognize")
 OUT_RED = os.path.join(ROOT, "03_redraw")
+_DRAW = B.profile().get("drawing", {})
+STAIR_MODE = _DRAW.get("stairs", "anchor")      # anchor=图上写「上/下」；treads=没有锚点，靠几何
+#                                          auto=先看有没有「上/下」锚点，没有就走几何（见 `_stair_mode`）
+DOOR_MODE = _DRAW.get("doors", "block")         # block=INSERT；symbols=墙层上的多点多段线
+DOOR_MIN_PTS = 16                               # 老口径兜底值（档案没写形状三项时才用）
+# ★★ 2026-10-19：门符号判据**唯一一份**在 `door_rule.py`（与 redraw / overlay_check 共用）。
+#   原先这里是写死的「≥16 点」，芙蓉园一族图（门 14 点、真墙链 22 点）会把墙当门丢掉。
+_IS_DOOR = DR.make_predicate(_DRAW)
 ACACHE = os.path.join(OUT_REC, "_acache")   # analyze() 的磁盘缓存（--no-acache 关掉）
 ACACHE_ON = True
 
-WALL_LAYER = "4.2墙体"
+# ★ 2026-10-17：墙层名**逐栋不同**（`4.2墙体` 101 张图 / `4墙体` 5 张）⇒ 从源图现认
+#   （档案 `wall_layer` 可覆盖）。写死的后果是另一些楼读到 0 条墙线、建出空房子。
+WALL_LAYER = B.layer("wall", "4.2墙体")
 RES = 25.0                 # mm / px
 STROKE = 50.0              # 画线的总宽（mm）—— 够封住发丝缝，又不填死墙带
 PAD = 2000.0               # 栅格外扩（mm），保证外圈能连通到边界
@@ -80,11 +95,38 @@ def raw_floors():
     return sorted(names, key=_key)
 
 
+# ★★ 2026-10-18（用户「c004 的门和门上面的墙不对」）：「开启弧」画法的门符号**也在墙层上**。
+#   实测 c004 1 层：26 条 r=1200 的 ARC + 26 条等长扇线（2 点折线，一端在弧心上）。
+#   不剔的后果（同一处竖切 x=7480 实测）：弧 + 扇线把「门扇扫过的扇形」圈成一个细域
+#   （w≈190 mm < WALL_MAX）⇒ 第二级「细空域补墙」把整块扇形并成墙 ⇒ 门那一竖的墙厚
+#   240 → **1100 mm**；门头墙由门洞现算，跟着 240 → 435 mm —— 正是用户看到的「不对」。
+#   剔掉后同一处只剩门线上 50 mm 的一条笔画，门洞两侧各回各的墙。
+#   开关在**档案**：没有 `doors_arc_r_mm` 的楼（symbols 62 栋 / block 1 栋）整段不执行。
+#   （判定本身在 `door_rule.door_symbol_geom`，这里不再留常量副本 —— 铁律 174。）
+
+
+def door_symbol_geom(doc):
+    """墙层上属于**门符号**的几何：开启弧 + 与弧配对的扇线。→ (弧键集, 扇线键集)
+
+    ★ 2026-10-20：判据**已搬到 `door_rule.door_symbol_geom`**（唯一一份）——
+      `overlay_check` 也要用它（覆盖判据把门扇线当成「原始墙」）。这里只把本栋档案递进去；
+      口径逐字未改，调用方看到的仍是同一个函数名、同一份结果。
+    """
+    return DR.door_symbol_geom(doc, _DRAW)
+
+
 # ------------------------------------------------------------------ 取墙层线段
 def wall_segments(path, keep_circle=False, doc=None):
     """墙层线段。`doc` 给了就用，没给才自己读 —— 读一遍 DXF 实测 **0.31 s**，
     而 `analyze` 里三处（本函数 / `stair_zones` / `tread_lines`）用的是**同一份文件**。"""
     doc = ezdxf.readfile(path) if doc is None else doc
+    _arc_keys, _leaf_keys = door_symbol_geom(doc)
+
+    def _is_leaf(p, q):
+        """这一**段**是不是扇线（判据全在 `door_symbol_geom`，这里只查表）。"""
+        return (round(p[0], 1), round(p[1], 1),
+                round(q[0], 1), round(q[1], 1)) in _leaf_keys
+
     segs = []
     for e in doc.modelspace():
         if e.dxf.layer != WALL_LAYER:
@@ -92,18 +134,69 @@ def wall_segments(path, keep_circle=False, doc=None):
         t = e.dxftype()
         if t == "LINE":
             a, b = e.dxf.start, e.dxf.end
+            if _leaf_keys and _is_leaf((a.x, a.y), (b.x, b.y)):
+                continue
             segs.append(((a.x, a.y), (b.x, b.y)))
         elif t == "LWPOLYLINE":
             pts = list(e.get_points("xyseb"))
+            # ★ 2026-10-17 同 ARC 那一处：`get_points` 给的是 **OCS**。镜像折线（extrusion
+            #   非 (0,0,1)）同样会落到镜像另一侧；c105 六层实测 0 条镜像折线，c006 也全是
+            #   单位 extrusion ⇒ 只有真碰上才转，默认路径逐字不变。
+            #   盲区：反射下 bulge 的符号也该翻，这里**没有**翻（没有实例可验，不凭空写规则）。
+            if tuple(e.dxf.extrusion) != (0.0, 0.0, 1.0):
+                _o = e.ocs()
+                pts = [(lambda w: (w[0], w[1]) + tuple(p[2:]))(_o.to_wcs((p[0], p[1], 0.0)))
+                       for p in pts]
+            # ★ 2026-10-17：`doors="symbols"` 的图（C005）把门画在**墙层**上（16/23 点多段线，
+            #   带开启弧）。它们是门，不是墙：混进栅格会在房间里留下细弧、并把门洞糊住。
+            #   8 点及以下的折线是 L 形墙链（实测 C005 有 10 条），不在此列。
+            # ★ 2026-10-19：判据改用 `door_rule`（点数 + 宽度窗 + 近方形 + 必须带弧）。
+            #   老写法 `len(pts) >= 16` 会把 22 点的真墙链当门丢掉（c034 2 层 40 条）。
+            if DOOR_MODE == "symbols" and _IS_DOOR(
+                    [p[0] for p in pts], [p[1] for p in pts],
+                    any(abs(p[4]) > 1e-9 for p in pts)):
+                continue
+            # ★ 2026-10-18：开启弧画法的**扇线**也是门符号，不许当墙。
+            #   ★ 判**逐段**不判整条折线：c004 把「柱子矩形 + 扇线」画在同一条 13 点折线里，
+            #     按整条折线判（`len(pts)==2`）会把扇线漏掉 ⇒ 门洞被糊住。
             for i in range(len(pts) - 1):
+                if _leaf_keys and _is_leaf(pts[i], pts[i + 1]):
+                    continue
                 segs.extend(_arc(pts[i], pts[i + 1]))
-            if e.closed and len(pts) > 2:
+            if e.closed and len(pts) > 2 and not (_leaf_keys and _is_leaf(pts[-1], pts[0])):
                 segs.extend(_arc(pts[-1], pts[0]))
         elif t == "ARC":
+            # ★ 2026-10-18：半径落在档案弧窗内的 ARC = 门的**开启弧**，不是墙。
+            if _arc_keys:
+                _c = e.dxf.center
+                if (round(_c[0], 1), round(_c[1], 1),
+                        round(e.dxf.radius, 1)) in _arc_keys:
+                    continue
             segs.extend(_arc_from_arc(e))
         elif t == "CIRCLE" and keep_circle:
             segs.extend(_circle(e))            # 全圆是**圆柱**，不是墙
     return segs
+
+
+def _stair_mode(doc):
+    """档案写 `stairs: "auto"` 时，按**这张图有没有锚点**现选 anchor / treads。
+
+    ★ 为什么要它：65 栋楼逐栋手挑「这栋有没有写 上/下」不现实，而且挑错了不报错
+      （锚点模式下找不到锚 ⇒ 0 个梯区 ⇒ 楼梯整段不建，看上去像「这层没楼梯」）。
+      auto 的判据只有一条：墙层上有没有 `上`/`下` 的 TEXT。有就走锚点（锚点是源图自己写的），
+      没有就走几何（踏步成跑）。两种后续判据都是原来那一份，不另写。
+    ★ 读数必须打出来：选了什么、另一条路有多少读数 —— 不然「自动」就等于「不说」。
+    """
+    if STAIR_MODE != "auto":
+        return STAIR_MODE
+    n_anchor = 0
+    for e in doc.modelspace():
+        if e.dxf.layer == WALL_LAYER and e.dxftype() == "TEXT" \
+                and e.dxf.text.strip() in ("上", "下"):
+            n_anchor += 1
+    mode = "anchor" if n_anchor else "treads"
+    print("   ▷ 楼梯画法：锚点 %d 个 ⇒ 采用 %s" % (n_anchor, mode))
+    return mode
 
 
 def stair_zones(path, doc=None):
@@ -114,6 +207,19 @@ def stair_zones(path, doc=None):
       它们是**楼梯**这个独立构件，本来就该另算。这里靠锚定位，不靠形状。
     """
     doc = ezdxf.readfile(path) if doc is None else doc
+    if _stair_mode(doc) == "treads":
+        # ★ 2026-10-17 C005：图上**没有**「上/下」文字（0 个 TEXT；墙层 24 条 MTEXT 全是房间名）。
+        #   改用纯几何：墙层里成跑的等距短线就是梯段，包络即锚区。
+        #   ★ 盲区：这一步只给出**候选范围**；哪些线算踏步仍由 `tread_lines/group_flights`
+        #     同一份判据决定（成跑 ≥4 条、步距 180~400、共享一端），这里不另判一次。
+        segs = [s for s in wall_segments(path, doc=doc)
+                if 100.0 < math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]) < TREAD_MAX]
+        groups = group_flights(segs)
+        keep = [g for g in groups if _same_length(g)]
+        if len(keep) != len(groups):
+            print("  剔异长假梯跑 %d 个（踏步线长度不成族，实为楔形/折断符号）"
+                  % (len(groups) - len(keep)))
+        return _merge_zones([_zone_of(g) for g in keep])
     anchors = []
     for e in doc.modelspace():
         if e.dxf.layer != WALL_LAYER or e.dxftype() != "TEXT":
@@ -189,22 +295,35 @@ def _arc(p0, p1):
     x1, y1 = float(p1[0]), float(p1[1])
     if abs(b) < 1e-12:
         return [((x0, y0), (x1, y1))]
-    (cx, cy), r, sa, ea = bulge_to_arc((x0, y0), (x1, y1), b)
+    # ★★ 2026-10-17 C105：`ezdxf.math.bulge_to_arc` 返回 **(center, 起始角, 终止角, 半径)**，
+    #   这里原来按 `(center, r, sa, ea)` 拆 ⇒ 半径与两个角全错位。c006 的墙是 LINE，
+    #   从不走 bulge ⇒ 这个错法一直没露头；c105 一层两条墙折线带 bulge 0.0047
+    #   ⇒ 半径 202759 mm 被当成终止角，弧绕着 (106067, −101916) 扫了 20 万弧度，
+    #   凭空在模型里造出 8856 段墙（整栋 y 范围 −101.9 → 120.3 m，实际只到 39.5 m）。
+    (cx, cy), sa, ea, r = bulge_to_arc((x0, y0), (x1, y1), b)
     return _arc_pts(cx, cy, r, sa, ea)
 
 
 def _arc_from_arc(e):
+    # ★★ 2026-10-17 C105 实测：ARC 的 `center`/`start_angle`/`end_angle` 是 **OCS**，不是世界坐标。
+    #   镜像画的弧（extrusion = (0,0,-1)）照抄 center.x ⇒ 落到**镜像的另一侧**：c105 一层 95 个、
+    #   二层 30 个这样的弧，实测把整栋平面包围盒从 184 m 涨到 **441 m**（x 到 −217 m），
+    #   症状不是报错，是模型里凭空多出一片墙、房间色块配准全挂。
+    #   `redraw.door_arcs` 早就用 `e.ocs().to_wcs(...)` 改对了 —— 这里是同一个错法漏掉的一处
+    #   （铁律 183：修好一个错法只算改了一半）。按**采样点**逐个转 WCS：镜像下扫描方向反过来
+    #   无所谓，线段集合不变。
     c = e.dxf.center
     return _arc_pts(c.x, c.y, e.dxf.radius,
-                    math.radians(e.dxf.start_angle), math.radians(e.dxf.end_angle))
+                    math.radians(e.dxf.start_angle), math.radians(e.dxf.end_angle),
+                    ocs=e.ocs())
 
 
 def _circle(e):
     c = e.dxf.center
-    return _arc_pts(c.x, c.y, e.dxf.radius, 0.0, 2 * math.pi)
+    return _arc_pts(c.x, c.y, e.dxf.radius, 0.0, 2 * math.pi, ocs=e.ocs())
 
 
-def _arc_pts(cx, cy, r, sa, ea):
+def _arc_pts(cx, cy, r, sa, ea, ocs=None):
     if ea < sa:
         ea += 2 * math.pi
     n = max(2, int(abs(ea - sa) * r / 60.0) + 1)      # 弦长≈60mm
@@ -213,6 +332,9 @@ def _arc_pts(cx, cy, r, sa, ea):
     for k in range(n + 1):
         a = sa + (ea - sa) * k / n
         p = (cx + r * math.cos(a), cy + r * math.sin(a))
+        if ocs is not None:
+            w = ocs.to_wcs((p[0], p[1], 0.0))
+            p = (w[0], w[1])
         if pm is not None:
             out.append((pm, p))
         pm = p
@@ -349,7 +471,7 @@ def positive_bands():
         r = comp_metrics(m, geo[2])
         if r is None:
             continue
-        A, P, w = r
+        A, _P, w = r
         if A / 1e6 < MIN_AREA:
             continue
         touch = (lab[0, :] == i).any() or (lab[-1, :] == i).any() \
@@ -476,6 +598,63 @@ def group_flights(segs):
     return out
 
 
+TREAD_EQ_TOL = 50.0              # 同一跑里「等长」的容差（mm）
+
+
+def _same_length(flight):
+    """一跑踏步线是否**成族等长** —— 真梯跑的唯一形状证据（2026-10-17 C005 实测）。
+
+    ★ 为什么必须加这一条：`group_flights` 只要求「平行 + 共享一端 + 步距 180~400」，
+      实测 1层两处 **4 条线、长 600/900/1200/1500、步距 300** 的楔形/折断符号
+      完全满足那三条 ⇒ 被判成两跑梯段（1300×1900 的假梯，会把墙挖出洞）。
+    ★ 判据：**过半**踏步线与最长者等长（±`TREAD_EQ_TOL`）。
+      真跑实测 14/14、15/15 全等；假跑 4 条互不相等（1/4）⇒ 有分辨力。
+      留「过半」不用「全等」：折断线会把一跑末尾几条截短（c006 实测 1590→531），
+      但那只是少数，成族的主体仍在。
+    ★ 只挂在 `treads`（几何）分支：c006 走 `anchor` 锚点路径，一字未动。
+    """
+    L = sorted((line_key(s)["L"] for s in flight), reverse=True)
+    full = L[0]
+    return sum(1 for x in L if abs(x - full) <= TREAD_EQ_TOL) * 2 >= len(L)
+
+
+def _zone_of(flight):
+    """一跑踏步线的外包框（外扩 200 mm）—— 与 `stair_zones` 锚点路径的出口**同形状**。"""
+    xs = [p[0] for seg in flight for p in seg]
+    ys = [p[1] for seg in flight for p in seg]
+    return (min(xs) - 200.0, min(ys) - 200.0, max(xs) + 200.0, max(ys) + 200.0)
+
+
+def _merge_zones(zones, tol=60.0):
+    """把**同一座梯间**的几跑并成一个框：相交（或相距 ≤ tol）的外包框合并。
+
+    ★ 为什么必须并（2026-10-17 C005 实测）：锚点路径给的是**一座梯间一个框**，
+      几何路径天然是**一跑一个框**。直接交出去 ⇒ `build3d.stair_steps` 每跑都装不下
+      双跑（`breadth = 2w + gap` ≈ 3.4 m > 单跑框 1.74~2.88 m）⇒ 三座梯间全退成单跑，
+      每跑都从楼面爬到楼面（4.0 m 只 14 级 ⇒ 踢面 267 mm，陡得不像楼梯），
+      日志原话「双跑退回单跑」。并成梯间框后 w≈1.74、gap≈0.48，双跑装得下。
+    ★ 合并条件用**相交**而不是「任意邻近」：真踏步跑都是并排同跨的；
+      实测 1~4 层三座梯间（7 跑）并成 3 框，5 层并成 1 框。
+    """
+    boxes = [list(z) for z in zones]
+    changed = True
+    while changed:
+        changed = False
+        for i in range(len(boxes)):
+            for j in range(i + 1, len(boxes)):
+                a, b = boxes[i], boxes[j]
+                if (a[0] - tol <= b[2] and b[0] - tol <= a[2] and
+                        a[1] - tol <= b[3] and b[1] - tol <= a[3]):
+                    boxes[i] = [min(a[0], b[0]), min(a[1], b[1]),
+                                max(a[2], b[2]), max(a[3], b[3])]
+                    boxes.pop(j)
+                    changed = True
+                    break
+            if changed:
+                break
+    return [tuple(b) for b in boxes]
+
+
 def tread_lines(doc, zones):
     """墙层里**真正的踏步线** = `group_flights()` 认下的那些线（拍平）。
 
@@ -487,8 +666,10 @@ def tread_lines(doc, zones):
           （真踏步 = 长 1470 mm、间距 270 mm、两跑各 14 条）；
         · 级数翻倍 ⇒ 逐级抬升时每级被当成两级，实测步距 70.4 mm
           （≈ 真踢面的一半：层高 4.0 m ÷ 26 级 = 153.85 mm，图上步距 270 mm ⇒ 一步两线）；
-          ★ 2026-10-15 用户令层高按 3.5 m 走 ⇒ 现在是 3.5 m ÷ 22 级 = **159.09 mm**。
-            本文件**不写死层高**（真源 = `构件库/参数.json` 的 `共用/层高`），这里只留读数。
+          ★ 2026-10-16 用户裁定「按甲定案 · 重算整条链」⇒ 层高**回到 4.0 m** ⇒ 上面那个
+            4.0 m ÷ 26 级 = **153.85 mm** 就是今天的读数（2026-10-15 那版 3.5 m ÷ 22 级 =
+            159.09 mm **已作废**）。本文件**不写死层高**（真源 = `构件库/参数.json` 的
+            `共用/层高`，现读 = 4000 mm），这里只留读数。
         · 平面还多出一堆碎板 —— 这正是用户看到的「楼梯不对」；
         · 同一条判据在 `drop_treads()` 里会把**楼梯间里的短墙**
           （实测两条相距 240 mm、长 323 mm 的平行线＝一堵 240 厚墙）
@@ -497,17 +678,22 @@ def tread_lines(doc, zones):
     返回 `[((x0,y0),(x1,y1)), …]`，坐标是 DXF 原值（好让 `drop_treads` 逐条对上）。
     """
     cand = []
-    for e in doc.modelspace():
-        if e.dxf.layer != WALL_LAYER or e.dxftype() != "LINE":
-            continue
-        a, b = e.dxf.start, e.dxf.end
-        L = math.hypot(b.x - a.x, b.y - a.y)
+    if _stair_mode(doc) == "treads":
+        # ★ 2026-10-17 C005：踏步是**墙层的 2 点多段线**，不是 LINE（图里一条 LINE 都没有）。
+        #   取线源走 `wall_segments`（同一份展开规则），后面的成跑判据一字不改。
+        src = [(s[0], s[1]) for s in wall_segments(None, doc=doc)]
+    else:
+        src = [((e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y))
+               for e in doc.modelspace()
+               if e.dxf.layer == WALL_LAYER and e.dxftype() == "LINE"]
+    for a, b in src:
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
         if not (100.0 < L < TREAD_MAX):       # TREAD_MAX=3000 mm：更长的必是真墙
             continue
-        mx, my = (a.x + b.x) / 2.0, (a.y + b.y) / 2.0
+        mx, my = (a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0
         if not in_zone(mx, my, zones):
             continue
-        cand.append(((a.x, a.y), (b.x, b.y)))
+        cand.append((a, b))
     out = []
     for g in group_flights(cand):
         out.extend(g)
@@ -553,7 +739,22 @@ def _src_fp(floor, wall_max, gap):
         h.update(f.read())
     with open(os.path.abspath(__file__), "rb") as f:
         h.update(f.read())
-    h.update(("%r|%r" % (wall_max, gap)).encode("utf-8"))
+    # ★ 2026-10-17：`STAIR_MODE` 来自楼栋档案（外部数据），不在本文件源码里 ——
+    #   不并进指纹就会出现「改了档案的楼梯口径，analyze 仍命中旧缓存、锚区照旧 0」。
+    # ★★ 2026-10-17 补 **整份 `drawing` 档案 + redraw.py 源码**：门的画法/点数/形状/弧窗
+    #   全住在 redraw.py 的模块级常量里（读档案），而 analyze 缓存里存着**认出来的门**。
+    #   只 hash 本文件 ⇒ 改了 `doors_min_pts` 仍命中旧缓存、门数照旧 0（C025 实测就是这样，
+    #   症状与「源图没画门」同形）。两者都并进来，改哪儿缓存都必然重算。
+    _rd = os.path.join(os.path.dirname(os.path.abspath(__file__)), "redraw.py")
+    with open(_rd, "rb") as f:
+        h.update(f.read())
+    # ★ 2026-10-19：门符号判据搬进 door_rule.py —— 不并进指纹就会「改了门判据仍命中旧缓存」。
+    _dr = os.path.join(os.path.dirname(os.path.abspath(__file__)), "door_rule.py")
+    with open(_dr, "rb") as f:
+        h.update(f.read())
+    h.update(json.dumps(B.profile().get("drawing", {}), sort_keys=True,
+                        ensure_ascii=False).encode("utf-8"))
+    h.update(("%r|%r|%s" % (wall_max, gap, STAIR_MODE)).encode("utf-8"))
     return h.hexdigest()
 
 
@@ -671,7 +872,14 @@ def solid_from_segs(segs, wall_max=WALL_MAX, gap=WALL_GAP,
     k = max(1, int(round(gap / res)))
     if k % 2 == 0:
         k += 1
-    ker = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+    # ★ 核必须**方形**（2026-10-19 用户「墙的拼接的地方为啥不是直角，X=87720 Y=23770」）：
+    #   椭圆核对**凹角**填不满，转角被磨成 45° 倒角 —— 实测 c086 1 层该点
+    #   (87700,23750)→(87775,23825) 一段 75 mm 斜边；全层 ≤150 mm 的 45° 段
+    #   椭圆核 1581 个，方核 1090 个，且 ≥70 mm 的（肉眼可见的那种）**全消失**，
+    #   剩下的都是 25 mm 一格的像素台阶（8 连通描边固有，不是病）。
+    #   副作用实测（c086 1~4 层）：墙面积 −0.9%、中轴墙厚 300 mm 不变、域数不变。
+    #   与 `redraw.plate_contours` 同一结论（那边早因「楼面四周一圈弧线」改成方核）。
+    ker = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
     solid = cv2.morphologyEx(img, cv2.MORPH_CLOSE, ker)
 
     # 第二级：闭合后残留的细空档
@@ -684,7 +892,7 @@ def solid_from_segs(segs, wall_max=WALL_MAX, gap=WALL_GAP,
     #   ④ 质心仍走 `nonzero`，但只在框里取、**加回框的偏移**再平均 —— 同一批整数、
     #      同一行主序 ⇒ 与整图取平均逐位相同。
     H, W = solid.shape
-    n, lab, st, _cc = components_stats(solid)
+    n, lab, st, _ = components_stats(solid)
     recs = []
     extra = np.zeros_like(solid)
     for i in range(1, n):

@@ -1,0 +1,586 @@
+{
+ "generator": "contours_to_fc.py",
+ "freecad_version": "1.1.4.20260928 (Git shallow)",
+ "source": "D:\\项目\\cdut3d\\rebuild\\06_su\\contours",
+ "deflection_mm": 0.5,
+ "angular_rad": 0.5,
+ "floors": [
+  {
+   "node": "B1",
+   "floor": "地下1层",
+   "z0_m": -3.5,
+   "polys": 137,
+   "classes": {
+    "WALL": {
+     "polys": 22,
+     "solids": 22,
+     "facets": 1208
+    },
+    "COL": {
+     "polys": 44,
+     "solids": 44,
+     "facets": 528
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 6,
+     "solids": 6,
+     "facets": 288
+    },
+    "DOOR": {
+     "polys": 13,
+     "solids": 13,
+     "facets": 156
+    },
+    "STAIR": {
+     "polys": 46,
+     "solids": 46,
+     "facets": 648
+    },
+    "LINTEL": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 68
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor0",
+   "floor": "1层",
+   "z0_m": 0.0,
+   "polys": 680,
+   "classes": {
+    "WALL": {
+     "polys": 110,
+     "solids": 110,
+     "facets": 18256
+    },
+    "COL": {
+     "polys": 209,
+     "solids": 209,
+     "facets": 3996
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 13,
+     "solids": 13,
+     "facets": 892
+    },
+    "DOOR": {
+     "polys": 57,
+     "solids": 57,
+     "facets": 684
+    },
+    "STAIR": {
+     "polys": 246,
+     "solids": 246,
+     "facets": 3420
+    },
+    "LINTEL": {
+     "polys": 33,
+     "solids": 33,
+     "facets": 476
+    },
+    "PARAPET": {
+     "polys": 6,
+     "solids": 6,
+     "facets": 360
+    },
+    "ROOF": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 148
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor1",
+   "floor": "2层",
+   "z0_m": 4.0,
+   "polys": 620,
+   "classes": {
+    "WALL": {
+     "polys": 62,
+     "solids": 62,
+     "facets": 9616
+    },
+    "COL": {
+     "polys": 207,
+     "solids": 207,
+     "facets": 4068
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 15,
+     "solids": 15,
+     "facets": 1008
+    },
+    "DOOR": {
+     "polys": 49,
+     "solids": 49,
+     "facets": 588
+    },
+    "STAIR": {
+     "polys": 271,
+     "solids": 271,
+     "facets": 3848
+    },
+    "LINTEL": {
+     "polys": 13,
+     "solids": 13,
+     "facets": 352
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor2",
+   "floor": "3层",
+   "z0_m": 8.0,
+   "polys": 618,
+   "classes": {
+    "WALL": {
+     "polys": 56,
+     "solids": 56,
+     "facets": 9368
+    },
+    "COL": {
+     "polys": 207,
+     "solids": 207,
+     "facets": 4068
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 15,
+     "solids": 15,
+     "facets": 1004
+    },
+    "DOOR": {
+     "polys": 53,
+     "solids": 53,
+     "facets": 636
+    },
+    "STAIR": {
+     "polys": 271,
+     "solids": 271,
+     "facets": 3848
+    },
+    "LINTEL": {
+     "polys": 13,
+     "solids": 13,
+     "facets": 352
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor3",
+   "floor": "4层",
+   "z0_m": 12.0,
+   "polys": 621,
+   "classes": {
+    "WALL": {
+     "polys": 56,
+     "solids": 56,
+     "facets": 9368
+    },
+    "COL": {
+     "polys": 207,
+     "solids": 207,
+     "facets": 4068
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 15,
+     "solids": 15,
+     "facets": 1004
+    },
+    "DOOR": {
+     "polys": 53,
+     "solids": 53,
+     "facets": 636
+    },
+    "STAIR": {
+     "polys": 271,
+     "solids": 271,
+     "facets": 3848
+    },
+    "LINTEL": {
+     "polys": 13,
+     "solids": 13,
+     "facets": 352
+    },
+    "ROOF": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 96
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor4",
+   "floor": "5层",
+   "z0_m": 16.0,
+   "polys": 520,
+   "classes": {
+    "WALL": {
+     "polys": 56,
+     "solids": 56,
+     "facets": 8760
+    },
+    "COL": {
+     "polys": 188,
+     "solids": 188,
+     "facets": 3024
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 12,
+     "solids": 12,
+     "facets": 868
+    },
+    "DOOR": {
+     "polys": 38,
+     "solids": 38,
+     "facets": 456
+    },
+    "STAIR": {
+     "polys": 216,
+     "solids": 216,
+     "facets": 2992
+    },
+    "LINTEL": {
+     "polys": 7,
+     "solids": 7,
+     "facets": 208
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor5",
+   "floor": "6层",
+   "z0_m": 20.0,
+   "polys": 521,
+   "classes": {
+    "WALL": {
+     "polys": 57,
+     "solids": 57,
+     "facets": 8772
+    },
+    "COL": {
+     "polys": 188,
+     "solids": 188,
+     "facets": 3024
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 12,
+     "solids": 12,
+     "facets": 868
+    },
+    "DOOR": {
+     "polys": 39,
+     "solids": 39,
+     "facets": 468
+    },
+    "STAIR": {
+     "polys": 216,
+     "solids": 216,
+     "facets": 2992
+    },
+    "LINTEL": {
+     "polys": 6,
+     "solids": 6,
+     "facets": 180
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor6",
+   "floor": "7层",
+   "z0_m": 24.0,
+   "polys": 267,
+   "classes": {
+    "WALL": {
+     "polys": 21,
+     "solids": 21,
+     "facets": 1296
+    },
+    "COL": {
+     "polys": 32,
+     "solids": 32,
+     "facets": 480
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 4,
+     "solids": 4,
+     "facets": 236
+    },
+    "DOOR": {
+     "polys": 19,
+     "solids": 19,
+     "facets": 228
+    },
+    "STAIR": {
+     "polys": 162,
+     "solids": 162,
+     "facets": 2040
+    },
+    "LINTEL": {
+     "polys": 8,
+     "solids": 8,
+     "facets": 352
+    },
+    "PARAPET": {
+     "polys": 12,
+     "solids": 12,
+     "facets": 15810
+    },
+    "ROOF": {
+     "polys": 6,
+     "solids": 6,
+     "facets": 524
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor7",
+   "floor": "8层",
+   "z0_m": 28.0,
+   "polys": 90,
+   "classes": {
+    "WALL": {
+     "polys": 22,
+     "solids": 22,
+     "facets": 1224
+    },
+    "COL": {
+     "polys": 24,
+     "solids": 24,
+     "facets": 384
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 5,
+     "solids": 5,
+     "facets": 252
+    },
+    "DOOR": {
+     "polys": 8,
+     "solids": 8,
+     "facets": 96
+    },
+    "STAIR": {
+     "polys": 27,
+     "solids": 27,
+     "facets": 356
+    },
+    "LINTEL": {
+     "polys": 1,
+     "solids": 1,
+     "facets": 28
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor8",
+   "floor": "9层",
+   "z0_m": 32.0,
+   "polys": 89,
+   "classes": {
+    "WALL": {
+     "polys": 21,
+     "solids": 21,
+     "facets": 1244
+    },
+    "COL": {
+     "polys": 24,
+     "solids": 24,
+     "facets": 384
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 5,
+     "solids": 5,
+     "facets": 252
+    },
+    "DOOR": {
+     "polys": 8,
+     "solids": 8,
+     "facets": 96
+    },
+    "STAIR": {
+     "polys": 27,
+     "solids": 27,
+     "facets": 356
+    },
+    "LINTEL": {
+     "polys": 1,
+     "solids": 1,
+     "facets": 28
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor9",
+   "floor": "10层",
+   "z0_m": 36.0,
+   "polys": 90,
+   "classes": {
+    "WALL": {
+     "polys": 22,
+     "solids": 22,
+     "facets": 1224
+    },
+    "COL": {
+     "polys": 24,
+     "solids": 24,
+     "facets": 384
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 5,
+     "solids": 5,
+     "facets": 252
+    },
+    "DOOR": {
+     "polys": 8,
+     "solids": 8,
+     "facets": 96
+    },
+    "STAIR": {
+     "polys": 27,
+     "solids": 27,
+     "facets": 356
+    },
+    "LINTEL": {
+     "polys": 1,
+     "solids": 1,
+     "facets": 28
+    }
+   },
+   "failures": []
+  },
+  {
+   "node": "floor10",
+   "floor": "11层",
+   "z0_m": 40.0,
+   "polys": 116,
+   "classes": {
+    "WALL": {
+     "polys": 22,
+     "solids": 22,
+     "facets": 1256
+    },
+    "COL": {
+     "polys": 24,
+     "solids": 24,
+     "facets": 384
+    },
+    "LIFT": {
+     "polys": 3,
+     "solids": 3,
+     "facets": 60
+    },
+    "SLAB": {
+     "polys": 5,
+     "solids": 5,
+     "facets": 252
+    },
+    "DOOR": {
+     "polys": 8,
+     "solids": 8,
+     "facets": 96
+    },
+    "STAIR": {
+     "polys": 27,
+     "solids": 27,
+     "facets": 356
+    },
+    "LINTEL": {
+     "polys": 1,
+     "solids": 1,
+     "facets": 28
+    },
+    "PARAPET": {
+     "polys": 11,
+     "solids": 11,
+     "facets": 452
+    },
+    "ROOF": {
+     "polys": 5,
+     "solids": 5,
+     "facets": 252
+    },
+    "ROOF_ROOM": {
+     "polys": 10,
+     "solids": 10,
+     "facets": 280
+    }
+   },
+   "failures": []
+  }
+ ],
+ "total_polys": 4369,
+ "total_solids": 4369,
+ "total_failures": 0,
+ "obj": "06_su/c006_fc.obj",
+ "obj_bytes": 6339910,
+ "obj_verts": 81578,
+ "obj_faces": 153950,
+ "parts": 92,
+ "elapsed_s": 21.46
+}

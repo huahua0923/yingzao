@@ -1,0 +1,22 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-20T00:00:00+08:00",
+    "component": {
+      "type": "application",
+      "name": "cdut3d",
+      "version": "0.2.0"
+    }
+  },
+  "components": [
+    {"type": "library", "name": "three.js", "version": "185", "licenses": [{"license": {"id": "MIT"}}]},
+    {"type": "library", "name": "ezdxf", "version": "1.4.4", "licenses": [{"license": {"id": "MIT"}}]},
+    {"type": "library", "name": "numpy", "version": "2.3.5", "licenses": [{"license": {"id": "BSD-3-Clause"}}]},
+    {"type": "library", "name": "shapely", "version": "2.1.2", "licenses": [{"license": {"id": "BSD-3-Clause"}}]},
+    {"type": "library", "name": "trimesh", "version": "5.1.0", "licenses": [{"license": {"id": "MIT"}}]},
+    {"type": "library", "name": "pygltflib", "version": "1.16.5", "licenses": [{"license": {"id": "MIT"}}]},
+    {"type": "library", "name": "Pillow", "version": "12.2.0", "licenses": [{"license": {"id": "HPND"}}]}
+  ]
+}

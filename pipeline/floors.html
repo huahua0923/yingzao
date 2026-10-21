@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第六教学楼 · 每层一页</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ink:#17181c; --muted:#6c6f76; --paper:#f3f0e8; --card:#fffdf7;
+    --line:#d9d2c2; --line2:#e8e3d7; --red:#b1342b; --blue:#2450b8;
+    --mono:ui-monospace,Consolas,"Courier New",monospace;
+    --serif:"Songti SC","SimSun","Noto Serif SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:15px/1.6 -apple-system,"Segoe UI","Noto Sans SC",sans-serif}
+  .mast{background:#14161b;color:#f2efe6}
+  .mast-in{max-width:1440px;margin:0 auto;padding:16px 36px;display:flex;
+           align-items:baseline;gap:16px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:#a8a294}
+  h1{font-family:var(--serif);font-size:25px;margin:0}
+  .mast-in .back{margin-left:auto;font-size:12.5px;color:#c9c3b5;text-decoration:none}
+  .mast-in .back:hover{color:#fff}
+  .mnav{display:flex;gap:0;margin-left:auto;align-self:center}
+  .mnav a{color:#c9c3b5;text-decoration:none;font-size:12.5px;padding:5px 11px;
+          border:1px solid #2c3038;border-left:0}
+  .mnav a:first-child{border-left:1px solid #2c3038}
+  .mnav a:hover{color:#fff;border-color:#5b6270;background:#1c1f25}
+  main{max-width:1440px;margin:0 auto;padding:22px 36px 70px}
+  .lead{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);display:flex;flex-direction:column}
+  .card h2{margin:0;padding:9px 13px;font-size:16px;display:flex;align-items:baseline;
+           gap:10px;border-bottom:1px solid var(--line2);font-family:var(--serif)}
+  .card h2 .z{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .shot{background:#fff;display:block;width:100%;aspect-ratio:4/3;border:0;
+        cursor:zoom-in;padding:8px;overflow:hidden}
+  .shot img{width:100%;height:100%;object-fit:contain;display:block}
+  .noimg{display:grid;place-items:center;color:var(--muted);font-size:12.5px;cursor:default}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line2);
+         border-top:1px solid var(--line2)}
+  .stats div{background:var(--card);padding:6px 9px}
+  .stats b{display:block;font-family:var(--mono);font-size:13.5px;line-height:1.3}
+  .stats span{font-size:10px;color:var(--muted)}
+  .acts{display:flex;gap:12px;padding:7px 13px;border-top:1px solid var(--line2);
+        font-size:12px}
+  .acts a{color:var(--blue);text-decoration:none}
+  .acts a:hover{text-decoration:underline}
+  .acts .off{color:#bdb6a7}
+  .light{position:fixed;inset:0;background:rgba(16,17,20,.88);display:none;
+         align-items:center;justify-content:center;z-index:50;padding:24px}
+  .light.on{display:flex}
+  .light img{max-width:96vw;max-height:90vh;background:#fff}
+  .light .x{position:absolute;top:14px;right:22px;color:#fff;font-size:26px;cursor:pointer;
+            background:none;border:0}
+  .err{padding:40px;color:var(--red);font-family:var(--mono)}
+  footer{max-width:1440px;margin:0 auto;padding:0 36px 34px;color:var(--muted);font-size:12px}
+  @media (max-width:640px){ .mast-in,main,footer{padding-left:14px;padding-right:14px} }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="mast-in">
+    <div>
+      <div class="brand">C006 · 第六教学楼（逸夫楼）</div>
+      <h1>每层一页</h1>
+    </div>
+    <nav class="mnav">
+      <a href="/pipeline" target="_blank">流程</a>
+      <a href="/pipeline/flow" target="_blank">总览</a>
+      <a href="/pipeline/floors" target="_blank">每层一页</a>
+      <a href="/pipeline/pages" target="_blank">全部页面</a>
+      <a href="http://127.0.0.1:8150/" target="_blank">工作台</a>
+      <a href="/files/demo/building.html#/building/cdut-main/c006" target="_blank">三维</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <p class="lead" id="lead">读取中…</p>
+  <div class="grid" id="grid"></div>
+</main>
+<footer>
+  每张图都是重画出来的那一层；数字现读 <code>02_recognize/*.json</code> 与
+  <code>06_su/contours/index.json</code>。点图放大。
+</footer>
+<div class="light" id="light"><button class="x" id="lightX">×</button><img id="lightImg" alt=""></div>
+
+<script>
+const fmt = v => v == null ? "—" : (Math.round(v*100)/100).toString();
+const ztxt = z => {
+  if (z == null) return "—";
+  const v = Number(z);
+  if (Math.abs(v) < 1e-9) return "±0.000";
+  return (v > 0 ? "+" : "−") + Math.abs(v).toFixed(3) + " m";
+};
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function stat(k, v){
+  const d = el("div");
+  d.append(el("b", null, v), el("span", null, k));
+  return d;
+}
+
+function card(f){
+  const c = el("div","card");
+  const h = el("h2");
+  h.append(document.createTextNode(f.floor), el("span","z", ztxt(f.z0_m)));
+  c.append(h);
+
+  if (f.img){
+    const btn = el("button","shot");
+    btn.type = "button";
+    btn.title = "点开看大图";
+    const img = el("img");
+    img.src = f.img; img.alt = f.floor + " 重画图"; img.loading = "lazy";
+    btn.append(img);
+    btn.onclick = () => openLight(f.img);
+    c.append(btn);
+  } else {
+    c.append(el("div","shot noimg", "这一层没有重画图"));
+  }
+
+  const s = el("div","stats");
+  s.append(stat("墙块", fmt(f.wall_polys)),
+           stat("房间", fmt(f.regions)),
+           stat("墙面积 m²", fmt(f.area_wall_m2)),
+           stat("线段", fmt(f.segments)));
+  c.append(s);
+
+  const a = el("div","acts");
+  const add = (href, text) => {
+    if (!href){ a.append(el("span","off", text + "（无）")); return; }
+    const x = el("a", null, text);
+    x.href = href; x.target = "_blank";
+    a.append(x);
+  };
+  add(f.plan, "平面线稿");
+  add(f.review, "审图");
+  add(f.dxf, "DXF");
+  c.append(a);
+  return c;
+}
+
+function openLight(src){
+  document.getElementById("lightImg").src = src;
+  document.getElementById("light").classList.add("on");
+}
+document.getElementById("lightX").onclick = () =>
+  document.getElementById("light").classList.remove("on");
+document.getElementById("light").addEventListener("click", e => {
+  if (e.target.id === "light") document.getElementById("light").classList.remove("on");
+});
+
+fetch("/api/state?t=" + Date.now())
+  .then(r => r.json())
+  .then(st => {
+    const floors = st.floors || [];
+    const grid = document.getElementById("grid");
+    grid.replaceChildren(...floors.map(card));
+    document.getElementById("lead").textContent =
+      floors.length + " 层（" + floors[0].floor + " → " + floors[floors.length-1].floor
+      + "），按标高自下而上。";
+  })
+  .catch(e => {
+    document.getElementById("grid").replaceChildren(
+      el("div","err", "读不到 /api/state：" + e.message));
+  });
+</script>
+</body>
+</html>

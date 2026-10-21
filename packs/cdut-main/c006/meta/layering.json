@@ -1,42 +1,42 @@
 {
  "schema": "cdut3d-layering/1",
  "building_id": "c006",
- "method": "整栋 = **正式件**原样搬入；层节点 floorK ↔ 第 K+1 层（0 基），B1 = 地下 1 层。**本包不建几何、不做坐标搬运** —— 这一件就是重建链自己的交付件。",
- "source_model": "rebuild/06_su/c006_su.glb",
- "source_note": "由 rebuild/tools/su_obj_to_glb.py 从 c006_su.obj 转来（只转格式、不动顶点；该步自带 polys_in == polys_out 断言与两把独立尺子）。",
+ "method": "整栋 = **本仓重建链的正式件**（FreeCAD 1.1 出的 c006_fc.glb）原样搬入；层节点 floorK ↔ 第 K+1 层（0 基）。本包不建几何、不做坐标搬运。",
+ "source_model": "rebuild/c006/06_su/c006_fc.glb",
+ "source_note": "链：源 DXF → 切图幅(12 张) → 识别 → build3d → FreeCAD → fc_obj_to_glb.py（只转格式、不动顶点；自带 polys_in == polys_out 断言）。同一份 contours 连跑两趟输出逐字节相同。",
  "up_axis": "y",
- "n_floors": 11,
- "floor_h_m": 3.5,
- "floor_h_note": "**现算自落盘件**：floor0..floor9 相邻层节点 `hi_m` 之差的中位（9 个带，离散 0.0000 m；floor10 带女儿墙/楼梯房 ⇒ 排除）。参数表 `共用/层高` 声明 3.5 m（一致）。★ 与已退场的 libs3d 链的 H=3.6 m **不是同一个量**（那件顶 39.72 m）—— 换链换的正是这一条。",
- "floor_h_spread_m": 0.0,
+ "n_floors": 12,
+ "floor_h_m": 4.0,
+ "floor_h_spread_m": 0.5,
+ "floor_h_note": "**件侧现算**：相邻层节点 lo_m 之差的中位（11 个带）。三个独立读数：件侧 4.0 m / contours [3.5, 4.0] m / 参数表 4.0 m ⇒ 一致。",
  "elevation_m": [
   -3.5,
-  41.5
+  47.62
  ],
  "layers": [
   {
    "node": "B1",
-   "faces": 8788,
+   "faces": 2956,
    "classes": {
     "COL": 528,
-    "DOOR": 396,
-    "LIFT": 156,
-    "LINTEL": 2188,
-    "SLAB": 196,
-    "STAIR": 2500,
-    "WALL": 2824
+    "DOOR": 156,
+    "LIFT": 60,
+    "LINTEL": 68,
+    "SLAB": 288,
+    "STAIR": 648,
+    "WALL": 1208
    },
    "class_hi": {
-    "COL": -0.0,
+    "COL": 0.0,
     "DOOR": -1.4,
-    "LIFT": -0.0,
-    "LINTEL": -0.0,
+    "LIFT": 0.0,
+    "LINTEL": 0.0,
     "SLAB": -3.38,
-    "STAIR": 0.9,
-    "WALL": -0.0
+    "STAIR": 0.0,
+    "WALL": 0.0
    },
    "lo_m": -3.5,
-   "hi_m": 0.9,
+   "hi_m": 0.0,
    "plan_m": [
     87.9,
     56.7
@@ -44,27 +44,31 @@
   },
   {
    "node": "floor0",
-   "faces": 46262,
+   "faces": 28290,
    "classes": {
-    "COL": 3516,
-    "DOOR": 2160,
-    "LIFT": 156,
-    "LINTEL": 8412,
-    "SLAB": 800,
-    "STAIR": 8772,
-    "WALL": 22446
+    "COL": 3996,
+    "DOOR": 684,
+    "LIFT": 60,
+    "LINTEL": 476,
+    "PARAPET": 360,
+    "ROOF": 148,
+    "SLAB": 890,
+    "STAIR": 3420,
+    "WALL": 18256
    },
    "class_hi": {
-    "COL": 3.5,
+    "COL": 4.0,
     "DOOR": 2.1,
-    "LIFT": 3.5,
-    "LINTEL": 3.5,
+    "LIFT": 4.0,
+    "LINTEL": 4.0,
+    "PARAPET": 5.2,
+    "ROOF": 4.0,
     "SLAB": 0.12,
-    "STAIR": 4.4,
-    "WALL": 3.5
+    "STAIR": 4.0,
+    "WALL": 4.0
    },
-   "lo_m": -0.0,
-   "hi_m": 4.4,
+   "lo_m": 0.0,
+   "hi_m": 5.2,
    "plan_m": [
     129.3,
     84.0
@@ -72,27 +76,27 @@
   },
   {
    "node": "floor1",
-   "faces": 44664,
+   "faces": 19532,
    "classes": {
-    "COL": 3468,
-    "DOOR": 1956,
-    "LIFT": 156,
-    "LINTEL": 7420,
-    "SLAB": 568,
-    "STAIR": 12500,
-    "WALL": 18596
+    "COL": 4068,
+    "DOOR": 588,
+    "LIFT": 60,
+    "LINTEL": 352,
+    "SLAB": 1000,
+    "STAIR": 3848,
+    "WALL": 9616
    },
    "class_hi": {
-    "COL": 7.0,
-    "DOOR": 5.6,
-    "LIFT": 7.0,
-    "LINTEL": 7.0,
-    "SLAB": 3.62,
-    "STAIR": 7.9,
-    "WALL": 7.0
+    "COL": 8.0,
+    "DOOR": 6.1,
+    "LIFT": 8.0,
+    "LINTEL": 8.0,
+    "SLAB": 4.12,
+    "STAIR": 8.0,
+    "WALL": 8.0
    },
-   "lo_m": 3.5,
-   "hi_m": 7.9,
+   "lo_m": 4.0,
+   "hi_m": 8.0,
    "plan_m": [
     129.3,
     84.0
@@ -100,27 +104,27 @@
   },
   {
    "node": "floor2",
-   "faces": 43740,
+   "faces": 19328,
    "classes": {
-    "COL": 3468,
-    "DOOR": 1910,
-    "LIFT": 156,
-    "LINTEL": 7116,
-    "SLAB": 568,
-    "STAIR": 12500,
-    "WALL": 18022
+    "COL": 4068,
+    "DOOR": 636,
+    "LIFT": 60,
+    "LINTEL": 352,
+    "SLAB": 996,
+    "STAIR": 3848,
+    "WALL": 9368
    },
    "class_hi": {
-    "COL": 10.5,
-    "DOOR": 9.1,
-    "LIFT": 10.5,
-    "LINTEL": 10.5,
-    "SLAB": 7.12,
-    "STAIR": 11.4,
-    "WALL": 10.5
+    "COL": 12.0,
+    "DOOR": 10.1,
+    "LIFT": 12.0,
+    "LINTEL": 12.0,
+    "SLAB": 8.12,
+    "STAIR": 12.0,
+    "WALL": 12.0
    },
-   "lo_m": 7.0,
-   "hi_m": 11.4,
+   "lo_m": 8.0,
+   "hi_m": 12.0,
    "plan_m": [
     129.3,
     84.0
@@ -128,27 +132,29 @@
   },
   {
    "node": "floor3",
-   "faces": 43740,
+   "faces": 19424,
    "classes": {
-    "COL": 3468,
-    "DOOR": 1910,
-    "LIFT": 156,
-    "LINTEL": 7116,
-    "SLAB": 568,
-    "STAIR": 12500,
-    "WALL": 18022
+    "COL": 4068,
+    "DOOR": 636,
+    "LIFT": 60,
+    "LINTEL": 352,
+    "ROOF": 96,
+    "SLAB": 996,
+    "STAIR": 3848,
+    "WALL": 9368
    },
    "class_hi": {
-    "COL": 14.0,
-    "DOOR": 12.6,
-    "LIFT": 14.0,
-    "LINTEL": 14.0,
-    "SLAB": 10.62,
-    "STAIR": 14.9,
-    "WALL": 14.0
+    "COL": 16.0,
+    "DOOR": 14.1,
+    "LIFT": 16.0,
+    "LINTEL": 16.0,
+    "ROOF": 16.0,
+    "SLAB": 12.12,
+    "STAIR": 16.0,
+    "WALL": 16.0
    },
-   "lo_m": 10.5,
-   "hi_m": 14.9,
+   "lo_m": 12.0,
+   "hi_m": 16.0,
    "plan_m": [
     129.3,
     84.0
@@ -156,27 +162,27 @@
   },
   {
    "node": "floor4",
-   "faces": 37356,
+   "faces": 16360,
    "classes": {
-    "COL": 2424,
-    "DOOR": 1754,
-    "LIFT": 156,
-    "LINTEL": 6316,
-    "SLAB": 508,
-    "STAIR": 10000,
-    "WALL": 16198
+    "COL": 3024,
+    "DOOR": 456,
+    "LIFT": 60,
+    "LINTEL": 208,
+    "SLAB": 860,
+    "STAIR": 2992,
+    "WALL": 8760
    },
    "class_hi": {
-    "COL": 17.5,
-    "DOOR": 16.1,
-    "LIFT": 17.5,
-    "LINTEL": 17.5,
-    "SLAB": 14.12,
-    "STAIR": 18.4,
-    "WALL": 17.5
+    "COL": 20.0,
+    "DOOR": 18.1,
+    "LIFT": 20.0,
+    "LINTEL": 20.0,
+    "SLAB": 16.12,
+    "STAIR": 20.0,
+    "WALL": 20.0
    },
-   "lo_m": 14.0,
-   "hi_m": 18.4,
+   "lo_m": 16.0,
+   "hi_m": 20.0,
    "plan_m": [
     129.3,
     84.0
@@ -184,27 +190,27 @@
   },
   {
    "node": "floor5",
-   "faces": 37362,
+   "faces": 16356,
    "classes": {
-    "COL": 2424,
-    "DOOR": 1766,
-    "LIFT": 156,
-    "LINTEL": 6364,
-    "SLAB": 508,
-    "STAIR": 10000,
-    "WALL": 16144
+    "COL": 3024,
+    "DOOR": 468,
+    "LIFT": 60,
+    "LINTEL": 180,
+    "SLAB": 860,
+    "STAIR": 2992,
+    "WALL": 8772
    },
    "class_hi": {
-    "COL": 21.0,
-    "DOOR": 19.6,
-    "LIFT": 21.0,
-    "LINTEL": 21.0,
-    "SLAB": 17.62,
-    "STAIR": 21.9,
-    "WALL": 21.0
+    "COL": 24.0,
+    "DOOR": 22.1,
+    "LIFT": 24.0,
+    "LINTEL": 24.0,
+    "SLAB": 20.12,
+    "STAIR": 24.0,
+    "WALL": 24.0
    },
-   "lo_m": 17.5,
-   "hi_m": 21.9,
+   "lo_m": 20.0,
+   "hi_m": 24.0,
    "plan_m": [
     129.3,
     84.0
@@ -212,29 +218,31 @@
   },
   {
    "node": "floor6",
-   "faces": 35131,
+   "faces": 21026,
    "classes": {
-    "COL": 360,
-    "DOOR": 732,
-    "LIFT": 156,
-    "LINTEL": 3624,
-    "ROOF_STEP": 416,
-    "SLAB": 499,
-    "STAIR": 7500,
-    "WALL": 21844
+    "COL": 480,
+    "DOOR": 228,
+    "LIFT": 60,
+    "LINTEL": 352,
+    "PARAPET": 15810,
+    "ROOF": 524,
+    "SLAB": 236,
+    "STAIR": 2040,
+    "WALL": 1296
    },
    "class_hi": {
-    "COL": 24.5,
-    "DOOR": 23.1,
-    "LIFT": 24.5,
-    "LINTEL": 24.5,
-    "ROOF_STEP": 24.5,
-    "SLAB": 21.12,
-    "STAIR": 25.4,
-    "WALL": 24.5
+    "COL": 28.0,
+    "DOOR": 26.1,
+    "LIFT": 28.0,
+    "LINTEL": 28.0,
+    "PARAPET": 25.2,
+    "ROOF": 24.12,
+    "SLAB": 24.12,
+    "STAIR": 28.0,
+    "WALL": 28.0
    },
-   "lo_m": 21.0,
-   "hi_m": 25.4,
+   "lo_m": 24.0,
+   "hi_m": 28.0,
    "plan_m": [
     129.0,
     84.0
@@ -242,27 +250,27 @@
   },
   {
    "node": "floor7",
-   "faces": 8018,
+   "faces": 2400,
    "classes": {
-    "COL": 264,
-    "DOOR": 540,
-    "LIFT": 156,
-    "LINTEL": 2648,
-    "SLAB": 188,
-    "STAIR": 1250,
-    "WALL": 2972
+    "COL": 384,
+    "DOOR": 96,
+    "LIFT": 60,
+    "LINTEL": 28,
+    "SLAB": 252,
+    "STAIR": 356,
+    "WALL": 1224
    },
    "class_hi": {
-    "COL": 28.0,
-    "DOOR": 26.6,
-    "LIFT": 28.0,
-    "LINTEL": 28.0,
-    "SLAB": 24.62,
-    "STAIR": 28.9,
-    "WALL": 28.0
+    "COL": 32.0,
+    "DOOR": 30.1,
+    "LIFT": 32.0,
+    "LINTEL": 32.0,
+    "SLAB": 28.12,
+    "STAIR": 32.0,
+    "WALL": 32.0
    },
-   "lo_m": 24.5,
-   "hi_m": 28.9,
+   "lo_m": 28.0,
+   "hi_m": 32.0,
    "plan_m": [
     46.5,
     23.1
@@ -270,27 +278,27 @@
   },
   {
    "node": "floor8",
-   "faces": 8070,
+   "faces": 2420,
    "classes": {
-    "COL": 264,
-    "DOOR": 540,
-    "LIFT": 156,
-    "LINTEL": 2632,
-    "SLAB": 188,
-    "STAIR": 1250,
-    "WALL": 3040
+    "COL": 384,
+    "DOOR": 96,
+    "LIFT": 60,
+    "LINTEL": 28,
+    "SLAB": 252,
+    "STAIR": 356,
+    "WALL": 1244
    },
    "class_hi": {
-    "COL": 31.5,
-    "DOOR": 30.1,
-    "LIFT": 31.5,
-    "LINTEL": 31.5,
-    "SLAB": 28.12,
-    "STAIR": 32.4,
-    "WALL": 31.5
+    "COL": 36.0,
+    "DOOR": 34.1,
+    "LIFT": 36.0,
+    "LINTEL": 36.0,
+    "SLAB": 32.12,
+    "STAIR": 36.0,
+    "WALL": 36.0
    },
-   "lo_m": 28.0,
-   "hi_m": 32.4,
+   "lo_m": 32.0,
+   "hi_m": 36.0,
    "plan_m": [
     46.5,
     23.1
@@ -298,27 +306,27 @@
   },
   {
    "node": "floor9",
-   "faces": 8018,
+   "faces": 2400,
    "classes": {
-    "COL": 264,
-    "DOOR": 540,
-    "LIFT": 156,
-    "LINTEL": 2648,
-    "SLAB": 188,
-    "STAIR": 1250,
-    "WALL": 2972
+    "COL": 384,
+    "DOOR": 96,
+    "LIFT": 60,
+    "LINTEL": 28,
+    "SLAB": 252,
+    "STAIR": 356,
+    "WALL": 1224
    },
    "class_hi": {
-    "COL": 35.0,
-    "DOOR": 33.6,
-    "LIFT": 35.0,
-    "LINTEL": 35.0,
-    "SLAB": 31.62,
-    "STAIR": 35.9,
-    "WALL": 35.0
+    "COL": 40.0,
+    "DOOR": 38.1,
+    "LIFT": 40.0,
+    "LINTEL": 40.0,
+    "SLAB": 36.12,
+    "STAIR": 40.0,
+    "WALL": 40.0
    },
-   "lo_m": 31.5,
-   "hi_m": 35.9,
+   "lo_m": 36.0,
+   "hi_m": 40.0,
    "plan_m": [
     46.5,
     23.1
@@ -326,33 +334,33 @@
   },
   {
    "node": "floor10",
-   "faces": 8528,
+   "faces": 3416,
    "classes": {
-    "COL": 264,
-    "DOOR": 540,
-    "LIFT": 156,
-    "LINTEL": 2648,
-    "PARAPET": 220,
-    "ROOF": 188,
-    "ROOF_STAIR": 24,
-    "SLAB": 188,
-    "STAIR": 1250,
-    "WALL": 3050
+    "COL": 384,
+    "DOOR": 96,
+    "LIFT": 60,
+    "LINTEL": 28,
+    "PARAPET": 452,
+    "ROOF": 252,
+    "ROOF_ROOM": 280,
+    "SLAB": 252,
+    "STAIR": 356,
+    "WALL": 1256
    },
    "class_hi": {
-    "COL": 38.5,
-    "DOOR": 37.1,
-    "LIFT": 38.5,
-    "LINTEL": 38.5,
-    "PARAPET": 39.7,
-    "ROOF": 38.5,
-    "ROOF_STAIR": 41.5,
-    "SLAB": 35.12,
-    "STAIR": 39.4,
-    "WALL": 38.5
+    "COL": 44.0,
+    "DOOR": 42.1,
+    "LIFT": 44.0,
+    "LINTEL": 44.0,
+    "PARAPET": 45.2,
+    "ROOF": 44.0,
+    "ROOF_ROOM": 47.62,
+    "SLAB": 40.12,
+    "STAIR": 44.0,
+    "WALL": 44.0
    },
-   "lo_m": 35.0,
-   "hi_m": 41.5,
+   "lo_m": 40.0,
+   "hi_m": 47.62,
    "plan_m": [
     46.54,
     23.1
@@ -360,40 +368,21 @@
   }
  ],
  "lossless_check": {
-  "faces_sum": 329677,
-  "note": "逐 (层,类) 子节点的面数**直接取自落盘件**（拆开再相加）。su_obj_to_glb.py 另有一条 polys_in == polys_out 的断言。"
+  "faces_sum": 153908,
+  "faces_all_in_glb": 153908,
+  "unmatched_meshes": [],
+  "note": "面数直接从落盘件逐 (层,类) 取、再相加；unmatched_meshes 为空才说明**没有几何落在层节点之外**。上游转格式那一步（su_obj_to_glb / fc_obj_to_glb）另有一条 polys_in == polys_out 断言。"
  },
  "top_features": {
-  "台阶屋面_m": 25.4,
-  "主屋面_m": 39.4,
-  "女儿墙顶_m": 39.7,
-  "顶楼楼梯房顶_m": 41.5,
-  "note": "全部由落盘件的 (层,类) 子节点包围盒现算，不手打。"
- },
- "supersedes": {
-  "why": "本包 manifest 声明顶部三样（女儿墙 / 顶楼楼梯房 / 7→8 台阶屋面）与 47.5 m 的塔楼，而 libs3d 逐层链按 H=3.6 m 建出来的件顶只有 39.72 m，三样一个都没有 ⇒ **声明与件不符**。用户 2026-10-14 裁定：包内件真源 = **正式件 06_su**。",
-  "old_chain": [
-   "tools/floors_from_libs3d.py（含 wall_close 补墙）",
-   "tools/slab_into_floor.py（一层楼板换 AutoCAD 那块）",
-   "tools/slabs_sharp_into_floors.py（2~11 层换直角板）",
-   "tools/pack_d1.py（搬 libs3d 已经建好的 B1）"
-  ],
-  "lost": [
-   "**墙闭合的 1412 根补块**（那是对 libs3d 那条链的件做的，见 gates/J-09.2-A1e_wallclosed.py）。SU 件的墙是 recognize.py 的 260 mm 形态学闭运算 + build3d 的「桥洞口→填洞」出的，**没有经过 wall_close**。",
-   "**一层楼板 = AutoCAD 描环拉伸的那块**（与 libs3d 那版口径差 123.911 m²：四边落在墙面 vs 各外扩 180 mm）。",
-   "**2~11 层的直角板**（修的是 libs3d build7.py 用 shapely 默认 join_style=round 把凹角磨成弧）。",
-   "**libs3d 建好的 B1**（BH=4200 口径）。SU 件自带的 B1 是它自己那条链建的。"
-  ],
-  "archived_pack": "_archive/pack-libs3d-20261014/（换链前那一整份包，26 文件 / 35 MB）",
-  "archived_meta": [
-   "meta/c006-basement.json",
-   "meta/c006-slabswap.json",
-   "evidence/c006-f1-slab-chain.json"
-  ]
+  "主屋面_m": 44.0,
+  "女儿墙顶_m": 45.2,
+  "顶楼楼梯房顶_m": 47.62,
+  "note": "全部由落盘件的 (层,类) 子节点包围盒现算，不手打；缺项写 null（不写 0）。"
  },
  "blind_spots": [
-  "层高/标高只量**这一件**：它是它自己那条链的口径，不与 libs3d 那条链互评（铁律 192：参照物必须与交付件同作用域）。",
-  "面数守恒只证「拆开再相加 = 落盘件」，**不证**几何对 —— 那是 gates/ 那几条判据的活。",
-  "子节点的**类名**取自 SU 组名（WALL/COL/SLAB/DOOR/STAIR/LIFT/PARAPET/ROOF_*）；SU 会剥掉非 ASCII ⇒ 楼上是 `G_K__CLASS`、地下室是 `__K__CLASS`，名字里**不含房间号**。"
+  "层高与女儿墙高是**口径决定**（参数表 `共用/层高`），源图没有任何标高/尺寸标注可证。",
+  "门窗的归类是规则：本包按墙层上的带弧多段线符号认门、只开洞不建门扇；源图没有窗图层 ⇒ 不建窗（不合成）。逐栋实况见本楼档案的 scope。",
+  "baseline/floors/*.json 的 `rooms`/`circulation` 来自 `redraw.geometry` 的「楼板 − 墙带」分区 + 房间号落点（**与建件同一份几何**）；`walls`/`doors` 两键**留空**（空数组 = 本版没做，不是「量到 0」）。",
+  "面数守恒只证「逐层相加 = 落盘件」，**不证**几何对 —— 那是 gates/ 的活。"
  ]
 }

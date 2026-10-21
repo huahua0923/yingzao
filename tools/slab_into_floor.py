@@ -503,7 +503,7 @@ def main():
         "faces": {"floor0_in": int(len(f0.faces)), "old_plate": old["faces"],
                   "new_plate": int(len(slab_c.faces)), "floor0_out": int(len(merged.faces))},
         "edge_caliber_note": "两版板边界口径不同（实测）：新板四边比旧板各内收 %.3f m；"
-                             "新板那条边界落在墙的**面**上（见 _scratch/probe_slab_edges.py："
+                             "新板那条边界落在墙的**面**上（见 过程/_scratch/probe_slab_edges.py："
                              "每条边向内 240 mm 都找得到配对墙线）。" % inset,
         "color": {"source": "借用被摘掉的旧板顶点色（中位数）", "rgb": None if col is None else [int(v) for v in col],
                   "in_any_judge": False},

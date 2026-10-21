@@ -136,14 +136,14 @@ from shapely.ops import unary_union  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "tools"))
-sys.path.insert(0, os.path.join(ROOT, "a1"))
+sys.path.insert(0, os.path.join(ROOT, "过程/a1"))
 import cad_close_walls as CC      # noqa: E402
 import generic_wall as GW         # noqa: E402
 import sheet_grid as SG           # noqa: E402
 import stage2_prepare_dxf as S2   # noqa: E402
 
 SRC = r"D:\项目\gym3d\材料\dxf_output\C006-第六教学楼（逸夫楼）.dxf"
-WORK = os.path.join(ROOT, "_out", "J-07.9.4-03")
+WORK = os.path.join(ROOT, "过程/_out", "J-07.9.4-03")
 OUT_02 = os.path.join(ROOT, "gates", "_out", "J-07.9.4-02.json")
 TOL = 480.0
 BLIND_TOL = 1e9        # 「盲扫」= TOL 取无穷大（凡未闭合、顶点 > 2 的都闭）

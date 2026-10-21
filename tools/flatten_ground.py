@@ -30,9 +30,9 @@ r"""修模·第三刀：**地面拟合压平**（只改高程，不动拓扑）�
 用法：
     # ① 产出**候选**名单（给人过目；落 _scratch，不落 _flatten）
     python tools/flatten_ground.py --blocks Tile_+003_+005 \
-        --pick-box 770,1180,800,1200 --pick-up 20 --pick-zmax 460 --sel-out _scratch/sel_T5.json
+        --pick-box 770,1180,800,1200 --pick-up 20 --pick-zmax 460 --sel-out 过程/_scratch/sel_T5.json
     # ② 按点名清单压平
-    python tools/flatten_ground.py --blocks Tile_+003_+005 --sel-file _scratch/sel_T5.json
+    python tools/flatten_ground.py --blocks Tile_+003_+005 --sel-file 过程/_scratch/sel_T5.json
     # ③ 只压成水平的（不改坡度）
     python tools/flatten_ground.py --blocks X --sel-file s.json --level
 
@@ -55,8 +55,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
 from tools import reality_placement as RP  # noqa: E402
 
-CLEAN = os.path.join(REPO, "_clean")
-FLATTEN = os.path.join(REPO, "_flatten")
+CLEAN = os.path.join(REPO, "过程/_clean")
+FLATTEN = os.path.join(REPO, "过程/_flatten")
 SEL_VER = "cdut3d-flatten-sel/1"
 
 RC_PASS, RC_FAIL, RC_NOGAUGE = 0, 1, 4

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>快速立体块 · 建模工作台</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{--paper:#f2eee4;--rule:#cfc8b7;--muted:#7d7666;--red:#a8342a;
+        --mono:"Cascadia Mono","Consolas",monospace}
+  html,body{margin:0;height:100%;overflow:hidden;background:#e9e4d7;color:#17150f;
+            font:13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif}
+  #c{position:fixed;inset:0;display:block}
+  .hud{position:fixed;left:14px;top:12px;background:rgba(242,238,228,.94);
+       border:1px solid var(--rule);padding:10px 12px;font:11px/1.6 var(--mono);max-width:360px}
+  .hud b{font:600 13px "Segoe UI","Microsoft YaHei",sans-serif;display:block;margin-bottom:4px}
+  .hud .err{color:var(--red)}
+  .bar2{position:fixed;right:14px;bottom:12px;display:flex;gap:6px}
+  .bar2 button{font:12px "Microsoft YaHei",sans-serif;padding:6px 11px;border:1px solid var(--rule);
+               background:rgba(242,238,228,.94);cursor:pointer}
+  .bar2 button:hover{background:#fff}
+  /* 示意立面：体量投影（不是设计立面，图里不画窗） */
+  #elev{position:fixed;inset:0;z-index:5;background:var(--paper);overflow:auto;padding:18px 22px 40px}
+  #elev[hidden]{display:none}
+  #elev header{display:flex;justify-content:space-between;align-items:baseline;
+               border-bottom:2px solid #17150f;padding-bottom:8px;margin-bottom:12px}
+  #elev h2{font:400 20px Georgia,"SimSun",serif;margin:0}
+  #elev .sub{font:11px var(--mono);color:var(--muted)}
+  #elev canvas{display:block;width:100%;max-width:1100px;border:1px solid var(--rule);
+               background:#fbf8f1;margin-bottom:16px}
+  #elev button{font:12px "Microsoft YaHei",sans-serif;padding:5px 10px;border:1px solid var(--rule);
+               background:#fff;cursor:pointer}
+</style>
+<script type="importmap">
+{"imports":{"three":"/demo/vendor/three.module.js","three/addons/":"/demo/vendor/jsm/"}}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="hud">读立体块…</div>
+<div class="bar2">
+  <button id="top">俯视</button>
+  <button id="iso">轴测</button>
+  <button id="reset">复位</button>
+  <button id="elevBtn">立面</button>
+</div>
+
+<div id="elev" hidden>
+  <header>
+    <div><h2>示意立面 · 体量投影</h2>
+      <div class="sub">由墙/柱盒投影而来。窗格是均匀示意图案，不是图纸里的窗位。</div></div>
+    <button id="elevClose">关闭</button>
+  </header>
+  <div class="sub" style="margin-bottom:6px">正立面（沿 −Z 看）</div>
+  <canvas id="ef"></canvas>
+  <div class="sub" style="margin-bottom:6px">侧立面（沿 −X 看）</div>
+  <canvas id="es"></canvas>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// DXF 里的层名/文件名是**外部数据**：进 innerHTML 之前一律转义（安全评审 2026-10-19）。
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+  c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const hud = document.getElementById('hud');
+const qs = new URLSearchParams(location.search);
+const id = qs.get('id') || '';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf2eee4);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 10, 800000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9d9583, 1.15));
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.position.set(50000, 90000, 30000);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+fill.position.set(-40000, 30000, -50000);
+scene.add(fill);
+
+// 层色：按层名首次出现的顺序分色，同层同色
+const PALETTE = [0xb9c3c9, 0xc9b9a6, 0xa6bcc9, 0xc9c0a6, 0xb0a6c9, 0xa6c9b3,
+                 0xc9a6a6, 0x9fb0a8];
+const byLayer = new Map();
+function colorOf(layer){
+  if (!byLayer.has(layer)) byLayer.set(layer, PALETTE[byLayer.size % PALETTE.length]);
+  return byLayer.get(layer);
+}
+
+let box = null, DATA = null, FLOORS = 1;
+
+function fit(){
+  if (!box) return;
+  const c = box.getCenter(new THREE.Vector3());
+  const s = box.getSize(new THREE.Vector3());
+  const r = Math.max(s.x, s.z, s.y);
+  // 按包围球算距离：竖屏/宽屏都装得下（只看 max(s) 时，扁长的楼会被切掉）
+  const sph = box.getBoundingSphere(new THREE.Sphere());
+  const fovV = camera.fov * Math.PI / 180;
+  const fovH = 2 * Math.atan(Math.tan(fovV / 2) * camera.aspect);
+  const dist = (sph.radius || r) / Math.sin(Math.min(fovV, fovH) / 2) * 1.12;
+  const d3 = new THREE.Vector3(1, 0.95, 1).normalize().multiplyScalar(dist);
+  controls.target.copy(c);
+  camera.position.copy(c).add(d3);
+  camera.near = Math.max(10, r / 500);
+  camera.far = Math.max(r * 40, dist * 6);
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+function viewTop(){
+  if (!box) return;
+  const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+  camera.position.set(c.x, c.y + Math.max(s.x, s.z) * 1.25, c.z + 1);
+  controls.target.copy(c); controls.update();
+}
+
+async function load(){
+  if (!id) throw new Error('没给 id');
+  const r = await fetch('/quick/' + encodeURIComponent(id) + '.json', {cache:'no-store'});
+  if (!r.ok) throw new Error('模型读不到：HTTP ' + r.status);
+  const d = await r.json();
+  const floors = Math.max(1, Math.min(40, parseInt(qs.get('floors') || '1', 10) || 1));
+  DATA = d; FLOORS = floors;
+  const g = new THREE.Group();
+  for (const b of (d.boxes || [])) {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(b.w, b.h, b.d),
+      new THREE.MeshLambertMaterial({color: colorOf(b.layer)}));
+    m.position.set(b.x, b.h / 2, b.z);
+    m.rotation.y = -b.rot;          // DXF 的 y 当 3D 的 z；右手系下差一个负号
+    g.add(m);
+  }
+  // 一张平面图只有一层墙：按「层数」竖向复制（用户：「至少看起来是那么一回事」）。
+  const stack = new THREE.Group();
+  for (let i = 0; i < floors; i++) {
+    const src = i === 0 ? g : g.clone();
+    src.position.y = i * d.level_h;
+    stack.add(src);
+  }
+  scene.add(stack);
+  box = new THREE.Box3().setFromObject(stack);
+  const size = box.getSize(new THREE.Vector3());
+  const grid = new THREE.GridHelper(Math.max(size.x, size.z) * 1.6, 24, 0x9d9583, 0xcfc8b7);
+  grid.position.y = 0.5;
+  scene.add(grid);
+  hud.innerHTML = `<b>${esc(d.source || id)}</b>
+    盒子 ${d.counts.boxes} · 实体 ${d.counts.entities}<br>
+    占地 ${(d.bbox.w/1000).toFixed(1)} × ${(d.bbox.d/1000).toFixed(1)} m · 层高 ${(d.level_h/1000).toFixed(2)} m · ${floors} 层<br>
+    层：${esc((d.counts.layers || []).join(' · '))}` +
+    (d.counts.truncated ? `<br><span class="err">超出上限，截掉 ${d.counts.truncated} 块</span>` : '');
+  fit();
+  window.__quick3d = {ready: true, boxes: (d.boxes || []).length, id,
+                     cam: camera.position.toArray(), tgt: controls.target.toArray(),
+                     size: box.getSize(new THREE.Vector3()).toArray()};
+}
+
+/* 示意立面：把盒子投影到竖直平面。axis 0 = 沿 −Z 看（正立面），1 = 沿 −X 看（侧立面）。 */
+function rectsFor(axis){
+  const out = [];
+  for (const b of (DATA.boxes || [])) {
+    const c = Math.cos(b.rot), s = Math.sin(b.rot), hw = b.w / 2, hd = b.d / 2;
+    const pts = [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]]
+      .map(([u, v]) => [b.x + u * c - v * s, b.z + u * s + v * c]);
+    const lo = Math.min(...pts.map(p => p[axis]));
+    const hi = Math.max(...pts.map(p => p[axis]));
+    for (let f = 0; f < FLOORS; f++)
+      out.push([lo, hi, f * DATA.level_h, f * DATA.level_h + b.h]);
+  }
+  return out;
+}
+
+function drawElev(cv, axis){
+  const R = rectsFor(axis);
+  if (!R.length) return;
+  const x0 = Math.min(...R.map(r => r[0])), x1 = Math.max(...R.map(r => r[1]));
+  const y1 = Math.max(...R.map(r => r[3]));
+  const W = 1100, H = Math.max(220, Math.min(560, (y1 / (x1 - x0)) * W * 0.72));
+  const dpr = Math.min(devicePixelRatio, 2);
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + 'px';
+  const g = cv.getContext('2d'); g.scale(dpr, dpr);
+  g.fillStyle = '#fbf8f1'; g.fillRect(0, 0, W, H);
+  const m = { l: 76, r: 28, t: 22, b: 34 };
+  const sx = (W - m.l - m.r) / (x1 - x0), sy = (H - m.t - m.b) / (y1 || 1);
+  const X = v => m.l + (v - x0) * sx, Y = v => H - m.b - v * sy;
+
+  // 体量填充
+  g.fillStyle = '#cfc8b7';
+  for (const r of R) {
+    const w = (r[1] - r[0]) * sx, h = (r[3] - r[2]) * sy;
+    if (w > 0 && h > 0) g.fillRect(X(r[0]), Y(r[3]), w, h);
+  }
+
+  // 窗格：**示意图案**（图上没有窗位），用体量轮廓做遮罩，只在墙面里画。
+  const mk = (w, h) => {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const x = c.getContext('2d'); x.scale(dpr, dpr); return x;
+  };
+  const mask = mk(cv.width, cv.height);
+  mask.fillStyle = '#000';
+  for (const r of R) {
+    const w = (r[1] - r[0]) * sx, h = (r[3] - r[2]) * sy;
+    if (w > 0 && h > 0) mask.fillRect(X(r[0]), Y(r[3]), w, h);
+  }
+  const WINS = mk(cv.width, cv.height);
+  const BAY = 2600;                                    // mm，横向开间示意值
+  const ncol = Math.max(2, Math.round((x1 - x0) / BAY));
+  const cw = (x1 - x0) / ncol;
+  WINS.fillStyle = '#6f7f86';
+  for (let f = 0; f < FLOORS; f++) {
+    for (let c = 0; c < ncol; c++) {
+      const wx0 = x0 + c * cw + cw * 0.22, ww = cw * 0.56;
+      const wy0 = f * DATA.level_h + DATA.level_h * 0.28, wh = DATA.level_h * 0.44;
+      WINS.fillRect(X(wx0), Y(wy0 + wh), ww * sx, wh * sy);
+    }
+  }
+  WINS.globalCompositeOperation = 'destination-in';
+  WINS.drawImage(mask.canvas, 0, 0, W, H);
+  g.drawImage(WINS.canvas, 0, 0, W, H);
+
+  // 层线 + 标高
+  g.font = '11px Consolas, monospace'; g.textBaseline = 'middle'; g.textAlign = 'right';
+  for (let f = 0; f <= FLOORS; f++) {
+    const y = Y(f * DATA.level_h);
+    g.strokeStyle = '#8e8776'; g.setLineDash([5, 4]);
+    g.beginPath(); g.moveTo(m.l, y); g.lineTo(W - m.r, y); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#7d7666';
+    g.fillText((f ? '+' : '±') + (f * DATA.level_h / 1000).toFixed(3), m.l - 8, y);
+  }
+  // 地坪线 + 图注
+  g.strokeStyle = '#17150f'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(m.l - 16, Y(0)); g.lineTo(W - m.r, Y(0)); g.stroke();
+  g.lineWidth = 1; g.fillStyle = '#17150f'; g.textAlign = 'center';
+  g.textBaseline = 'alphabetic';
+  g.fillText('体量投影 · 总高 ' + (y1 / 1000).toFixed(2) + ' m · 面宽 ' +
+             ((x1 - x0) / 1000).toFixed(2) + ' m', W / 2, H - 12);
+}
+
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+document.getElementById('top').onclick = viewTop;
+document.getElementById('iso').onclick = fit;
+document.getElementById('reset').onclick = fit;
+document.getElementById('elevBtn').onclick = () => {
+  if (!DATA) return;
+  drawElev(document.getElementById('ef'), 0);
+  drawElev(document.getElementById('es'), 1);
+  document.getElementById('elev').hidden = false;
+};
+document.getElementById('elevClose').onclick = () => {
+  document.getElementById('elev').hidden = true;
+};
+
+resize();
+load().catch(e => { hud.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; });
+
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

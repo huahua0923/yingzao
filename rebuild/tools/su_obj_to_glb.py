@@ -6,13 +6,14 @@
   无女儿墙 / 无顶楼楼梯房 / 无 7→8 台阶屋面），而 `manifest.json` 第 19 行却声明
   「塔楼 47.5 m …… 均按真实几何表示」—— **声明与件不符**。
   用户裁定：包内件换成 **SU 出的正式件**（三类顶部构件都在）。
-  ★ 2026-10-15 用户令层高按 **3.5 m** 走 ⇒ 件顶 = 11×3.5 + 楼梯房 3.0 = **41.5 m**
-    （原先 4.0 m 口径下是 47.0 m）。本文件**不写死这个数**，现读 `05_build/build.json`。
+  ★ 2026-10-16 用户裁定「按甲定案 · 重算整条链」⇒ 层高 **4.0 m**，件顶 = 11×4.0 + 楼梯房 3.0
+    = **47.0 m**（＝ `05_build/build.json::z_max_m`）。本文件**不写死这个数**，现读 `05_build/build.json`。
+    （2026-10-15 那版 3.5 m ⇒ 41.5 m，已作废。）
 
 三件事**一律实测，不沿用记忆**（探针 `_scratch/probe_su_import.py` 的读数）：
   ① SU 的 OBJ 头写着 `# File units = millimeters`，但 **Blender 的导入器不认这行**
      —— 量到 EXT=[129300, 84000, 50500]，是毫米当米读 ⇒ 本脚本一律 **×0.001**。
-  ② 导进来后高度落在 **Blender 的 Z**（−3500 → 41500 mm @3.5 m 口径）；glTF 要 Y 朝上 ⇒
+  ② 导进来后高度落在 **Blender 的 Z**（−3500 → 47000 mm @4.0 m 口径）；glTF 要 Y 朝上 ⇒
      交给 Blender 的导出器做 Z→Y（`export_yup=True`），**不自己转顶点**。
   ③ 118861 个面里 **974 个是 n 边形**（最大 2665 顶点）。自己拿扇形三角化会把
      带洞/凹的墙面板和楼板画错 ⇒ **不自己三角化**，走 `wm.obj_import(use_split_groups=True)`
@@ -52,29 +53,57 @@ import struct
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # `-I` 不预置脚本目录
+import building as B                                              # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)                       # D:\项目\cdut3d
-SRC = os.path.join(ROOT, "06_su", "c006_su.obj")
-OUT = os.path.join(ROOT, "06_su", "c006_su.glb")
+ROOT = B.ROOT                                      # c006=…/rebuild；c005=…/rebuild/c005
+NAME = B.out_name()                                # c006_su / c005_su
+SRC = os.path.join(ROOT, "06_su", "%s_su.obj" % NAME)
+OUT = os.path.join(ROOT, "06_su", "%s_su.glb" % NAME)
 BLENDER = r"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
 
-# 期望值来自**另一条独立读数**（那一步是 build3d 自己的记账，本文件量的是 SU 导出的几何
-#   ⇒ 两次读数不同源，铁律 187）：
-#   平面 129.3 × 84.0 m（rebuild/构件清单.md §6，源件柱网推出，与件无关）；
-#   高度**不写死** —— 从 `rebuild/05_build/build.json` 的 `basement_m` / `z_max_m` 现读。
-#   ★ 2026-10-15：原先写死 `(-3500.0, 46999.996)`（= 11×4.0 + 楼梯房 3.0）。用户令层高改 3.5 m 后
-#     件顶变成 41.5 m，而这两个数没跟着动 ⇒ 这一步会**报假红**（件是对的，期望值是旧的）。
-#     层高这种「一个口径决定、下游好几处跟着变」的数，一律现读现算（铁律 018/103）。
-EXP_PLAN_M = (129.3, 84.0)
+# 期望值**两个都不手打**，全部从 build3d 自己的产物现算（铁律 187：与 SU 出的几何是两次
+#   不同读数；铁律 018：层高/层数改了口径时，这里不会像旧版那样留着一个不动的数）：
+#     平面 —— `05_build/<NAME>_white.obj` 的顶点包围盒 (x, z)（该件 y 朝上）；
+#     标高 —— `05_build/build.json` 的 `basement_m` / `z_max_m`。
+#   ★★ 2026-10-17：原先是手打的 `EXP_PLAN_M = (129.3, 84.0)`（c006 一处）。做 c005 时
+#     手打值必然错（103.9 × 26.9）—— 而错的方向是**报假红**，不是漏判；但更坏的是
+#     它逼着下一个做新楼的人在源码里改常量。现改成现算，c006 读数逐位不变（实测 129.3/84.0）。
+def _plan_m():
+    """从 white OBJ 顶点现算平面外轮廓 (x, y) 米。缺件 ⇒ 明确报错，不退回常量。"""
+    p = os.path.join(ROOT, "05_build", "%s_white.obj" % NAME)
+    if not os.path.exists(p):
+        raise SystemExit("★ 缺 %s —— 先跑 build3d.py；本脚本不猜平面尺寸" % p)
+    mn = [1e9] * 3
+    mx = [-1e9] * 3
+    seen = 0
+    with open(p, encoding="utf-8") as f:
+        for ln in f:
+            if not ln.startswith("v "):
+                continue
+            q = [float(t) for t in ln.split()[1:4]]
+            seen += 1
+            for i in range(3):
+                mn[i] = min(mn[i], q[i])
+                mx[i] = max(mx[i], q[i])
+    if not seen:
+        raise SystemExit("★ %s 里一个顶点都没有" % p)
+    return (mx[0] - mn[0], mx[2] - mn[2])     # OBJ 是 y 朝上 ⇒ 平面 = x / z
 
 
 def _exp_hi_mm():
     """(底, 顶) 毫米 —— 现读 build.json。读不到就**明确报错**，不悄悄退回常量。"""
-    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                     "05_build", "build.json")
+    p = os.path.join(ROOT, "05_build", "build.json")
     b = json.load(open(p, encoding="utf-8"))
     return (-abs(float(b["basement_m"])) * 1000.0, float(b["z_max_m"]) * 1000.0)
 MM = 0.001
+
+
+def _nodes():
+    """GLB 顶层节点名单 —— 有地下室才发 B1，地上层数取档案。"""
+    return ((["B1"] if B.profile().get("basement") else [])
+            + ["floor%d" % k for k in range(len(B.floor_names()))])
 
 BPY = r'''
 import bpy, re, sys, mathutils
@@ -124,7 +153,7 @@ def merge(objs, name):
     me.update()
     return me
 
-NODES = ["B1"] + ["floor%d" % k for k in range(11)]
+NODES = __NODES__
 scene = bpy.context.scene.collection
 empties = {}
 for n in NODES:
@@ -202,7 +231,8 @@ def main():
 
     bp = os.path.join(HERE, "_su_obj_to_glb.py")
     with open(bp, "w", encoding="utf-8", newline="\n") as f:
-        f.write(BPY.replace("__SRC__", SRC).replace("__OUT__", OUT))
+        f.write(BPY.replace("__SRC__", SRC).replace("__OUT__", OUT)
+                   .replace("__NODES__", json.dumps(_nodes())))
 
     r = subprocess.run([BLENDER, "-b", "-P", bp], capture_output=True, text=True)
     keep = ("BLENDER_IN", "BLENDER_GROUPS", "BLENDER_NODES", "BLENDER_BBOX_M",
@@ -248,19 +278,25 @@ def main():
     fails = []
     if bad_xform:
         fails.append("有节点带变换 %s ⇒ 下面的包围盒不是实测件的位置" % bad_xform[:3])
-    # 朝向：glTF 是 Y 朝上 ⇒ 高度必须落在 **Y**，且高度（45.0 m @3.5 m 口径）是三轴里
+    # 朝向：glTF 是 Y 朝上 ⇒ 高度必须落在 **Y**，且高度（50.5 m @4.0 m 口径）是三轴里
     # **最小**的（平面 129.3 × 84.0）。这条与 render3d.py 的 ORIENT_FAIL 是同一个判据。
-    if not (ext[1] < ext[0] and ext[1] < ext[2]):
-        fails.append("高度不在 Y：EXT=%s ⇒ 整栋会躺倒" % ext)
-    if abs(ext[0] - EXP_PLAN_M[0]) > 0.5 or abs(ext[2] - EXP_PLAN_M[1]) > 0.5:
-        fails.append("平面尺寸对不上 %.1f×%.1f m（期望 %.1f×%.1f）"
-                     % (ext[0], ext[2], EXP_PLAN_M[0], EXP_PLAN_M[1]))
+    plan = _plan_m()
+    if abs(ext[0] - plan[0]) > 0.5 or abs(ext[2] - plan[1]) > 0.5:
+        fails.append("平面尺寸对不上 %.1f×%.1f m（期望 %.1f×%.1f，取自 white OBJ）"
+                     % (ext[0], ext[2], plan[0], plan[1]))
     lo_exp, hi_exp = [v * MM for v in _exp_hi_mm()]
+    # ★★ 2026-10-17 C022 实测：原判据要求「高度必须是三轴里最小的那一轴」——
+    #   那是 c006 的形状（50.5 m 高、129×84 平面）。C022 是 47.5×26.9 平面、28.7 m 高，
+    #   高度比进深还大 ⇒ 件是对的也会被判「会躺倒」。改成拿**期望高度**比 Y 跨距，
+    #   只有「高度跑到 Z 上」才报躺倒（两份转换器同一口径，铁律 183）。
+    _h_exp = hi_exp - lo_exp
+    if abs((mx[1] - mn[1]) - _h_exp) > 0.05 and abs((mx[2] - mn[2]) - _h_exp) <= 0.05:
+        fails.append("高度跑到了 Z 上：EXT=%s（高 %.1f m 在 Z）⇒ 整栋躺倒" % (ext, _h_exp))
     if abs(mn[1] - lo_exp) > 0.05 or abs(mx[1] - hi_exp) > 0.05:
         fails.append("标高对不上 %.3f–%.3f m（期望 %.3f–%.3f）"
                      % (mn[1], mx[1], lo_exp, hi_exp))
-    if sorted(parents) != sorted(["B1"] + ["floor%d" % k for k in range(11)]):
-        fails.append("层节点名单不对：%s" % parents)
+    if sorted(parents) != sorted(_nodes()):
+        fails.append("层节点名单不对：%s（期望 %s）" % (parents, _nodes()))
     if fails:
         print("★ 判据不过：")
         for x in fails:

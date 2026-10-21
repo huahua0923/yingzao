@@ -1,0 +1,41 @@
+{
+ "schema": "cdut3d-positive-control/1",
+ "gauge": "逐层节点 ε 校验（节点在 + 底标高 + 主体顶标高 + 无游离网格）",
+ "threshold": 0.95,
+ "baseline": {
+  "score": 1.0,
+  "passed": 37,
+  "total": 37,
+  "glb": "D:\\项目\\cdut3d\\rebuild\\06_su\\c006_fc.glb",
+  "sha256": "a1d7f971092e6fe613814f8f4e2fe073fde118a8a0cb18c5540b9bff9a58f877"
+ },
+ "perturbation": {
+  "kind": "整层平移",
+  "node": "floor1",
+  "shift_m": 2.0,
+  "meshes_moved": 7,
+  "glb": "D:\\项目\\cdut3d\\demo\\_gen\\c006_ctrl_floor1_plus2m.glb",
+  "sha256": "204c6895a6414f542177aba339fec7590937656dff15774165b6e6d383b3a3ec"
+ },
+ "control": {
+  "score": 0.945946,
+  "passed": 35,
+  "total": 37,
+  "fails": [
+   {
+    "id": "floor1/底标高",
+    "ok": false,
+    "want": 4.0,
+    "got": 6.0
+   },
+   {
+    "id": "floor1/顶标高(主体)",
+    "ok": false,
+    "want": 8.0,
+    "got": 10.0
+   }
+  ]
+ },
+ "fired": true,
+ "note": "假件由本脚本从真件现造（不改真件）；两件走**同一段** _gauge 代码。假件只抬起一层 ⇒ 节点数不变，考的是标高量具本身。"
+}

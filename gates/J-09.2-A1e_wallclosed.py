@@ -14,7 +14,7 @@ r"""判据 J-09.2-A1e：**外墙按交付口径闭合了没有** —— 墙与�
 ★ 背景（全部实测）：libs3d 链 `build8.py::bridge_gaps` 原文注释「**墙实体仍按图纸不补**」，
   它只给门造门头（754 扇门 / 754 个门头），**窗洞一个都不补**
   ⇒ 交付逐层件里量到 **709 条 ≥50 mm 的缝**，逐条在 z=1000/2850/3300 三个高度上问，
-  **100% 是整层高的洞、0 条有门头**（=_scratch/probe_gap_height.py）。
+  **100% 是整层高的洞、0 条有门头**（=过程/_scratch/probe_gap_height.py）。
   交付口径（实景三维 LOD1.3 = 棱柱体）要求外墙闭合、不表达门窗洞 ⇒ 该补。
 
 ★ 判据（本闸门查的）：
@@ -86,9 +86,14 @@ PACK_MODEL = os.path.join(CDUT, "packs", "cdut-main", "c006", "model",
 #    正式件是每层拆成 `floor0__WALL` / `floor0__SLAB` … **六个**子几何。
 #    ★ A/B/C 三条量的仍是 libs3d 那条链的产物（demo/_gen/c006-floors.glb）—— 它仍该死守，
 #      但**它已经不喂包了**：这一条写进盲区，不许读者默认包内件被 A/B/C 保过。
-SU_FORMAL = os.path.join(CDUT, "rebuild", "06_su", "c006_su.glb")
+# ★ 2026-10-17 换链（用户令「现在开工换 FreeCAD」）：正式件 = **FreeCAD 出的**
+#   `c006_fc.glb`（contours → contours_to_fc.py → fc_obj_to_glb.py）。F 腿比的仍是
+#   「包内件 == 正式件」这一件事，只是参照物跟着换到同作用域（铁律 192）。
+#   SU 件 `c006_su.glb` 仍在盘上作退路；要拿它当参照物设 `CDUT_FORMAL_GLB=c006_su.glb`。
+FORMAL_GLB = os.path.join(CDUT, "rebuild", "06_su",
+                          os.environ.get("CDUT_FORMAL_GLB") or "c006_fc.glb")
 N_FLOOR = 11
-F1_TILE = ("L", 0)          # F1 对应的图幅：由 _scratch/_ident_tile.py 实测选出（88.7% vs 60.0%）
+F1_TILE = ("L", 0)          # F1 对应的图幅：由 过程/_scratch/_ident_tile.py 实测选出（88.7% vs 60.0%）
 
 
 def synth(thick, run, gap, height=3600.0):
@@ -369,18 +374,18 @@ def main():
     same_bytes = None
     if not os.path.exists(PACK_MODEL):
         badF.append("包内 model 件不存在 %s" % PACK_MODEL)
-    elif not os.path.exists(SU_FORMAL):
+    elif not os.path.exists(FORMAL_GLB):
         # ★ 参照物不在 ⇒ 这是「**没量到**」，不是「绿」（铁律 199/137 的同一形状）。
-        badF.append("正式件不在 %s ⇒ F **没量到**（不许当绿）" % SU_FORMAL)
+        badF.append("正式件不在 %s ⇒ F **没量到**（不许当绿）" % FORMAL_GLB)
     else:
         # 腿一：逐字节同源。包内件就是正式件的副本（build_pack ②.5 是搬、不是再造）。
         same_bytes = (hashlib.sha256(open(PACK_MODEL, "rb").read()).hexdigest()
-                      == hashlib.sha256(open(SU_FORMAL, "rb").read()).hexdigest())
+                      == hashlib.sha256(open(FORMAL_GLB, "rb").read()).hexdigest())
         if not same_bytes:
             badF.append("包内件与正式件**不是同一份字节**")
         # 腿二：逐 (层,类) 子几何 —— 名字集合 + 面数 + 包络。防「两份一起被换成同一个错东西」
         #   （纯粹的同源检查对「两边同错」是瞎的；这条腿至少把「结构变了」捅出来）。
-        su_sc = trimesh.load(SU_FORMAL, force="scene")
+        su_sc = trimesh.load(FORMAL_GLB, force="scene")
         sp = trimesh.load(PACK_MODEL, force="scene")
         badF += f_bad_su(su_sc, sp)
         # 正对照④：把包内 `floor0__SLAB` 挪 1 m 冒充 ⇒ 腿二必须红（证明它有分辨力）
@@ -397,7 +402,7 @@ def main():
             print("  正对照④ 跑不起来：%s" % e)
     rec["F_pack_same_source"] = {"ok": not badF, "bad": badF,
                                  "pack_model": PACK_MODEL,
-                                 "reference": os.path.basename(SU_FORMAL),
+                                 "reference": os.path.basename(FORMAL_GLB),
                                  "same_bytes_sha256": same_bytes,
                                  "swap_touched_only_%s" % SLAB_NODE: not bad_swap,
                                  "control_shift_1m_fired": ctrlF_ok,
@@ -405,7 +410,7 @@ def main():
                                          "（原先比的是 libs3d 链产物 c006-floors-slab.glb，"
                                          "换链后那件**已经不喂包**）。A/B/C 三条量的仍是 libs3d 那条链。"}
     print("\nF 同源      : 包内 model vs 正式件（%s）%s"
-          % (os.path.basename(SU_FORMAL),
+          % (os.path.basename(FORMAL_GLB),
              "✓ 逐字节同一份 + 逐 (层,类) 子几何全等（%s）" % os.path.basename(PACK_MODEL)
              if not badF else "✗ %s" % badF[:3]))
     print("  参照物守门  : 换板那一步只动了 %s、其余 10 层没碰 %s（★ 那是 libs3d 链的产物，"

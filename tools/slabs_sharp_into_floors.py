@@ -46,7 +46,7 @@
 
 ★ 判据四件套（§10.0.1）：① 量**写出的** GLB ② 量具与参照物写明 ③ 盲区声明 ④ 正对照必配
 用法:
-  python tools/slabs_sharp_into_floors.py --floors <分层.glb> --prisms _gen/slab_prisms.json
+  python tools/slabs_sharp_into_floors.py --floors <分层.glb> --prisms 过程/_gen/slab_prisms.json
                                           --out <换后.glb> [--meta out.json]
 """
 import argparse

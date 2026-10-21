@@ -1,0 +1,284 @@
+{
+ "schema": "cdut3d-chain-evidence/1",
+ "building_id": "c006",
+ "contours": [
+  {
+   "floor": "地下1层",
+   "z0_m": -3.5,
+   "h_m": 3.5,
+   "polys": 137,
+   "per_layer": {
+    "WALL": 22,
+    "COL": 44,
+    "LIFT": 3,
+    "SLAB": 6,
+    "DOOR": 13,
+    "STAIR": 46,
+    "LINTEL": 3,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "1层",
+   "z0_m": 0.0,
+   "h_m": 4.0,
+   "polys": 680,
+   "per_layer": {
+    "WALL": 110,
+    "COL": 209,
+    "LIFT": 3,
+    "SLAB": 13,
+    "DOOR": 57,
+    "STAIR": 246,
+    "LINTEL": 33,
+    "ROOF_ROOM": 0,
+    "PARAPET": 6,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 3
+   },
+   "ok": true
+  },
+  {
+   "floor": "2层",
+   "z0_m": 4.0,
+   "h_m": 4.0,
+   "polys": 620,
+   "per_layer": {
+    "WALL": 62,
+    "COL": 207,
+    "LIFT": 3,
+    "SLAB": 15,
+    "DOOR": 49,
+    "STAIR": 271,
+    "LINTEL": 13,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "3层",
+   "z0_m": 8.0,
+   "h_m": 4.0,
+   "polys": 618,
+   "per_layer": {
+    "WALL": 56,
+    "COL": 207,
+    "LIFT": 3,
+    "SLAB": 15,
+    "DOOR": 53,
+    "STAIR": 271,
+    "LINTEL": 13,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "4层",
+   "z0_m": 12.0,
+   "h_m": 4.0,
+   "polys": 621,
+   "per_layer": {
+    "WALL": 56,
+    "COL": 207,
+    "LIFT": 3,
+    "SLAB": 15,
+    "DOOR": 53,
+    "STAIR": 271,
+    "LINTEL": 13,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 3
+   },
+   "ok": true
+  },
+  {
+   "floor": "5层",
+   "z0_m": 16.0,
+   "h_m": 4.0,
+   "polys": 520,
+   "per_layer": {
+    "WALL": 56,
+    "COL": 188,
+    "LIFT": 3,
+    "SLAB": 12,
+    "DOOR": 38,
+    "STAIR": 216,
+    "LINTEL": 7,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "6层",
+   "z0_m": 20.0,
+   "h_m": 4.0,
+   "polys": 521,
+   "per_layer": {
+    "WALL": 57,
+    "COL": 188,
+    "LIFT": 3,
+    "SLAB": 12,
+    "DOOR": 39,
+    "STAIR": 216,
+    "LINTEL": 6,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "7层",
+   "z0_m": 24.0,
+   "h_m": 4.0,
+   "polys": 267,
+   "per_layer": {
+    "WALL": 21,
+    "COL": 32,
+    "LIFT": 3,
+    "SLAB": 4,
+    "DOOR": 19,
+    "STAIR": 162,
+    "LINTEL": 8,
+    "ROOF_ROOM": 0,
+    "PARAPET": 12,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 6
+   },
+   "ok": true
+  },
+  {
+   "floor": "8层",
+   "z0_m": 28.0,
+   "h_m": 4.0,
+   "polys": 90,
+   "per_layer": {
+    "WALL": 22,
+    "COL": 24,
+    "LIFT": 3,
+    "SLAB": 5,
+    "DOOR": 8,
+    "STAIR": 27,
+    "LINTEL": 1,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "9层",
+   "z0_m": 32.0,
+   "h_m": 4.0,
+   "polys": 89,
+   "per_layer": {
+    "WALL": 21,
+    "COL": 24,
+    "LIFT": 3,
+    "SLAB": 5,
+    "DOOR": 8,
+    "STAIR": 27,
+    "LINTEL": 1,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "10层",
+   "z0_m": 36.0,
+   "h_m": 4.0,
+   "polys": 90,
+   "per_layer": {
+    "WALL": 22,
+    "COL": 24,
+    "LIFT": 3,
+    "SLAB": 5,
+    "DOOR": 8,
+    "STAIR": 27,
+    "LINTEL": 1,
+    "ROOF_ROOM": 0,
+    "PARAPET": 0,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 0
+   },
+   "ok": true
+  },
+  {
+   "floor": "11层",
+   "z0_m": 40.0,
+   "h_m": 4.0,
+   "polys": 116,
+   "per_layer": {
+    "WALL": 22,
+    "COL": 24,
+    "LIFT": 3,
+    "SLAB": 5,
+    "DOOR": 8,
+    "STAIR": 27,
+    "LINTEL": 1,
+    "ROOF_ROOM": 10,
+    "PARAPET": 11,
+    "ROOF_STAIR": 0,
+    "ROOF_STEP": 0,
+    "ROOF": 5
+   },
+   "ok": true
+  }
+ ],
+ "build_json": {
+  "storey_m": 4.0,
+  "basement_m": 3.5,
+  "top_m": 44.0,
+  "z_max_m": 47.62,
+  "z_max_main_m": 44.0,
+  "n_floors": 11
+ },
+ "floor_h_sources": {
+  "件侧": {
+   "floor_h_m": 4.0,
+   "spread_m": 0.5,
+   "how": "相邻层节点 lo_m 之差（11 个带）"
+  },
+  "轮廓侧": {
+   "floor_h_m": [
+    3.5,
+    4.0
+   ],
+   "how": "contours/index.json 的 h_m（SU 建的正是这批轮廓）"
+  },
+  "参数侧": {
+   "storey_m": 4.0,
+   "how": "05_build/build.json"
+  }
+ }
+}

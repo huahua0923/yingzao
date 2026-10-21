@@ -1,15 +1,39 @@
 # -*- coding: utf-8 -*-
 r"""J-10.10-08 顶部三个「推的数」对照 2024 实景 —— 步 5 ①（与 CAD 链融合）
 
+【★★ 2026-10-20 口径变更 · 用户裁定：「实景就是看结构有没有问题，尺寸只是参考」】
+  ⇒ 本闸**不再对尺寸出红**。原三件（女儿墙高 1.2 / 楼梯房高 3.5 / 台阶屋面高 28.0）降为
+    **参考读数**：照旧量、照旧逐条印、照旧落 JSON，判词一律写「参考」，不参与 rc。
+  ⇒ 判定改为**结构四条**（S1~S4，见 `judge_structure`）：实景里这栋楼是不是**两段式**
+    （裙房面 + 比它高出 ≥2 层的塔楼面）、塔楼面尺度是不是与模型同量级、塔楼面离模型塔楼
+    平面多远（结构级容差 20 m，不是尺寸容差）、模型自己是否自洽。
+  ★ 代价（铁律 028）：**尺寸写错了，本闸不会再红**。挡尺寸的是另源的 `J-10.10-11`
+    （逐层平面图轮廓尺度）；本闸今后只回答「结构对不对」。
+  ★ 触发这条改动的读数（`过程/_out/塔楼差10米来源·判词.md`）：图纸塔楼与 2024 实建
+    平面差 (ΔE −9, ΔN −4) m、实建塔楼比图纸高 ~3.8 m（约一层）——**不是模型内部错**，
+    是图纸与实建之间的差。既然用户裁定「尺寸只是参考」，这条差就不再拦链。
+  ★ 旧的早退条件「同类构件顶标高不唯一 ⇒ NOGAUGE」**已去掉**：楼梯房四个顶标高
+    （47000/47120/47500/47620 mm）只说明**尺寸有四种**，不说明**结构有问题**；
+    它也一直让本闸在碰 DSM 之前就退出（＝尺寸问题冒充「量不到」）。现在把四种照实印出来。
+
 【判据】`rebuild/构件库/参数.json` 里三个标着**假设**的顶部数，拿 **2024 航测 DSM**
   （`fly2024_dsm_025.tif`，0.25 m/px，EPSG:4544，**与交付件不同源**）在**同一栋楼内**量一遍：
     ① **女儿墙高**   声明 **1.2 m**（`构件/顶部/女儿墙高`）
-    ② **楼梯房高**   声明 **3.0 m**（`构件/顶部/楼梯房高`）
-    ③ **台阶屋面高** 声明 **相对模型 ±0.000 的 24.5 m**（＝ 7 层板顶，**由 `c006_catalog.json` 表现算**）
-  ★ ③ 的口径已改过一次（铁律 28，代价写在旁边）：原口径是「相对**塔楼顶** −14.0 m」，
-    而塔楼顶在本闸里**量不出来**（见下）⇒ ③ 改量**裙房屋面 − 地面**，与声明量同义、且**不依赖塔楼顶**。
-    ★ 它的差**分不开**两件事：「层高其实是 4.0」与「模型 ±0.000 不在实测地面上」（**同一读数**）——
-      **必须由用户裁**，本闸不自行改口径（写进盲区）。
+    ② **楼梯房高**   声明 **3.5 m**（`构件/顶部/楼梯房高`；★ 2026-10-19 用户裁定
+                     **全仓默认由 3.0 改 3.5**，原 3.0 m 是构造推值；本闸在改数后仍是「未量到」，
+                     见判词表的 note —— 改声明不会让②变绿或变红，那是尺子问题不是数的问题）
+    ③ **台阶屋面高** 声明 **相对模型 ±0.000 的 28.0 m**（＝ 7 层板顶，**由 `c006_catalog.json` 表现算**）
+  ★ ③ 的口径已改过**两次**（铁律 28，代价写在旁边）：
+    · 第一次：原口径是「相对**塔楼顶** −14.0 m」，而塔楼顶在本闸里**量不出来**（见下）
+      ⇒ ③ 改量**裙房屋面 − 地面**，与声明量同义、且**不依赖塔楼顶**。
+    · 第二次（2026-10-16，**用户裁定「按甲定案 · 重算整条链」**）：层高由 3500 改 **4000 mm**
+      ⇒ 声明值 24.500 → **28.000 m**。★ 这次改口径的**依据**是第四把尺子
+      `J-10.10-11_裙房层数-轮廓尺度分辨.py`（**与 DSM 不同源**：量的是 12 份逐层平面图的轮廓尺度，
+      7→8 层之间断崖，三口径 k\* 全 = 7）⇒ **本闸的读数与声明现在应当相符**（实测 28.101，差 0.101 m）。
+    ★ 这一段的**旧形态**（「③ 的差分不开三件事，必须由用户裁」）**已经裁完** ——
+      裁定 = 甲（层高 4.0 m / 裙房 7 层）。★ 代价（铁律 028）：本闸**自己分不开**那三件事这一点**没有变**，
+      变的只是「谁来裁」。仍未被本闸量到的反证并列留在 `参数.json::共用/层高.出处` 里
+      （21.132 m 那块面在 4.0 口径下无对应层；47.666/54.990 两块面两说都不干净）。
 
   **位姿**：整栋**一个**位姿，只用 `_work/regbest_1层.json`（转角 110°、不拟合比例尺、质心对质心）。
    ★ 开闸第一件事是**复算** `outline_en` 并与盘上存的那份逐位比（< 1e-6 m）——
@@ -40,8 +64,10 @@ r"""J-10.10-08 顶部三个「推的数」对照 2024 实景 —— 步 5 ①（
     本闸因此**拒绝出 ② 的数**，而不是挑一块报出来（正对照·丁 证明这份「不稳定」是可复现的）。
   · ★★ **③ 的差本闸分不开三件事**（**同一个读数**，铁律 018：「两个数对上不能证明它们对」）：
     「层高其实是 4.0 m」/「模型 ±0.000 不在实测地面上」/「**裙房层数少了 1 层**」。
-    ★ 只有第三条与既有命令「**层高定 3.5 m**」相容（实测 28.103 ÷ 3.5 = **8.03 层** ⇒ 裙房应为 **8 层**，
-      交付件现在是 7 层）⇒ 但**口径是用户的**，本闸**不自行改**，只把三条并列摆出来。
+    ★ **这一条已经裁完（2026-10-16）**：第四条**与 DSM 不同源**的尺子
+      （`J-10.10-11`，量 12 份逐层平面图的轮廓尺度）判**裙房 = 7 层** ⇒ 用户裁**甲（层高 4.0 m）**
+      ⇒ 交付口径已改，本闸的声明值随之由 24.500 变 **28.000**。
+      ★ 本闸**自己仍分不开**那三件事这一点**没有变**（它只是 DSM 上的一个读数）—— 分开它们的是那把**另源的尺子**。
   · **「平地」阈值 `FLAT_TOL_M = 1.0 m` 与 `_scratch/dsm_roofs_c006.py:91` 同口径**
     （★ 该脚本 `:83` 的 `rng3 < 0.40` 是**铺装**判据，不是平屋面判据 —— 早前照抄错过一次，
     代价：塔楼板被切成 14.1 / 9.9 m² 两块、都掉到 `LEVEL_MIN_AREA` 以下，候选面全变杂物）。
@@ -77,6 +103,19 @@ r"""J-10.10-08 顶部三个「推的数」对照 2024 实景 —— 步 5 ①（
   丙 **同一掩膜自减** ⇒ 必须**恰好 0.0** —— 证明这条尺子不会凭空造出差。
   丁 **塔楼掩膜平移 5 m** ⇒ 掩膜里**仍**躺着不止一块面（跨度仍 > `ROOF_LEVEL_TOL`）——
      ★ 把「不稳定」本身变成一条**通过**的对照：没有它，② 的「未量到」与「尺子抽风」永远同形（铁律 183）。
+  戊/己/庚/辛 **结构判据的正对照**（喂 `judge_structure` 的**坏输入**；纯函数，与今天的读数无关）：
+     戊 z_t←z_p（塔楼面与裙房面同高）⇒ S1 必须红；己 a_t×10 ⇒ S2 必须红；
+     庚 cen_t 东移 40 m ⇒ S3 必须红；辛 真值 ⇒ S1~S4 必须全绿。
+     ★ 没有这四条，S1~S4 只是「写完的函数」，不是「量过的判据」（铁律 17/137）。
+
+【收口规则】（2026-10-20 起）
+  · 三件**尺寸**只作参考：照旧量、照旧印、落 JSON，verdict 一律写「参考」，**不参与 rc**。
+    代价（铁律 28）：尺寸写错了，本闸不会再红 —— 挡尺寸的是另源的 `J-10.10-11`。
+  · rc 只看 **S1~S4** ＋ 正对照：
+      S1~S4 有任一条 `None`（量不到） ⇒ **rc=4**（判据没立起来，不许用「其余几条绿」顶替）；
+      S1~S4 有任一条 `False`        ⇒ **rc=1**（结构不对）；
+      全 True 但正对照没全响        ⇒ **rc=1**（判据没分辨力，绿不算数）；
+      全 True 且正对照全响          ⇒ **rc=0**。
 
 三态：`RC_PASS=0 / RC_FAIL=1 / RC_NOGAUGE=4`。
 """
@@ -116,6 +155,17 @@ ERODE_STEP_M = 4.0
 STEPS_UNION_M = 1.0       # 从台阶屋面上扣掉的「塔楼足迹外扩」
 LEVEL_MIN_AREA = 20.0     # 「候选面」最小面积 m²（≠ `parts` 的 20 px 门限：那是 1.25 m²，两个数不是一回事）
 ROOF_LEVEL_TOL = 2.0      # 塔楼顶「算一块面」的高度跨度上限 m —— 超过 ⇒ **拒绝出数**，不挑一块
+# ---- 结构判据的门（★ 2026-10-20 用户裁定「实景只看结构、尺寸只是参考」后新增；都按**结构**定，
+#      不按尺寸定：塔楼必须比裙房高出「至少两层」（8 m），但多高不判；尺度只要同量级。）
+STRUCT_MIN_AREA = 300.0            # 一块「结构面」的最小面积 m²
+#   实测出处（两个**不同**估计器，别当成同一个数，铁律 174）：
+#   · 裙房面（平地连通块，本闸选面用）：最大一块 648.9 m²；同一水平带全部平地面合计 2112.5 m²。
+#   · 塔楼面（高出裙房 ≥4 m 的连通投影）：993.1 m²（`过程/_out/塔楼差10米来源·判词.md` ⑤）。
+#   300 是「结构面」这把尺子的下限：比它小的块是屋顶设备/杂物，不是「一段楼」。
+STRUCT_TOWER_MIN_DZ = 8.0          # 塔楼面 − 裙房面 下限 m（≥2 层）
+STRUCT_TOWER_MAX_DZ = 48.0         # 上限 m（12 层；更离谱就不是同一栋楼的塔楼了）
+STRUCT_AREA_RATIO = (0.6, 1.6)     # 塔楼面面积 / 模型塔楼面积（尺度同量级，不是尺寸相等）
+STRUCT_XY_MAX = 20.0               # 塔楼面块心离模型塔楼平面多远算「同一个塔楼」m（结构级容差）
 OFFSET_SEARCH_M = 20      # 环平移搜索半径 m（只诊断「环圈错地方 vs 楼不止一块面」，不参与判定）
 OFFSET_STEP_M = 5         # 搜索步长 m
 
@@ -221,7 +271,11 @@ def load_regions(to_en):
         return [], None
 
     roof, f11 = blocks("11层", "ROOF")
-    stair, _ = blocks("11层", "ROOF_STAIR")
+    # ★ 2026-10-19：类名 `ROOF_STAIR` 已并入 `ROOF_ROOM`（`rebuild/tools/export_contours.py:207`；
+    #   同一天 `J-10.8-02` / `build_pack*.py` 都跟着改了，本闸漏改）。按旧名取 ⇒ 被测集合恒空
+    #   ⇒ 下面 `min()` 直接抛 traceback，症状是 rc=1「不符」，与「没量到」同形（铁律 199）。
+    #   类名真源是生成器那一份，这里只跟名、不另立名单。
+    stair, _ = blocks("11层", "ROOF_ROOM")
     par, _ = blocks("11层", "PARAPET")
     step, f07 = blocks("7层", "ROOF_STEP")
 
@@ -240,10 +294,14 @@ def load_regions(to_en):
         outline8_mm=MF["8层"]["outline_mm"],
         outline1_mm=MF["1层"]["outline_mm"],
         # 构件bbox短边（用来判「亚格」）——现算，不手打
-        stair_min_side_m=min(min(float(b["bbox"][2] - b["bbox"][0]),
-                                 float(b["bbox"][3] - b["bbox"][1])) for b in stair) / 1000.0,
-        step_min_side_m=min(min(float(b["bbox"][2] - b["bbox"][0]),
-                                float(b["bbox"][3] - b["bbox"][1])) for b in step) / 1000.0,
+        # ★ 空集合写 None，**不许**在这里抛异常：下游 `need` 的非空断言负责把它报成 NOGAUGE
+        #   （rc=4「没量到」），而不是让 traceback 冒充 rc=1「不符」（铁律 199）。
+        stair_min_side_m=(None if not stair else
+                          min(min(float(b["bbox"][2] - b["bbox"][0]),
+                                  float(b["bbox"][3] - b["bbox"][1])) for b in stair) / 1000.0),
+        step_min_side_m=(None if not step else
+                         min(min(float(b["bbox"][2] - b["bbox"][0]),
+                                 float(b["bbox"][3] - b["bbox"][1])) for b in step) / 1000.0),
     )
     return d
 
@@ -369,6 +427,38 @@ def dilate(m, meters, mpp):
     return ndimage.binary_dilation(m, structure=np.ones((3, 3), bool), iterations=k, border_value=0)
 
 
+# ------------------------------------------------------------------ 结构判据（2026-10-20 起唯一判据）
+
+def judge_structure(z_t, a_t, cen_t, a_model, cen_model, z_p, s4_ok):
+    """结构四条。输入全是现读的数（不手打）；=None 表示「这块没量到」。
+
+    ★ 纯函数：正对照**直接喂坏输入**进来，验它有分辨力（铁律 137：判据没喂过错就不知道它会不会红）。
+    ★ 四条只问**结构**，不问尺寸：塔楼比裙房高多少、塔楼面多大、塔楼画在哪 —— 都只要求在
+      「同量级 / 有序 / 同一个塔楼」的范围内，不要求等于某个数。
+    """
+    out = {}
+    dz = None if (z_t is None or z_p is None) else float(z_t - z_p)
+    out["S1 两段式：塔楼面高出裙房面"] = dict(
+        ok=None if dz is None else bool(STRUCT_TOWER_MIN_DZ <= dz <= STRUCT_TOWER_MAX_DZ),
+        read="量不到" if dz is None else
+        "%.2f m（要 %.0f~%.0f m）" % (dz, STRUCT_TOWER_MIN_DZ, STRUCT_TOWER_MAX_DZ))
+    ratio = None if (a_t is None or not a_model) else float(a_t) / float(a_model)
+    out["S2 塔楼尺度同量级（实景/模型面积比）"] = dict(
+        ok=None if ratio is None else bool(STRUCT_AREA_RATIO[0] <= ratio <= STRUCT_AREA_RATIO[1]),
+        read="量不到" if ratio is None else
+        "%.3f（要 %.1f~%.1f）" % (ratio, STRUCT_AREA_RATIO[0], STRUCT_AREA_RATIO[1]))
+    d = None
+    if cen_t is not None and cen_model is not None:
+        d = float(math.hypot(float(cen_t[0]) - float(cen_model[0]),
+                             float(cen_t[1]) - float(cen_model[1])))
+    out["S3 塔楼位置（实景块心−模型环心）"] = dict(
+        ok=None if d is None else bool(d <= STRUCT_XY_MAX),
+        read="量不到" if d is None else "%.2f m（要 ≤ %.0f m）" % (d, STRUCT_XY_MAX))
+    out["S4 模型自洽（塔楼环在裙房轮廓内＋标高有序）"] = dict(
+        ok=None if s4_ok is None else bool(s4_ok), read="见上面 [模型自证] 行")
+    return out
+
+
 # ------------------------------------------------------------------ 主
 
 def main() -> int:
@@ -401,7 +491,7 @@ def main() -> int:
 
     # ---- 非空断言（铁律 137）----
     need = [("11层/ROOF", R["n_roof"]), ("11层/PARAPET", R["n_parapet"]),
-            ("11层/ROOF_STAIR", R["n_roof_stair"]), ("7层/ROOF_STEP", R["n_roof_step"])]
+            ("11层/ROOF_ROOM", R["n_roof_stair"]), ("7层/ROOF_STEP", R["n_roof_step"])]
     empty = [n for n, c in need if c <= 0]
     if empty:
         log("★ 被测集合为空：%s ⇒ 本闸没量到（不是「相符」）" % empty)
@@ -409,16 +499,18 @@ def main() -> int:
         log("%s 总判 : NOGAUGE" % GID)
         return _finish(RC_NOGAUGE, reason="构件集合为空：%s" % empty, counts=dict(need),
                        blind=["构件表里找不到要量的构件 ⇒ 拒绝出读数"])
-    if not (len(R["z_roof_top_mm"]) == len(R["z_roof_step_top_mm"]) == 1
-            and len(R["z_parapet_top_mm"]) == 1 and len(R["z_roof_stair_top_mm"]) == 1):
-        log("★ 同类构件的顶标高不唯一 ⇒ 模型自己就没说清，「相符」无从谈起")
-        log("===== 判词 =====")
-        log("%s 总判 : NOGAUGE" % GID)
-        return _finish(RC_NOGAUGE, reason="同类构件顶标高不唯一",
-                       z_top=dict(roof=R["z_roof_top_mm"], parapet=R["z_parapet_top_mm"],
-                                  stair=R["z_roof_stair_top_mm"], step=R["z_roof_step_top_mm"]),
-                       blind=["同类构件自身标高不一致 ⇒ 本闸不出读数"])
-    log("构件：ROOF %d ｜ PARAPET %d ｜ ROOF_STAIR %d ｜ ROOF_STEP %d（**非空**）"
+    # ★★ 2026-10-20：原来这里「顶标高不唯一 ⇒ NOGAUGE」直接早退。用户裁定「尺寸只是参考」后
+    #   这条早退**本身就是错的**：楼梯房四种顶标高是**尺寸不唯一**，不是**结构有问题**；
+    #   它还会让本闸在碰 DSM 之前就退出 —— 尺寸问题冒充「量不到」，症状同形（铁律 199/183）。
+    #   现在：四种照实印出来，判定交给结构四条。
+    _z_uniq = (len(R["z_roof_top_mm"]) == len(R["z_roof_step_top_mm"]) == 1
+               and len(R["z_parapet_top_mm"]) == 1 and len(R["z_roof_stair_top_mm"]) == 1)
+    if not _z_uniq:
+        log("      [尺寸] 同类构件顶标高不唯一（只作参考，不判）：roof %s ｜ parapet %s ｜ "
+            "stair %s ｜ step %s"
+            % (R["z_roof_top_mm"], R["z_parapet_top_mm"],
+               R["z_roof_stair_top_mm"], R["z_roof_step_top_mm"]))
+    log("构件：ROOF %d ｜ PARAPET %d ｜ ROOF_ROOM %d ｜ ROOF_STEP %d（**非空**）"
         % (R["n_roof"], R["n_parapet"], R["n_roof_stair"], R["n_roof_step"]))
 
     # ---- 采样 ----
@@ -776,7 +868,92 @@ def main() -> int:
            "未量到" if g_med is None else "%.2f m" % g_med,
            "—" if g_spread is None else "%.2f m" % g_spread))
 
-    # ---- 三条读数 ----
+    # ---- 结构读数（★ 2026-10-20 起：这才是判据）----
+    #  裙房面＝落在模型 1 层轮廓内、地面 +10~+35 m 的**最大一块平地**（只取它的 z；实测 492.6 m）。
+    #     ★ 面积只用来挑面：同一水平带全部平地面合计 2 112.5 m²，最大一块 648.9 m² ——
+    #       两个数说的是两件事，不混用（铁律 174）。
+    #  塔楼面＝**高出裙房面 ≥ STRUCT_TOWER_MIN_DZ/2 的连通投影**（★ 不限在模型轮廓内 ——
+    #     模型塔楼位置本身就是被测物，把它限定在模型环里等于先假定答案对）。
+    #    ★ 为什么不用「平地连通块」：塔顶被楼梯房/屋顶设备切碎（实测最大平地 183.9 m²
+    #      < STRUCT_MIN_AREA），平地法**结构上看不见塔楼**；而 S1~S3 问的是「有没有第二段、
+    #      多大、在哪」＝**平面投影**，不是「有没有一块没设备的屋顶」。投影面偏大（含塔壁），
+    #      故 S2 的 0.6~1.6 是**结构级容差**，不是尺寸判据（铁律 28：代价写在此处）。
+    #    ★ 选面阈值取 MIN_DZ/2（＝4 m）而**不是** MIN_DZ（8 m）：取 8 m 的话，S1 的下限
+    #      与选面阈值同源 ⇒ S1 永远为真（铁律 137）。取一半，S1 才真能报「只高 5 m」这种红。
+    _o1m = dsm.mask([R["outline1_mm"]])
+    _pg = [p for p in parts(_o1m & dsm.flat & dsm.good, min_px=150)
+           if p["area_m2"] >= STRUCT_MIN_AREA
+           and g_med is not None and g_med + 10.0 <= p["z"] <= g_med + 35.0]
+    _pod = max(_pg, key=lambda p: p["area_m2"]) if _pg else None
+    _tow_parts = []
+    if _pod is not None:
+        _hi = dsm.good & (dsm.arr >= _pod["z"] + STRUCT_TOWER_MIN_DZ / 2.0)
+        if _hi.any():
+            _lab, _nl = ndimage.label(_hi, structure=np.ones((3, 3), int))
+            _cnt = np.bincount(_lab.ravel())
+            _cnt[0] = 0
+            for _k in np.argsort(_cnt)[::-1]:
+                if _k == 0:
+                    continue
+                _a = _cnt[_k] * dsm.mpp ** 2
+                if _a < STRUCT_MIN_AREA:
+                    break
+                _sel = _lab == _k
+                _rc = np.argwhere(_sel).mean(axis=0)
+                _tow_parts.append(dict(n=int(_cnt[_k]), area_m2=float(_a),
+                                       z=float(np.median(dsm.arr[_sel])),
+                                       cen=(float(_rc[0]), float(_rc[1]))))
+    _tow = _tow_parts[0] if _tow_parts else None
+    # ★ 第二大的块 ≥ 最大块 60% ⇒ 尺子分不开「哪一块是塔楼」⇒ **拒绝出数**，
+    #   不按面积挑一个报出来（铁律 197：量具分不开「正好 N」与「被截断」时不许给唯一解）。
+    _tow_ambiguous = (len(_tow_parts) > 1
+                      and _tow_parts[1]["area_m2"] >= 0.6 * _tow_parts[0]["area_m2"])
+    if _tow_ambiguous:
+        _tow = None
+
+    def _dedn(p):
+        """(row,col) 块心 → 相对窗口中心的 (E 偏移, N 偏移) 米（与 `_mring` 同一把尺子）。"""
+        return ((p["cen"][1] - dsm.ctr_px[1]) * dsm.mpp,
+                (dsm.ctr_px[0] - p["cen"][0]) * dsm.mpp)
+
+    _m11 = [t for t in _mring if t[0] == "11层ROOF"]
+    _a_model = _m11[0][1] if _m11 else None
+    _c_model = (_m11[0][2], _m11[0][3]) if _m11 else None
+    # S4 不碰 DSM：塔楼环必须落在 1 层轮廓内（模型自己先说清），且模型自身标高有序。
+    _s4 = ((1.0 - _n_out / _n_all) >= 0.99
+           and max(R["z_roof_top_mm"]) > max(R["z_roof_step_top_mm"]) > 0)
+    SC = judge_structure(
+        z_t=(_tow["z"] if _tow else None), a_t=(_tow["area_m2"] if _tow else None),
+        cen_t=(_dedn(_tow) if _tow else None), a_model=_a_model, cen_model=_c_model,
+        z_p=(_pod["z"] if _pod else None), s4_ok=_s4)
+    log("\n[结构]（2026-10-20 起本闸只看这一组；下面三件尺寸只印不判）")
+    log("      裙房面：%s"
+        % ("没找到（要 ≥%.0f m²、地面+10~+35 m、落在 1 层轮廓内）" % STRUCT_MIN_AREA
+           if _pod is None else
+           "%.1f m² ｜ z=%.2f m ｜ 块心 (E%+.1f, N%+.1f) m"
+           % (_pod["area_m2"], _pod["z"], _dedn(_pod)[0], _dedn(_pod)[1])))
+    log("      塔楼面：%s"
+        % ("没有 ≥%.0f m² 的连通投影（要 ≥ 裙房面+%.1f m）"
+           % (STRUCT_MIN_AREA, STRUCT_TOWER_MIN_DZ / 2.0)
+           if not _tow_parts else
+           ("**分不开**：%d 个候选，最大 %.1f m² / 次大 %.1f m²（≥60%% ⇒ 拒绝出数）"
+            % (len(_tow_parts), _tow_parts[0]["area_m2"], _tow_parts[1]["area_m2"])
+            if _tow_ambiguous else
+            "%.1f m² ｜ z=%.2f m ｜ 块心 (E%+.1f, N%+.1f) m ｜ 候选 %d 个"
+            % (_tow["area_m2"], _tow["z"], _dedn(_tow)[0], _dedn(_tow)[1], len(_tow_parts)))))
+    if len(_tow_parts) > 1:
+        log("      （候选清单，只诊断：%s）"
+            % " ｜ ".join("#%d %.1f m² z=%.2f 块心(E%+.1f,N%+.1f)"
+                          % (i + 1, p["area_m2"], p["z"], _dedn(p)[0], _dedn(p)[1])
+                          for i, p in enumerate(_tow_parts[:4])))
+    log("      模型 11 层塔楼环：%.1f m² ｜ 栅格质心 %s"
+        % ((_a_model or 0.0), "未量到" if _c_model is None
+           else "(E%+.1f, N%+.1f) m" % _c_model))
+    for _k, _v in SC.items():
+        log("      %s %s ｜ %s"
+            % ("✓" if _v["ok"] else ("？" if _v["ok"] is None else "★"), _k, _v["read"]))
+
+    # ---- 三条尺寸读数（★ 2026-10-20 起只作参考，不参与判定）----
     edges = {}
     for w in (0.25, 0.5, 0.75, 1.0):
         zz, npz = medf(band(S, w, dsm.mpp))
@@ -826,7 +1003,11 @@ def main() -> int:
     ]
     for it in items:
         it["delta"] = None if it["read"] is None else float(it["read"] - it["decl"])
-        it["verdict"] = judge(it["read"], it["decl"], it["sub"], it["tol"])
+        # ★ 2026-10-20 口径变更：三件尺寸**只印不判**（用户裁定「尺寸只是参考」）。
+        #   旧口径的判定仍算出来、落进 `size_verdict_old` 备查，但 **verdict 一律「参考」**，
+        #   **不参与 rc**（代价：尺寸写错本闸不再红，挡尺寸的是另源 `J-10.10-11`）。
+        it["size_verdict_old"] = judge(it["read"], it["decl"], it["sub"], it["tol"])
+        it["verdict"] = "参考"
 
     log("\n[读数] 外圈带宽度扫描（① —— 若女儿墙真被 DSM 看见，0.25 m 带应当最高、随后衰减）：")
     log("      ★ **只作诊断**：① 的读数用 `z_roof`（塔楼顶），它不是 None 才有读数。"
@@ -859,28 +1040,33 @@ def main() -> int:
     log("      台阶屋面区高于「地面+5 m」的像素比例 = %s（原口径记「98%% 高于 5 m」）"
         % ("未量到" if frac_above5 is None else "%.1f%%" % (100 * frac_above5)))
     if g_med is not None and z_step is not None:
-        # ★★ 一句必须说清的话：③ 的差**分不开两件事，两者给出同一个读数** ——
-        #   ① 「层高」：影像反算 ≈4.0 m/层，交付侧写 3500 mm；
-        #   ② 「模型 z=0 在不在实测地面上」：catalog 里 `1层 z0=0.0` ＋ `地下1层 z0=−3500`，
-        #      ⇒ ±0.000 是**模型自己的约定**，本闸**没有任何办法**验证它就落在 464.5 m。
-        #   铁律 018：两个数对上不能证明它们对；同理两个错法给出同一个读数也不能互证。
+        # ★★ 一句必须说清的话（**代价留痕**，铁律 028）：本闸只有一个 DSM 读数，
+        #   它**分不开**下面三件事 ——
+        #   ① 「层高」；② 「模型 ±0.000 在不在实测地面上」（catalog 里 `1层 z0=0` ＋
+        #      `地下1层 z0=−3500` 是**模型自己的约定**，本闸没有任何办法验证它落在实测地面上）；
+        #   ③ 「裙房层数少了一层」。
+        #   ★ 铁律 018：两个数对上不能证明它们对；同理两个错法给出同一个读数也不能互证。
+        #   ★★ 2026-10-16 用户裁定「按甲定案 · 重算整条链」⇒ 口径取 **甲（层高 4000 mm / 裙房 7 层）**。
+        #      分开这三件事的**不是本闸**，是第四把尺子 `J-10.10-11`（量 12 份逐层平面图的轮廓尺度，
+        #      **与 DSM 不同源**）。⇒ 本闸此后只**并排报**「反算 m/层」与「反算层数」两个读数，不再自称能裁。
         _n_pod = int(round(z_top_step / (D["storey_mm"] / 1000.0)))       # 7（由表现算，不手打）
         log("      ★ ③ 反算层高：%.3f m ÷ %d 层（模型口径 %.1f ÷ %.1f） = **%.2f m/层**"
             % (r3, _n_pod, z_top_step, D["storey_mm"] / 1000.0, r3 / _n_pod))
         log("        而交付侧写 **%.0f mm [%s]** ｜ 差 %.3f m（÷%d 层 = %.2f m/层 的缺口）"
             % (D["storey_mm"], D["storey_mark"], r3 - d3, _n_pod, (r3 - d3) / _n_pod))
-        # ★★ 第三个读法（★ 这条与 2026-10-15 的「层高都不管了，到默认 3.5 m 建设」相容）：
-        #   层高**不动**，问「这个 28.103 m 是几层」⇒ 28.103 ÷ 3.5 = 8.03 层 ⇒ **裙房是 8 层**。
-        #   实测支持：本窗 0.5 m 分层的层心 492.50 / 496.00 / 485.50 m 减去地面 464.52
-        #   = 27.98 / 31.48 / 20.98 m，与模型 层高3.5 的 8 层顶 28.0 / 9 层顶 31.5 / 6 层顶 21.0
-        #   **逐一对上（≤0.5 m）** —— 这是「层高 3.5 成立、层数才是错的那一项」的独立旁证。
-        _n_if35 = r3 / (D["storey_mm"] / 1000.0)     # ★ 用**读到的** r3，不是声明的 z_top_step
-        log("      ★ 第三个读法（与「层高定 3.5 m」相容）：层高不动 ⇒ %.3f ÷ %.1f = **%.2f 层** "
-            "⇒ 裙房应为 **%d 层**（差正好一层）"
-            % (r3, D["storey_mm"] / 1000.0, _n_if35, int(round(_n_if35))))
-        log("      ⇒ ★ 本闸**分不开**「层高其实是 4.0」/「模型 ±0.000 不在实测地面上」/"
-            "「裙房层数少了 1 层」：三者给出**同一个读数**（铁律 018 的形状）⇒ **必须由用户裁**，"
-            "本闸不自行改口径。★ 注意其中只有第三条与既有命令「层高定 3.5 m」相容")
+        # ★★ 第三个读法：**层高按交付口径不动**，问「这个读数折合几层」。
+        #   口径 = 4000 mm（用户 2026-10-16 裁定）⇒ 28.101 ÷ 4.0 = 7.03 层。
+        #   ★ 这里**只落读数**：残差 0.03 层（≈0.1 m）正是 DSM 栅格 + 位姿能解释的量级，
+        #     本闸**不**拿它宣称「层数正确」—— 那是 `J-10.10-11` 的判词（铁律 192：参照物不许自任）。
+        _n_if = r3 / (D["storey_mm"] / 1000.0)     # ★ 用**读到的** r3，不是声明的 z_top_step
+        log("      ★ 第三个读法（层高按交付口径 %.0f mm 不动）：%.3f ÷ %.1f = **%.2f 层** "
+            "⇒ 残差 %.2f 层（≈ %.3f m）"
+            % (D["storey_mm"], r3, D["storey_mm"] / 1000.0, _n_if,
+               _n_if - _n_pod, r3 - z_top_step))
+        log("      ⇒ ★ 本闸**自己分不开**「层高」/「±0.000 在不在实测地面」/「裙房层数少 1 层」："
+            "三者给出**同一个读数**（铁律 018 的形状）。★ 分开它们的是**另源**的第四把尺子 "
+            "`J-10.10-11`（逐层平面图轮廓尺度）⇒ 2026-10-16 用户裁定 **甲（4000 mm / 裙房 7 层）**，"
+            "交付口径已按此重算。★ 未被本闸量到的反证并列留在 `参数.json::共用/层高.出处`（不许静默）")
 
     # ---- 正对照 ----
     ctl = []
@@ -945,6 +1131,26 @@ def main() -> int:
     rec("丙 同一掩膜自减", "必须恰好 0.0（尺子不会凭空造出差）",
         (zp_c is not None and abs((zp_c - g_med) - r3) == 0.0), reread=r3)
 
+    # ---- 结构判据的正对照（戊/己/庚/辛/壬）★ 纯函数：直接喂坏输入，与今天的读数无关 ----
+    #   没有这几条，S1~S4 只是「写完的函数」，不是「量过的判据」（铁律 17/137）。
+    _SB = dict(z_t=500.0, a_t=1000.0, cen_t=(0.0, 0.0), a_model=900.0,
+               cen_model=(0.0, 0.0), z_p=480.0, s4_ok=True)
+
+    def _sc(sc, pre):
+        return [v["ok"] for k, v in sc.items() if k.startswith(pre)][0]
+
+    rec("戊 结构·塔楼面与裙房面同高（z_t←z_p）", "S1 必须红",
+        _sc(judge_structure(**dict(_SB, z_t=_SB["z_p"])), "S1") is False)
+    rec("己 结构·塔楼面面积 ×10", "S2 必须红",
+        _sc(judge_structure(**dict(_SB, a_t=_SB["a_t"] * 10.0)), "S2") is False)
+    rec("庚 结构·塔楼块心东移 40 m", "S3 必须红（阈 %.0f m）" % STRUCT_XY_MAX,
+        _sc(judge_structure(**dict(_SB, cen_t=(40.0, 0.0))), "S3") is False)
+    rec("辛 结构·真值输入", "S1~S4 全为 True（正常输入上不误报）",
+        all(v["ok"] is True for v in judge_structure(**_SB).values()),
+        read={"S%d" % i: _sc(judge_structure(**_SB), "S%d" % i) for i in (1, 2, 3, 4)})
+    rec("壬 结构·塔楼面量不到（z_t=None）", "S1 必须是 None（量不到），不许当绿",
+        _sc(judge_structure(**dict(_SB, z_t=None)), "S1") is None)
+
     n_fired = sum(1 for c in ctl if c["fired"])
     log("\n[正对照]")
     for c in ctl:
@@ -952,31 +1158,65 @@ def main() -> int:
             % ("✓" if c["fired"] else "★没红！", c["case"],
                {k: v for k, v in c.items() if k not in ("case", "expect", "fired")}))
 
-    # ---- 收口 ----
-    n_bad = sum(1 for it in items if it["verdict"] == "不符")
-    n_ok = sum(1 for it in items if it["verdict"] == "相符")
-    n_und = sum(1 for it in items if it["verdict"] in ("未决", "未量到"))
-    ok = (n_bad == 0) and (n_ok >= 1) and (n_fired == len(ctl))
+    # ---- 收口（★ 2026-10-20：rc 只看结构 S1~S4 ＋ 正对照；三件尺寸只作参考）----
+    n_ref = sum(1 for it in items if it["verdict"] == "参考")
+    _sc_unmeasured = [k for k, v in SC.items() if v["ok"] is None]
+    _sc_bad = [k for k, v in SC.items() if v["ok"] is False]
+    _sc_ok = [k for k, v in SC.items() if v["ok"] is True]
+    _ctl_ok = (n_fired == len(ctl))
+    if _sc_unmeasured:
+        rc, verdict = RC_NOGAUGE, "NOGAUGE"
+        why = "结构判据有 %d 条**量不到**：%s" % (len(_sc_unmeasured), "、".join(_sc_unmeasured))
+    elif _sc_bad:
+        rc, verdict = RC_FAIL, "FAIL"
+        why = "结构判据有 %d 条**不通过**：%s" % (len(_sc_bad), "、".join(_sc_bad))
+    elif not _ctl_ok:
+        rc, verdict = RC_FAIL, "FAIL"
+        why = "正对照只响了 %d/%d ⇒ 判据没分辨力，S1~S4 的绿不算数" % (n_fired, len(ctl))
+    else:
+        rc, verdict = RC_PASS, "PASS"
+        why = "结构 S1~S4 全绿 ｜ 正对照 %d/%d" % (n_fired, len(ctl))
 
     log("\n===== 判词 =====")
-    log("三个「推的数」对照 2024 实景：相符 %d ｜ 不符 %d ｜ **仍未决/未量到 %d**（tol_m = %.3f m）"
-        % (n_ok, n_bad, n_und, tol))
+    log("结构判据：绿 %d ｜ 红 %d ｜ **量不到 %d**（Δz 阈 %.0f~%.0f m、面积比 %.1f~%.1f、平面 %.0f m）"
+        % (len(_sc_ok), len(_sc_bad), len(_sc_unmeasured),
+           STRUCT_TOWER_MIN_DZ, STRUCT_TOWER_MAX_DZ, STRUCT_AREA_RATIO[0], STRUCT_AREA_RATIO[1],
+           STRUCT_XY_MAX))
+    for _k, _v in SC.items():
+        log("   %s %s ｜ %s"
+            % ("✓" if _v["ok"] is True else ("？" if _v["ok"] is None else "★"), _k, _v["read"]))
+    log("三个「推的数」对照 2024 实景：**%d 条只作参考**（尺寸口径 2026-10-20 作废，不参与 rc；tol_m = %.3f m）"
+        % (n_ref, tol))
     for it in items:
-        log("   %s %-24s 实景 %s vs 声明 %.3f ⇒ **%s**%s"
+        log("   %s %-24s 实景 %s vs 声明 %.3f ⇒ **%s**（旧口径 %s）%s"
             % (it["no"], it["name"],
                "未量到" if it["read"] is None else "%.3f m" % it["read"], it["decl"], it["verdict"],
-               ("（%s）" % it["note"]) if it["note"] else ""))
+               it["size_verdict_old"], ("（%s）" % it["note"]) if it["note"] else ""))
     log("   塔楼顶基准面：%s（候选面 %d 块，跨度 %s，阈值 %.1f m）"
         % ("可用" if roof_ok else "**不可用 ⇒ 拒绝出数**", len(lv_big),
            "—" if roof_spread is None else "%.2f m" % roof_spread, ROOF_LEVEL_TOL))
     log("   地面：%s m（%d 个估计器，跨度 %s）"
         % ("未量到" if g_med is None else "%.2f" % g_med, len(g_est),
            "—" if g_spread is None else "%.2f m" % g_spread))
+    log("   总判依据：%s" % why)
     log("正对照 %d/%d 按预期 ｜ ★ 计划文件里那条「平移 1 m ⇒ 读数必须变」**实测作废**，"
-        "已换成与分辨力相称的甲/乙/丙/丁（见 docstring）" % (n_fired, len(ctl)))
-    log("%s 总判 : %s" % (GID, "PASS" if ok else "FAIL"))
+        "已换成与分辨力相称的甲/乙/丙/丁（尺寸）＋ 戊/己/庚/辛/壬（结构，见 docstring）"
+        % (n_fired, len(ctl)))
+    log("%s 总判 : %s" % (GID, verdict))
 
     blind = [
+        "★ **尺寸不判了**（2026-10-20 用户裁定）：三件只作参考 ⇒ **尺寸写错了本闸不拦**；"
+        "挡尺寸的是另源的 `J-10.10-11`（逐层平面图轮廓尺度）",
+        "★ **结构门是结构级的**（Δz %.0f~%.0f m、面积比 %.1f~%.1f、平面 %.0f m），不是尺寸级："
+        "它回答「是不是两段式、同一个塔楼」，**不回答**「塔楼高 44 m 还是 47.8 m」"
+        % (STRUCT_TOWER_MIN_DZ, STRUCT_TOWER_MAX_DZ, STRUCT_AREA_RATIO[0], STRUCT_AREA_RATIO[1],
+           STRUCT_XY_MAX),
+        "★ **塔楼面是「高出裙房面 ≥%.1f m 的连通投影」**：投影含塔壁与屋顶设备 ⇒ **面积偏大**；"
+        "选面阈值只有 %.1f m（S1 下限 %.0f m 的一半）⇒ **低于 %.1f m 的第二段本闸看不见**"
+        % (STRUCT_TOWER_MIN_DZ / 2.0, STRUCT_TOWER_MIN_DZ / 2.0, STRUCT_TOWER_MIN_DZ,
+           STRUCT_TOWER_MIN_DZ / 2.0),
+        "★ **两个塔楼候选分不开时（次大 ≥ 最大 60%）本闸拒绝出数**，不按面积挑一个 —— "
+        "「塔楼」与「旁边更高的楼」在投影面积上同形（铁律 197）",
         "**DSM＝最高面**：树冠/旗杆/女儿墙顶上多出来的都算进去 ⇒ 读数偏正；本闸不做树/屋分类",
         "**0.25 m 格 vs %.2f m 女儿墙厚**：① 结构性亚格；看不见时本闸报**未决**，"
         "**不报「没有女儿墙」**" % (D["parapet_t_mm"] / 1000.0),
@@ -985,7 +1225,8 @@ def main() -> int:
         "本闸因此**拒绝出 ② 的数**，而不是挑一块报出来",
         "**③ 的差本闸分不开三件事**（同一个读数，铁律 018）：「层高其实是 4.0 m」/"
         "「模型 ±0.000 不在实测地面上」/「**裙房层数少了 1 层**」（实测与声明差 %.2f m）⇒ "
-        "三条并列报给用户裁，本闸不自行改口径；★ 只有第三条与既有命令「层高定 3.5 m」相容"
+        "三条**并列报**、本闸不自行裁。★ 已由**另源**的第四把尺子 `J-10.10-11` 分开、"
+        "2026-10-16 用户裁定 **甲（4000 mm / 裙房 7 层）**；★ 本闸**自己仍分不开**这一点没有变"
         % (r3 - d3 if (r3 is not None) else 0.0),
         "**「平地」阈值 %.2f m 与 `_scratch/dsm_roofs_c006.py:91` 同口径**（`:83` 的 0.40 是铺装判据）"
         "⇒ 但两把尺子的窗口/掩膜不同，**不比绝对值**" % FLAT_TOL_M,
@@ -1004,7 +1245,23 @@ def main() -> int:
         "参照链只用了 DSM 栅格链（0.25 m），**没用** campus2024.glb 实景网格链 ⇒ 两链差别本闸看不见",
         "**本闸量的是「影像上那个台阶有多高」，不是「该不该是那么高」**——合规性是另一件事",
     ]
-    return _finish(RC_PASS if ok else RC_FAIL,
+    return _finish(rc,
+                   verdict=verdict, reason=why,
+                   structure=SC, structure_green=_sc_ok, structure_red=_sc_bad,
+                   structure_unmeasured=_sc_unmeasured,
+                   podium_face=(None if _pod is None else
+                                dict(area_m2=round(_pod["area_m2"], 1), z=round(_pod["z"], 2),
+                                     cen_de=round(_dedn(_pod)[0], 2),
+                                     cen_dn=round(_dedn(_pod)[1], 2))),
+                   tower_face=(None if _tow is None else
+                               dict(area_m2=round(_tow["area_m2"], 1), z=round(_tow["z"], 2),
+                                    cen_de=round(_dedn(_tow)[0], 2),
+                                    cen_dn=round(_dedn(_tow)[1], 2))),
+                   tower_ambiguous=bool(_tow_ambiguous),
+                   tower_candidates=[dict(area_m2=round(p["area_m2"], 1), z=round(p["z"], 2),
+                                          cen_de=round(_dedn(p)[0], 2),
+                                          cen_dn=round(_dedn(p)[1], 2))
+                                     for p in _tow_parts],
                    dsm=dict(path=DSM, crs=dsm.crs, mpp=dsm.mpp, half_m=HALF_M,
                             n_valid_frac=dsm.n_valid_frac),
                    placement=pinfo, decls=D, region_counts=dict(need),
@@ -1034,7 +1291,7 @@ def main() -> int:
                                       zero_is_max=bool(not (_a0 and _os[0][0] > _a0[0][0] * 1.25)),
                                       note="诊断量，不参与判定、不回写位姿（位姿来自 1 层轮廓独立拟合）"),
                    items=items,
-                   n_ok=n_ok, n_bad=n_bad, n_undecided=n_und,
+                   n_reference=n_ref,
                    aux_ground_ring_m=g_ring, aux_ground_p05_m=g_p05,
                    aux_step_frac_above_ground_plus5=frac_above5,
                    n_controls=len(ctl), n_controls_fired=n_fired, controls=ctl,

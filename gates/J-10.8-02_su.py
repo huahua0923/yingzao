@@ -40,7 +40,8 @@
      解不出、或**多于一个轴**解得开（平面与高度同量级 ⇒ 分不开）⇒ 红。
   ④ **总高**：高度区间 ≈ `[B1高, 地上总高 + 4.0] m`。
      ★ 上界**不再写死**：`地上总高 = 11 × 层高`，层高取自 `rebuild/构件库/参数.json` 的
-       `构件.共用.层高`（唯一真源）。★ 层高是**口径决定**（2026-10-15 用户令 3.5 m），
+       `构件.共用.层高`（唯一真源）。★ 层高是**口径决定**（2026-10-16 用户裁定
+       「按甲定案 · 重算整条链」⇒ 现读 4000 mm），
        不是实测数 ⇒ 本闸量的是「件与**声明的口径**是否自洽」，**不是**「件与影像是否相符」
        （影像那一半是**缺口**，写在 `参数.json` 的 `出处` 里，不在这里假装量过，铁律 199）。
      ★ 专抓两个真踩过的坑：附属件标高写成**绝对**值 ⇒ 84.0 m；单位当英寸读 ⇒ 3 284 m。
@@ -48,17 +49,19 @@
      源层柱块 INSERT 数**之和**（一个层键配到两个源层就是两层之和）。分母独立于本仓任何生成物。
   ⑥ **层距**：每个层键的承重带高 ≥ 3.0 m；层带**底** ≈ 它所配到的**最低**源层的名义层底（±0.25 m）；
      并且 **12 个源层必须各被配到恰好一次**（配重了/漏了都红 —— 这条替代了「层键数 == 12」）。
-  ⑦ **顶部三件**：`PARAPET`/`ROOF_STAIR`/`ROOF_STEP` 各 ≥ 1 组。★ **两类分开判**：
-     · `PARAPET`/`ROOF_STAIR` 长在**顶上** ⇒ 顶 ∈ `[地上总高, 地上总高 + 4.0]` m；
+  ⑦ **顶部各件**：`PARAPET`/`ROOF_ROOM`/`ROOF_STEP` 各 ≥ 1 组。★ **两类分开判**：
+     · `PARAPET`/`ROOF_ROOM` 长在**顶上** ⇒ 顶 ∈ `[地上总高, 地上总高 + 4.0]` m；
+       （★ 2026-10-19：`ROOF_STAIR` 已并入 `ROOF_ROOM` —— 楼梯间 + 机房同属这一类）
      · `ROOF_STEP`（台阶屋面）**不在顶上**（README §8 实测 `7层/ROOF_STEP z=27880.0mm`）
        ⇒ 顶必须落在**楼层边界**（**层高的整数倍** ±0.3）上，且 ≤ 女儿墙底（不许钻出去）。
      ★ 这里的「组 N 个」是 **`g` 行（SU 的 mesh）数**，**不是** SketchUp 里的组数：
      一个组里有两块互不相连的子实体 ⇒ 导出成 **2 个 `g` 行**。实测件里
-     `Mesh7126/Mesh7127 G_7__ROOF_STEP`、`Mesh7129/Mesh7130 G_11__ROOF_STAIR`、
+     `Mesh7126/Mesh7127 G_7__ROOF_STEP`、`Mesh7129/Mesh7130 G_11__ROOF_ROOM`、
      `Mesh7128 G_11__PARAPET` ⇒ 读到 2/2/1 **不是**建重了，所以 ⑦ **不查「恰好 1 个」**。
      先前「三件都要落在顶上区间」是**错的期望**：那时「ROOF_STEP 顶到 7层顶」被当成违反，
      其实它落在 7层顶**就是对的**（0 基索引把它的读数搅成了 [24.00, 44.00]，连「顶在哪」都读错）。
-     ★ 3.5 m 口径下 7层顶 = 24.50 m（层高 4.0 时是 28.00 m）—— 本闸**跟着参数表走**，
+     ★ 2026-10-16 用户裁定「按甲定案 · 重算整条链」⇒ 参数表层高 = **4.0 m** ⇒ 7层顶 = **28.00 m**
+     （2026-10-15 那版 3.5 m ⇒ 24.50 m 已作废）—— 本闸**跟着参数表走**，
      不钉死任一个数（钉死就是「两个地方写同一个数」，铁律 018）。
   ⑧ **网格健全**：面里的 `f` 索引不许越界、面不许少于 3 点、相邻两顶点不许**指向同一个坐标**。
      ★ `f` 索引是 **1 基**的（OBJ 规范）—— 按 0 基读会让**每个面错位一个顶点**，
@@ -85,10 +88,12 @@
 量具盲区（声明）：
   · **高度本身没有源件参照**：12 张 DXF 是平面图，没有任何标高信息 ⇒ ④⑥ 的基准来自
     「12 张图 ⇒ 地上 11 层 + B1」+ 层高规则，**本来就不是我量出来的**；
-    而且**层高本身也是口径决定**（参数表 `共用/层高`，2026-10-15 用户令 3.5 m）
-    ⇒ ④ 只查「件顶是否落在**声明的**口径上」，**不查那个口径对不对**。
-    ★ 真值侧的那把尺子是**影像（DSM）**，不是本闸 —— 它给出裙房 27.9 m / 塔楼 47.5 m，
-    与 3.5 m 口径下的 24.5 / 38.5 m **有差**；这差是**缺口**，写在 `参数.json` 的 `出处` 里。
+    而且**层高本身也是口径决定**（参数表 `共用/层高`；2026-10-16 用户裁定「按甲定案 · 重算整条链」
+    ⇒ 现读 4000 mm）⇒ ④ 只查「件顶是否落在**声明的**口径上」，**不查那个口径对不对**。
+    ★ 真值侧的那把尺子是**影像（DSM）**，不是本闸。★ 当日状态（2026-10-16）：4.0 m 口径下
+    7层顶 = 28.00 m，而 `gates/J-10.10-08` 用 DSM 量的台阶屋面 = **28.101 m** ⇒ **相符**
+    （容差 0.374 m）；该闸当日由 FAIL 转 **PASS**。★ 塔楼那条**仍未解**：DSM 上还有
+    `21.132 / 47.666 / 54.990` 三块面，两说都套不上 ⇒ 本闸与那把尺子**都出不了数**。
   · **女儿墙 1.2 m / 楼梯房 3.0 m / 台阶屋面**是**假设值** ⇒ ⑦ 只查「在顶上区间 / 落在楼层边界」。
   · ⑤⑪ 的配对靠**层带求交**：两层被整体对调且柱数相同（2/3/4层都是 197）时看不见。这条**承认**。
   · **门**：源件 `$DorLib2D$` 按**块**计，件侧 `DOOR` 按**组**计 ⇒ 两把尺子不同源，
@@ -137,8 +142,24 @@ OBJ = os.path.join(SU, "c006_su.obj")
 EXPMD = os.path.join(SU, "EXPORT.md")
 HERE = os.path.dirname(os.path.abspath(__file__))
 RUNDIR = os.path.join(HERE, "_out")
-JSON_OUT = os.path.join(HERE, "_out", "J-10.8-02.json")
+# ★★ 2026-10-19：本闸原来把产物名写死成 `J-10.8-02.json`，而 `_runner.py` 按
+#   `<闸>.<bid>.json` 找 verdict ⇒ 矩阵里恒显「闸没落 verdict」（rc=0 也一样）。
+#   ⇒ 产物名带 bid；但不许拿别的楼来量（本闸的 RAW/OBJ 是 c006 的），
+#      非 c006 一律 SKIP 报「没量到」（铁律 192：参照物必须与交付件同作用域）。
+def _bid_argv():
+    a = sys.argv
+    if "--bid" in a:
+        i = a.index("--bid")
+        if i + 1 < len(a):
+            return str(a[i + 1]).strip()
+    return (os.environ.get("CDUT_BUILDING") or "c006").strip() or "c006"
+
+
+BID = _bid_argv()
+JSON_OUT = os.path.join(HERE, "_out", "J-10.8-02.%s.json" % BID)
+RUN_OUT = os.path.join(HERE, "_out", "J-10.8-02.%s.run.txt" % BID)
 _LOG = []
+_RED = [0]          # C1 真件的违反条数（正对照不计入）
 # ★ 顶层读数：台账页 `demo/sys.html` 每条判据要三路独立读数（json 的 pass ／ run.txt 的 rc ／
 #   判词行）。本闸原先只落 run.txt ⇒ 页面上「顶层字段」一节空着。这里只**搬运本闸已经算出来的量**，
 #   一个数都不新造。`_MEAS` 只由 C1（真件）那次 judge 填 —— 正对照跑的是改过的顶点，
@@ -185,7 +206,7 @@ B1_M = 3.5              # m：地下层层高。★ 这一条**还不在参数�
 CANON = ["地下1层"] + ["%d层" % n for n in range(1, 12)]   # 源件标高序（唯一独立次序）
 N_FLOORS = len(CANON) - 1                                 # 地上层数 = 11（由源件次序数出，不另写）
 TOP_M = N_FLOORS * STOREY_M                                # 地上总高
-Z_TOP_SLACK = 4.0       # m：顶上三件（女儿墙 1.2 / 楼梯房 3.0）都该落在这段里；本闸只卡区间
+Z_TOP_SLACK = 4.0       # m：顶上各件（女儿墙 1.2 / 屋面附属用房墙 3.0 + 顶板 0.12）都该落在这段里
 Z_TOP_MIN, Z_TOP_MAX = TOP_M, TOP_M + Z_TOP_SLACK
 # ⑦ 台阶屋面（ROOF_STEP）**不在顶上**：README §8 实测它落在 7层→8层 的梯段处
 #   （`7层/ROOF_STEP z=27880.0mm`）。要求它落在顶上区间里是**错的期望**。
@@ -193,7 +214,12 @@ Z_TOP_MIN, Z_TOP_MAX = TOP_M, TOP_M + Z_TOP_SLACK
 STEP_ON_BOUNDARY = 0.3
 COL_BLOCKS = ("_FZHK", "_YZHK")
 DOOR_BLOCK = "$DORLIB2D$"
-ATTACH = ("PARAPET", "ROOF_STAIR", "ROOF_STEP")
+# ★★ 2026-10-19：`ROOF_STAIR` → `ROOF_ROOM`。2026-10-18 起出屋面楼梯间与电梯机房
+#   合并成**结构体**（环带墙 + 顶板），类名统一为 `ROOF_ROOM`（`export_contours.py:207`），
+#   轮廓里已**不再出现** `ROOF_STAIR` ⇒ 旧期望读件恒「一件都没有」，而件是对的
+#   （实测：c006 重出后 `⑦ ROOF_STAIR 一件都没有`，同时 11 层确实有 10 块 ROOF_ROOM）。
+#   本闸只服务 c006 这一份件（N_FLOORS 由源件次序数出），故直接改名单。
+ATTACH = ("PARAPET", "ROOF_ROOM", "ROOF_STEP")
 STRUCT = ("WALL", "COL")
 NOM = {"地下1层": (-B1_M, 0.0)}
 for _n in range(1, N_FLOORS + 1):
@@ -537,9 +563,11 @@ def judge(m, src, doc, meas=None):
 
     # ⑦ 顶部三件
     # ★ 两类判据**不可合并**（铁律 196：收口共用函数时主语被悄悄换掉）：
-    #   · PARAPET / ROOF_STAIR 长在**顶上** ⇒ 顶 ∈ [地上总高, 地上总高 + 4.0]；
+    #   · PARAPET / ROOF_ROOM 长在**顶上** ⇒ 顶 ∈ [地上总高, 地上总高 + 4.0]；
+    #     （ROOF_ROOM = 屋面附属用房：环带墙 3.0 m + 顶板 0.12 m ⇒ 顶 47.12 m 仍在区间内）
     #   · ROOF_STEP（台阶屋面）**不长在顶上** —— README §8 实测它落在 7层→8层 的梯段处
-    #     （`7层/ROOF_STEP z=27880.0mm`，3.5 m 口径下 7层顶 = 24.50 m）。
+    #     （`7层/ROOF_STEP z=27880.0mm` —— 4.0 m 口径下 7层顶 = 28.00 m，板顶 = 28.00 − 0.12
+    #      = 27.88 m = 27880 mm，逐位对上；2026-10-15 那版 3.5 m 口径下是 24380 mm，已作废）。
     #     先前「三件都要落在顶上」是**错的期望**；
     #     那条「顶到 7层顶」的读数本身是 0 基索引的假象，改对索引后它变成 [24.00, 44.00]。
     #   · ROOF_STEP 判两层：① 顶落在**楼层边界**（**层高的整数倍** ±0.3）上——它就该落在
@@ -673,17 +701,24 @@ def drop_classes(m, classes):
 
 
 def main():
+    # ★ 2026-10-19：本闸的 RAW/OBJ 都是 c006 的。别的楼进来**不许**拿 c006 的件冒充它的件
+    #   （铁律 192：参照物必须与交付件同作用域）⇒ 如实报「没量到」，不报 PASS。
+    if BID != "c006":
+        log("SKIP：本闸的源件/正式件路径写死为 c006（RAW=%s；OBJ=%s），"
+            "对 %s 没有同作用域的参照 ⇒ 没量到，不算过" % (RAW, OBJ, BID))
+        _write(4, unmeasured=1)
+        return 4
     for p in (OBJ, EXPMD):
         if not os.path.exists(p):
             log("SKIP：%s 不在（正式件还没出）" % p)
-            _write(4)
+            _write(4, unmeasured=1)
             return 4
     src = src_read(RAW)
     n_ok = sum(1 for g in src["grid"].values() if g)
     if len(src["files"]) != 12 or n_ok != 12:
         log("SKIP：源件 %d 张 dxf、柱网量到 %d 张 —— 「没量到」，不算过、也不报成 FAIL（铁律 199）"
             % (len(src["files"]), n_ok))
-        _write(4)
+        _write(4, unmeasured=1)
         return 4
     log("源件：12 张 dxf")
     for s in CANON:
@@ -708,6 +743,7 @@ def main():
     _MEAS["groups"] = len(m["groups"])
 
     f1 = judge(m, src, doc, _MEAS)
+    _RED[0] = len(f1)                 # verdict 的 counts.red **只取真件**那一趟
     log("C1 真件：违反 %d 条 ⇒ %s" % (len(f1), "放行" if not f1 else "★红了"))
     for v in f1:
         log("     - %s" % v)
@@ -763,6 +799,8 @@ def main():
     #   顶到 **69.03 m** = 45 000×1.6634 − 3 500×1.6634（正是 84 000/50 500 这个老比值）。
     #   改成**从件自己现算**：目标 = 该件两个平面轴里**较小的**那个 ⇒ 高度与平面同量级，
     #   朝上轴必「分不开」（铁律 018/174：同一个数不许在两处各写一遍，第二处会悄悄停在老口径）。
+    #   ★ 2026-10-16 用户裁定「按甲定案 · 重算整条链」⇒ 层高回 4.0 m、件高又是 50 500 mm
+    #     —— 但本节已不再依赖那个数（现算），所以**口径再怎么翻，这条对照都有分辨力**。
     _bb2 = bounds(m["verts"])
     _ext2 = [_bb2[1][i] - _bb2[0][i] for i in range(3)]
     _tgt2 = sorted([_ext2[i] for i in range(3) if i != k])[0]
@@ -834,17 +872,22 @@ def main():
     return rc
 
 
-def _write(rc):
-    """落两样产物：run.txt（判词行，原样）＋ json（顶层读数，页面第三路）。
+def _write(rc, unmeasured=0):
+    """落两样产物：run.txt（判词行，原样）＋ json（**verdict 口径**，`_runner.py` 才读得到）。
 
-    ★ 退出码**不在这里算** —— 由调用方把 `rc` 递进来，`pass` 只是 `rc == 0` 的同一件事，
-      免得两处各写一遍「什么算过」（铁律 18）。
+    ★ 退出码**不在这里算** —— 由调用方把 `rc` 递进来。
+    ★ 2026-10-19：补 `schema` / `gate` / `bid` / `counts` / `run_txt` —— 缺了 `counts`，
+      `_runner.py` 只能印「闸没落 verdict」；三态照旧：rc=0 pass=true，rc=1 pass=false，
+      rc=4 **pass=null**（「没量到」不许冒充过，铁律 199）。
     """
     os.makedirs(RUNDIR, exist_ok=True)
-    with open(os.path.join(RUNDIR, "J-10.8-02.run.txt"), "w", encoding="utf-8", newline="\n") as f:
+    with open(RUN_OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(_LOG) + "\n")
-    # ★ 第三路读数：本闸**真正量到**的顶层字段。`pass` 与退出码同源（rc==0），其余是上面已算出的量。
-    out = {"pass": rc == 0, "rc": rc}
+    # ★ 第三路读数：本闸**真正量到**的顶层字段。`pass` 与退出码同源，其余是上面已算出的量。
+    out = {"schema": "cdut3d-verdict/1", "gate": "J-10.8-02", "bid": BID,
+           "pass": (None if rc == 4 else rc == 0), "rc": rc,
+           "counts": {"red": (_RED[0] if rc == 1 else 0), "unmeasured": int(unmeasured)},
+           "run_txt": RUN_OUT}
     out.update(_MEAS)
     out["blind"] = list(BLIND)
     os.makedirs(os.path.dirname(JSON_OUT), exist_ok=True)

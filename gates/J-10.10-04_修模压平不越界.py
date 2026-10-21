@@ -60,8 +60,8 @@ import trimesh  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_out")
-CLEAN = os.path.join(REPO, "_clean")
-FLAT = os.path.join(REPO, "_flatten")
+CLEAN = os.path.join(REPO, "过程/_clean")
+FLAT = os.path.join(REPO, "过程/_flatten")
 
 sys.path.insert(0, REPO)
 from tools.flatten_ground import SEL_VER, f32_ulp, plane_fit, sha256_file  # noqa: E402

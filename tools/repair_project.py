@@ -83,9 +83,9 @@ sys.path.insert(0, os.path.join(REPO, "tools"))
 
 STAGES = {
     "edit": os.path.join(REPO, "_edit"),
-    "repair": os.path.join(REPO, "_repair"),
-    "clean": os.path.join(REPO, "_clean"),
-    "flatten": os.path.join(REPO, "_flatten"),
+    "repair": os.path.join(REPO, "过程/_repair"),
+    "clean": os.path.join(REPO, "过程/_clean"),
+    "flatten": os.path.join(REPO, "过程/_flatten"),
     # ★ 步 4：`_drill/` 是**按楼栋**切的（步 3 产物），目录形状与 `_edit/` **逐字同形**
     #   （`<stage>/<名>/<名>.glb`）⇒ 「编辑器」不必为它另写一套，加一个 stage 就够（KISS/DRY）。
     #   ★ 块名在 drill 档就是**栋号** `bldg_<16hex>`（可指名——这是步 3 的全部意义）。
@@ -99,7 +99,7 @@ _STAGE_ROOT = None
 
 def stage_root(stage: str) -> str:
     return _STAGE_ROOT or STAGES[stage]
-WORK = os.path.join(REPO, "_work", "修模工程")
+WORK = os.path.join(REPO, "过程/_work", "修模工程")
 ARCHIVE = os.path.join(REPO, "_archive")
 
 # ★ `--archive-dir` 覆盖（默认 None＝用 `ARCHIVE`）：与 `--stage-dir`/`--work-dir` **同一件理由**。
@@ -171,7 +171,22 @@ def piece_counts(path: str, weld: bool = False) -> dict:
 
 
 def glb_images(path: str) -> int:
-    """glTF JSON 块里 `images` 的条数（不解析二进制块）。"""
+    """glTF JSON 块里 `images` 的条数（不解析二进制块）。
+
+    ★ **为什么这里读 12 字节头、而不是换成成熟库**（2026-10-16 **实测**，不是懒得换）：
+    本仓已有 `pygltflib 1.16.5`，但它的 `GLTF2.load(fname)` **没有** `load_file=False`
+    这类轻载入口 ⇒ 一次调用会把整个二进制块与全部 dataclass 都建起来。同一件上两侧量：
+
+    | 同一件 | 小件 937 KB（8 图） | 最大件 48.5 MB（285 图） |
+    |---|---|---|
+    | 本函数（读头 ＋ `json.loads`） | 0.0005 s | 2.88 s |
+    | `pygltflib.GLTF2().load` | **12.09 s** | **135.03 s** |
+
+    两者**逐件答案相同**（8 = 8、285 = 285）⇒ 手读这 8 行是**对的**；换成成熟库只换来约 **47 倍**耗时。
+    ⇒ **这里不换**。「能用成熟件就用」**不等于**「无脑换」——换之前先量。
+    （★ 视口控件那边结论相反：自写轨道 vs three.js 官方 `OrbitControls`，官方件又快又全
+     ⇒ 那边**换了**，见 `demo/reality.html`。）
+    """
     import struct
     with open(path, "rb") as f:
         f.read(12)

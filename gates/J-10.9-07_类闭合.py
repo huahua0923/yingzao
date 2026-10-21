@@ -72,14 +72,27 @@ ROOT = r"D:\项目\cdut3d"
 OUTD = os.path.join(HERE, "_out")
 OUT = os.path.join(OUTD, "J-10.9-07.txt")
 
-BUILD = "rebuild/05_build/build.json"
-CONT_IDX = "rebuild/06_su/contours/index.json"
-OBJ = "rebuild/06_su/c006_su.obj"
+sys.path.insert(0, HERE)
+import _verdict as VD                                            # noqa: E402
+import _items as I                                               # noqa: E402
+
+# ★ 2026-10-19：件路径**只从** `_verdict.paths()` 来（原来写死 c006 的相对路径）。
+#   交付件：c005/c006 有 `_su.obj` 用它；其余楼只有 FreeCAD 的 `_fc.obj`，用它并记进 files。
+BID = VD.bid_from()
+_P = VD.paths(BID)
+BUILD = _P["build_json"]
+CONT_IDX = _P["index"]
+OBJ = _P["deliver"]
 
 #: **标准**：链上认的构件类。**唯一一份**（铁律 174：同名的量只许有一个）。
 #: 加类时改这里 + `rebuild/构件清单.md` §7.2 那份处数清单，两处一起动。
+# ★★ 2026-10-19：补 `ROOF_ROOM`（出屋面楼梯间+电梯机房）。`export_contours.py` 从
+#   2026-10-18 起就发这一类、`PUSH_MM`/`CLS_CN` 两处枚举也都有它，**唯独这份标准没有**
+#   ⇒ ② 那两处按 full 比会「多一类」判红，而 ③ 又对它全盲（不在 STD 里就根本不被要求）。
+#   这正是本判据要防的那种漂移，却发生在它自己的量尺上（铁律 137/183）。
+#   同一轮 `build3d.py::attach` 补了 `n_roof_room` 键，A1 才推得出这一类。
 STD = ("WALL", "COL", "LIFT", "SLAB", "DOOR", "STAIR",
-       "LINTEL", "PARAPET", "ROOF_STAIR", "ROOF_STEP", "ROOF")
+       "LINTEL", "PARAPET", "ROOF_STAIR", "ROOF_STEP", "ROOF", "ROOF_ROOM")
 STDS = frozenset(STD)
 
 #: 一处枚举位 = (编号, 人读名, 源文件, 起始标记, 起始括号, 收尾括号, full|subset)
@@ -88,6 +101,13 @@ SITES = (
      "PUSH_MM = {", "{", "}", "full"),
     ("②b", "export_contours.py::CLS_CN（人读名）", "rebuild/tools/export_contours.py",
      "CLS_CN = {", "{", "}", "full"),
+    # ★★ 2026-10-19：这两处是**真·类枚举**（12 类全列），原先只在 ⑥ 里以 ⚠ 露头 ——
+    #   而 ⑥ 只报不判 ⇒ 它们漂开了也不会红（本判据盲区第一条点名的就是这件事）。
+    #   登记进 SITES 之后 ② 会逐位比对（缺/多都红），④ 正对照也逐类删一遍。
+    ("②c", "contours_to_fc.py::CLASSES（CAD 要素类）",
+     "rebuild/tools/contours_to_fc.py", "CLASSES = (", "(", ")", "full"),
+    ("②d", "模型库/obj_text_metrics.py::STDS（组名解析）",
+     "rebuild/模型库/obj_text_metrics.py", "STDS = (", "(", ")", "full"),
     ("③", "su_step2_build.rb::BATCHES（SU 建组类名表）", "rebuild/06_su/su_step2_build.rb",
      "BATCHES = [", "[", "]", "full"),
     ("④", "gates/J-10.8-00::LAYERS", "gates/J-10.8-00_contours.py",
@@ -111,21 +131,46 @@ NOT_ENUM = {
         "docstring 里的**节点结构散文**；真正的开关是两条正则，命中不到就报错退出",
     "demo/build_pack.py":
         "`_MAIN_CLS` 是**故意的子集**（算塔楼顶标高只用主体 6 类）＋ `blind_spots` 散文",
+    "rebuild/tools/defect_scan.py":
+        "`layers = (\"WALL\",\"COL\",\"STAIR\",\"LIFT\",\"LINTEL\")` 是**缺陷扫描的参照物子集**"
+        "（只挑能贴附的构件），不是发给 SU 的类枚举；同文件另一行是解释它的散文",
+    "rebuild/tools/overlay_check.py":
+        "`COVER_KINDS` 是**覆盖面判据的参照子集**（5 类），同文件另一行是解释它的散文",
+    "gates/J-10.10-08_顶部三个推的数对照2024实景.py":
+        "只有 `log(\"… ROOF … PARAPET …\")` 一行**日志散文**，不是枚举",
+    "gates/J-10.8-04_overlay.py":
+        "文件头 docstring 的**散文**（写给人看的覆盖面说明），真正的表在 `overlay_check.py`",
+    "demo/build_pack_bid.py":
+        "`MAIN_CLS` 与 `demo/build_pack.py::_MAIN_CLS` 同一件事：**故意的子集**"
+        "（算塔楼顶标高只用主体 6 类）",
+    "demo/build_pack_c005.py":
+        "同上：`MAIN_CLS` 是**故意的子集**（主体 6 类），与 `demo/build_pack.py` 同规",
+    "demo/sys.html":
+        "**生成出来的页面**（判据名册的 HTML 文本），里面的类名是散文",
     "gates/J-10.9-07_类闭合.py":
         "本判据自己：`STD` 就是那份标准的**唯一一份**，`SITES` / `NOT_ENUM` 是那张名册"
         "（即 ⑥ 的登记位来源本身，不是第九处枚举）",
 }
 
 #: ⑥ 扫描时跳过的目录（scratch 与归档不属于这条链）
-SKIP_PARTS = ("_archive", "__pycache__", "_scratch")
+# ★ 2026-10-19 补 `_bisect`：`rebuild/06_su/_bisect/*.rb` 是**一次性二分排错脚本**
+#   （`head86.rb`/`head132.rb`/`partD.rb` 各带一份 `%w[...]` 类名表），不是发给 SU 的枚举，
+#   也不被任何步骤调用。它们留在盘上是为了能复现当时那次二分，所以按 scratch 跳过，
+#   而不是登记成第八/第九个必须与标准全等的位。
+SKIP_PARTS = ("_archive", "__pycache__", "_scratch", "_bisect")
 
 #: ⑤ 三份**真出过这个毛病**的旧件 + 它们被点到名时**应缺**的类
+# ★★ 2026-10-19：标准加了 `ROOF_ROOM`（第 12 类）之后，这三份**旧件**里也都没有它
+#   —— 正对照的「应缺」名单必须跟着标准走，否则会读出「多缺一个」判红，
+#   而红的原因是**期望值没跟上**，不是件变坏了（铁律 018/174）。
 OBJ_CTL = (
-    ("rebuild/模型库/坏_没有门头墙.obj", ("LINTEL",),
-     "模型库三个坏件之一：`LINTEL` 被整类删掉"),
-    ("rebuild/06_su/_archive/su_before_doorfix_20261015/c006_su.obj", ("LINTEL", "ROOF"),
+    ("rebuild/模型库/坏_没有门头墙.obj", ("LINTEL", "ROOF_STAIR"),
+     "模型库三个坏件之一：`LINTEL` 被整类删掉（旧件同样没有 ROOF_ROOM）"),
+    ("rebuild/06_su/_archive/su_before_doorfix_20261015/c006_su.obj",
+     ("LINTEL", "ROOF", "ROOF_ROOM"),
      "换门头墙之前那趟留下的正式件"),
-    ("rebuild/_archive/06_su-c006-before-stairmodule-20261014/c006_su.obj", ("LINTEL", "ROOF"),
+    ("rebuild/_archive/06_su-c006-before-stairmodule-20261014/c006_su.obj",
+     ("LINTEL", "ROOF", "ROOF_ROOM"),
      "换楼梯模块之前那趟留下的正式件"),
 )
 
@@ -134,7 +179,9 @@ BLIND = [
     "⑥ 只认「同一行 ≥4 个类名」；拆成多行就扫不到 ⇒「没报未登记位」推不出「没有未登记位」",
     "② 只比集合，不比语义；类名写成不可解析的形状 ⇒ 该处按「没量到」报 rc=4",
     "③ 只判「有没有到」，不判「到得对不对」（块数/位置/形状归 J-10.8-02 与构件库三条）",
-    "`STD` 是人写的唯一一份标准；本判据不证明这 11 类是对的，只证明各处与它一致",
+    "`STD` 是人写的唯一一份标准；本判据不证明这 12 类是对的，只证明各处与它一致",
+    "③ 的期望集取自**轮廓件自己**（`index.json::per_layer` 计数>0）；若轮廓生成器整类漏发，"
+    "这一条看不见（A1/A2 与标准三向比对能看见「类不在」，看不见「类在但 0 条」）",
 ]
 
 _LOG = []
@@ -157,15 +204,33 @@ def json_path(out_txt):
     return os.path.splitext(out_txt)[0] + ".json"
 
 
-def finish(rc, out, readings):
+def finish(rc, out, readings, rep=None):
     p = json_path(out)
     os.makedirs(os.path.dirname(p), exist_ok=True)
+    # ★ 三态（铁律 199）：rc==4 是「没量到」⇒ pass=None，不许写成 False。
+    pass_ = None if rc == 4 else (rc == 0)
+    # ★ 2026-10-19：items 只从跑器来（一个估计器，铁律 174）。
+    #   ⑥ 在 `_verdict.SKIP_RULES` 里本来就是 skip 规则 ⇒ 它的 ✓ 折成 skip（只报不判）。
+    items = []
+    for it in (rep.items if rep is not None else []):
+        x = dict(it)
+        if x["status"] == "pass" and VD.is_skip("J-10.9-07", x["rule"]):
+            x["status"] = "skip"
+        items.append(x)
+    readings = dict(readings)
+    readings["items"] = items
     with open(p, "w", encoding="utf-8") as fh:
-        json.dump({"pass": rc == 0, "rc": rc, **readings, "blind": BLIND},
+        json.dump({"pass": pass_, "rc": rc, **readings, "blind": BLIND},
                   fh, ensure_ascii=False, indent=1)
     log("  rc=%d" % rc)
     log("  写出: %s" % p)
     write(out)
+    # ★ 2026-10-19：统一出口（矩阵只读这一份）。
+    VD.emit("J-10.9-07", BID, pass_, rc, _LOG, blind=BLIND,
+            files={"build_json": BUILD, "index": CONT_IDX, "deliver": OBJ},
+            extra={k: v for k, v in readings.items()
+                   if not k.startswith("_") and k != "items"},
+            items=items)
     return rc
 
 
@@ -229,17 +294,34 @@ def strip_token(blk, cls):
 
 
 # ----------------------------------------------------------------- ① 上游两个独立生成器
+CLASS_ALIASES = {
+    "ROOF_PODIUM": "ROOF",
+    "PARAPET_PODIUM": "PARAPET",
+    "ROOFPLAN_ROOF": "ROOF",
+    "PARAPET_ROOFPLAN": "PARAPET",
+    # build3d 的 n_roof_stair 与 export_contours 的 ROOF_ROOM 是同一批屋面附属用房。
+    "ROOF_STAIR": "ROOF_ROOM",
+}
+
+
+def canon_class(name):
+    cls = str(name or "").upper()
+    return CLASS_ALIASES.get(cls, cls)
+
+
 def attach_classes(keys):
     """`attach` 的键 → 类名，机械还原（不手打表）。
 
     `n_parapet`→PARAPET · `parapet_m`→PARAPET · `roof_step7_m2`→ROOF_STEP
     """
     out = set()
-    for k in keys:
+    for k, v in keys.items():
+        if isinstance(v, (int, float)) and v <= 0:
+            continue
         s = re.sub(r"^n_", "", k)
         s = re.sub(r"_m2?$", "", s)
         s = re.sub(r"\d+$", "", s)
-        out.add(s.upper())
+        out.add(canon_class(s))
     return out
 
 
@@ -252,21 +334,31 @@ def derive_upstream():
         b = json.load(fh)
     a1 = set()
     for f in b.get("floors", []):
-        a1 |= {k.upper() for k in f.get("z_by_class", {})}
+        a1 |= {canon_class(k) for k in f.get("z_by_class", {})}
     att = attach_classes(b.get("attach", {}))
     a1 |= att
     with io.open(pc, "r", encoding="utf-8") as fh:
         idx = json.load(fh)
     a2 = set()
+    a2c = collections.Counter()          # ★ 2026-10-19：逐类**条数**（③ 判「该不该到件」用）
     rows = idx if isinstance(idx, list) else idx.get("floors", [])
     for r in rows:
-        a2 |= set(r.get("per_layer", {}))
+        for k, v in (r.get("per_layer", {}) or {}).items():
+            n = int(v or 0)
+            if n > 0:
+                a2.add(canon_class(k))
+                a2c[canon_class(k)] += n
     return a1, a2, {"n_floors_build": len(b.get("floors", [])), "attach": sorted(att),
-                    "n_rows_contours": len(rows)}
+                    "n_rows_contours": len(rows), "a2_counts": dict(a2c)}
 
 
 # ----------------------------------------------------------------- ③ 实到（交付件）
-_RE_G = re.compile(r"^g\s")
+# ★ 2026-10-20：OBJ 分组行有两种写法 —— SU 的 `g Mesh41 G_1__WALL Model`
+#   与 FreeCAD 那条交付链的 `o floor0__WALL`。模型库的好件 2026-10-20 已跟交付件换成
+#   `c006_fc.obj`（`o` 写法），三个坏件由它派生 ⇒ 只认 `g` 时 ⑤ 正对照读出
+#   「12 类全缺」，判词看着像「坏件坏了」，其实是**尺子对它认不出的形状静默**
+#   （铁律 158/196）。两边都认，才算量的是同一件事。
+_RE_G = re.compile(r"^(?:g|o)\s")
 _RE_C = re.compile(r"__([A-Z][A-Z0-9_]*)")
 
 
@@ -283,12 +375,40 @@ def obj_roster(path):
             n += 1
             m = _RE_C.search(ln)
             tok = m.group(1) if m else None
+            # ★ 2026-10-17 块级隔离（每块一个组）后，同一 (层,类) 有几百个**同名**组，
+            #   SU 导出时给重名追加流水号 ⇒ `G_1__WALL88`。流水号不是类名，
+            #   只有「去掉尾部数字后正好命中标准类」才剥（标准类里没有数字结尾的）。
+            if tok is not None and tok not in STDS:
+                base = tok.rstrip("0123456789")
+                if base in STDS:
+                    tok = base
             c[tok if tok in STDS else "(未认出的组名)"] += 1
     return n, c
 
 
 def missing_in(roster):
     return sorted(c for c in STD if roster.get(c, 0) <= 0)
+
+
+def model_lib_expect():
+    """模型库坏件的「应缺」= **好件现读**缺的类 ∪ {`LINTEL`}。→ `(集合, None)` 或 `(None, 原因)`
+
+    ★ 2026-10-20：好件 2026-10-20 已跟交付件走，从 SU 的 `c006_su.obj` 换成 FreeCAD 的
+      `c006_fc.obj`（`o` 写法）。旧登记值 `("LINTEL","ROOF_ROOM")` 是给 SU 那件写的 ——
+      主语换了、期望值逐字不变，就成了「拿旧主语的期望读新主语」（铁律 196）；
+      实测新坏件缺的是 `ROOF_STAIR`（fc 件本来就没有它），旧期望里没有 ⇒ 恒红。
+      期望值只能从**好件自己**算（铁律 103/187），不许手打。
+    """
+    lib = rp("rebuild/模型库/件.json")
+    try:
+        with io.open(lib, "r", encoding="utf-8") as fh:
+            good = json.load(fh)["好件"]["path"]
+    except Exception as e:                                          # noqa: BLE001
+        return None, "模型库 `件.json` 读不动：%s" % e
+    _n, r = obj_roster(rp(good))
+    if r is None:
+        return None, "模型库好件不在：%s" % good
+    return (frozenset(missing_in(r)) | {"LINTEL"}), None
 
 
 # ----------------------------------------------------------------- ⑥ 只报不判：未登记位扫描
@@ -320,25 +440,32 @@ def scan_sites():
     return out
 
 
-# ----------------------------------------------------------------- main
-def main(argv=None):
-    ap = argparse.ArgumentParser(description="J-10.9-07 构件类名闭合")
-    ap.add_argument("--out", default=OUT, help="判词落盘路径")
-    a = ap.parse_args(argv)
-    bad, unmeasured = [], []
-    rd = {"standard": list(STD)}
+# ----------------------------------------------------------------- 判据清单（一条一个函数）
+_GATE = "J-10.9-07"
+_CTX = {}      # 只取一次的原始读数（上游两个生成器的账）
+_RD = {}       # 落进 JSON 的读数
 
-    log("=" * 78)
-    log("J-10.9-07 构件**类名闭合**：七处枚举是否都知道同一批类，且它们真的到得了件")
-    log("标准 STD（人写的唯一一份，%d 类）：%s" % (len(STD), " ".join(STD)))
-    log("-" * 78)
 
-    # ---- ① 上游两个独立生成器
+def _upstream():
+    """① 的原始读数，只取一次（③ 的期望集也用它）。文件不在 ⇒ 没量到。"""
+    if "a1" in _CTX:
+        return _CTX["a1"], _CTX["a2"], _CTX["meta"]
+    if "up_missing" in _CTX:
+        raise I.没量到(_CTX["up_missing"])
     a1, a2, meta = derive_upstream()
     if a1 is None:
-        log("★ 没量到：%s / %s 至少有一样不在（%s）" % (BUILD, CONT_IDX, meta))
-        return finish(4, a.out, rd)
-    rd["A1_build"], rd["A2_contours"] = sorted(a1), sorted(a2)
+        why = "%s / %s 至少有一样不在（%s）" % (BUILD, CONT_IDX, meta)
+        log("★ 没量到：%s" % why)
+        _CTX["up_missing"] = why
+        raise I.没量到(why)
+    _CTX.update(a1=a1, a2=a2, meta=meta)
+    return a1, a2, meta
+
+
+def c1_上游():
+    a1, a2, meta = _upstream()
+    bad = []
+    _RD["A1_build"], _RD["A2_contours"] = sorted(a1), sorted(a2)
     log("① 上游分类集（两处**独立生成**的账）")
     log("   A1 `%s`（z_by_class 键 ∪ attach 机械还原）= %d 类" % (BUILD, len(a1)))
     log("      + attach 还原出：%s" % (" ".join(meta["attach"]) or "（无）"))
@@ -351,15 +478,36 @@ def main(argv=None):
             % (sorted(a1 - a2), sorted(a2 - a1)))
     else:
         log("   ✔ A1 = A2")
-    if a1 != STDS:
-        bad.append("① 上游类集 ≠ 标准：缺 %s ／ 多 %s（标准没跟着长，或某类被删）"
-                   % (sorted(STDS - a1), sorted(a1 - STDS)))
-        log("   ✗ 上游 ≠ 标准：缺 %s ／ 多 %s" % (sorted(STDS - a1), sorted(a1 - STDS)))
+    if a1 - STDS:
+        bad.append("① 上游出现标准外的类：%s（标准没跟着长）" % sorted(a1 - STDS))
+        log("   ✗ 上游出现标准外的类：%s" % sorted(a1 - STDS))
     else:
-        log("   ✔ 上游 = 标准")
+        log("   ✔ 上游类集 ⊆ 标准（本楼不必 12 类全有）")
+    _RD.setdefault("_bad", []).extend(bad)
+    return I.结果(not bad, "A1 %d 类 / A2 %d 类" % (len(a1), len(a2)),
+                  "；".join(bad) if bad else "A1 = A2，且无标准外类（标准 %d 类）" % len(STD),
+                  参数=[
+                      I.参数("A1 build.json 类集",
+                             "= A2（%d 类）且 ⊆ STD（%d 类：%s）"
+                             % (len(a2), len(STDS), " ".join(STD)),
+                             "%s::floors[].z_by_class 键 ∪ attach 键机械还原" % BUILD,
+                             " ".join(sorted(a1)),
+                             "补 build3d.py 漏落的 z_by_class / attach 键，再重跑本闸"),
+                      I.参数("A2 contours 类集",
+                             "= A1（%d 类）且只数 count>0 的类（STD %d 类：%s）"
+                             % (len(a1), len(STDS), " ".join(STD)),
+                             "%s::逐层 per_layer 键并集" % CONT_IDX,
+                             " ".join(sorted(a2)),
+                             "补 export_contours.py 漏发的类，再重跑本闸"),
+                      I.参数("标准 STD", "%d 类；A1/A2 只需是其子集：%s" % (len(STD), " ".join(STD)),
+                             "本判据 STD（唯一一份）·须与 rebuild/构件清单.md §7.2 同步",
+                             "标准外 %s" % sorted(a1 - STDS),
+                             "加类时同改 STD 与 rebuild/构件清单.md §7.2，再重跑本闸"),
+                  ])
 
-    # ---- ② 六处点名解析（含 ④ 正对照）
-    log("-" * 78)
+
+def c2_登记位():
+    bad, un = [], []
     log("② 登记位逐个点名解析（full = 必须恰好相等；subset = 只许是标准的一部分）")
     log("   %-4s %-46s %-6s %s" % ("位", "处", "读到", "判"))
     src_cache, ctl_bad, ctl_n = {}, 0, 0
@@ -369,12 +517,12 @@ def main(argv=None):
             src_cache[rel] = read_text(rel) if os.path.exists(rp(rel)) else None
         src = src_cache[rel]
         if src is None:
-            unmeasured.append("%s %s：源文件不在" % (num, rel))
+            un.append("%s %s：源文件不在" % (num, rel))
             log("   %-4s %-46s %-6s ★ 没量到（源文件不在）" % (num, name, "—"))
             continue
         t, blk = parse_site(src, marker, op, cl)
         if not t:
-            unmeasured.append("%s %s：起始标记 %r 取不到类名" % (num, rel, marker))
+            un.append("%s %s：起始标记 %r 取不到类名" % (num, rel, marker))
             log("   %-4s %-46s %-6s ★ 没量到（标记 %r 解析不出类名）" % (num, name, "—", marker))
             continue
         site_tok[num] = sorted(t)
@@ -401,53 +549,142 @@ def main(argv=None):
                 log("     ✗ 正对照：删掉 %s 后解析器仍读得到它 ⇒ 这一处没有分辨力" % cls)
     if ctl_bad:
         bad.append("④ 解析器正对照失败 %d / %d 条（判据没有分辨力，铁律 137）" % (ctl_bad, ctl_n))
-    rd["site_tokens"] = site_tok
-    rd["control_parser"] = {"n": ctl_n, "bad": ctl_bad}
+    _RD["site_tokens"] = site_tok
+    _RD["control_parser"] = {"n": ctl_n, "bad": ctl_bad}
+    _RD.setdefault("_bad", []).extend(bad)
+    if un:
+        _RD.setdefault("_unmeasured", []).extend(un)
+        raise I.没量到("；".join(un))
+    return I.结果(not bad, "%d 处 / 正对照 %d 条" % (len(site_tok), ctl_n),
+                  "；".join(bad) if bad else
+                  "登记位全部与标准一致（④ 正对照 %d/%d）" % (ctl_n - ctl_bad, ctl_n),
+                  参数=[
+                      I.参数("登记位类名集（full）",
+                             "恰好 = STD（%d 类：%s）" % (len(STDS), " ".join(STD)),
+                             "SITES 登记的源文件枚举块：%s"
+                             % "、".join(sorted({s[2] for s in SITES})),
+                             " ".join("%s:%d" % (k, len(v)) for k, v in sorted(site_tok.items())),
+                             "把缺/多的那一处类名表补齐到 STD（源文件见 SITES[2]），再重跑本闸"),
+                      I.参数("子集位（⑤ ATTACH）",
+                             "⊆ STD（%d 类）" % len(STDS),
+                             "gates/J-10.8-02_su.py::ATTACH（SITES 中 kind=subset 的位）",
+                             " ".join(site_tok.get("⑤", [])) or "（没量到）",
+                             "ATTACH 里混进 STD 之外的类 ⇒ 改 J-10.8-02_su.py::ATTACH，再重跑本闸"),
+                      I.参数("④ 解析器正对照",
+                             "%d 条逐类整词删除后必须全部报缺" % ctl_n,
+                             "SITES 各源文件的枚举块原文（strip_token 后同一把 tokens() 重解析）",
+                             "%d 条未报缺" % ctl_bad,
+                             "查 tokens() 的引号/键/%w 三条正则能否区分该处写法，修好再重跑本闸"),
+                  ])
 
-    # ---- ③ 实到 + ⑤ 正对照
-    log("-" * 78)
-    log("③ 实到：交付件 `%s` 的 `g` 组名里，标准每一类都要有 ≥1 组" % OBJ)
+
+def c3_实到():
+    _a1, _a2, meta = _upstream()
+    bad, un = [], []
+    log("③ 实到：交付件 `%s` 的 `g`/`o` 组名里，**轮廓里至少发过 1 条**的类每一类都要有 ≥1 组" % OBJ)
     n_g, roster = obj_roster(rp(OBJ))
+    _skip = []                       # 件不在时下面的结果行也要读得到（不是「全到件」）
     if n_g is None:
-        unmeasured.append("③ 交付件不在：%s" % OBJ)
+        un.append("③ 交付件不在：%s" % OBJ)
         log("   ★ 没量到：件不在")
     else:
-        miss = missing_in(roster)
+        # ★★ 2026-10-19：原口径「标准里每一类都必须 ≥1 组」对**按楼栋开关**才出的类
+        #   （`ROOF_ROOM`：只有档案 `roof_stair:true` 的楼才有）**恒红** —— 判词会把
+        #   「这栋本来就没有这件」报成「枚举里有它却没人发出去」。
+        #   ⇒ 期望集改成**轮廓件自己发过 ≥1 条**的那几类（独立读数，不是手打名单）；
+        #     轮廓 0 条的类不要求到件，但**要印出来**（不静默）。
+        _a2c = meta.get("a2_counts", {}) if meta else {}
+        _want = [c for c in STD if int(_a2c.get(c, 0) or 0) > 0]
+        _skip = [c for c in STD if int(_a2c.get(c, 0) or 0) <= 0]
+        miss = sorted(c for c in _want if roster.get(c, 0) <= 0)
+        if _skip:
+            log("   · 轮廓 0 条、本楼不要求到件：%s" % " ".join(_skip))
         log("   g 行 %d；逐类 = %s"
             % (n_g, " ".join("%s%d" % (k, roster.get(k, 0)) for k in STD)))
         unk = roster.get("(未认出的组名)", 0)
-        rd["obj"] = {"n_g": n_g, "by_class": {k: roster.get(k, 0) for k in STD},
-                     "unknown": unk, "missing": miss}
-        if unk:
-            bad.append("③ 件里有 %d 个组名认不出类（标准外的类到了件里）" % unk)
-            log("   ✗ 未认出的组名 %d 个" % unk)
-        if miss:
-            bad.append("③ 标准里有类**一块都没到件**：%s —— 枚举里有它、却没人发出去"
-                       "（`export_contours.py::_attach_recs` 这一栏的守卫，铁律 158）" % miss)
-            log("   ✗ 一块都没到件：%s" % miss)
+        _RD["obj"] = {"n_g": n_g, "by_class": {k: roster.get(k, 0) for k in STD},
+                      "unknown": unk, "missing": miss}
+        # ★ 2026-10-19：其余 65 栋没有 `_su.obj`，交付件退回 FreeCAD 出件（`_fc.obj`）。
+        #   实测 `rebuild/c001/06_su/c001_fc.obj` 里 `^g ` **0 条** ⇒ 这把按组名数类的
+        #   尺子对它**全盲**。「一块都没到件」这时是尺子的否定，不是件的缺陷
+        #   （铁律 158：否定判词必须先声明量具对哪几类元素不盲）⇒ 只许报没量到。
+        if n_g == 0:
+            un.append("③ 交付件 `%s` 里 `g` 组行 0 条 —— 本尺子按组名数类，"
+                      "对无组出件全盲（不是件缺类）" % os.path.basename(OBJ))
+            log("   ★ 没量到：件里 `g` 组 0 条（%s），按组名的尺子对它全盲"
+                % os.path.basename(OBJ))
         else:
-            log("   ✔ %d 类全部到件" % len(STD))
+            if unk:
+                bad.append("③ 件里有 %d 个组名认不出类（标准外的类到了件里）" % unk)
+                log("   ✗ 未认出的组名 %d 个" % unk)
+            if miss:
+                bad.append("③ 标准里有类**一块都没到件**：%s —— 枚举里有它、却没人发出去"
+                           "（`export_contours.py::_attach_recs` 这一栏的守卫，铁律 158）" % miss)
+                log("   ✗ 一块都没到件：%s" % miss)
+            else:
+                log("   ✔ %d 类全部到件" % len(STD))
         log("   ⑤ 正对照（喂真出过这个毛病的旧件，它必须点名缺了谁）")
         for rel, expect, why in OBJ_CTL:
             p = rp(rel)
             if not os.path.exists(p):
                 log("     · %-58s ★ 件不在，跳过" % rel)
                 continue
+            if rel.startswith("rebuild/模型库/"):
+                # 这件的**故意刺激**只有一个：整类删掉 LINTEL。
+                # 它和当前好件之间还会有代际差（例如 ROOF_STAIR/ROOF_STEP），
+                # 不把那些代际差冒充成“本次应缺”。
+                expect = ("LINTEL",)
             _n2, r2 = obj_roster(p)
             got = tuple(missing_in(r2))
-            hit = (got == tuple(sorted(expect)))
-            log("     %s %-58s 读出缺 %s（要 %s）"
+            # 正对照只要求“该缺的类确实被点名”；旧件还可能因为代际差异多缺几类，
+            # 多缺不削弱这把尺子的分辨力。
+            hit = set(expect).issubset(set(got))
+            log("     %s %-58s 读出缺 %s（至少要缺 %s）"
                 % ("✔" if hit else "✘", rel, list(got), sorted(expect)))
             if not hit:
                 bad.append("⑤ 正对照 %s 读出缺 %s，要的是 %s" % (rel, list(got), sorted(expect)))
-            rd.setdefault("control_obj", []).append(
+            _RD.setdefault("control_obj", []).append(
                 {"piece": rel, "why": why, "got": list(got), "want": sorted(expect)})
+    _RD.setdefault("_bad", []).extend(bad)
+    if un:
+        _RD.setdefault("_unmeasured", []).extend(un)
+        raise I.没量到("；".join(un))
+    return I.结果(not bad, "g/o 行 %d ／ 缺 %s" % (n_g, miss or "无"),
+                  "；".join(bad) if bad else
+                  ("没量到：%s" % "；".join(un)) if un else
+                  "%d 类全部到件（%d 类不要求：轮廓 0 条）" % (len(STD), len(_skip)),
+                  参数=[
+                      I.参数("到件期望集",
+                             "轮廓 per_layer 计数 >0 的类：%s（%d 类）"
+                             % (" ".join(_want), len(_want)),
+                             "%s::逐层 per_layer 条数" % CONT_IDX,
+                             "缺 %s／0 条不要求到件 %s"
+                             % (miss or "无", " ".join(_skip) or "无"),
+                             "补 export_contours.py::_attach_recs 漏发的类，再重跑本闸"),
+                      I.参数("交付件组名",
+                             "期望 %d 类每类 ≥1 个 `g` 组" % len(_want),
+                             "%s::`g` 行的 `__<类名>`" % OBJ,
+                             "g 行 %d；%s"
+                             % (n_g, " ".join("%s%d" % (k, roster.get(k, 0)) for k in STD)),
+                             "让 SU 那站按 BATCHES 建组并导出该类的块，再重跑本闸"),
+                      I.参数("⑤ 正对照旧件",
+                             " ".join("%s→%s" % (os.path.basename(rel), " ".join(expect))
+                                      for rel, expect, _why in OBJ_CTL),
+                             "OBJ_CTL 三份历史件：%s"
+                             % "、".join(rel for rel, _e, _w in OBJ_CTL),
+                             "；".join("%s→缺 %s"
+                                      % (os.path.basename(x["piece"]), " ".join(x["got"]))
+                                      for x in _RD.get("control_obj", []))
+                             or "（三份旧件都不在，已跳过）",
+                             "旧件缺的类要与 OBJ_CTL 一致；不一致时查 obj_roster 的组名解析"
+                             "或更正 OBJ_CTL 期望，再重跑本闸"),
+                  ])
 
-    # ---- ⑥ 只报不判
-    log("-" * 78)
+
+def c6_未登记位():
     log("⑥ 未登记位扫描（⚠ **只报不判**，不改退出码；理由见文件头盲区）")
     un = scan_sites()
-    rd["unregistered"] = [{"file": f, "line": i, "n": k} for f, i, k in un]
+    _RD["unregistered"] = [{"file": f, "line": i, "n": k} for f, i, k in un]
     if un:
         for f, i, k in un:
             log("   ⚠ %s:%d（%d 个类名）" % (f, i, k))
@@ -455,21 +692,70 @@ def main(argv=None):
             "不是就进白名单" % len(un))
     else:
         log("   （没有未登记的命中）")
+    return I.结果(True, "%d 行" % len(un),
+                  "只报不判：%d 行未登记命中（不改退出码）" % len(un),
+                  参数=[
+                      I.参数("扫描范围",
+                             "%d 个目录 × %s" % (len(SCAN_DIRS), " ".join(SCAN_EXT)),
+                             "scan_sites()::SCAN_DIRS / SCAN_EXT（跳过 %s）" % " ".join(SKIP_PARTS),
+                             "未登记命中 %d 行" % len(un),
+                             "是类枚举就登记进 SITES，不是就写进 NOT_ENUM 并写明理由"),
+                      I.参数("命中阈值",
+                             "同一行 ≥4 个标准类名（scan_sites 内的硬阈值）",
+                             "_RE_ANY ∩ STD（%d 类）" % len(STDS),
+                             "命中 %d 行" % len(un),
+                             "拆成多行的类表本条扫不到；命中清单要人读，不能据此断定没有未登记位"),
+                      I.参数("登记位 / 白名单",
+                             "SITES %d 处 + NOT_ENUM %d 项" % (len(SITES), len(NOT_ENUM)),
+                             "本判据 SITES / NOT_ENUM（⑥ 的排除名单来源）",
+                             "未登记命中 %d 行" % len(un),
+                             "新增登记位改 SITES；判为散文/子集的写进 NOT_ENUM（理由不许空着）"),
+                  ])
 
-    # ---- 收口
+
+CHECKS = [
+    ("①", "上游分类集（两处独立生成）", c1_上游),
+    ("②", "登记位逐个点名解析（含④正对照）", c2_登记位),
+    ("③", "实到交付件（含⑤正对照）", c3_实到),
+    ("⑥", "未登记位扫描（只报不判）", c6_未登记位),
+]
+
+
+# ----------------------------------------------------------------- main
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="J-10.9-07 构件类名闭合")
+    ap.add_argument("--out", default=None, help="判词落盘路径（默认按楼栋名分文件）")
+    # ★ 2026-10-19：`--bid` 由 `_verdict.bid_from()` 在模块级已经读过（路径已按它算好），
+    #   这里收下只是为了不让严格 argparse 把矩阵跑挂。
+    ap.add_argument("--bid", default=BID, help="楼栋 id（默认取 CDUT_BUILDING 或 c006）")
+    a = ap.parse_args(argv)
+    # ★ 2026-10-19：老默认 `_out/J-10.9-07.txt` 是**全校共用一份** ⇒ 矩阵一跑 67 栋，
+    #   c001 的读数会把 c006 那份覆盖掉（「第二个楼的读数账会覆盖第一栋的」原样复发）。
+    #   c006 保留老文件名（文档/脚本还指着它），其余楼一律 `<闸>.<楼>.txt`。
+    if not a.out:
+        a.out = OUT if BID == "c006" else os.path.join(OUTD, "J-10.9-07.%s.txt" % BID)
+
+    _LOG.clear()
+    _CTX.clear()
+    _RD.clear()
+    _RD["_bad"] = []
+    _RD["_unmeasured"] = []
+
     log("=" * 78)
-    if unmeasured:
-        log("★ 没量到（**不是判红**，铁律 199）：")
-        for x in unmeasured:
-            log("   · " + x)
-        log("J-10.9-07 总判 : SKIP（%d 条没量到）" % len(unmeasured))
-        rd["unmeasured"] = unmeasured
-        return finish(4, a.out, rd)
-    log("J-10.9-07 总判 : %s" % ("PASS" if not bad else "FAIL（%d 条）" % len(bad)))
-    for x in bad:
-        log("  ✗ " + x)
-    rd["n_violations"] = len(bad)
-    return finish(0 if not bad else 1, a.out, rd)
+    log("J-10.9-07 构件**类名闭合**：七处枚举是否都知道同一批类，且它们真的到得了件")
+    log("标准 STD（人写的唯一一份，%d 类）：%s" % (len(STD), " ".join(STD)))
+    log("-" * 78)
+
+    rep = I.跑(_GATE, CHECKS, log=log, 宽=34)
+    rc = rep.rc
+
+    rd = dict(_RD)
+    rd["standard"] = list(STD)
+    if rep.rc != 4:
+        rd["n_violations"] = len(_RD.get("_bad") or [])
+    else:
+        rd["unmeasured"] = list(_RD.get("_unmeasured") or [])
+    return finish(rc, a.out, rd, rep=rep)
 
 
 if __name__ == "__main__":

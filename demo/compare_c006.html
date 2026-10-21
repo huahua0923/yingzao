@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>c006 白模 × 实景 同机位对照</title>
+<style>
+  :root{ --bg:#0a0e13; --line:#233040; --ink:#d7e2ee; --muted:#7d8fa3;
+         --mono:"Cascadia Mono",Consolas,"SF Mono",monospace; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font:13px/1.5 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  #c{display:block;width:100%;height:100%}
+  #hud{position:fixed;left:12px;top:12px;padding:8px 12px;background:#0e1520cc;
+    border:1px solid var(--line);border-radius:6px;font-family:var(--mono);font-size:12px;
+    white-space:pre;pointer-events:none}
+</style>
+<script type="importmap">
+{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">载入中…</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* 同机位对照：三份 glb 已由 tools/place_white_model.py 落到**同一个局部系**
+   局部系 = xl=E−OE, yl=h−OH, zl=−(N−ON)，Y 向上，单位 m。
+   本页只做一件事：把白模与实景放在同一相机下拍，好一眼看出缺什么。 */
+
+const DIR = '../过程/_layers/layers_c006/';
+const qs  = new URLSearchParams(location.search);
+const XRAY = qs.get('xray') === '1';
+const canvas = document.getElementById('c');
+const hud = document.getElementById('hud');
+
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(1);
+renderer.setClearColor(0x0a0e13, 1);
+
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xdfefff, 0x2a2118, 1.5));
+const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+sun.position.set(-120, 180, -90);
+scene.add(sun);
+const sun2 = new THREE.DirectionalLight(0xffffff, 0.8);
+sun2.position.set(140, 120, 110);
+scene.add(sun2);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 1, 6000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = false;
+
+const gFar   = new THREE.Group();   // 轮廓外的实景（带纹理）
+const gFill  = new THREE.Group();   // 轮廓内的实景糊面
+const gWhite = new THREE.Group();   // 我们的白模
+scene.add(gFar, gFill, gWhite);
+
+const loader = new GLTFLoader();
+const load = (u,g) => new Promise((res,rej)=>loader.load(encodeURI(u)+'?t='+Date.now(),
+  r=>{ g.add(r.scene); res(r); }, undefined, rej));
+
+const ST = {mode:'overlay', ready:false, center:new THREE.Vector3()};
+
+function applyMode(){
+  const m = ST.mode;
+  gFar.visible   = (m==='reality' || m==='overlay');
+  gFill.visible  = (m==='reality' || m==='overlay');
+  gWhite.visible = (m==='white'   || m==='overlay');
+  gWhite.traverse(o=>{ if(o.isMesh && o.material){
+    const arr = Array.isArray(o.material) ? o.material : [o.material];
+    arr.forEach(x=>{
+      x.transparent = (m==='overlay');
+      x.opacity     = (m==='overlay') ? 0.55 : 1.0;
+      x.color.setHex((m==='overlay') ? 0x63d0ff : 0xdddddd);
+      x.depthWrite  = (m!=='overlay');
+      // `?xray=1`：白模不测深度 ⇒ 即使被实景挡住也画在最上面，错位一眼可见。
+      if(XRAY){ x.depthTest = false; x.opacity = 0.35; }
+      x.needsUpdate = true;
+    });
+  }});
+  hud.textContent = '模式 ' + m + '\n相机 az=' + (ST.az|0) + '° el=' + (ST.el|0) + '° dist=' + (ST.dist|0) + ' m';
+  document.body.dataset.mode = m;
+}
+
+function setView(az, el, dist, tx, ty, tz){
+  ST.az = az; ST.el = el; ST.dist = dist;
+  const t = new THREE.Vector3(
+    tx!==undefined ? +tx : ST.center.x,
+    ty!==undefined ? +ty : ST.center.y,
+    tz!==undefined ? +tz : ST.center.z);
+  const a = az*Math.PI/180, e = el*Math.PI/180;
+  camera.position.set(
+    t.x + dist*Math.cos(e)*Math.sin(a),
+    t.y + dist*Math.sin(e),
+    t.z + dist*Math.cos(e)*Math.cos(a));
+  controls.target.copy(t);
+  camera.lookAt(t);
+  controls.update();
+  applyMode();
+  return {target:[t.x,t.y,t.z], pos:camera.position.toArray().map(v=>+v.toFixed(3))};
+}
+
+function onResize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if(canvas.width!==w || canvas.height!==h){
+    renderer.setSize(w, h, false);
+    camera.aspect = w/Math.max(1,h); camera.updateProjectionMatrix();
+  }
+}
+function tick(){ onResize(); renderer.render(scene,camera); requestAnimationFrame(tick); }
+
+(async ()=>{
+  try{
+    await load(DIR+'reality_local.glb', gFar);
+    await load(DIR+'reality_fill_local.glb', gFill);
+    await load(DIR+'white_local.glb', gWhite);
+  }catch(e){
+    hud.textContent = '载不动 glb：' + e.message;
+    document.body.dataset.mode = 'error';
+    window.__cmp = {ready:false, error:String(e.message)};
+    return;
+  }
+  const bb = new THREE.Box3().setFromObject(gWhite);
+  bb.getCenter(ST.center);
+  ST.ready = true;
+
+  window.__cmp = {
+    ready:true,
+    three:THREE, scene, camera, controls, gFar, gFill, gWhite,
+    setMode(m){ ST.mode = m; applyMode(); return m; },
+    setView,
+    info(){
+      const wb = new THREE.Box3().setFromObject(gWhite);
+      const rb = new THREE.Box3().setFromObject(gFar);
+      const f = v => v.toArray().map(x=>+x.toFixed(2));
+      return {white:{min:f(wb.min), max:f(wb.max)},
+              reality:{min:f(rb.min), max:f(rb.max)},
+              center:f(ST.center)};
+    }
+  };
+
+  // ★ 平面旋转开关：`?rot=180` 把白模绕自身平面中心转 180°（验手性/朝向用）。
+  //   不改落位账本，只在本页做一次绕 Y 轴旋转 + 反向平移补偿。
+  const rot = +(qs.get('rot') ?? 0);
+  if(rot){
+    ST.center.copy(bb.getCenter(new THREE.Vector3()));
+    const pivot = new THREE.Group();
+    pivot.position.copy(ST.center);
+    ST.center.set(0,0,0);
+    gWhite.position.sub(pivot.position);
+    pivot.add(gWhite);
+    pivot.rotation.y = rot*Math.PI/180;
+    scene.add(pivot);
+  }
+  const az = +(qs.get('az') ?? 205), el = +(qs.get('el') ?? 22), dist = +(qs.get('dist') ?? 260);
+  const mode = qs.get('mode') || 'overlay';
+  ST.mode = mode;
+  applyMode();
+  setView(az, el, dist, qs.get('tx'), qs.get('ty'), qs.get('tz'));
+  document.body.dataset.ready = 'true';
+  tick();
+})();
+</script>
+</body>
+</html>

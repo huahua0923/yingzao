@@ -33,7 +33,21 @@
 
 require 'json'
 
+# ★ 2026-10-17：目录与出件名随楼栋走（c006 默认值一字不动）。
+#   **不走环境变量**：本机 Ruby 把 ENV 读成 GBK，路径里又带中文「项目」⇒
+#   ① 直接插值 `Encoding::CompatibilityError: GBK and UTF-8`（实测把整趟打崩、SU 弹框挂 600 s）；
+#   ② 强行转码又可能解成乱码 ⇒ `contours/index.json` 找不到、连 SCRIPT_ENTERED 都打不出来。
+#   ⇒ 改由 `_run_su_step2.ps1` 在**本文件旁边**写 `_su_target.txt`（UTF-8 两行：目录 / 名前缀），
+#     这里按 `__FILE__` 的位置读它。没有这份文件 ⇒ 退回 c006 默认值。
+_HERE = File.dirname(File.expand_path(__FILE__))
+_TG   = File.join(_HERE, "_su_target.txt")
 DIR   = "D:/项目/cdut3d/rebuild/06_su"
+NAME  = "c006"
+if File.exist?(_TG)
+  _ls = File.readlines(_TG, encoding: "UTF-8").map { |l| l.sub(/^\uFEFF/, "").strip }
+  DIR  = _ls[0] unless _ls[0].to_s.empty?
+  NAME = _ls[1] unless _ls[1].to_s.empty?
+end
 CONT  = "#{DIR}/contours"
 LOG   = "#{DIR}/build_log.txt"
 # ★★ 2026-10-15：`ALL_FLOORS` **不再写死**（原来是 `(i-1)*4.0`）。层高是**口径决定**
@@ -73,10 +87,27 @@ BATCHES = [
   #   ★★ 这张表是**硬编码的类名表**：`contours` 里发了、这里没列 ⇒ **静默不建**、
   #      面数照样「正常」、rc=0（铁律 158：判词不声明量具对什么盲就是恒绿）。
   #      只 11 层有它（其余 11 层的 JSON 里 `ROOF` 恒 0 条，循环直接跳过）。
-  ["批2 主体(墙/柱/井/板/门头墙 + 顶部四件)",
-   %w[WALL COL LIFT SLAB LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF]],
+  # ★★ 2026-10-19 加 `ROOF_ROOM`（出屋面楼梯间+电梯机房，`export_contours.py` 2026-10-18
+  #   起就在发）。这张表漏了它 ⇒ **静默不建**、面数照样「正常」、rc=0 ——
+  #   `gates/J-10.9-07` ③ 的「每一类都要到件」正是为这件事设的。
+  ["批2 主体(墙/柱/井/板/门头墙 + 顶部五件)",
+   %w[WALL COL LIFT SLAB LINTEL PARAPET ROOF_STAIR ROOF_STEP ROOF ROOF_ROOM]],
   ["批3 梯",                          %w[STAIR]]
 ]
+
+# ★★ 2026-10-17：**除 COL 外一律块级隔离**。
+#   第一版只隔离「成链」的类（WALL/STAIR/SLAB/PARAPET/ROOF*），把 DOOR 留在共用组里
+#   ⇒ c006 实测开口边从 6 反弹到 **132**，且 132 条**全在 G_*__DOOR**（12 层门洞互相吃面）。
+#   ⇒ 判据不是「这个类像不像链」，而是「这个类里有没有相邻共面的块」；实测只有 COL
+#   不能拆：`gates/J-10.8-02` ⑤⑪ 拿**每层 COL 组数**当分母（柱块数），
+#   改成每块一组会把分母换成多边形数，闸立刻 22 条红（实测）。
+#   所以：**COL 保持每层一组，其余全部每块一组**（白名单反转成排除名单，
+#   将来新增的类默认隔离 —— 默认安全的那个方向）。
+ISOLATE_EXCEPT = %w[COL].freeze
+
+def isolated?(lay)
+  !ISOLATE_EXCEPT.include?(lay)
+end
 
 def say(s)
   # ★ 每行都带 pid：日志**不在开头 File.delete**（删了就看不出有几个进程/几趟在写）
@@ -144,7 +175,7 @@ def guarded(su)
   say "CLEARED entities=#{model.entities.length}"
 
   c = { face: 0, fail: 0, skip: 0, degen: 0 }
-  skp = "#{DIR}/c006_su.skp"
+  skp = "#{DIR}/#{NAME}_su.skp"
   t_all = Time.now
 
   BATCHES.each_with_index do |(bname, layers), bi|
@@ -166,17 +197,16 @@ def guarded(su)
       d["polys"].group_by { |p| p["layer"] }.each do |lay, arr|
         next unless layers.include?(lay)
         key = "#{name}_#{lay}"
-        # ★ 每层每类一个组：不同类不共面 ⇒ 不会互相切面；组内多边形互不相交。
-        #   组名会被 SU 剥掉非 ASCII ⇒ 楼上成 `G_5__WALL`、地下室成 `__1__WALL`
+        # ★ 组名会被 SU 剥掉非 ASCII ⇒ 楼上成 `G_5__WALL`、地下室成 `__1__WALL`
         #   （`su_obj_to_glb.py` 的两条正则就是按这个反推的）。
-        if model.entities.grep(Sketchup::Group).any? { |gg| gg.name == key }
-          say "    = #{key} 已有，跳过"
-          next
-        end
-        g = model.entities.add_group
-        g.name = key
-        ge = g.entities
+        # ★★ 2026-10-17 起是**每块一个组**（见下），不再是「每层每类一个组」。
         say format("    > %s n=%d z=%.1f", key, arr.length, zbase + arr[0]["z"].to_f)
+        # 非隔离类（COL/LIFT/LINTEL/DOOR）共用一个组，先建出来
+        g_cls = nil
+        unless isolated?(lay)
+          g_cls = model.entities.add_group
+          g_cls.name = key
+        end
         arr.each_with_index do |pr, i|
           # ★ 每 20 块打一行：SU 万一把自己转死，日志能指到**哪一块**（不猜）
           if (i % 20).zero?
@@ -186,8 +216,27 @@ def guarded(su)
           #    日志最后一行就是转死时正在处理的那一块：`add` = 还没成面，`push` = 面成了、正拉伸。
           say format("        > add  %s", pr["id"]) if lay == "DOOR"
           next if pr["ring"].length < 3
+          # ★★ 2026-10-17 块级隔离（用户拍板「全面改并重算两栋」）：
+          #    同一组里**相邻共面的底块**在建面/拉伸时会互相吃面 —— c005 实测 575 条开口边
+          #    全落在块底面，且孤立类（COL/LIFT/LINTEL）为 0、成链的类（WALL/STAIR/SLAB/
+          #    PARAPET）才有。成链的类每块单独成组 ⇒ 组内只有一张面，没有别的块可吃。
+          #    **孤立类不动**（它们本来就闭合，而且 COL 的组数是 J-10.8-02 ⑤⑪ 的分母）。
+          #    组名仍用同一个 key：SU 的 OBJ 导出本来就按网格拆成多条 `g` 行
+          #    （实测一个组导出 Mesh1..Mesh5 五行同名），`su_obj_to_glb.py` 按名归并
+          #    ⇒ 下游 (层,类) 节点结构一字不变。
+          if isolated?(lay)
+            g = model.entities.add_group
+            g.name = key
+            ge = g.entities
+          else
+            g = nil
+            ge = g_cls.entities
+          end
           f = face_of(ge, pr["ring"], zbase + pr["z"].to_f, c)
-          next if f.nil?
+          if f.nil?
+            g.erase! if g && g.valid?
+            next
+          end
           say format("        > push %s", pr["id"]) if lay == "DOOR"
           # ★ 逐块的拉伸高度优先（2026-10-14「楼梯直接建模块替换」）：楼梯每一级要
           #   从自己的底标高**长到自己那一级**，若还按「一层的 STAIR 一个常数 50 mm」拉，
@@ -231,7 +280,7 @@ def guarded(su)
   #   glb 由 `rebuild/tools/su_obj_to_glb.py` 从 obj 转（`demo/build_pack.py:137,185`）。
   #   代价（铁律 28：处置是个决定）：**32.5 MB/趟 的写盘省了，但哪天要用 DAE 交换格式，
   #   得把这一行加回来** —— 这份代价就是「不再有现成 .dae」。
-  [["obj", "#{DIR}/c006_su.obj"]].each do |tag, p|
+  [["obj", "#{DIR}/#{NAME}_su.obj"]].each do |tag, p|
     ok = begin
       model.export(p)
     rescue StandardError => e
@@ -244,6 +293,9 @@ def guarded(su)
 rescue StandardError => e
   say "FATAL #{e.class}: #{e.message}"
   say((e.backtrace || []).first(8).join(" | "))
+  # ★ 2026-10-17：崩了**必须自己退**。上一版只在成功路径排了退出，实测崩溃后 SU 窗口
+  #   干挂满 600 s 才被 ps1 掐掉（`timeout-killed`），下一趟又被单实例挡住。
+  UI.start_timer(3.0, false) { SU.quit rescue nil }
 end
 
 # ★★ 2026-10-13 实测：原先写 `UI.start_timer(5.0, false)` 期望「只跑一次」，实际**重复触发** ——

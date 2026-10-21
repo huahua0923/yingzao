@@ -58,8 +58,13 @@ def build(building: str, out_pkg: str, artifacts: list, qc: dict,
         # 拷贝用字节层
         with open(a["src"], "rb") as fin, open(dst, "wb") as fout:
             fout.write(fin.read())
-        listed.append({"role": a["role"], "path": rel,
-                       "bytes": os.path.getsize(dst), "sha256": sha256_file(dst)})
+        entry = {"role": a["role"], "path": rel,
+                 "bytes": os.path.getsize(dst), "sha256": sha256_file(dst)}
+        # ★ 2026-10-18（用户「地下一楼也没有出来」）：调用方可以带**附加字段**
+        #   （`baseline_floor` 带 `node` = 模型层节点名）。原来这里只抄 role/path/bytes/sha256
+        #   ⇒ 附加字段被**静默丢掉**，查看器只能拿文件序号猜层 —— B1 因此永远对不上。
+        entry.update({k: v for k, v in a.items() if k not in ("role", "src", "rel")})
+        listed.append(entry)
 
     qc_rel = "qc/%s-qc.json" % building
     qc_abs = os.path.join(out_pkg, qc_rel.replace("/", os.sep))

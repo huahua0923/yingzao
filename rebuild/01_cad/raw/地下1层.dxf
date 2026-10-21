@@ -493,7 +493,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461329.323298611
+2461334.7788425926
   9
 $TDUCREATE
  40
@@ -501,7 +501,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461329.323298611
+2461334.7788425926
   9
 $TDUUPDATE
  40
@@ -933,11 +933,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{59DA487B-488E-4241-AB56-1410565BE024}
+{1F44F8F7-D7D7-424F-9A3C-58B627FEAD9F}
   9
 $VERSIONGUID
   2
-{053BD2BD-8F75-48B6-A078-7557ADD9F5BF}
+{FF0E3EDE-80DE-4363-928F-98A90543045D}
   9
 $EXTNAMES
 290
@@ -1327,9 +1327,9 @@ ISM
   0
 CLASS
   1
-ACDBPLACEHOLDER
+LAYOUT
   2
-AcDbPlaceHolder
+AcDbLayout
   3
 ObjectDBX Classes
  90
@@ -1343,9 +1343,9 @@ ObjectDBX Classes
   0
 CLASS
   1
-LAYOUT
+ACDBPLACEHOLDER
   2
-AcDbLayout
+AcDbPlaceHolder
   3
 ObjectDBX Classes
  90
@@ -2325,7 +2325,7 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-4.2墙体
+6房间号
  70
 0
  62
@@ -2351,11 +2351,11 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-8单位
+4.2墙体
  70
 0
  62
-4
+7
   6
 Continuous
 370
@@ -2370,6 +2370,32 @@ EE
 LAYER
   5
 309
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+7用途
+ 70
+0
+ 62
+6
+  6
+Continuous
+370
+-3
+390
+F
+347
+EE
+348
+0
+  0
+LAYER
+  5
+30A
 330
 1
 100
@@ -2395,32 +2421,6 @@ EE
   0
 LAYER
   5
-30A
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-6房间号
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-F
-347
-EE
-348
-0
-  0
-LAYER
-  5
 30B
 330
 1
@@ -2429,15 +2429,13 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-3轴线
+8单位
  70
-5
+0
  62
-1
+4
   6
 Continuous
-290
-0
 370
 -3
 390
@@ -2457,13 +2455,15 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-7用途
+3轴线
  70
-0
+5
  62
-6
+1
   6
 Continuous
+290
+0
 370
 -3
 390
@@ -3225,11 +3225,11 @@ AcDbSymbolTableRecord
 100
 AcDbTextStyleTableRecord
   2
-乙图
+_TCH_DIM
  70
 0
  40
-600.0
+0.0
  41
 1.0
  50
@@ -3237,11 +3237,11 @@ AcDbTextStyleTableRecord
  71
 0
  42
-450.0
+350.0
   3
-arial.ttf
+SIMPLEX
   4
-
+GBCBIG
   0
 STYLE
   5
@@ -3281,11 +3281,11 @@ AcDbSymbolTableRecord
 100
 AcDbTextStyleTableRecord
   2
-_TCH_DIM
+乙图
  70
 0
  40
-0.0
+600.0
  41
 1.0
  50
@@ -3293,11 +3293,11 @@ _TCH_DIM
  71
 0
  42
-350.0
+450.0
   3
-SIMPLEX
+arial.ttf
   4
-GBCBIG
+
   0
 ENDTAB
   0
@@ -22083,7 +22083,7 @@ DictionaryVariables
 280
 0
   1
-1.4.4 @ 2026-10-14T23:45:33.624485+00:00
+1.4.4 @ 2026-10-20T10:41:32.587889+00:00
   0
 VISUALSTYLE
   5
@@ -28645,7 +28645,7 @@ DictionaryVariables
 280
 0
   1
-1.4.4 @ 2026-10-14T23:45:33.646247+00:00
+1.4.4 @ 2026-10-20T10:41:32.597436+00:00
   0
 ENDSEC
   0

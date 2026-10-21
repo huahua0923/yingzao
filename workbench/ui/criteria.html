@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cdut3d · 判据科普</title>
+<!--
+  2026-10-20 用户令：「判据太多、太复杂，有时候我都看不懂。做成科普，
+  旁边有个图解释为什么用这个判据。」
+
+  ★ 本页只讲**为什么**和**怎么量**；每个数从 `/api/criteria` 现算（扫 gates/_out），不许手打。
+  ★ 检测器（现 22 条，随 缺陷库.json 现算）并成 8 组问句；归组只改讲法，不改量法 —— 每组的红/黄数仍逐条来自检测器。
+-->
+<style>
+  :root{--bg:#0a0e13;--panel:#0e1520;--line:#233040;--ink:#d7e2ee;--muted:#7d8fa3;
+        --accent:#4ea1ff;--red:#ff5d5d;--yellow:#ffc247;--green:#47d18c;--note:#6f8296}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.65 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  header{padding:26px 28px 10px}
+  header h1{margin:0 0 6px;font-size:22px;font-weight:600;letter-spacing:.02em}
+  header h1 span{color:var(--accent)}
+  header p{margin:6px 0 0;color:var(--muted);max-width:900px}
+  .banner{margin:14px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:8px;
+    background:var(--panel);color:var(--muted);max-width:980px}
+  .banner b{color:var(--ink)}
+  main{padding:10px 28px 60px;display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));
+    gap:16px;max-width:1500px}
+  .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;
+    display:flex;flex-direction:column}
+  .card .head{padding:12px 14px 8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card .tag{font-family:"Cascadia Mono",Consolas,monospace;font-size:11px;color:var(--accent);
+    border:1px solid #2b4a6f;border-radius:4px;padding:1px 6px;white-space:nowrap}
+  .card h2{margin:0;font-size:16px;font-weight:600}
+  .card .why{padding:10px 14px 0;color:var(--ink)}
+  .card .how{padding:6px 14px 10px;color:var(--muted);font-size:13px}
+  .card .how b{color:var(--ink);font-weight:600}
+  .nums{padding:8px 14px;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;
+    font-family:"Cascadia Mono",Consolas,monospace;font-size:12px}
+  .nums .r{color:var(--red)}.nums .y{color:var(--yellow)}.nums .n{color:var(--note)}
+  .nums .g{color:var(--green)}.nums .m{color:var(--muted)}
+  .ex{padding:0 14px 12px;color:var(--muted);font-size:12px}
+  .split{padding:0 14px 8px;color:var(--note);font-size:12px;
+    font-family:"Cascadia Mono",Consolas,monospace}
+  .warn{margin:0 14px 12px;padding:9px 11px;border-radius:6px;font-size:12.5px;
+    background:#2a1f0c;border:1px solid #5a431a;color:#ffd79a}
+  .warn b{color:#ffe9c9}
+  svg{display:block;width:100%;height:auto;background:#0b1119}
+  .legend{padding:8px 28px 0;color:var(--muted);font-size:12px}
+  .legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin:0 4px 0 12px}
+  footer{padding:0 28px 40px;color:var(--muted);font-size:12px;max-width:1100px}
+  code{font-family:"Cascadia Mono",Consolas,monospace;color:#9fc7f5}
+</style>
+</head>
+<body>
+<header>
+  <h1>判据科普 · <span>这些检查在问什么</span></h1>
+  <p>每条判据先回答一个人会问的问题。看不懂的判据，等于没有判据。</p>
+  <div class="banner" id="banner">正在从 <code>/api/criteria</code> 现算读数…</div>
+  <div class="legend">图示颜色：
+    <i style="background:#5b6b7d"></i>图纸
+    <i style="background:#4ea1ff"></i>模型件
+    <i style="background:#ff5d5d"></i>对不上
+    <i style="background:#47d18c"></i>对得上
+  </div>
+</header>
+<main id="grid"></main>
+<footer>
+  读数来源：<code>gates/_out/defects.&lt;栋&gt;.json</code>（每张卡的红/黄数由 <code>/api/criteria</code>
+  现算，不在页面上手打）。「未量到」是没跑或量不了，<b>不是 0</b>。
+</footer>
+
+<script>
+(function () {
+  // 每张卡的插图：解释「为什么需要这条判据」，不是装饰。
+  const SVG = {
+    对图: `
+<svg viewBox="0 0 420 190" role="img" aria-label="图纸与模型叠合、构件计数">
+  <text x="12" y="18" fill="#7d8fa3" font-size="12">原图（灰） ＋ 模型件（蓝）叠在一起</text>
+  <line x1="40" y1="40" x2="200" y2="40" stroke="#5b6b7d" stroke-width="6" stroke-linecap="round"/>
+  <line x1="40" y1="40" x2="200" y2="40" stroke="#47d18c" stroke-width="2.5" stroke-dasharray="10 8"/>
+  <text x="210" y="45" fill="#47d18c" font-size="11">重合 ⇒ 对得上</text>
+  <line x1="40" y1="80" x2="200" y2="80" stroke="#5b6b7d" stroke-width="6" stroke-linecap="round"/>
+  <text x="210" y="85" fill="#ff5d5d" font-size="11">图纸有、件没有 ⇒ 漏墙</text>
+  <line x1="40" y1="120" x2="200" y2="120" stroke="#4ea1ff" stroke-width="3"/>
+  <text x="210" y="125" fill="#ff5d5d" font-size="11">件有、图纸没有 ⇒ 多出来的墙</text>
+  <rect x="40" y="150" width="22" height="22" fill="#5b6b7d"/>
+  <text x="70" y="166" fill="#7d8fa3" font-size="11">图上画了柱</text>
+  <text x="160" y="166" fill="#ff5d5d" font-size="11">件里 0 根 ⇒ 漏认（图上没画就是图的事实）</text>
+</svg>`,
+    门: `
+<svg viewBox="0 0 420 150" role="img" aria-label="门必须开在墙上">
+  <rect x="30" y="52" width="360" height="22" fill="#33414f"/>
+  <rect x="150" y="52" width="52" height="22" fill="#0b1119"/>
+  <line x1="150" y1="52" x2="150" y2="74" stroke="#4ea1ff" stroke-width="2"/>
+  <line x1="202" y1="52" x2="202" y2="74" stroke="#4ea1ff" stroke-width="2"/>
+  <rect x="176" y="30" width="4" height="22" fill="#4ea1ff"/>
+  <path d="M180 52 a24 24 0 0 1 24 -24" fill="none" stroke="#4ea1ff" stroke-width="1.6" t="1"/>
+  <text x="30" y="40" fill="#7d8fa3" font-size="11">墙带（连续）</text>
+  <text x="150" y="96" fill="#47d18c" font-size="11">门洞在墙里 ⇒ 门扇贴墙、洞口打穿</text>
+  <circle cx="340" cy="118" r="5" fill="none" stroke="#ff5d5d" stroke-width="2"/>
+  <line x1="340" y1="118" x2="340" y2="94" stroke="#ff5d5d" stroke-width="2" stroke-dasharray="4 3"/>
+  <text x="250" y="140" fill="#ff5d5d" font-size="11">离墙 18 m 的「门扇」⇒ 认错符号</text>
+</svg>`,
+    楼梯: `
+<svg viewBox="0 0 420 150" role="img" aria-label="踏步是台阶不是墙">
+  <text x="12" y="18" fill="#7d8fa3" font-size="12">同样一块地方，两种建法</text>
+  <path d="M40 120 h40 v-16 h40 v-16 h40 v-16 h40 v-16 h40 v-16" fill="none" stroke="#47d18c" stroke-width="3"/>
+  <text x="40" y="140" fill="#47d18c" font-size="11">踏步：一级一级的台阶</text>
+  <rect x="250" y="40" width="120" height="80" fill="#33414f"/>
+  <text x="250" y="140" fill="#ff5d5d" font-size="11">错法：拉成一堵实心墙 ⇒ 挡路</text>
+</svg>`,
+    楼板屋顶: `
+<svg viewBox="0 0 420 150" role="img" aria-label="房间头顶要有楼板或屋顶">
+  <rect x="40" y="40" width="140" height="70" fill="none" stroke="#5b6b7d" stroke-width="2"/>
+  <rect x="30" y="30" width="160" height="12" fill="#47d18c" opacity=".8"/>
+  <text x="40" y="132" fill="#47d18c" font-size="11">板盖住房间 ⇒ 对</text>
+  <rect x="250" y="40" width="140" height="70" fill="none" stroke="#5b6b7d" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="260" y="80" fill="#ff5d5d" font-size="12">露天</text>
+  <text x="250" y="132" fill="#ff5d5d" font-size="11">没有板/屋顶 ⇒ 房间漏天</text>
+</svg>`,
+    接缝: `
+<svg viewBox="0 0 420 150" role="img" aria-label="墙与墙接上">
+  <line x1="40" y1="45" x2="175" y2="45" stroke="#5b6b7d" stroke-width="8"/>
+  <line x1="245" y1="45" x2="380" y2="45" stroke="#5b6b7d" stroke-width="8"/>
+  <text x="150" y="28" fill="#ff5d5d" font-size="11">断口</text>
+  <line x1="40" y1="105" x2="380" y2="105" stroke="#47d18c" stroke-width="8"/>
+  <text x="140" y="132" fill="#47d18c" font-size="11">接上 ⇒ 外墙闭合</text>
+</svg>`,
+    新鲜度: `
+<svg viewBox="0 0 420 150" role="img" aria-label="件必须比工具和图纸新">
+  <line x1="30" y1="70" x2="390" y2="70" stroke="#5b6b7d" stroke-width="2" marker-end="url(#ar)"/>
+  <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+    <path d="M0 0 L8 4 L0 8 z" fill="#5b6b7d"/></marker></defs>
+  <circle cx="80" cy="70" r="5" fill="#4ea1ff"/><text x="55" y="55" fill="#d7e2ee" font-size="11">图纸</text>
+  <circle cx="190" cy="70" r="5" fill="#4ea1ff"/><text x="165" y="55" fill="#d7e2ee" font-size="11">建件</text>
+  <circle cx="300" cy="70" r="5" fill="#4ea1ff"/><text x="275" y="55" fill="#d7e2ee" font-size="11">轮廓/GLB</text>
+  <text x="30" y="105" fill="#ff5d5d" font-size="11">工具或图纸改过之后没重跑 ⇒ 后面看的都是旧件</text>
+</svg>`,
+    实景: `
+<svg viewBox="0 0 420 150" role="img" aria-label="和航拍照片比对">
+  <rect x="40" y="30" width="340" height="90" fill="#16202c" stroke="#233040"/>
+  <path d="M90 100 L120 55 L300 55 L330 100 Z" fill="none" stroke="#47d18c" stroke-width="2"/>
+  <path d="M120 55 L300 55 L330 100 L90 100 Z" fill="none" stroke="#4ea1ff" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="50" y="140" fill="#7d8fa3" font-size="11">楼体轮廓（绿）与件（蓝虚线）套在一起看</text>
+</svg>`,
+    参数: `
+<svg viewBox="0 0 420 150" role="img" aria-label="参数有没有真值">
+  <rect x="40" y="30" width="150" height="34" fill="none" stroke="#47d18c"/>
+  <text x="52" y="52" fill="#47d18c" font-size="12">实测：量出来的</text>
+  <rect x="40" y="78" width="150" height="34" fill="none" stroke="#ffc247"/>
+  <text x="52" y="100" fill="#ffc247" font-size="12">假设：猜的</text>
+  <text x="210" y="72" fill="#d7e2ee" font-size="12">假设值只能出「提示」</text>
+  <text x="210" y="94" fill="#d7e2ee" font-size="12">不能据此说「件错了」</text>
+</svg>`
+  };
+
+  const grid = document.getElementById('grid');
+  const banner = document.getElementById('banner');
+
+  function el(tag, cls, html) {
+    const d = document.createElement(tag);
+    if (cls) d.className = cls;
+    if (html !== undefined) d.innerHTML = html;
+    return d;
+  }
+
+  fetch('/api/criteria', {cache: 'no-store'}).then(r => r.json()).then(d => {
+    banner.innerHTML = '<b>' + d.packs + ' / ' + d.总包 + '</b> 份缺陷档案' +
+      (d.无档案 && d.无档案.length
+        ? '（<b>' + d.无档案.join(' ') + '</b> 没有档案：没建件或建不出 ⇒ 没量到，不是全绿）' : '') +
+      '；下面 <b>' + d.组.length + '</b> 组问题（原 <b>' + (d.条数 || '?') +
+      '</b> 个检测器并组，只改讲法、不改量法）。';
+    for (const c of d.组) {
+      const card = el('div', 'card');
+      const head = el('div', 'head');
+      head.appendChild(el('span', 'tag', c.ids.join(' ')));
+      head.appendChild(el('h2', null, c.问答));
+      card.appendChild(head);
+      card.appendChild(el('div', 'why', c.为什么));
+      card.appendChild(el('div', 'how', '<b>怎么量：</b>' + c.怎么量));
+      card.appendChild(el('div', null, SVG[c.k] || ''));
+      const nums = el('div', 'nums');
+      nums.appendChild(el('span', 'r', '红 ' + c.红));
+      nums.appendChild(el('span', 'y', '黄 ' + c.黄));
+      nums.appendChild(el('span', 'n', '提示 ' + c.提示));
+      if (c.未量条.length) {
+        nums.appendChild(el('span', 'm', '从未量到：' + c.未量条.join(' ') +
+          (c.未量 ? '（' + c.未量 + ' 栋次）' : '')));
+      } else if (c.未量) {
+        nums.appendChild(el('span', 'm', '未量到 ' + c.未量 + ' 栋次'));
+      }
+      if (!c.红 && !c.黄 && !c.未量 && !c.未量条.length) {
+        nums.appendChild(el('span', 'g', c.提示 ? '已量（无红黄，但有提示）' : '已量 · 全绿'));
+      }
+      card.appendChild(nums);
+
+      // 判据病历：这条改过几次、最近一次错在哪、有没有反例（没有反例的绿没有依据）。
+      const led = c.账本 || {};
+      const lk = Object.keys(led);
+      if (lk.length) {
+        card.appendChild(el('div', 'split', '判据病历：' + lk.map(k => {
+          const v = led[k];
+          if (!v.量具) return k + ' 无量具' + (v.现状 ? '（' + v.现状 + '）' : '');
+          return k + (v.改过 ? ' 改过' + v.改过 + '次（' + v.最近 + '）' : ' 未改过') +
+            (v.反例 ? ' · 反例' + v.反例 : ' · 无反例');
+        }).join('　|　')));
+      }
+      // 按检测器拆账：让「240 条黄」自己说明是哪一把尺子报的，不许糊成一个数。
+      const rows = c.按条 || [];
+      if (rows.length > 1) {
+        card.appendChild(el('div', 'split', rows.map(x =>
+          x.id + (x.名 ? ' ' + x.名 : '') + ' 红' + x.红 + ' 黄' + x.黄 +
+          (x.提示 ? ' 提示' + x.提示 : '')).join(' · ')));
+      }
+      // ★ 只在**一组有多个检测器**时才谈「一条吞掉整组」：单检测器的组（如新鲜度）
+      //   100% 是必然的，那不是尺子有问题，是有问题。
+      const tot = c.红 + c.黄;
+      if (c.ids.length >= 2 && rows.length && tot >= 20) {
+        const top = rows[0], s = (top.红 + top.黄) / tot;
+        if (s >= 0.7) {
+          card.appendChild(el('div', 'warn',
+            '<b>' + top.id + '</b> 一条占了本组 ' + Math.round(s * 100) +
+            '% 的读数（' + (top.红 + top.黄) + ' / ' + tot +
+            '）。这多半不是 ' + (top.红 + top.黄) +
+            ' 个错误，而是<b>这一把尺子要重审</b>：先确认它的前提在本仓成立，再谈红黄。'));
+        }
+      }
+      if (c.例 && c.例.length) card.appendChild(el('div', 'ex', '例：' + c.例.join('；')));
+      grid.appendChild(card);
+    }
+  }).catch(e => {
+    banner.innerHTML = '读数没取到：' + e.message + '（页面结构照常显示，但数字不许猜）';
+    for (const k of Object.keys(SVG)) {
+      const card = el('div', 'card');
+      const head = el('div', 'head');
+      head.appendChild(el('h2', null, k));
+      card.appendChild(head);
+      card.appendChild(el('div', null, SVG[k]));
+      grid.appendChild(card);
+    }
+  });
+})();
+</script>
+</body>
+</html>

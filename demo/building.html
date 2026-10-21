@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cdut3d · 楼栋展示</title>
+<!--
+  ★★ 2026-10-16 用户令：「现在我要的展示页面，类似于 http://127.0.0.1:8140/admin/#/building」
+     形状**照抄 gym3d** 的 `frontend/admin/js/views/building.js`（那套已跑熟）。
+  ★★ 2026-10-17 用户令：「http://127.0.0.1:8140/building.html 页面参考这个设计」
+     ＋「这个页面右侧栏给了很多的解释和说明，这些对我这个展示页面没什么用。
+        我就要刚才那种演示页面的展示」＋「基本按照我给你的页面做」
+     ⇒ **去掉顶栏与底栏**，改成 `8140/building.html` 那种**全屏三维 + 浮层**：
+        左上 建筑下拉 + 栋名；其下 操作提示三行；再下 楼层条 + 开关
+        右上 信息卡（点构件 / 点房间都出在这）；右下 房间列表；图例在它左边
+        解释性内容（读数徽标、盲区、数据源）**全部收进 <details>**，默认不占地方。
+     只借参考页的**形**；配色沿用本页既有的蓝系令牌 —— 同一套 UI 里混两种主色，
+     读起来像两个系统拼起来的。
+     舞台 = **同源 iframe 托管成熟的 `demo/index.html`**（`?pack=<场区>/<楼栋>&embed=building`）
+     ⇒ **不重写查看器**。它是成熟件（分层/透明/点选/朝向自检都在里面），重画一遍等于再造一个会漂的副本。
+
+  ★ 父页读子页**只走握手口**（`child.window.__cdut3d` / `__cdut3dLive()`），**不猜文字**：
+       · phase: 'loading' | 'ready' | 'failed'  —— 只有 'ready' 才算「几何挂上去了」
+       · builtToken === buildToken             —— 防「读的是上一趟的残影」
+       · `__cdut3dLive()` 是**当场**取数（`renderer.info.render.triangles` 恒是上一帧的数）
+    子页那份握手口在 `demo/index.html` 里（搜 `window.__cdut3d =`），与它既有的
+    `__cdutView/__cdutPick/...` 哨位**并存不改** —— 那批是 `gates/J-09.1.1-viewer.py` 钉住的。
+    ★ **哨位名单一个都不许加**：所以本页要用子页的开关（楼层条、房间色块、图层清单）时，
+      一律**按 id 去点它自己的控件**，不新造接口。
+
+  ★★ 2026-10-17 用户令：「一个页面多个建筑」（先说过「两个建筑对比」，随即改口「不是对比，
+     是一个多个建筑」「一个页面多个建筑」）⇒ **楼栋下拉里有多栋，同一页切换，不是并排对比**。
+     ★★ 2026-10-17 用户令（改口）：「理化楼是完全按照 cdut3d 的线路生成，和其他没有关系」
+     ⇒ 理化楼 c005 **不再是「外部楼栋」**：它已按本仓口径打成 `packs/cdut-main/c005/`
+        （见 `demo/build_pack_c005.py`），与 c006 一样走 `packs` 这条路、同一个查看器。
+        `external` 那条分支（`demo/external_buildings.json`）**整段删掉** —— 同一栋楼
+        在页面上下拉里出现两次、两套说法，比没有更糟。
+     一律 `packs/index.json::packs`：本仓打过包的楼栋，走同源 iframe + 握手口，
+     楼层条/房间面板/色块联动全都在。
+  ★ 三个数字全部**现算**：楼栋清单来自 `packs/index.json`（`demo/build_index.py` 从盘上生成），
+    读数来自子页握手，**本文件里不许出现任何楼栋专属的坐标/层高/件名**（用户令：通用的步骤）。
+-->
+<style>
+:root{
+  --bg:#0e1116; --line:#26303c; --ink:#e8eef6; --dim:#8d9bab;
+  --acc:#59b0ff; --ok:#4cc38a; --warn:#e0b341; --bad:#e5645f;
+  --panel:#0c1117f2;
+  --mono:Consolas,"Cascadia Mono",ui-monospace,"Courier New",monospace;
+  --ui:"Segoe UI",system-ui,-apple-system,"Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--ui);overflow:hidden}
+
+/* 全屏舞台：三维铺满整个窗口，一切 UI 都是浮在它上面的层 */
+.stage{position:fixed;inset:0;background:#fff}
+.stage iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+.veil{
+  position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
+  background:#0e1116ee;color:var(--ink);text-align:center;padding:24px;
+}
+.veil[data-on="1"]{display:flex}
+.veil .box{max-width:640px}
+.veil h2{margin:0 0 8px;font-size:18px}
+.veil p{margin:6px 0;color:var(--dim);font:13px/1.6 var(--mono);word-break:break-all}
+
+/* 浮层公共形：深底、细描边、投影。层级一律 10（veil 30 压在它们上面） */
+.fl{
+  position:fixed;z-index:10;background:var(--panel);border:1px solid var(--line);
+  border-radius:9px;box-shadow:0 8px 26px #0008;backdrop-filter:blur(3px);
+}
+.fl h3{margin:0;padding:7px 10px;font:600 12px/1.3 var(--ui);color:var(--dim);
+  border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.fl h3 .n{font:600 11.5px var(--mono);color:var(--ink);text-align:right}
+
+select{
+  background:#0c1117;color:var(--ink);border:1px solid var(--line);border-radius:6px;
+  padding:3px 6px;font:12px var(--ui);min-width:180px;max-width:26vw;
+}
+select:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+
+/* ★ 2026-10-20 用户令「各个模块之间摆得比较紧凑一点，腾出大空间来显示这个房间」：
+   左上两块（建筑条 / 楼层条）收成一个紧凑的竖排，互相之间 4 px；右列/信息卡同步收窄。 */
+#bar{left:8px;top:8px;display:flex;align-items:center;gap:7px;padding:4px 8px}
+#bar label{font:600 11px/1.2 var(--mono);letter-spacing:.08em;color:var(--dim)}
+#bar b{font:600 13px var(--ui);color:var(--ink);white-space:nowrap}
+
+/* 楼层条：全部 / F1..F11 / 分隔 / 房间色块开关 */
+#floorbar{left:8px;top:44px;padding:4px 7px;display:flex;align-items:center;
+  gap:5px;flex-wrap:wrap;max-width:min(600px,54vw)}
+.flrow{display:flex;flex-wrap:wrap;gap:5px}
+.flrow button{
+  padding:4px 9px;background:#0e141b;color:var(--dim);border:1px solid var(--line);
+  border-radius:6px;font:12px var(--mono);cursor:pointer;
+}
+.flrow button:hover{color:var(--ink);border-color:var(--acc)}
+.flrow button.on{background:#123049;color:#cfe9ff;border-color:var(--acc)}
+.sep{width:1px;align-self:stretch;background:var(--line);margin:0 2px}
+.sw{
+  display:inline-flex;align-items:baseline;gap:6px;padding:4px 9px;cursor:pointer;
+  background:#0e141b;color:var(--dim);border:1px solid var(--line);border-radius:6px;
+  font:12px var(--mono);white-space:nowrap;
+}
+.sw:hover{color:var(--ink);border-color:var(--acc)}
+.sw[data-on="1"]{background:#123049;color:#cfe9ff;border-color:var(--acc)}
+.sw[data-busy="1"]{opacity:.55}
+
+/* 右上信息卡：点构件 / 点房间 / 从列表选房间，三个来源都落在这里 */
+/* ★ 高度用 calc 把「上锚的卡」与「下锚的箱」的预算加起来卡在 100vh 以内。
+   写死 52vh/56vh 在矮窗口（≈530 px）会相加超 100vh ⇒ 房间列表压在信息卡上，
+   而「压住」看起来像「信息卡没这一行」（铁律 137：判据漏掉主体就永远绿）。 */
+#info{right:8px;top:8px;width:250px;max-height:calc(40vh - 12px);overflow:auto;padding:6px 9px 7px;
+  font:12px/1.6 var(--ui);color:var(--dim)}
+/* ★ 没有卡片可显示时整块收起来（2026-10-20「没有必要的显示就不要显示」）—— 空面板也占屏 */
+#info.hide{display:none}
+#info::-webkit-scrollbar{width:8px}
+#info::-webkit-scrollbar-thumb{background:#232c38;border-radius:4px}
+#info .t{font:700 14px var(--ui);color:var(--acc);margin:0 0 3px}
+#info b{color:#8fa2b6;font-weight:400;display:inline-block;min-width:62px;vertical-align:top}
+#info span{color:var(--ink)}
+#info code{font:11.5px var(--mono);color:#9fd0ff;background:#111a24;border:1px solid #1d2836;
+  border-radius:4px;padding:0 4px}
+#info .note{margin:6px 0 0;padding-top:6px;border-top:1px dashed var(--line);
+  color:#6f7b8b;font-size:11.5px;line-height:1.6}
+#infoIdle{color:#6f7b8b}
+/* ★ 2026-10-19 用户令「这个页面有很多的解释，都先不要」⇒ 说明性浮层一律不显示：
+   操作提示（已删）、空态说明、读数/盲区两个 details。数据（楼层条、房间表、图例、状态行）照旧。 */
+#infoIdle,#panelBox details:not(:first-child){display:none}
+.icard{position:relative;padding-top:2px}
+.icard + .icard{margin-top:8px;border-top:1px solid var(--line);padding-top:9px}
+.icard .x{position:absolute;right:-2px;top:-1px;cursor:pointer;color:var(--dim);
+  font:14px var(--mono);padding:1px 6px;z-index:1}
+.icard .x:hover{color:var(--ink)}
+
+/* ★ 2026-10-20 用户令「房间用途和房间[号]，都在**最右侧一列**」（先口误说左，随即更正）：
+   两块原来**右下并排**（图例挤在信息列左边、窄窗口还被 `display:none` 藏掉），
+   现在摞成**右列**：用途在上、房间号在下，列底对齐窗口下沿。
+   高度预算照 `#info` 那句注释的老规矩：信息卡 ≤46vh + 本列 ≤54vh ≈ 100vh，互不压。
+   ★ 外框在 `#rightcol`；两块自己不再定位（`position:relative` 盖掉 `.fl` 的 fixed）。 */
+#rightcol{position:fixed;right:8px;bottom:8px;width:244px;z-index:10;
+  max-height:calc(54vh - 8px);display:flex;flex-direction:column;gap:5px;min-height:0}
+#rightcol > .fl{position:relative;left:auto;right:auto;top:auto;bottom:auto;
+  width:auto;max-height:none;min-height:0;flex:0 1 auto;display:flex;flex-direction:column}
+#legendBox{flex:0 0 auto}
+#panelBox{flex:1 1 auto;overflow:hidden}
+
+/* 下：房间号列表 */
+#panelBox details{border-bottom:1px solid var(--line);min-height:0;display:flex;flex-direction:column}
+#panelBox details:last-child{border-bottom:0}
+#panelBox summary{cursor:pointer;padding:4px 9px;font:600 11.5px/1.3 var(--ui);color:var(--acc);
+  display:flex;justify-content:space-between;gap:6px}
+#panelBox summary .n{font:600 11px var(--mono);color:var(--dim)}
+#panelBox .dbody{padding:0 8px 7px;overflow:auto;min-height:0}
+#panelBox .dbody::-webkit-scrollbar{width:8px}
+#panelBox .dbody::-webkit-scrollbar-thumb{background:#232c38;border-radius:4px}
+.rlist{display:flex;flex-direction:column;gap:1px;max-height:36vh;overflow:auto}
+.rrow{
+  display:grid;grid-template-columns:9px 1fr auto;gap:7px;align-items:baseline;
+  padding:3px 5px;border-radius:4px;cursor:pointer;border:1px solid transparent;
+}
+.rrow:hover{background:#131b24;border-color:var(--line)}
+.rrow.on{background:#12293c;border-color:var(--acc)}
+.rrow i{width:10px;height:10px;border-radius:2px;border:1px solid #0007;align-self:center}
+.rrow .nm{font:12px var(--mono);color:var(--ink);display:block}
+.rrow .pu{font:11px var(--ui);color:var(--dim);display:block}
+.rrow .ar{font:11.5px var(--mono);color:var(--dim)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap;
+  background:#0e141b;border:1px solid var(--line);border-radius:999px;padding:2px 8px;
+  font:11px var(--mono);color:var(--dim);
+}
+.chip b{color:var(--ink);font-weight:600}
+.chip.st-loading b{color:var(--warn)} .chip.st-ready b{color:var(--ok)} .chip.st-failed b{color:var(--bad)}
+
+/* 上：房间用途图例（位于左列顶部，摆位见 `#leftcol`） */
+#legendBox{display:flex;flex-direction:column}
+/* 2026-10-20 用户令「悬浮标牌」的开关：就挂在图例标题上，不另开面板 */
+#legendBox h3{display:flex;align-items:center;gap:8px}
+#legendBox .rtag{margin-left:auto;display:inline-flex;align-items:center;gap:4px;
+  font:600 11px var(--ui);color:var(--dim);cursor:pointer;user-select:none}
+#legendBox .rtag input{margin:0}
+#legendBox .rtag.on{color:var(--acc)}
+#legendBox .dbody{padding:4px 8px 6px;overflow:auto;min-height:0;max-height:26vh}
+#legendBox .dbody::-webkit-scrollbar{width:8px}
+#legendBox .dbody::-webkit-scrollbar-thumb{background:#232c38;border-radius:4px}
+.lgd{display:flex;flex-direction:column;gap:1px}
+.lgd span{display:inline-flex;align-items:center;gap:6px;font:11px var(--ui);color:var(--dim);
+  cursor:pointer;white-space:nowrap;border-radius:4px;padding:1px 3px}
+.lgd span:hover{color:var(--ink)}
+.lgd span.on{color:var(--ink);background:#16202c}
+.lgd i{width:10px;height:10px;flex:0 0 10px;border-radius:2px;border:1px solid #0007}
+.lgd b{margin-left:auto;font-family:var(--mono);font-weight:600;color:var(--dim)}
+
+/* 左下：状态 + 路径 + 按钮 */
+#footline{left:8px;bottom:8px;max-width:min(600px,54vw);padding:4px 9px;
+  font:11px var(--mono);color:var(--dim)}
+#footline .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#footline .btns{display:flex;gap:5px}
+.bar-btn{
+  background:#0e141b;color:var(--ink);border:1px solid var(--line);border-radius:6px;
+  padding:3px 8px;font:11.5px var(--ui);cursor:pointer;white-space:nowrap;
+}
+.bar-btn:hover{border-color:var(--acc);color:#fff}
+#alerts.bad{color:var(--warn)}
+#footline .tag{display:block;margin-top:4px;color:#6f7b8b;word-break:break-all}
+
+@media (max-width:1180px){
+  /* ★ 2026-10-20：这一条原来把图例整块 `display:none`（用户：「这个不显示」）—— 改成只收窄，不再隐藏。 */
+  #rightcol{width:232px}
+}
+@media (max-width:900px){
+  #floorbar{top:48px;max-width:calc(100vw - 16px)}
+  #info{width:220px;max-height:36vh}
+}
+
+/* ── 2026-10-21 展示页视觉升级：夜景金铜色、玻璃浮层、全屏舞台 ─────────── */
+:root{
+  --bg:#070c11;--line:rgba(228,211,176,.16);--ink:#eee7da;--dim:#8d9aa4;
+  --acc:#d8b06a;--ok:#78b99a;--warn:#d8b06a;--bad:#df8875;
+  --panel:rgba(9,16,22,.78);
+}
+body{background:var(--bg);font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif}
+.stage{background:#070c11}
+.stage::after{
+  content:"";position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(4,8,12,.62) 0%,transparent 19%,transparent 76%,rgba(4,8,12,.74) 100%),
+    radial-gradient(circle at 50% 42%,transparent 40%,rgba(3,7,10,.36) 100%);
+}
+.fl{
+  background:linear-gradient(145deg,rgba(15,25,33,.89),rgba(7,13,18,.83));
+  border:1px solid var(--line);border-radius:3px;
+  box-shadow:0 20px 54px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter:blur(16px) saturate(115%);
+  -webkit-backdrop-filter:blur(16px) saturate(115%);
+}
+.fl h3{
+  padding:10px 12px;color:#c7bda9;font-size:10px;letter-spacing:.16em;
+  border-bottom-color:rgba(228,211,176,.12);
+}
+.fl h3 .n{color:var(--acc);font-size:10px}
+#bar{
+  left:22px;top:20px;padding:12px 16px 11px;gap:10px;border-left:2px solid var(--acc);
+  min-width:420px;
+}
+#bar::before{
+  content:"营造 · CHENGDU UNIVERSITY OF TECHNOLOGY";
+  position:absolute;left:16px;top:8px;color:rgba(216,176,106,.7);
+  font-size:7.5px;letter-spacing:.22em;white-space:nowrap;
+}
+#bar label{
+  margin-top:17px;color:#778894;font-size:8px;letter-spacing:.18em;
+}
+#bar select{
+  margin-top:17px;min-width:220px;background:rgba(4,10,15,.72);
+  border-color:rgba(228,211,176,.16);border-radius:2px;padding:5px 8px;
+  color:#d9d2c5;font-size:11px;
+}
+#bar b#bname{
+  margin-top:17px;font-family:"STZhongsong","Songti SC","SimSun",serif;
+  font-size:19px;font-weight:500;letter-spacing:.08em;color:#f0e7d7;
+}
+#bar #chainTag{display:none}
+#floorbar{
+  left:22px;top:92px;max-width:min(720px,calc(100vw - 360px));
+  padding:8px 10px;gap:6px;background:rgba(8,14,20,.72);
+}
+.flrow{gap:4px}
+.flrow button{
+  min-width:36px;padding:5px 9px;border:1px solid transparent;border-radius:2px;
+  background:transparent;color:#8998a3;font-size:10px;letter-spacing:.04em;
+}
+.flrow button:hover{color:#eee7da;border-color:rgba(216,176,106,.3);background:rgba(216,176,106,.05)}
+.flrow button.on{
+  background:linear-gradient(135deg,rgba(216,176,106,.96),rgba(170,124,58,.96));
+  border-color:transparent;color:#17110a;font-weight:700;
+}
+.sep{background:rgba(228,211,176,.13)}
+.sw{
+  padding:5px 10px;border-color:transparent;border-radius:2px;background:rgba(255,255,255,.026);
+  color:#91a0ab;font-size:10px;
+}
+.sw:hover{color:#eee7da;border-color:rgba(216,176,106,.25);background:rgba(216,176,106,.045)}
+.sw[data-on="1"]{background:rgba(216,176,106,.11);color:#e7c98d;border-color:rgba(216,176,106,.38)}
+#clipH{accent-color:var(--acc)}
+#rightcol{right:22px;bottom:22px;width:278px;gap:8px;max-height:calc(58vh - 16px)}
+#info{right:22px;top:20px;width:286px;max-height:calc(38vh - 16px);padding:13px 15px;
+  color:#9eabb5;font-size:11.5px;line-height:1.7}
+#info .t{font-family:"STZhongsong","Songti SC","SimSun",serif;font-size:17px;font-weight:500;
+  color:var(--acc);letter-spacing:.06em}
+#info b{color:#80909c;min-width:58px}
+#info span{color:#e3ddd1}
+#info code{background:rgba(216,176,106,.07);border-color:rgba(216,176,106,.17);color:#e7c98d}
+.icard + .icard{border-top-color:rgba(228,211,176,.1)}
+#legendBox{flex:0 0 auto}
+#panelBox{flex:1 1 auto}
+#legendBox .dbody{max-height:25vh;padding:7px 10px}
+#panelBox summary{padding:10px 12px;color:#d6c8ae;font-size:10px;letter-spacing:.12em}
+#panelBox .dbody{padding:0 10px 9px}
+.rlist{gap:3px;max-height:34vh}
+.rrow{padding:7px 8px;border-radius:2px;border-color:transparent}
+.rrow:hover{background:rgba(255,255,255,.035);border-color:rgba(216,176,106,.13)}
+.rrow.on{background:rgba(216,176,106,.1);border-color:rgba(216,176,106,.38)}
+.rrow .nm{font-size:11px;color:#e6dfd3}
+.rrow .pu{font-size:9.5px;color:#7d8d98}
+.rrow .ar{font-size:10px;color:#b3a88f}
+.lgd span{padding:4px 5px;border-radius:2px;font-size:10px;color:#82919c}
+.lgd span:hover{color:#e6dfd3}
+.lgd span.on{background:rgba(216,176,106,.08);color:#ead9b4}
+#legendBox .rtag{font-size:9.5px;color:#8b9aa4}
+#legendBox .rtag.on{color:var(--acc)}
+#footline{
+  left:22px;bottom:22px;padding:9px 12px;max-width:min(660px,54vw);
+  color:#7f8f9b;font-size:10px;letter-spacing:.03em;
+}
+.bar-btn{
+  border-color:rgba(228,211,176,.14);border-radius:2px;background:rgba(255,255,255,.025);
+  color:#aab5bd;padding:5px 10px;font-size:10px;
+}
+.bar-btn:hover{border-color:rgba(216,176,106,.4);color:#ead9b4}
+#alerts.bad{color:var(--bad)}
+body::after{
+  content:"拖动旋转 · 滚轮缩放 · 双击复位";
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:9;
+  color:rgba(232,225,212,.36);font-size:9px;letter-spacing:.22em;pointer-events:none;
+}
+@media (max-width:900px){
+  #bar{left:12px;top:12px;min-width:0;max-width:calc(100vw - 24px)}
+  #bar::before{display:none}#bar label{display:none}
+  #bar select,#bar b#bname{margin-top:0}
+  #floorbar{left:12px;top:76px;max-width:calc(100vw - 24px)}
+  #info{right:12px;top:12px;width:240px}
+  #rightcol{right:12px;bottom:12px;width:240px}
+  #footline{left:12px;bottom:12px;max-width:calc(100vw - 280px)}
+  body::after{display:none}
+}
+</style>
+</head><body>
+
+<div class="stage" id="stage"></div>
+<div class="veil" id="veil"><div class="box" id="veilBox"></div></div>
+
+<!-- 左上：建筑 + 栋名 -->
+<div class="fl" id="bar">
+  <label for="pick">建筑</label>
+  <select id="pick" title="清单来自 packs/index.json（demo/build_index.py 从盘上现算）"></select>
+  <b id="bname">—</b>
+  <span id="chainTag" style="font:11px var(--mono);color:var(--dim);white-space:nowrap"></span>
+</div>
+
+<!-- ★ 2026-10-20 用户令「没有必要的显示就不要显示（比如『说明什么』之类的）」「各个模块
+     之间摆得比较紧凑一点，腾出大空间来显示这个房间」⇒ 原来的操作提示/路径浮层（`#hint`）整块删掉：
+     它印的是层数×层高/件大小/指纹 —— 对看房间没有用，还占住左上 140 px。 -->
+
+<!-- 楼层条 + 房间色块开关 -->
+<div class="fl" id="floorbar">
+  <div class="flrow" id="rfloors"></div>
+  <span class="sep"></span>
+  <button class="sw" id="bRooms" data-on="0" data-busy="1"
+          title="在三维里把每个房间铺成色块。★ 只有**从这个展示页进去**（带 embed）才铺得出来；直接打开查看器时没有这一层。">房间色块 <b id="rbN2">—</b></button>
+  <button class="sw" id="bWallT" data-on="0" data-busy="1"
+          title="把外墙/门楣/女儿墙调成 25% 半透明 —— 能看穿外壳看到楼内的房间色块（照参考页 8140 的「墙体透明」）。★ 同样只在展示页这一支里有。">墙体半透明 <b id="wallN">—</b></button>
+  <!-- ★ 2026-10-20 用户令「可以，你做吧」：剖切面。D-01 穿模 / D-03 门洞没打穿 / D-15 某层没板，
+       这三类在整栋轴测图里**都看不见**，剖到那一层就现形。滑杆单位是**该件包围盒的百分比**，
+       绝对值（m）由子页按包围盒现算并印在右边 —— 本页不另算一份（铁律 018）。 -->
+  <button class="sw" id="bClip" data-on="0" data-busy="1"
+          title="沿高度把三维剖开：只留标高以下的构件。剖到某一层，就能看清墙接没接上、门洞打没打穿、楼板有没有盖。">剖切 <b id="clipN">—</b></button>
+  <input type="range" id="clipH" min="0" max="1000" value="1000" disabled
+         style="width:120px;vertical-align:middle" title="剖切标高（拖动改变切开的高度）">
+</div>
+
+<!-- 右上：信息卡。三个来源（点子页构件 / 点子页房间 / 点本页列表）都落在这里 -->
+<div class="fl" id="info">
+  <div id="infoIdle">在上方三维里<b>点一下构件或房间地面</b>，这里出它的信息。<br>
+    （这个浮层是<b>展示页</b>：查看器自己那份信息面板被收起来了，本页把它<b>搬</b>到这里显示。）</div>
+  <div class="icard" id="pickcard" style="display:none"></div>
+  <div class="icard" id="rcard" style="display:none"></div>
+</div>
+
+<!-- 右列：房间用途在上、房间号在下（2026-10-20 用户令「房间用途和房间[号]，都在最右侧一列」） -->
+<div id="rightcol">
+<!-- 上：房间用途图例（点一项只看这一类，三维色块跟着筛） -->
+<div class="fl" id="legendBox">
+  <h3>房间用途 <span class="n" id="rlegendN">—</span>
+    <label class="rtag" id="rtagBox"
+      title="在每个房间色块上方浮一块小标牌：第一行使用人、第二行面积、第三行用途（多房号共用一区的会注明）。标牌永远正对镜头，不随楼转动。"><input type="checkbox" id="rtagOn">标牌 <b id="rtagN">—</b></label>
+  </h3>
+  <div class="dbody"><div class="lgd" id="rlegend"></div></div>
+</div>
+
+<!-- 下：房间号列表（数据只取包内 ledger/rooms.json） -->
+<div class="fl" id="panelBox">
+  <details open>
+    <summary>房间 <span class="n" id="rnum">—</span></summary>
+    <div class="dbody"><div class="rlist" id="rlist"></div></div>
+  </details>
+  <details>
+    <summary>数据源与本页量具的盲区</summary>
+    <div class="dbody" style="font:11.5px/1.7 var(--ui);color:#8d9bab">
+      ① 只量**本页这个 iframe**：子页画不出来（显存耗尽/驱动黑名单）时握手口仍可能报
+      <code>ready</code>（几何进了场景，只是没画到屏幕上）——「件在场景里」≠「屏幕上看得见」。<br>
+      ② 只量**包的声明与渲染统计**（三角面 / 子节点 / 层数），**不证几何对**（那是 <code>gates/</code> 的活）。<br>
+      ③ 判据走握手口，**不读子页文字**：<code>#postag</code> 那类文本只当第二张网；文字改了不会让本页判错，
+      但文字里的信息也可能被本页**漏掉**。<br>
+      ④ 「量不到」一律显示 <code>—</code>，**不显示 0**（0 是一个读数，量不到不是读数）。<br>
+      ⑤ <b>房间列表只读包内 <code>ledger/rooms.json</code></b>（一张<b>人写的</b>台账），
+      <b>不读几何</b>：台账面积与子页那套房间多边形是两回事，本页<b>不判谁对</b>；
+      图纸上的用途/单位若写错，本页照搬、不校对。<br>
+      ⑥ 楼层条与房间色块开关是<b>点子页自己的控件</b>（跨 DOM，同源），<b>只证「控件被点到」</b>，
+      不证子页真的换过画面 —— 子页画不出来时这句照样成立。<br>
+      ⑦ ★★ <b>本页是带 <code>embed</code> 进去的</b>，子页在这条路上会**多铺一层房间色块**
+      （<code>demo/index.html</code> 的 ⑨ 段，只在 embed 下执行）。⇒ <b>展示页看到的场景与
+      <code>gates/</code> 打开的审计页<b>不完全一样</b></b>：闸不带 embed，没有这一层。
+      这是 2026-10-17 用户择定的（「铺，只展示页开」），代价就是这里的**不一致**。<br>
+      ⑧ 右上信息卡里「点构件 / 点房间」那几张卡，是把**子页 <code>#pickinfo</code> 的 HTML 搬过来**显示的
+      （子页那份面板被收在收起来的侧栏里，屏幕上本来看不见）。本页只<b>搬显示</b>，
+      判词仍以子页为准；跨源或子页没起来时**保持上一次的显示、不报错刷屏**。<br>
+      ⑨ 「房间色块」开关报的片数取自<b>子页那条开关自己的标签</b>，是子页算的；本页不另算一遍
+      （两处写同一个计数，一致也证明不了它是对的 —— 铁律 018）。<br>
+      ⑩ ★ <b>「铺了色块」不等于「点得到」</b>：色块铺在楼内，被外立面挡着。<b>「墙体半透明」关着</b>时
+      80 点网格抽样只有 <b>18</b> 点命中房间面（2026-10-17 让路改动后实测；改前同口径 <b>11</b>）⇒ 想点房间，
+      多半还要先把楼层条收到某一层、或把模型转到俯视/底面。上面那句「点击房间地面看用途」是<b>能力声明，不是保证</b>。<br>
+      ⑪ ★ 「墙体半透明」＝照参考页 `8140/building.html` 做的（它的按钮叫「墙体透明」）：把<b>墙/门楣/女儿墙</b>
+      调到 <b>25%</b>（<b>同一个数</b>，`WALL_TRANSPARENT_OPACITY`），<b>色块本身不动</b>（参考页注释里写着：
+      压暗用颜色 lerp 不用 `material.opacity`，为的是不引透明排序）。它只管<b>看透</b>。
+      ★ 用户令「<b>选中时，不要再选中墙体，要直接选中地板</b>」⇒ 子页现在<b>无条件</b>让外壳那一族给房间地垫让路，
+      <b>与这个开关无关</b>（不是「开了才让路」）；挡路的若是楼梯/竖井/门洞照旧报它。
+      代价：<b>本页点不到墙、门头墙、女儿墙本身了</b>。两个开关都只活在<b>这条 embed 支路</b>里
+      —— 直接打开查看器（不带 <code>embed</code>）时<b>两个都不存在</b>，那才是四条闸看到的那份。<br>
+      ★★ <b>本页墙体是白的</b>（2026-10-17 用户令「墙体就不要是红色的，白色就可以了」）：砖红族是当初为
+      <b>找问题</b>下的外衣（冷灰门头墙 vs 砖红墙，一眼挑出补出来的门头墙），展示页两边都是白 ⇒
+      <b>那块缺陷在展示页上看不见</b>，要看得回不带 <code>embed</code> 的审计页。白族只在 embed 生效。<br>
+      ⑫ ★ <b>色块与模型原来差一个平移</b>（2026-10-17 用户令「色块和模型要完全叠在一起」，实测才发现）：
+      包内 <code>baseline/floors/*.json</code> 是<b>包自己的居中帧</b>，模型是<b>场地帧</b>，差
+      <b>+81.900 / +52.199 m</b> ⇒ 色块整片飘在楼外。这个平移是<b>页里现求</b>的（拿两边每层都有的柱心
+      <b>按下标配对</b>、每层自证、取多数派：10 层同意、残差 ≤0.4 mm；F7 条数不等 14≠30 判<b>对不上</b>并记名），
+      <b>不是</b>写死的常数。配准失败时<b>一块也不铺</b>。色块上的数字是这个平移的<b>实测值</b>，不是声明。
+    </div>
+  </details>
+</div>
+
+</div><!-- /#rightcol -->
+
+<!-- 左下：状态行 -->
+<div class="fl" id="footline">
+  <div class="row1">
+    <span id="status">正在读楼栋清单…</span>
+    <span id="alerts"></span>
+    <span class="btns">
+      <button class="bar-btn" id="bFull">全屏</button>
+      <button class="bar-btn" id="bTab">新标签打开</button>
+      <button class="bar-btn" id="bReload">重载</button>
+    </span>
+  </div>
+  <!-- ★ 2026-10-20：包路径（`.tag`）按用户令不再显示 —— 它是给维护者看的，不是给看房间的人看的 -->
+</div>
+
+<script type="module">
+// ── 0 工具 ────────────────────────────────────────────────────────────────
+// ★ 文本位用 esc、属性位用 attr（同一套纪律见 demo/index.html 那段 ★★：包里来的串
+//   （楼栋名/标题）一律转义后再进 innerHTML，属性位还要多转引号，否则一个带引号的名字
+//   就能闭合属性跑出标签）。
+const esc  = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const attr = s => esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const dash = v => (v === null || v === undefined || v === '') ? '—' : v;
+const mb   = b => (b == null) ? '—' : (b / 1e6).toFixed(1) + ' MB';
+const sha  = s => s ? String(s).slice(0, 12) + '…' : '—';
+
+const POLL_MS = 400;            // 轮询握手口的间隔
+const READY_TIMEOUT_MS = 60000; // 12 MB 本地件：60 s 还没 'ready' 就当它挂了（实测装载 <3 s）
+const PACKS_INDEX = '../packs/index.json';
+
+const $ = id => document.getElementById(id);
+const stage = $('stage'), pick = $('pick'), chips = $('chips'), veil = $('veil'),
+      veilBox = $('veilBox'), statusEl = $('status'), alertsEl = $('alerts'),
+      rnum = $('rnum'), rfloors = $('rfloors'), rlegend = $('rlegend'), rlegendN = $('rlegendN'),
+      rlist = $('rlist'), rcard = $('rcard'), pickcard = $('pickcard'), infoIdle = $('infoIdle'),
+      bname = $('bname'), hint3 = $('hint3'),   // ★ hint3 已随 `#hint` 浮层删除 ⇒ 恒为 null（写入处有守卫）
+      bRooms = $('bRooms'), rbN2 = $('rbN2'),
+      bWallT = $('bWallT'), wallN = $('wallN'), chainTag = $('chainTag'),
+      bClip = $('bClip'), clipN = $('clipN'), clipH = $('clipH'),
+      rtagOn = $('rtagOn'), rtagN = $('rtagN'), rtagBox = $('rtagBox');
+
+let currentId = null;      // 当前楼栋「<场区>/<楼栋>」
+let frame = null;          // 当前 iframe
+let pollTimer = null, deadline = 0, lastPhase = '', liveTris = null;
+let rows = [];             // packs/index.json 的 packs[]
+
+// 房间面板的状态。`ledger` = 本栋台账（`ledger/rooms.json` 原样），**不在前端重算**。
+//   `fFloor`/`fPurpose` 是**筛选**（null = 全部），`selRoom` 是当前选中的那一行。
+//   ★ 三个都随 load() 归零 —— 切楼栋时留着上一栋的筛选，看起来像「新楼栋只有 3 间房」。
+let ledger = null, fFloor = null, fPurpose = null, selRoom = null;
+let _pickHtml = '';        // 子页 #pickinfo 上一次搬过来的 HTML（一样就不动 DOM，免得每 400 ms 闪）
+let _pickDismissed = '';   // 用户按过 × 的那一份（按**内容**认；见 setPickCard 里那段 ★）
+
+// ── 1 路由：`#/building/<场区>/<楼栋>` ─────────────────────────────────────
+// 形状照 gym3d 的 `#/<id>/<sub>`：链接可分享、刷新回到同一栋。查询串里也认 `?pack=`。
+function parseHash(){
+  const seg = decodeURIComponent(location.hash.replace(/^#\/?/, '')).split('/').filter(Boolean);
+  if (seg[0] === 'building' && seg[1] && seg[2]) return seg[1] + '/' + seg[2];
+  return null;
+}
+function setHash(id){
+  const want = '#/building/' + id;
+  // ★ 用 replaceState（不 push）：这里只是把「现在看的是哪一栋」写进地址栏，
+  //   点下拉不该往历史里塞一条 —— 否则退格一次退回上一栋，人会以为按钮坏了。
+  if (location.hash !== want) history.replaceState(null, '', want);
+}
+const indexOf = id => rows.findIndex(r => r.campus + '/' + r.id === id);
+
+function showVeil(html){ veilBox.innerHTML = html; veil.dataset.on = '1'; }
+function hideVeil(){ veil.dataset.on = '0'; }
+
+// ── 2 画徽标（数**全部**来自握手口与清单，本页一个都不手打）────────────────
+function chip(cls, k, v){ return '<span class="chip' + (cls ? ' ' + cls : '') + '">'
+  + esc(k) + ' <b>' + esc(dash(v)) + '</b></span>'; }
+
+function paintChips(row, hs){
+  // ★ 2026-10-19 用户令「这个页面有很多的解释，都先不要」⇒ 读数块已从 DOM 删掉，
+  //   这里必须早退：`chips` 是按 id 隐式取到的全局，元素没了就是 null，
+  //   写 innerHTML 会抛错并把后面的 load() 整段打断（页面上表现为三维区全黑）。
+  if (!chips) return;
+  const f = (row && row.floors) || {}, qc = (row && row.qc) || {}, g = qc.gauge || {};
+  const phase = hs ? hs.phase : 'loading';
+  const stale = hs && hs.phase === 'ready' && hs.builtToken !== hs.buildToken;
+  chips.innerHTML = [
+    chip('st-' + phase, '相位', phase + (stale ? '(过期令牌)' : '')),
+    chip('', '三角面', liveTris == null ? (hs && hs.tris) : liveTris),
+    chip('', '场景子节点', hs && hs.kids),
+    chip('', '分层', hs && hs.layers),
+    chip('', '层数×层高', dash(f.n_floors) + ' × ' + dash(f.floor_h_m) + ' m'),
+    chip('', '标高', Array.isArray(f.elevation_m)
+                   ? f.elevation_m[0] + '…' + f.elevation_m[1] + ' m' : '—'),
+    chip('', '质检', dash(qc.level) + ' · ' + dash(g.value) + '/' + dash(g.threshold)),
+    chip('', '包指纹', sha(row && row.package_sha256)),
+    chip('', '件 sha256', sha(row && row.model && row.model.sha256)),
+    chip('', '件大小', row && row.model ? mb(row.model.bytes) : '—'),
+  ].join('');
+}
+
+function paintAlerts(row){
+  const msgs = [];
+  if (row && (row.blind_spots || []).length)
+    msgs.push('⚠ 清单里 ' + row.blind_spots.length + ' 格量不到：' + row.blind_spots.join(' / '));
+  if (row && !row.model) msgs.push('⚠ 这个包的 manifest 里没有 role=model 的件');
+  alertsEl.textContent = msgs.join('  ');
+  alertsEl.className = msgs.length ? 'bad' : '';
+}
+
+// ── 3 装载：**先探包、再起 iframe** ────────────────────────────────────────
+// ★ 顺序是有理由的：包不存在时若直接起 iframe，父页要等满 READY_TIMEOUT_MS 才报错；
+//   而 404 在父页一次 fetch 就知道 ⇒ 把「包没有」与「包有但画不出来」分成两句判词
+//   （铁律 199：把「崩了」与「没量到」分开写）。
+async function probePack(id){
+  // ★ 2026-10-21：同一路径的 manifest 在重出后 SHA 会变，必须带一次性查询参数，
+  //   否则旧标签页/中间缓存可能继续拿上一版包清单。
+  const r = await fetch('../packs/' + id + '/manifest.json?v=' + Date.now(), {cache: 'no-store'});
+  if (!r.ok) return {ok: false, why: 'manifest.json ' + r.status};
+  const m = await r.json();
+  if (m.building_id !== id.split('/')[1])
+    return {ok: false, why: '包的 building_id=' + m.building_id + ' 与目录名不符'};
+  // ★ 2026-10-18：基线层节点名（`B1` / `floor6`）按文件序号排 —— 与子页 `floors` 数组同序。
+  //   联动切层只认这个**身份**，不认 `k+1` 拼出来的名字（旧写法把 F7 切成了 F8）。
+  const _num = a => parseInt(String(a.path).split('floor').pop(), 10);
+  packFloorNodes = (m.artifacts || []).filter(a => a.role === 'baseline_floor')
+    .sort((a, b) => _num(a) - _num(b)).map(a => a.node || null);
+  return {ok: true};
+}
+
+function disposeFrame(){
+  // ★★ 顺序不能换：先把 `src` 指到空白页、**再** remove（gym3d 记过的坑）。
+  //   浏览器大约只允许 ~16 个 WebGL 上下文，直接 remove 的话旧上下文的回收要等 GC，
+  //   来回切几趟就静默变白屏 —— 而白屏看起来与「件没加载」一模一样。
+  if (!frame) return;
+  try { if (frame.contentWindow) frame.contentWindow.location.href = 'about:blank'; } catch (e) {}
+  frame.remove(); frame = null;
+}
+function stopPoll(){ if (pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+
+// 同源地取子页的 document。**取不到就回 null**（跨源 / 还没起来），由调用方写各自的判词。
+function childDoc(){
+  if (!frame) return null;
+  try { return frame.contentDocument || null; } catch (e) { return null; }
+}
+
+function load(id, opts){
+  opts = opts || {};
+  const row = rows[indexOf(id)];
+  if (!row){
+    showVeil('<h2>找不到这个包</h2><p>' + esc(id) + '</p><p>清单里只有：'
+             + esc(rows.map(r => r.campus + '/' + r.id).join(' · ') || '（空）') + '</p>');
+    return;
+  }
+  currentId = id;
+  if (opts.push) setHash(id);
+  pick.value = id;
+  document.title = 'cdut3d · ' + row.title;
+  liveTris = null; lastPhase = '';
+  chainTag.textContent = '· cdut3d 链';
+  setPickCard(''); setRoomsSw('busy');           // 换栋时先把上一栋的信息卡与开关读数清掉
+  paintChips(row, null); paintAlerts(row);
+  bname.textContent = row.title || id;
+  // ★ 层数×层高本来印在操作提示浮层里；浮层已按用户令删除（2026-10-20「没有必要的显示就不要显示」）。
+  //   数不丢：它仍挂在建筑下拉的 `title` 上（悬停可见），不占屏幕。
+  const _f = row.floors || {};
+  if (hint3) hint3.textContent = '本楼 ' + dash(_f.n_floors) + ' 层 × 层高 ' + dash(_f.floor_h_m) + ' m';
+  pick.title = dash(_f.n_floors) + ' 层 × 层高 ' + dash(_f.floor_h_m) + ' m · '
+             + '3D 件 ' + (row.model ? mb(row.model.bytes) : '—');
+  loadRooms(id);                                   // 房间面板：与装载并行，各读各的件
+  packFloorNodes = [];                             // 换栋先清：上一栋的节点名不许留在这一栋上用
+  // 包路径不再上屏（2026-10-20 用户令）—— 维护信息只留在清单/日志里
+  disposeFrame();
+  stopPoll();
+  probePack(id).then(res => {
+    if (currentId !== id) return;            // ★ 认身份：这一趟过期了就别再动页面
+    if (!res.ok){
+      showVeil('<h2>包读不动，没起 iframe</h2><p>' + esc(id + ' ⇒ ' + res.why) + '</p>'
+               + '<p>先跑 <code>demo/build_pack.py</code>，再 <code>demo/build_index.py</code>。</p>');
+      statusEl.textContent = '包读不动：' + res.why;
+      return;
+    }
+    hideVeil();
+    // ★ 2026-10-20：`packFloorNodes` 是这一趟才填的，而 `loadRooms` 与它并行跑 ——
+    //   台账 0 行的包，楼层条第一次画的时候还拿不到件里的层名（会印成 floor0/1/2 甚至空条）。
+    //   节点名一到位就按同一份 `ledger` 重画一次楼层条（房间面片一个字节都没变，只是标签对了）。
+    try { if (ledger && !ledger.length) paintRooms(); } catch (e) {}
+    statusEl.textContent = '装载中…';
+    frame = document.createElement('iframe');
+    // ★ 同源、**不加 sandbox**：父页要读子页的握手口。
+    //   `?pack=` 只进查询参数，子页自己白名单校验（见 demo/index.html 里那段 ★★）。
+    //   `&embed=building` = 告诉子页「你是被展示页嵌进去的」⇒ 收掉它自己那套侧栏，
+    //   并（2026-10-17 起）**多铺一层房间色块**。闸不走这条路，所以闸看到的字节不变。
+    frame.src = './index.html?pack=' + encodeURIComponent(id)
+              + '&embed=building&v=' + Date.now();
+    frame.title = '模型：' + row.title;
+    stage.appendChild(frame);
+    deadline = Date.now() + READY_TIMEOUT_MS;
+    pollTimer = setInterval(poll, POLL_MS);
+  }).catch(e => {
+    if (currentId !== id) return;
+    showVeil('<h2>探测包时出错</h2><p>' + esc(String(e)) + '</p>');
+  });
+}
+
+// ── 4 轮询：只读子页的**握手口** ─────────────────────────────────────────
+function poll(){
+  const row = rows[indexOf(currentId)];
+  if (!frame || !frame.contentWindow) return;
+  let hs = null, live = null;
+  try {
+    const w = frame.contentWindow;
+    hs = w.__cdut3d || null;
+    // ★ 帧后数要**当场**取：`renderer.info.render.triangles` 总是上一帧的值，
+    //   快照里那一格天生滞后一帧 ⇒ 判「件挂上了/画面在动」必须调这个活口。
+    live = (typeof w.__cdut3dLive === 'function') ? w.__cdut3dLive() : null;
+  } catch (e) {
+    statusEl.textContent = '读不到子页握手口：' + e;    // 如实报，不假装在加载
+    return;
+  }
+  if (!hs){
+    // 握手口还没建起来（子页 module 脚本还在跑）。**这不是失败**，只是「还没量到」。
+    paintChips(row, {phase: 'loading'});
+    if (Date.now() > deadline) fail('超时（到点仍读不到握手口）', row);
+    return;
+  }
+  if (live) liveTris = live.tris;
+  paintChips(row, hs);
+  mirrorChild();                                    // ★ 把子页那份信息卡搬过来（见 ⑥ 段）
+  if (hs.phase !== lastPhase){
+    lastPhase = hs.phase;
+    if (hs.phase === 'ready')
+      statusEl.textContent = '就绪：' + row.title + ' · 令牌 ' + hs.builtToken + '/' + hs.buildToken
+        + (hs.bad_pack ? ' · ★ pack 参数被拒：' + hs.bad_pack : '')
+        // ★ 换楼/重进时子页是**新建**的，`purposePicked` 回到 null ⇒ 本页选着的用途要**重新压一次**
+        //   （2026-10-20：不压的话切楼后三维全显，而图例仍是选中的样子 —— 两处读数打架）。
+        + (fPurpose === null ? '' : ' · 用途 ' + syncChildPurpose(fPurpose))
+        // ★ 标牌同理：勾选是本页的状态，换楼后新子页里默认关 ⇒ 这里补一次（读数也重写）。
+        + (rtagOn && rtagOn.checked ? ' · ' + syncChildTags(true) : '');
+    else if (hs.phase === 'failed') { fail(hs.error || '装载失败', row); return; }
+    else statusEl.textContent = '装载中…';
+  }
+  if (hs.phase === 'loading' && Date.now() > deadline)
+    fail('超时（' + (READY_TIMEOUT_MS / 1000) + ' s 未就绪）', row);
+}
+
+function fail(why, row){
+  stopPoll();
+  // ★ 第二张网：握手口说失败时，把子页**自己写下的那句**也抄上来（同源才读得到）。
+  //   它只是线索，**判据仍旧是握手口**（铁律 158：这张网只捞文本，捞不到显存/画面类故障）。
+  let text = '';
+  const doc = childDoc();
+  const el = doc && doc.getElementById('postag');
+  if (el) text = el.textContent;
+  showVeil('<h2>没画出来</h2><p>' + esc(why) + '</p>'
+           + (text ? '<p>子页写着：' + esc(text) + '</p>' : '')
+           + '<p>' + esc((row && row.pack_dir) || '') + '</p>'
+           + '<p><button class="bar-btn" id="bAgain">再试一次</button></p>');
+  const b = $('bAgain'); if (b) b.onclick = () => { hideVeil(); load(currentId, {push: false}); };
+  statusEl.textContent = '未就绪：' + why;
+}
+
+// ── 5 按钮 ───────────────────────────────────────────────────────────────
+$('bReload').onclick = () => { hideVeil(); load(currentId, {push: false}); };
+$('bTab').onclick = () => {
+  const row = rows[indexOf(currentId)];
+  window.open('./index.html?pack=' + encodeURIComponent(currentId)
+              + '&v=' + Date.now(), '_blank');
+};
+$('bFull').onclick = () => {
+  // ★ 整页全屏（不是只全屏舞台）：舞台全屏的话，这颗按钮和楼栋下拉都被挡在外面，
+  //   只剩 Esc 一条退路 —— 退路只有一条的全屏就是陷阱。
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen();
+};
+document.addEventListener('fullscreenchange', () => {
+  $('bFull').textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+});
+pick.onchange = () => { hideVeil(); load(pick.value, {push: true}); };
+addEventListener('hashchange', () => {
+  const id = parseHash();
+  if (id && id !== currentId){ hideVeil(); load(id, {push: false}); }
+});
+// ★ 卸载时**必须**把 iframe 拆掉（不拆的话来回切几趟就把 WebGL 上下文用光，见 disposeFrame）
+addEventListener('beforeunload', disposeFrame);
+
+// ── 6 与子页的两条联动（都走**子页自己的控件**，一条新接口都不造）────────────
+// ★ 为什么按 id 点而不加哨位口子：`demo/index.html` 的对外哨位名单是
+//   `gates/J-09.1.1-viewer.py` **钉住**的（`__cdut3d/__cdutLive/__cdutView/__cdutPick*…`），
+//   往里加名字就是动那张判据。所以一律「同源 DOM + 点它自己的按钮/勾它自己的框」。
+
+// 信息卡：把子页 `#pickinfo` 搬过来显示。**只搬显示，不判对错**（判词仍以子页为准）。
+//   ★ 为什么必须搬：embed 版里子页那份面板在**收起来的侧栏**里，屏幕上本来看不见 ——
+//     不搬的话「点击构件报名字」在展示页上等于没有。
+//   ★ 子页没起来 / 读不到时**一个字都不动**：清空会把上一次的读数抹成「什么都没点到」，
+//     那正是「量不到」伪装成「读数是空」（铁律 199）。
+const pkOn = () => !!(_pickHtml && _pickHtml !== _pickDismissed);
+function setPickCard(html){
+  if (html === _pickHtml) return;    // 没变就不动 DOM（每 400 ms 重写一次会让选中/滚动跳）
+  _pickHtml = html;
+  // ★ 按过 × 的那一份**不许**下一轮又弹回来。所以记住的是「**哪一份**被 × 掉了」（内容），
+  //   不是「按过 ×」这个布尔 —— 后者一旦置位，新的一次点选就再也显示不出来（铁律 199）。
+  if (html && html === _pickDismissed){ pickcard.style.display = 'none'; syncIdle(); return; }
+  pickcard.innerHTML = html ? '<span class="x" id="pkx">×</span>' + html : '';
+  pickcard.style.display = html ? '' : 'none';
+  if (html){
+    const x = $('pkx');
+    if (x) x.onclick = () => {
+      _pickDismissed = html; pickcard.innerHTML = ''; pickcard.style.display = 'none';
+      _pickHtml = ''; syncIdle();
+    };
+  }
+  syncIdle();
+}
+function syncIdle(){
+  infoIdle.style.display = (pkOn() || selRoom) ? 'none' : '';
+  // ★ 2026-10-20「没有必要的显示就不要显示」：两张卡都收起来时，右上那块**空面板**也一起收走
+  //   —— 否则屏上留着 250×N 的一片深色空框，看着像「本来该有东西但没加载出来」。
+  const box = document.getElementById('info');
+  const any = (pickcard.style.display !== 'none') || (rcard.style.display !== 'none');
+  if (box) box.classList.toggle('hide', !any);
+}
+function mirrorChild(){
+  const doc = childDoc();
+  if (!doc) return;
+  const el = doc.getElementById('pickinfo');
+  if (el) setPickCard(el.innerHTML);
+  // 房间色块开关：读数取自**子页那条开关自己的标签**（子页算的，本页不另算一遍 —— 铁律 018）
+  const cb = doc.getElementById('cbRooms');
+  const n = doc.getElementById('rbN');
+  if (cb){
+    bRooms.dataset.busy = '0';
+    bRooms.dataset.on = cb.checked ? '1' : '0';
+    rbN2.textContent = (n && n.textContent) ? n.textContent : (cb.checked ? '开' : '关');
+  } else {
+    // 子页这一版**没有**那条开关 ⇒ 说明它是不认 embed 的旧版（或这个包没起来）。
+    //   照实说，不给一个看起来像「关着」的状态（铁律 199）。
+    bRooms.dataset.busy = '0'; bRooms.dataset.on = '0'; rbN2.textContent = '不可用';
+  }
+  // 墙体半透明开关：同样**读子页那个复选框自己的状态**，本页不另存一份（铁律 018）。
+  //   ★ 与上面分开判：子页可能只有房间那条、还没有墙这条（本页比子页旧/新各是一种），
+  //     并成一句「都不可用」会把「子页没有这条」报成「子页没起来」（铁律 199）。
+  const cbw = doc.getElementById('cbWallT');
+  if (cbw){
+    bWallT.dataset.busy = '0';
+    bWallT.dataset.on = cbw.checked ? '1' : '0';
+    wallN.textContent = cbw.checked ? '开' : '关';
+  } else {
+    bWallT.dataset.busy = '0'; bWallT.dataset.on = '0'; wallN.textContent = '子页无此开关';
+  }
+  // 剖切面：读数**全部取自子页的探针** `__cdutClip()`（标高由它按包围盒现算），
+  //   本页只负责显示与转发（铁律 018：同一个量不在两处各算一遍）。
+  const cw = frame && frame.contentWindow;
+  const cprobe = cw && cw.__cdutClip;
+  if (typeof cprobe === 'function'){
+    const s = cprobe();
+    bClip.dataset.busy = '0';
+    bClip.dataset.on = s.on ? '1' : '0';
+    clipN.textContent = s.on ? ('≤ ' + (s.y == null ? '—' : s.y.toFixed(1)) + ' m') : '关';
+    clipH.disabled = !s.on || s.lo == null;
+    if (s.on && s.lo != null && s.y != null){
+      clipH.value = String(Math.round(1000 * (s.y - s.lo) / (s.hi - s.lo)));
+    }
+    clipH.title = s.lo == null
+      ? '量不到这件模型的包围盒 ⇒ 没有可剖的标高区间'
+      : ('剖切标高：' + s.lo.toFixed(1) + ' ~ ' + s.hi.toFixed(1) + ' m');
+  } else {
+    bClip.dataset.busy = '0'; bClip.dataset.on = '0'; clipN.textContent = '子页无此探针';
+    clipH.disabled = true;
+  }
+}
+function setRoomsSw(state){
+  if (state === 'busy'){ bRooms.dataset.busy = '1'; rbN2.textContent = '—'; return; }
+  bRooms.dataset.busy = '0';
+}
+bRooms.onclick = () => {
+  const doc = childDoc();
+  const cb = doc && doc.getElementById('cbRooms');
+  if (!cb){
+    statusEl.textContent = '点不到子页的房间色块开关（子页没起来，或这一版没有这条开关）';
+    return;
+  }
+  cb.click();
+  mirrorChild();
+};
+bWallT.onclick = () => {
+  const doc = childDoc();
+  const cb = doc && doc.getElementById('cbWallT');
+  if (!cb){
+    statusEl.textContent = '点不到子页的「墙体半透明」开关（子页没起来，或这一版还没有这条开关）';
+    return;
+  }
+  cb.click();
+  mirrorChild();
+};
+// ★ 2026-10-20 剖切面：**只转发给子页的探针**，本页不持有任何状态。
+//   ★「没量到」与「子页没有这条探针」分开报（铁律 199）。
+bClip.onclick = () => {
+  const cw = frame && frame.contentWindow;
+  const cprobe = cw && cw.__cdutClip;
+  if (typeof cprobe !== 'function'){
+    statusEl.textContent = '子页没有剖切探针（这一版 demo/index.html 里找不到 __cdutClip）';
+    return;
+  }
+  const s = cprobe();
+  if (s.lo == null && !s.on){
+    statusEl.textContent = '量不到这件模型的包围盒 ⇒ 没有可剖的标高区间（先等三维载入完成）';
+    return;
+  }
+  cprobe({ on: !s.on });
+  mirrorChild();
+};
+clipH.oninput = () => {
+  const cw = frame && frame.contentWindow;
+  const cprobe = cw && cw.__cdutClip;
+  if (typeof cprobe !== 'function') return;
+  cprobe({ pct: Number(clipH.value) / 1000 });
+  const s = cprobe();
+  clipN.textContent = s.on ? ('≤ ' + (s.y == null ? '—' : s.y.toFixed(1)) + ' m') : '关';
+};
+
+// 切子页的层：走**子页自己的楼层条**（`demo/index.html` 的 `#floors`），不新造接口。
+//   ★ 四条判词分开写，不并成一句「联动失败」（铁律 199：「没量到」与「崩了」不是一回事）。
+function syncChildFloor(k){
+  const doc = childDoc();
+  if (!doc) return '子页还没起（联动未做）';
+  const box = doc.getElementById('floors');
+  if (!box) return '子页没有楼层条（这一版的 demo/index.html 里找不到 #floors）';
+  // ★ 只数 `button`：2026-10-17 起 `#floors` 末尾多了一个**房间色块开关**（<label>），
+  //   拿 children.length 当层数会**多报一层** —— 而这个数只印在报错句里，平时看不见。
+  const btns = [...box.querySelectorAll('button')];
+  if (!btns.length) return '子页楼层条是空的（件还没挂上去？）';
+  // ★ 认**节点名**不认下标、也不认 `k+1`：c006 第 0 项是「地下1层」，子页按钮文字由
+  //   `floorLabel(node)` 现算（`floor6` ⇒ F7、`B1` ⇒ B1）。旧写法点第 k 个按钮、
+  //   却把名字印成 F(k+1) —— 2026-10-18 截图里 F7 的判词就是 F8。
+  const node = nodeOfLedgerFloor(k);
+  const mm = /^floor(\d+)$/.exec(node);
+  const want = mm ? ('F' + (+mm[1] + 1)) : node;
+  const b = btns.find(x => (x.textContent || '').trim() === want);
+  if (!b) return '子页楼层条里没有「' + want + '」（有：'
+                 + btns.map(x => (x.textContent || '').trim()).join(' ') + '）';
+  b.click();
+  return '已点到子页的「' + want + '」按钮（子页画面换没换，本页量不到）';
+}
+
+// 切子页的**图层可见性**：按图层行上的名字（`F3` 这种）认，不按下标。
+//   ★ 先**把命中集数出来**再动：一个都没命中时若照常执行，就会把所有层**全部关掉** ——
+//     屏幕变空，而那与「件没加载」同形。所以命中 0 就**一个都不动**并照实报（铁律 137）。
+function syncChildLayers(k){
+  const doc = childDoc();
+  if (!doc) return '子页还没起';
+  const wrap = doc.getElementById('layers');
+  if (!wrap) return '子页没有图层清单（#layers）';
+  const rowsEl = [...wrap.querySelectorAll('.layrow')];
+  if (!rowsEl.length) return '子页的图层清单是空的（件还没挂上去？）';
+  // ★ 认**身份**：子页每行 `.nm` 的 `title` 头一段就是 GLB 节点名（`B1` / `floor6`）。
+  //   按下标或按 `F(k+1)` 拼名都踩过坑：c006 第 0 项是地下层，`k+1` 会切到**下一层**
+  //   （2026-10-18 截图里 F7 被切成了 F8）。文字名只当**退路**（老包的节点名不是 floorK）。
+  const rowNode = el => { const t = el.querySelector('.nm'); return t ? String(t.title || '').split(' · ')[0] : ''; };
+  const wantNm = (k === null) ? null : F_LABEL(k);
+  const wantNode = (k === null) ? null : nodeOfLedgerFloor(k);
+  const want = (k === null) ? () => true : (el => {
+    const nm = el.querySelector('.nm');
+    return rowNode(el) === wantNode || (!!nm && nm.textContent.trim() === wantNm);
+  });
+  const hit = rowsEl.filter(r => r.querySelector('input[type=checkbox]') && want(r));
+  if (k !== null && !hit.length)
+    return '子页图层里没有「' + wantNm + '」（节点 ' + wantNode + '），**一层都没动**（宁可不动，也不把全楼关掉）';
+  for (const r of rowsEl){
+    const cb = r.querySelector('input[type=checkbox]');
+    if (!cb) continue;
+    const w = want(r);
+    if (cb.checked !== w){ cb.checked = w; cb.dispatchEvent(new Event('change', {bubbles: true})); }
+  }
+  return (k === null) ? '已让子页显示全部层'
+                      : ('已让子页只看「' + wantNm + '」（命中 ' + hit.length + ' 行）');
+}
+
+// 切子页的**房间用途筛**：用户令（2026-10-20）「房间用途可以选择，选择后的有颜色」。
+//   ★ 不新造全局哨位：走 `__cdut3d` 上**既有的那个对象**加的一个方法（名字本来就在
+//     `gates/J-09.1.1-viewer.py` 的名单里，方法名不算新哨位）。
+//   ★ 三种结果分开报（铁律 199）：子页没起 / 子页是旧版没有这个方法 / 子页说这一类命中 0。
+//     后两种**都不许**写成「已筛选」—— 返回的是子页自己量出来的数。
+function syncChildPurpose(p){
+  const w = frame && frame.contentWindow;
+  let hs = null;
+  try { hs = w ? (w.__cdut3d || null) : null; } catch (e) { return '读不到子页握手口：' + e; }
+  if (!hs) return '子页还没起（联动未做）';
+  if (typeof hs.setPurpose !== 'function') return '子页没有 setPurpose（这一版的 demo/index.html 太旧）';
+  let r = null;
+  try { r = hs.setPurpose(p); } catch (e) { return '子页 setPurpose 抛 ' + e; }
+  if (!r || typeof r !== 'object') return '子页没回读数（无法确认筛没筛）';
+  if (!r.ok) return r.why + '（子页 ' + r.total + ' 片照旧）';
+  if (r.name === null) return '子页已恢复全部 ' + r.total + ' 片';
+  // ★ 第二条判据命中的（用途名对不上、按房号选出多号开敞区）：判词必须把这件事**写出来**，
+  //   否则与「按用途名命中」同形 —— 而这两件事的可信度完全不同（一片可能压着几十个房号）。
+  if (r.mode === 'number')
+    return '子页 ' + r.shown + '/' + r.total + ' 片（色块里没有这个用途名，按台账房号命中 '
+         + r.matched + '/' + r.ledgerRooms + ' 间；开敞区一片含多号）';
+  return '子页 ' + r.shown + '/' + r.total + ' 片（' + r.name.join('、') + '）';
+}
+
+// ── 7 房间面板 ───────────────────────────────────────────────────────────
+// 数据只有**一个来源**：包内 `ledger/rooms.json`（一房间一行：number/purpose/dept/area_m2/floor）。
+//   子页 `index.html` 那份是**逐层多边形**（`baseline/floors/floor<k>.json`），两者是**两个来源**，
+//   三维里铺的那层色块读的是后者 —— 本页列表读前者。**不合并**，但要把这件事说清楚（见盲区 ⑤⑦）。
+//
+// ★ 配色不另造：`hue()` 与子页画平面图/铺色块那处**逐字同式**（`h*31+charCodeAt` 取模 360）。
+//   两处各写一套颜色必然漂，而漂了看不出来（铁律 018：两个地方写同一个数，一致证明不了它是对的）。
+//   真要改色，**两处一起改** —— 这行注释就是留给下一个动手的人。
+const hue = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const pcolor = s => 'hsl(' + hue(s) + ' 58% 60%)';
+// ★ 2026-10-20 用户令「很多楼栋的房间用途的颜色没有加上」⇒「按房间号分色，图例标『源图无用途』」。
+//   有 11 栋楼的源图没有 `8用途` 图层（只有 `6房间号`+`5面积`），台账 `purpose` 是空串，
+//   全栋挤进同一个「未标」色 = 看上去没上色。**不编造用途**，只把**取色**换成按房间号；
+//   图例仍按用途分类（`未标` 一类，可筛选），标签写成 `未标（源图无用途）`。
+//   同一式在子页 `demo/index.html::rckey/rcolorR`，**两处一起改**（铁律 018）。
+const GOLD = 137.508;   // 黄金角：相邻房间号要拉得最开（见子页 `rcolorR` 的注释）
+const numTail = s => { const m = /(\d+)\s*$/.exec(String(s == null ? '' : s)); return m ? +m[1] : null; };
+const pcolorR = r => {
+  const p = P_OF(r);
+  if (p !== '未标') return pcolor(p);
+  const t = numTail(r.number);
+  return 'hsl(' + (t == null ? 200 : Math.round((t * GOLD) % 360)) + ' 58% 60%)';
+};
+const P_LABEL = p => (p === '未标' ? '未标（源图无用途）' : p);
+const P_OF = r => r.purpose || '未标';     // 台账 purpose 实测 214/214 有值；空值仍**单列一类**，不并进别的
+// ★ 台账 floor 是 **0 基**（与 baseline/floors/floor<k>.json 同号）。
+//   `F_IDX` 把 floor **收成数**再往外用：包里的字段是**外部数据**（追到 DXF 去的），
+//   裸拼进 innerHTML 就是一个注入口（后台安全审查 2026-10-17 就抓的这条）。
+//   ⇒ 数字拼进去天生没有注入口，比「转义一个串」更结实；非数一律 `—`（铁律 199：量不到 ≠ 0）。
+const F_IDX = r => {
+  const v = r.floor;
+  // ★ 先判「字段在不在」**再**收数：`Number(null)` 与 `Number('')` 都是 0 ——
+  //   少了这一行，缺 floor 的房间会被**静默印成 F1**（铁律 199：量不到不许写成 0）。
+  //   （这条是喂坏输入试出来的：`floor=null` 原样落成 `（floor0.json）`。）
+  if (v === null || v === undefined || v === '') return null;
+  const k = Number(v);
+  return Number.isFinite(k) ? k : null;
+};
+// ★ 2026-10-18（用户「地下一楼也没有出来」）：显示名**不按下标加一**。
+//   台账 `floor` 是 `B3.FLOORS` 的**序号**（c006 第 0 项是「地下1层」）⇒ `k+1` 把地下室印成 F1。
+//   台账行自带 `sheet`（图幅名 = 楼层名，如「地下1层」「7层」）—— 直接用它，不从下标猜。
+const F_OF  = r => {
+  const s = (r && r.sheet) ? String(r.sheet) : '';
+  const m = /^(\d+)层$/.exec(s) || /^(\d+)$/.exec(s);
+  if (m) return 'F' + (+m[1]);      // 「7层」→ F7；图幅名只写数字（c015 的「1」）→ F1
+  if (s) return s;                  // 「地下1层」「屋面层」…：原样印，不猜
+  const k = F_IDX(r);
+  return k === null ? '—' : 'floor' + k;
+};
+
+// ★ 2026-10-18（用户截图里 F7 的判词印成 F8）：`floor` 是**楼层序号**（0 基，c006 第 0 项
+//   是「地下1层」），`k+1` 只在「没有地下层」的楼上碰巧对。凡是**印给人看**的层名一律走这里。
+const F_LABEL = k => {
+  const r = (ledger || []).find(x => F_IDX(x) === k);
+  if (r) return F_OF(r);
+  // ★ 2026-10-20 c015 芙蓉综合楼：台账 0 行时楼上没有 `sheet` 可读 ⇒ 原来的 `floorK`
+  //   把楼层条印成「floor0/floor1/floor2」。**件里明明有层**，改从 manifest 的
+  //   `baseline_floor` 节点名现算（与 `syncChildFloor` 同一套规则：floorK ⇒ F(K+1)）。
+  const node = packFloorNodes[k];
+  const m = node && /^floor(\d+)$/.exec(node);
+  if (m) return 'F' + (+m[1] + 1);
+  return node || ('floor' + k);
+};
+// 楼层条的分母：**台账有就按台账**（一房间一行的实测层），台账空就按**件里的基线层**
+//   （manifest `baseline_floor`，一层一份）。两个来源都不在 ⇒ 空条，由调用方照实印「没有」。
+const floorList = () => {
+  const ks = new Set();
+  (ledger || []).forEach(r => { const k = F_IDX(r); if (k !== null) ks.add(k); });
+  if (!ks.size) packFloorNodes.forEach((_n, i) => ks.add(i));
+  return [...ks].sort((a, b) => a - b);
+};
+// 台账层序 k → 基线件节点名（manifest 的 `baseline_floor` 条目按文件序号排，与子页
+//   `demo/index.html` 的 `floors` 数组同序）。拿不到 manifest ⇒ 退回老包的 `floor<k>`。
+let packFloorNodes = [];
+const nodeOfLedgerFloor = k => packFloorNodes[k] || ('floor' + k);
+
+function rcardOff(){ rcard.style.display = 'none'; rcard.innerHTML = ''; syncIdle(); }
+
+async function loadRooms(id){
+  ledger = null; fFloor = null; fPurpose = null; selRoom = null;
+  rcardOff();
+  rnum.textContent = '—'; rlegendN.textContent = '—';
+  rlegend.innerHTML = '';
+  rlist.innerHTML = '<div style="padding:6px 2px;color:#8d9bab">读房间台账…</div>';
+  let d = null, why = '';
+  try {
+    const r = await fetch('../packs/' + id + '/ledger/rooms.json', {cache: 'no-store'});
+    if (!r.ok) why = 'ledger/rooms.json ' + r.status;
+    else d = await r.json();
+  } catch (e) { why = String(e); }
+  if (currentId !== id) return;                    // ★ 认身份：这一趟过期了就别再动面板
+  if (!d || !Array.isArray(d)){
+    // ★ 两种「没有」分开印：读不动（件缺/网络）≠ 台账真是 0 行（铁律 199）
+    rlist.innerHTML = '<div style="padding:6px 2px;color:var(--warn)">'
+      + (why ? '读不到房间台账：' + esc(why) + '（这个包没有 ledger/rooms.json？）'
+             : '台账不是列表（旧格式）—— 读不到行')
+      + '</div>';
+    return;
+  }
+  if (!d.length){
+    // ★★ 2026-10-20（用户「芙蓉综合楼看不到每层的」）：台账 0 行**不等于**这栋楼没有层。
+    //   原来这里直接 return ⇒ `#rfloors` 一个按钮都不画，屏上只剩「全部」，
+    //   而三维件里 F1/F2/F3 都在（manifest baseline_floor 三份）。
+    //   ⇒ 台账照收（0 行是事实），楼层条改由**件里的层**画（`floorList`）；
+    //   列表处说明「台账 0 行」，不再让「没有层」与「没有台账」同形。
+    ledger = d;
+    paintRooms();
+    return;
+  }
+  ledger = d;
+  paintRooms();
+}
+
+function paintRooms(){
+  const all = ledger;
+  // 楼层条同样走 F_IDX：收不到层号的房间**不冒充第 0 层**，它只落在「全部」里（见 F_IDX 那段）。
+  // ★ 2026-10-20：楼层条**不只看台账**（台账 0 行的包，件里仍有层 —— `floorList` 见上）。
+  const fls = floorList();
+  // ★ 2026-10-20 用户令「我打开某一层，图例只显示这一层」⇒ 图例的分母换成**这一层的房间**
+  //   （原来按全栋统计：选 F3 时图例仍列着全楼 20 类，点下去那一类在这层可能一间都没有）。
+  const base = (fFloor === null) ? all : all.filter(r => F_IDX(r) === fFloor);
+  const pcs = {}; base.forEach(r => { const p = P_OF(r); pcs[p] = (pcs[p] || 0) + 1; });
+  // 选中的那类若这一层**没有** ⇒ 清掉它：不清的话图例里一个 on 都没有、列表空着，
+  //   看着像「点了没反应」（铁律 199：状态变了就得让它看得见）。
+  let dropped = null;
+  if (fPurpose !== null && !(fPurpose in pcs)){ dropped = fPurpose; fPurpose = null; }
+  const ok = all.filter(r => (fFloor === null || F_IDX(r) === fFloor)
+                          && (fPurpose === null || P_OF(r) === fPurpose));
+  const area = ok.reduce((s, r) => s + (typeof r.area_m2 === 'number' ? r.area_m2 : 0), 0);
+  // ★ 分子分母都印：只印「18 间」会让人以为全楼就 18 间。m² 同理是**选中集**的合计，不是全栋。
+  const txt = ok.length + ' / ' + all.length + ' 间 · ' + area.toFixed(1) + ' m²'
+            + ((fFloor === null && fPurpose === null) ? '（全栋）' : '（筛选后）');
+  rnum.textContent = txt;
+  rlegendN.textContent = Object.keys(pcs).length + ' 类 · ' + base.length + ' 间'
+                       + (fFloor === null ? '' : '（' + F_LABEL(fFloor) + '）');
+
+  // ★ 标签由该层第一行的 `sheet` 现取（`F_OF`），不再按下标 +1 拼 «F» ——
+  //   含地下层的楼第 0 项是「地下1层」，按下标拼会把它印成 F1（用户「地下一楼也没有出来」）。
+  rfloors.innerHTML = '<button data-f="all"' + (fFloor === null ? ' class="on"' : '') + '>全部</button>'
+    + fls.map(k => '<button data-f="' + k + '"' + (fFloor === k ? ' class="on"' : '') + '>' + esc(F_LABEL(k)) + '</button>').join('');
+
+  rlegend.innerHTML = Object.entries(pcs).sort((a, b) => b[1] - a[1]).map(([p, n]) =>
+    '<span data-p="' + attr(p) + '"' + (fPurpose === p ? ' class="on"' : '') + ' title="点一下只看这一类">'
+    + '<i style="background:' + (p === '未标' ? '#6b6b6b' : pcolor(p)) + '"></i>'
+    + esc(P_LABEL(p)) + ' <b>' + n + '</b></span>').join('');
+
+  rlist.innerHTML = ok.map((r, i) => {
+    const p = P_OF(r);
+    return '<div class="rrow' + (selRoom === r ? ' on' : '') + '" data-i="' + i + '">'
+      + '<i style="background:' + pcolorR(r) + '"></i>'
+      + '<span><span class="nm">' + esc(r.number || '（无房号）') + '</span>'
+      + '<span class="pu">' + F_OF(r) + ' · ' + esc(P_LABEL(p)) + '</span></span>'
+      + '<span class="ar">' + (typeof r.area_m2 === 'number' ? r.area_m2.toFixed(2) : esc(dash(r.area_m2))) + '</span>'
+      + '</div>';
+  }).join('') || (!all.length
+    // ★ 台账 0 行：楼层条仍是件里的层（上面画的），列表这里要说清「0 行」这件事本身。
+    ? '<div style="padding:6px 2px;color:var(--warn)">台账是空的：0 行 —— 不是「读不到」，'
+      + '是这栋的源图**没有可登记的房号/用途行**。上面的楼层条按 3D 件里的层列出，'
+      + '点它仍能切三维。</div>'
+    : '<div style="padding:6px 2px">这个筛选下没有房间。</div>');
+
+  rlist._ok = ok;   // ★ 点击按**下标**回取，而不是把整行塞进 DOM 属性（铁律 194：按身份，不按值）
+  return dropped;   // 这一层没有、被清掉的那个用途名（没清 = null）
+}
+
+function showCard(r){
+  selRoom = r;
+  const p = P_OF(r);
+  // 联动只在**选了具体层**时做：「全部」没有唯一目标层，硬猜一个就是替用户决定。
+  //   ★ 三层判词分开印（点楼层条 / 切三维图层 / 没选层），失败时哪一条坏了看得见。
+  const link = (fFloor === null)
+    ? '选一个具体楼层后这里会写联动结果（「全部」没有唯一目标层）'
+    : (syncChildFloor(fFloor) + '；' + syncChildLayers(fFloor));
+  rcard.innerHTML =
+    '<span class="x" id="rx">×</span>'
+    + '<div class="t">' + esc(r.number || '（无房号）') + '</div>'
+    + '<div><b>用途</b><span>' + esc(P_LABEL(p)) + '</span></div>'
+    + '<div><b>使用单位</b><span>' + esc(dash(r.dept)) + '</span></div>'
+    + '<div><b>台账面积</b><span>' + esc(dash(r.area_m2)) + ' m²</span></div>'
+    + '<div><b>图纸面积</b><span>' + esc(dash(r.area)) + '</span></div>'
+    + '<div><b>层</b><span>' + F_OF(r) + '（floor' + (F_IDX(r) === null ? '—' : F_IDX(r)) + '.json）</span></div>'
+    + '<div><b>台账 id</b><span>' + esc(r.id) + '</span></div>'
+    + '<div><b>房间色</b><span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;'
+    + 'vertical-align:-1px;background:' + pcolorR(r) + ';border:1px solid #0007"></i> '
+    + esc(pcolorR(r)) + (p === '未标' ? '（按房间号取色）' : '') + '</span></div>'
+    + '<div class="note">' + esc(link) + '</div>';
+  rcard.style.display = '';
+  $('rx').onclick = () => { rcardOff(); selRoom = null; paintRooms(); };
+  syncIdle();
+  paintRooms();
+}
+
+// 事件全用**委托**：列表每次重画，挂在旧元素上的 onclick 会随重画一起失效 ——
+//   而「失效的按钮」看起来与「点了没反应」一模一样，这类 bug 闸里量不到。
+rfloors.onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  fFloor = (b.dataset.f === 'all') ? null : Number(b.dataset.f);
+  selRoom = null; rcardOff();
+  const dropped = paintRooms();          // ★ 图例只列这一层的用途；选中的那类这层没有 ⇒ 这里被清掉
+  // ★ 选了层就**顺带**把三维收到那一层（参考页那排楼层按钮就是这个用途）。
+  //   「全部」= 让子页把层全打开。两句判词都写进状态行，失败时看得见。
+  const what = (fFloor === null)
+    ? ('全部层：' + syncChildLayers(null))
+    : ('只看 ' + F_LABEL(fFloor) + '：' + syncChildLayers(fFloor) + '；' + syncChildFloor(fFloor));
+  if (frame) statusEl.textContent = what
+    // ★ 换层后**总要把用途重新压给子页一次**：`fPurpose` 可能刚被 `paintRooms` 清成 null（这层没这一类），
+    //   不清的话三维还留着上一层的筛选，而图例已经没有 on 了 —— 两处读数会打架。
+    + ' · ' + (dropped
+        ? ('这层没有「' + dropped + '」⇒ 已取消用途筛选；')
+        : (fPurpose === null ? '' : '用途保持「' + fPurpose + '」；'))
+    + syncChildPurpose(fPurpose);
+};
+rlegend.onclick = e => {
+  const s = e.target.closest('span'); if (!s) return;
+  const p = s.dataset.p;
+  fPurpose = (fPurpose === p) ? null : p;      // 再点一次取消
+  selRoom = null; rcardOff(); paintRooms();
+  // ★ 用户令（2026-10-20）「房间用途可以选择，选择后的有颜色」：点这一项，
+  //   三维里的房间色块**跟着只留这一类**（再点一次恢复全部）。
+  //   成败**照子页回的读数写状态行**（命中 0 时说命中 0，不写成「已筛选」）。
+  if (frame) statusEl.textContent = (fPurpose === null ? '三维：全部用途' : '三维只看「' + fPurpose + '」')
+                                  + ' — ' + syncChildPurpose(fPurpose);
+};
+
+// ── 悬浮标牌（2026-10-20 用户令）──────────────────────────────────────────
+//   「在选择房间色块时，旁边增加一个选项，可以把该房间每层的房间信息都显示到色块的上方」；
+//   「以悬浮的方式显示……不管房间怎么转动，这个标牌永远是冲着我的正方向的」。
+//   ⇒ 开关就挂在图例标题右边（不另开面板，照 2026-10-20 那条「已经有列表的，在上面做就行」）。
+//   ★ 读数一律取自子页回的**现数**（开/关、几片），本页不另算一遍（铁律 018）。
+//   ★ 三种失败分开报（铁律 199）：子页没起 / 子页是旧版没这个方法 / 子页回了非对象。
+function syncChildTags(on){
+  const w = frame && frame.contentWindow;
+  let hs = null;
+  try { hs = w ? (w.__cdut3d || null) : null; } catch (e) { return '读不到子页握手口：' + e; }
+  if (!hs) return '子页还没起（标牌未动）';
+  if (typeof hs.setRoomTags !== 'function') return '子页没有 setRoomTags（这一版的 demo/index.html 太旧）';
+  let r = null;
+  try { r = hs.setRoomTags(on); } catch (e) { return '子页 setRoomTags 抛 ' + e; }
+  if (!r || typeof r !== 'object') return '子页没回读数（无法确认标牌开没开）';
+  if (rtagN) rtagN.textContent = r.shown + '/' + r.total;
+  if (rtagBox) rtagBox.classList.toggle('on', !!r.on);
+  return (r.on ? '标牌开：' : '标牌关：')
+       + (r.built ? (r.shown + '/' + r.total + ' 片') : '色块还没建出来（0/' + r.total + '）');
+}
+if (rtagOn) rtagOn.onchange = () => {
+  if (rtagBox) rtagBox.classList.toggle('on', rtagOn.checked);
+  const msg = syncChildTags(rtagOn.checked);
+  if (frame) statusEl.textContent = msg;
+};
+rlist.onclick = e => {
+  const row = e.target.closest('.rrow'); if (!row) return;
+  const r = (rlist._ok || [])[Number(row.dataset.i)];
+  if (r) showCard(r);
+};
+
+// ── 8 开张 ───────────────────────────────────────────────────────────────
+(async () => {
+  let idx = null;
+  try {
+    const r = await fetch(PACKS_INDEX, {cache: 'no-store'});
+    if (!r.ok) throw new Error(r.status + ' ' + PACKS_INDEX);
+    idx = await r.json();
+  } catch (e) {
+    showVeil('<h2>读不到楼栋清单</h2><p>' + esc(String(e)) + '</p>'
+             + '<p>先跑 <code>python demo/build_index.py</code>（它从 <code>packs/*/*/manifest.json</code>'
+             + ' 现算，不动包内任何一件）。</p>');
+    statusEl.textContent = '清单没读到';
+    return;
+  }
+  // ★★ 一个页面多个建筑：楼栋**全部**来自 `packs`（本仓打过包的）。
+  //   理化楼 c005 也在里面（`demo/build_pack_c005.py`）—— 用户令「理化楼是完全按照 cdut3d 的
+  //   线路生成，和其他没有关系」⇒ 它不单开一条外部分支，和 c006 走同一条路。
+  rows = idx.packs || [];
+  if (!rows.length){
+    showVeil('<h2>盘上一个包都没有</h2><p>先跑 <code>demo/build_pack.py</code>。</p>');
+    return;
+  }
+  pick.innerHTML = rows.map(r => '<option value="' + attr(r.campus + '/' + r.id) + '">'
+    + esc(r.campus + ' / ' + r.id + ' · ' + r.title)
+    + '</option>').join('');
+
+  const fromHash = parseHash();
+  const fromQuery = new URLSearchParams(location.search).get('pack');
+  const want = fromHash || fromQuery;
+  if (want && indexOf(want) < 0){
+    showVeil('<h2>清单里没有这个楼栋</h2><p>' + esc(want) + '</p>'
+             + '<p>清单：' + esc(rows.map(r => r.campus + '/' + r.id).join(' · ')) + '</p>');
+    return;
+  }
+  load(want || (rows[0].campus + '/' + rows[0].id), {push: !!want});
+})();
+</script>
+</body></html>

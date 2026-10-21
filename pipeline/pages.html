@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第六教学楼 · 全部页面</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ink:#17181c; --muted:#6c6f76; --paper:#f3f0e8; --card:#fffdf7;
+    --line:#d9d2c2; --line2:#e8e3d7; --blue:#2450b8;
+    --mono:ui-monospace,Consolas,"Courier New",monospace;
+    --serif:"Songti SC","SimSun","Noto Serif SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:15px/1.6 -apple-system,"Segoe UI","Noto Sans SC",sans-serif}
+  .mast{background:#14161b;color:#f2efe6}
+  .mast-in{max-width:1440px;margin:0 auto;padding:16px 36px;display:flex;
+           align-items:baseline;gap:16px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:#a8a294}
+  h1{font-family:var(--serif);font-size:25px;margin:0}
+  .mast-in .back{margin-left:auto;font-size:12.5px;color:#c9c3b5;text-decoration:none}
+  .mast-in .back:hover{color:#fff}
+  main{max-width:1100px;margin:0 auto;padding:22px 36px 70px}
+  .lead{color:var(--muted);font-size:13px;margin:0 0 18px}
+  h2{font-family:var(--serif);font-size:17px;margin:26px 0 8px;
+     padding-bottom:5px;border-bottom:1px solid var(--line)}
+  h2 .n{font-family:var(--mono);font-size:11px;color:var(--muted);margin-right:8px}
+  .row{display:grid;grid-template-columns:190px 1fr;gap:14px;align-items:baseline;
+       padding:9px 0;border-bottom:1px solid var(--line2)}
+  .row:last-child{border-bottom:0}
+  .row a{color:var(--blue);text-decoration:none;font-size:14.5px}
+  .row a:hover{text-decoration:underline}
+  .row .q{color:var(--muted);font-size:13px}
+  .err{padding:40px;color:#b1342b;font-family:var(--mono)}
+  footer{max-width:1100px;margin:0 auto;padding:0 36px 34px;color:var(--muted);font-size:12px}
+  @media (max-width:640px){
+    .mast-in,main,footer{padding-left:14px;padding-right:14px}
+    .row{grid-template-columns:1fr;gap:2px}
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="mast-in">
+    <div>
+      <div class="brand">C006 · 第六教学楼（逸夫楼）</div>
+      <h1>全部页面</h1>
+    </div>
+    <a class="back" href="/pipeline">← 回到流程</a>
+  </div>
+</header>
+<main>
+  <p class="lead" id="lead">读取中…</p>
+  <div id="body"></div>
+</main>
+<footer>
+  每页只回答一个问题；归到哪一步是人为定的（<code>server.py::PAGES</code>），不是量出来的。
+</footer>
+
+<script>
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function group(title, n, items){
+  const box = el("section");
+  const h = el("h2");
+  if (n != null) h.append(el("span","n", String(n).padStart(2,"0")));
+  h.append(document.createTextNode(title));
+  box.append(h);
+  for (const p of items){
+    const r = el("div","row");
+    const a = el("a", null, p.title);
+    a.href = p.href;
+    a.target = "_blank";
+    a.rel = "noopener";
+    r.append(a, el("div","q", p.asked || ""));
+    box.append(r);
+  }
+  return box;
+}
+
+fetch("/api/state?t=" + Date.now())
+  .then(r => r.json())
+  .then(st => {
+    const pages = st.pages || [];
+    const stages = (st.stages || []).map(s => ({id: s.id, n: s.n, name: s.name}));
+    const body = document.getElementById("body");
+    const parts = [];
+    for (const s of stages){
+      const items = pages.filter(p => p.stage === s.id);
+      if (items.length) parts.push(group(s.name, s.n, items));
+    }
+    const rest = pages.filter(p => !p.stage);
+    if (rest.length) parts.push(group("其他", null, rest));
+    body.replaceChildren(...parts);
+    document.getElementById("lead").textContent =
+      pages.length + " 个页面，按「从图纸到模型」的第几步分组。";
+  })
+  .catch(e => {
+    document.getElementById("body").replaceChildren(
+      el("div","err", "读不到 /api/state：" + e.message));
+  });
+</script>
+</body>
+</html>

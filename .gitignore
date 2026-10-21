@@ -30,14 +30,38 @@
 **/_probe_out/
 **/_gen/
 **/_stale-*/
+/过程/
+/demo/_shots/
 
 # ── 2 日志 / 缓存 / 半截件
 *.log
 *.pyc
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 *.skb
 *.partial-*
 *.skp.partial-*
+*.bak-*
+
+# ── 2.1 运行态 / 密钥 / 发布产物
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+node_modules/
+/workbench/_jobs/
+/workbench/_quick/
+/workbench/_backup/
+/workbench/_auth/
+/releases/
+/dist/
+/_archive_bak_*.zip
+/_code_bak_*.zip
 # SU 的运行日志（su_step2_build.rb:38 追加写；摘要在 EXPORT.md，这里不入库）
 build_log.txt
 **/build_log.txt
@@ -65,3 +89,10 @@ build_log.txt
 
 # ── 5 归档用的旧件（顶层 _archive 已排，这里兜住 rebuild 里散落的）
 /rebuild/_archive/
+
+# ── 6 服务端只发布「查看器 + 模型包」；各楼重建中间件不随 Git 走
+/packs/cdut-main/*
+!/packs/cdut-main/c006/
+/packs/index.json
+/rebuild/c[0-9]*/
+/rebuild/ny*/

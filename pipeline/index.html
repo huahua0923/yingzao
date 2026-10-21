@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第六教学楼 · 从图纸到模型</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ink:#17181c; --muted:#6c6f76; --paper:#f3f0e8; --card:#fffdf7;
+    --line:#d9d2c2; --line2:#e8e3d7;
+    --red:#b1342b; --blue:#2450b8; --green:#1a7a4f; --amber:#946200;
+    --mono:ui-monospace,Consolas,"Courier New",monospace;
+    --serif:"Songti SC","SimSun","Noto Serif SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:15px/1.6 -apple-system,"Segoe UI","Noto Sans SC",sans-serif}
+  .mast{background:#14161b;color:#f2efe6}
+  .mast-in{max-width:1440px;margin:0 auto;padding:18px 36px 16px;
+           display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:#a8a294}
+  h1{font-family:var(--serif);font-size:26px;font-weight:700;margin:0;letter-spacing:.02em}
+  .mast-in .right{margin-left:auto;display:flex;gap:22px;flex-wrap:wrap}
+  .mast-in .right div{text-align:right}
+  .mast-in b{display:block;font-family:var(--mono);font-size:18px;color:#fff;line-height:1.2}
+  .mast-in span{font-size:10.5px;color:#9a9486;letter-spacing:.08em}
+
+  .rail{position:sticky;top:0;z-index:20;background:rgba(243,240,232,.97);
+        border-bottom:1px solid var(--line)}
+  .rail-in{max-width:1440px;margin:0 auto;padding:0 36px;display:flex;
+           overflow-x:auto;scrollbar-width:thin}
+  .node{flex:1 1 0;min-width:118px;background:none;border:0;border-bottom:3px solid transparent;
+        padding:11px 9px 10px;text-align:left;cursor:pointer;font:inherit;color:var(--muted);
+        display:grid;grid-template-columns:24px 1fr;column-gap:8px;row-gap:1px;position:relative}
+  .node:hover{background:rgba(0,0,0,.02)}
+  .node .num{grid-row:1/3;font-family:var(--mono);font-size:10.5px;width:22px;height:22px;
+             border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;
+             align-self:center;color:var(--muted);background:var(--card)}
+  .node .nname{font-size:14px;font-weight:600;color:var(--ink)}
+  .node .nsub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;
+              text-overflow:ellipsis}
+  .node.on{border-bottom-color:var(--red)}
+  .node.on .num{background:var(--red);border-color:var(--red);color:#fff}
+  .node .dot{position:absolute;top:11px;right:8px;width:6px;height:6px;border-radius:50%}
+  .dot.ok{background:var(--green)} .dot.bad{background:var(--red)}
+  .dot.unmeasured{background:var(--amber)} .dot.none{background:#c9c3b5}
+
+  main{max-width:1440px;margin:0 auto;padding:20px 36px 70px}
+  .stage{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(360px,1fr);
+         gap:24px;align-items:start}
+  .figure{margin:0;background:var(--card);border:1px solid var(--line)}
+  .figure .imgwrap{background:#fff;display:grid;place-items:center;min-height:280px;
+                   padding:8px;border-bottom:1px solid var(--line2)}
+  .figure img{max-width:100%;max-height:520px;display:block}
+  .figure figcaption{padding:9px 14px;font-size:12.5px;color:var(--muted)}
+  .figtag{font-family:var(--mono);font-size:10.5px;color:var(--red);
+          letter-spacing:.1em;margin-right:10px}
+
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--muted)}
+  .read h2{font-family:var(--serif);font-size:28px;margin:2px 0 4px;line-height:1.2;
+           display:flex;align-items:center;gap:10px}
+  .info{font:700 12px/1 -apple-system,sans-serif;width:20px;height:20px;border-radius:50%;
+        border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;
+        padding:0;display:grid;place-items:center}
+  .info:hover{border-color:var(--blue);color:var(--blue)}
+  .one{font-size:15px;margin:0 0 12px;color:#333}
+  .stats{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--line);padding:4px 10px}
+  .stat b{display:block;font-family:var(--mono);font-size:15px;font-weight:600;line-height:1.3}
+  .stat span{font-size:10.5px;color:var(--muted)}
+
+  /* 可改的数 */
+  .knobs{border-top:2px solid var(--ink);padding-top:10px}
+  .khead{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .khead h3{font-size:12px;letter-spacing:.12em;color:var(--muted);margin:0;font-weight:600;
+            font-family:var(--mono)}
+  .khead .tip{font-size:11.5px;color:var(--muted)}
+  .knob{padding:7px 0;border-bottom:1px dotted var(--line2)}
+  .krow{display:flex;align-items:center;gap:8px}
+  .krow .kn{font-size:14px;font-weight:600}
+  .krow .kq{width:17px;height:17px;border-radius:50%;border:1px solid var(--line);
+            background:none;color:var(--muted);font:600 10px/1 sans-serif;cursor:pointer;padding:0}
+  .krow .kq:hover{border-color:var(--blue);color:var(--blue)}
+  .krow .kv{margin-left:auto;font-family:var(--mono);font-size:13.5px}
+  .krow .ktag{font-size:10px;padding:0 6px;border-radius:99px;border:1px solid var(--line);
+              color:var(--muted)}
+  .ktag.实测{color:var(--green);border-color:#b9dcc9;background:#eef7f1}
+  .ktag.假设{color:var(--amber);border-color:#e2cf9d;background:#faf4e3}
+  .ktag.规范{color:var(--blue);border-color:#c3d0ee;background:#eff3fc}
+  .ktag.现件{color:var(--blue);border-color:#c3d0ee;background:#eff3fc}
+  .ktag.待坐实{color:var(--red);border-color:#e8bdb7;background:#fbeeec}
+  .krow input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--red)}
+  .kwhy{display:none;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .kwhy.on{display:block}
+  .kwhy .src{margin-top:3px;padding-left:8px;border-left:2px solid var(--line);
+             color:#55585e;overflow-wrap:anywhere}
+  .kempty{font-size:13px;color:var(--muted);padding:6px 0}
+
+  /* 改前改后 */
+  .cmp{margin-top:16px;border:1px solid var(--line);background:var(--card)}
+  .cmp .chead{display:flex;align-items:baseline;gap:10px;padding:8px 12px;
+              border-bottom:1px solid var(--line2)}
+  .cmp .chead b{font-size:13px}
+  .cmp .chead .st{font-size:11.5px;color:var(--muted);margin-left:auto}
+  .cmp .reset{font:inherit;font-size:11.5px;border:1px solid var(--line);background:none;
+              padding:2px 8px;cursor:pointer;color:var(--muted)}
+  .cmp .reset:hover{border-color:var(--red);color:var(--red)}
+  .cmp svg{display:block;width:100%;height:auto;background:#fff}
+  .diffs{padding:4px 12px 10px}
+  .diff{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:baseline;
+        font-size:12.5px;padding:3px 0;color:var(--muted)}
+  .diff .dv{font-family:var(--mono)}
+  .diff.chg{color:var(--ink)}
+  .diff.chg .dv{color:var(--red);font-weight:600}
+  .cnote{padding:0 12px 9px;font-size:11px;color:#9a9486}
+
+  /* 真跑一遍 */
+  .trial{margin-top:14px;border-top:2px solid var(--ink);padding-top:10px}
+  .trial .run{font:inherit;font-size:13.5px;padding:6px 16px;border:1px solid var(--ink);
+             background:var(--ink);color:#fff;cursor:pointer}
+  .trial .run:disabled{background:#b9b3a6;border-color:#b9b3a6;cursor:not-allowed}
+  .trial .tsub{margin-left:10px;font-size:11.5px;color:var(--muted)}
+  .trial .tout{margin-top:9px;font-size:12.5px}
+  .trial .terr{color:var(--red)}
+  .trial .trow{display:grid;grid-template-columns:1fr auto;gap:8px;padding:2px 0;
+               border-bottom:1px dotted var(--line2)}
+  .trial .trow b{font-family:var(--mono);font-weight:600}
+  .trial .twarn{color:var(--amber);margin-top:6px}
+  .trial pre{background:#f7f4ec;border:1px solid var(--line2);padding:7px;font-size:11px;
+             max-height:160px;overflow:auto;white-space:pre-wrap;margin:6px 0 0}
+
+  /* 验证台账 */
+  .ledger{width:100%;padding:8px 14px 12px;max-height:560px;overflow:auto;background:#fff}
+  .ledger .lhead{position:sticky;top:0;background:#fff;z-index:1;display:flex;gap:14px;
+                 padding:4px 0 7px;border-bottom:1px solid var(--line);font-size:11.5px;
+                 color:var(--muted);font-family:var(--mono)}
+  .lgrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;
+         padding:5px 2px;border-bottom:1px dotted var(--line2);font-size:13px}
+  .lgrow.bad{background:#fdf3f1}
+  .lgrow .gid{font-family:var(--mono);font-size:10.5px;color:#a29a88;white-space:nowrap}
+  .lgrow .gt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lgrow.bad .gt{font-weight:600}
+
+  .pill{font-family:var(--mono);font-size:10.5px;padding:1px 7px;border:1px solid;
+        border-radius:99px;white-space:nowrap}
+  .pill.ok{color:var(--green);border-color:#b9dcc9;background:#eef7f1}
+  .pill.bad{color:var(--red);border-color:#e8bdb7;background:#fbeeec}
+  .pill.unmeasured{color:var(--amber);border-color:#e2cf9d;background:#faf4e3}
+  .pill.none{color:var(--muted);border-color:var(--line);background:#f4f2ec}
+  .gates{margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
+  .gates h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted);
+            margin:0 0 4px;font-weight:600}
+  .gate{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;
+        font-size:13px;padding:5px 0;border-bottom:1px dotted var(--line2)}
+  .gate .gid{font-family:var(--mono);font-size:10.5px;color:#a29a88;white-space:nowrap}
+  .gate a{color:var(--blue);text-decoration:none;font-size:11.5px;white-space:nowrap}
+
+  .mnav{display:flex;gap:0;margin-left:auto;align-self:center}
+  .mnav a{color:#c9c3b5;text-decoration:none;font-size:12.5px;padding:5px 11px;
+          border:1px solid #2c3038;border-left:0}
+  .mnav a:first-child{border-left:1px solid #2c3038}
+  .mnav a:hover{color:#fff;border-color:#5b6270;background:#1c1f25}
+
+  .pgs{margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
+  .pgs h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted);
+          margin:0 0 6px;font-weight:600}
+  .pgs a{display:inline-block;margin:0 6px 6px 0;padding:3px 9px;border:1px solid var(--line);
+         color:var(--blue);text-decoration:none;font-size:12.5px;background:var(--card)}
+  .pgs a:hover{border-color:var(--blue)}
+
+  .sheetgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+             gap:9px;width:100%;padding:12px}
+  .sheet{border:1px solid var(--line);background:#fff;padding:8px 10px;position:relative}
+  .sheet::before{content:"";position:absolute;inset:4px 4px auto 4px;height:22px;
+                 border:1px solid var(--line2)}
+  .sheet b{display:block;font-size:12.5px;margin:29px 0 1px;font-weight:600;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sheet span{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+
+  /* 全量参数（折叠） */
+  .allparams{margin-top:34px;border-top:2px solid var(--ink);padding-top:12px}
+  .allparams summary{cursor:pointer;font-family:var(--serif);font-size:19px}
+  .allparams summary::marker{color:var(--red)}
+  .phead{display:flex;gap:14px;align-items:center;margin:12px 0 6px;flex-wrap:wrap}
+  .phead input{font:inherit;font-size:12.5px;padding:5px 10px;border:1px solid var(--line);
+               background:var(--card);min-width:240px;margin-left:auto}
+  .pgroup{margin-top:14px}
+  .pgroup h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted);
+             margin:0 0 6px;font-weight:600}
+  .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-left:3px solid #cfc7b4;
+         padding:7px 11px;display:grid;grid-template-columns:1fr auto;gap:0 8px}
+  .pname{font-size:13px;font-weight:600}
+  .pval{font-family:var(--mono);font-size:12px;text-align:right}
+  .peffect{grid-column:1/3;font-size:11.5px;color:var(--muted);margin-top:2px;
+           display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* 弹层 */
+  .modal{position:fixed;inset:0;background:rgba(20,22,27,.45);display:none;
+         align-items:center;justify-content:center;z-index:60;padding:20px}
+  .modal.on{display:flex}
+  .modal .box{background:var(--paper);border:1px solid var(--line);max-width:560px;width:100%;
+              max-height:80vh;overflow:auto;padding:20px 22px;box-shadow:0 20px 50px -20px #000}
+  .modal h3{font-family:var(--serif);font-size:21px;margin:0 0 4px}
+  .modal .sub{font-size:12px;color:var(--muted);margin-bottom:12px;font-family:var(--mono)}
+  .modal h4{font-size:11.5px;letter-spacing:.12em;color:var(--muted);margin:14px 0 5px;
+            font-family:var(--mono)}
+  .modal ul{margin:0;padding-left:16px}
+  .modal li{font-size:14px;padding:2px 0}
+  .modal .close{margin-top:16px;font:inherit;font-size:13px;padding:5px 14px;
+                border:1px solid var(--line);background:var(--card);cursor:pointer}
+  .err{padding:40px;color:var(--red);font-family:var(--mono)}
+  footer{max-width:1440px;margin:0 auto;padding:0 36px 40px;color:var(--muted);font-size:12px}
+  footer a{color:var(--blue);text-decoration:none}
+  @media (max-width:960px){
+    .stage{grid-template-columns:1fr}
+    .mast-in,main,.rail-in,footer{padding-left:16px;padding-right:16px}
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="mast-in">
+    <div>
+      <div class="brand">C006 · 第六教学楼（逸夫楼）</div>
+      <h1>从图纸到模型</h1>
+    </div>
+    <nav class="mnav">
+      <a href="/pipeline" target="_blank">流程</a>
+      <a href="/pipeline/flow" target="_blank">总览</a>
+      <a href="/pipeline/floors" target="_blank">每层一页</a>
+      <a href="/pipeline/pages" target="_blank">全部页面</a>
+      <a href="http://127.0.0.1:8150/" target="_blank">工作台</a>
+      <a href="/files/demo/building.html#/building/cdut-main/c006" target="_blank">三维</a>
+    </nav>
+    <div class="right" id="mastNums"></div>
+  </div>
+</header>
+
+<nav class="rail"><div class="rail-in" id="rail"></div></nav>
+
+<main>
+  <section class="stage" id="stage"><div class="err">读取中…</div></section>
+
+  <details class="allparams" id="allparams">
+    <summary>全部参数（<span id="pcount">—</span> 个）</summary>
+    <div class="phead">
+      <input id="q" placeholder="找参数，例如「层高」「门扇」">
+    </div>
+    <div id="pboard"></div>
+  </details>
+</main>
+
+<footer>
+  数字都是打开时现读的（<span id="gen"></span>）。改旋钮只做「试算」，不改真源
+  <code>rebuild/构件库/参数.json</code>。
+  · <a href="/pipeline/floors">每层一页</a>
+  · <a href="/files/%E8%A7%84%E8%8C%83%2F%E6%A0%87%E5%87%86%E7%BB%91%E5%AE%9A.md" target="_blank">规范依据</a>
+  · <a href="/files/demo/building.html" target="_blank">三维展示</a>
+</footer>
+
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+
+<script>
+const MARK = {ok:"合格", bad:"有问题", unmeasured:"没测到", none:"没读过"};
+const GROUPS = ["门","楼梯","共用","顶部","竖井"];
+let ST = null, CUR = 0, EDITS = {}, CMP = null, TRIAL = null, TRIAL_BUSY = false;
+
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+const mb = n => n >= 1048576 ? (n/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(n/1024))+" KB";
+const plain = s => String(s == null ? "" : s).replace(/\*\*/g, "").trim();
+const fmt = v => (Math.round(v*1000)/1000).toString();
+
+function knobValue(k){
+  return EDITS[k.path] != null ? EDITS[k.path] : Number(k.value);
+}
+
+async function load(){
+  const r = await fetch("/api/state?t="+Date.now());
+  if (!r.ok) throw new Error("HTTP "+r.status);
+  ST = await r.json();
+  document.getElementById("gen").textContent = ST.generated_at || "";
+  document.getElementById("pcount").textContent = ST.counts.params;
+  renderMast(); renderRail(); renderStage(); renderParams();
+}
+
+function renderMast(){
+  const c = ST.counts, box = document.getElementById("mastNums");
+  box.replaceChildren();
+  const st = ST.standards || {};
+  for (const [v,k] of [[c.floors,"层"], [c.top_m+" m","主体高"], [c.gates,"个检查"],
+                       (st.verified != null ? [st.verified+"/"+st.n,"条规范已核"] : [c.params,"个参数"])]){
+    const d = el("div");
+    d.append(el("b", null, String(v)), el("span", null, k));
+    box.append(d);
+  }
+}
+
+function renderRail(){
+  const rail = document.getElementById("rail");
+  rail.replaceChildren();
+  ST.stages.forEach((s,i) => {
+    const b = el("button", "node" + (i===CUR ? " on" : ""));
+    b.type = "button";
+    b.append(el("span","num",String(s.n)), el("span","nname",s.name),
+             el("span","nsub",s.sub));
+    const g = (s.gates || [])[0];
+    if (g) { const d = el("span","dot "+g.state); d.title = g.title; b.append(d); }
+    b.onclick = () => select(i);
+    rail.append(b);
+  });
+}
+
+function select(i){
+  if (!ST || i<0 || i>=ST.stages.length) return;
+  CUR = i;
+  document.querySelectorAll(".node").forEach((n,k)=>n.classList.toggle("on",k===i));
+  renderStage();
+}
+
+function statNode(k,v){
+  const d = el("div","stat");
+  d.append(el("b",null,v), el("span",null,k));
+  return d;
+}
+
+function sheetGrid(items){
+  const g = el("div","sheetgrid");
+  for (const it of items){
+    const c = el("div","sheet");
+    c.append(el("b",null,it.name), el("span",null,mb(it.bytes||0)));
+    g.append(c);
+  }
+  return g;
+}
+
+function gateLedger(rows){
+  const box = el("div","ledger");
+  const head = el("div","lhead");
+  const n = s => rows.filter(r=>r.state===s).length;
+  head.append(el("span",null,"共 "+rows.length+" 个检查"),
+              el("span",null,"合格 "+n("ok")),
+              el("span",null,"有问题 "+n("bad")),
+              el("span",null,"没测到 "+n("unmeasured")));
+  box.append(head);
+  for (const r of rows){
+    const row = el("div","lgrow "+r.state);
+    row.append(el("span","pill "+r.state, MARK[r.state]||r.state),
+               el("span","gt", r.title),
+               el("span","gid", r.id + (r.n ? " · "+r.n+" 条" : "")
+                    + (r.fail ? " / "+r.fail+" 红" : "")));
+    box.append(row);
+  }
+  return box;
+}
+
+/* ── 改前 / 改后：按参数算立面示意 ── */
+function derived(over){
+  const m = ST.model, g = p => (over[p] != null ? over[p] : null);
+  const n = g("@n_above") != null ? g("@n_above") : m.n_above;
+  const storey = g("构件/共用/层高") != null ? g("构件/共用/层高")/1000 : m.storey_m;
+  const door = g("构件/门/洞高") != null ? g("构件/门/洞高") : m.door_mm;
+  const par = g("构件/顶部/女儿墙高") != null ? g("构件/顶部/女儿墙高") : m.parapet_mm;
+  const riser = g("构件/楼梯/踢面") != null ? g("构件/楼梯/踢面") : m.riser_mm;
+  const wall = g("构件/共用/墙厚") != null ? g("构件/共用/墙厚") : m.wall_mm;
+  const ring = g("构件/共用/环_最短边下限") != null ? g("构件/共用/环_最短边下限") : m.ring_mm;
+  const room = g("构件/共用/房间_面积下限") != null ? g("构件/共用/房间_面积下限") : m.room_m2;
+  const top = n * storey;
+  return {
+    n, storey, door, par, riser, wall, ring, room,
+    top, zmax: top + (m.z_max_m - m.top_m),
+    basement: m.basement_m,
+    lintel: (storey - door/1000) * 1000,
+    steps: Math.max(1, Math.round(storey*1000 / (2*riser))),
+  };
+}
+
+function elevation(a, b){
+  const H = Math.max(a.basement + a.n*a.storey + a.par/1000,
+                     b.basement + b.n*b.storey + b.par/1000, 1);
+  const gY = 176, W = 56, px = 132 / H;
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 300 200");
+  svg.setAttribute("role", "img");
+  const mk = (tag, attrs, text) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    svg.append(e);
+    return e;
+  };
+  mk("line", {x1:8, y1:gY, x2:292, y2:gY, stroke:"#17181c", "stroke-width":"1"});
+  mk("text", {x:8, y:gY-5, "font-size":"9", fill:"#8b8578"}, "±0.000");
+  [[a, 26, "改前", "#b7b0a1"], [b, 170, "改后", "#b1342b"]].forEach(([d, x, lab, col]) => {
+    const mainH = d.n*d.storey*px, parH = d.par/1000*px, baseH = d.basement*px;
+    mk("rect", {x, y:gY, width:W, height:Math.max(1,baseH), fill:"#efece4",
+                stroke:col, "stroke-width":"1", "stroke-dasharray":"2 2"});
+    mk("rect", {x, y:gY-mainH, width:W, height:mainH, fill:"none",
+                stroke:col, "stroke-width":"1.6"});
+    for (let i=1;i<d.n;i++)
+      mk("line", {x1:x, y1:gY-i*d.storey*px, x2:x+W, y2:gY-i*d.storey*px,
+                  stroke:col, "stroke-width":".5", opacity:".5"});
+    if (parH > 0)
+      mk("rect", {x, y:gY-mainH-parH, width:W, height:parH, fill:col, opacity:".85"});
+    mk("text", {x:x+W/2, y:gY-mainH-parH-6, "font-size":"10.5", "text-anchor":"middle",
+                fill:col, "font-family":"Consolas,monospace"}, d.top.toFixed(1)+" m");
+    mk("text", {x:x+W/2, y:gY+16, "font-size":"10", "text-anchor":"middle", fill:"#6c6f76"},
+       lab);
+  });
+  return svg;
+}
+
+function cmpCard(){
+  const a = derived({}), b = derived(EDITS);
+  const changed = Object.keys(EDITS).length > 0;
+  const card = el("div","cmp");
+  const head = el("div","chead");
+  head.append(el("b",null,"改前 / 改后"),
+              el("span","st", changed ? "试算中" : "还没改"));
+  if (changed){
+    const r = el("button","reset","恢复原样");
+    r.onclick = () => { EDITS = {}; renderStage(); };
+    head.append(r);
+  }
+  card.append(head, elevation(a,b));
+  const rows = [
+    ["楼层数", a.n+" 层", b.n+" 层", a.n!==b.n],
+    ["层高", fmt(a.storey)+" m", fmt(b.storey)+" m", a.storey!==b.storey],
+    ["主体高", fmt(a.top)+" m", fmt(b.top)+" m", a.top!==b.top],
+    ["最高点", fmt(a.zmax)+" m", fmt(b.zmax)+" m", a.zmax!==b.zmax],
+    ["门头墙高", Math.round(a.lintel)+" mm", Math.round(b.lintel)+" mm", a.lintel!==b.lintel],
+    ["每跑级数", a.steps+" 级", b.steps+" 级", a.steps!==b.steps],
+    ["女儿墙", Math.round(a.par)+" mm", Math.round(b.par)+" mm", a.par!==b.par],
+    ["墙厚", Math.round(a.wall)+" mm", Math.round(b.wall)+" mm", a.wall!==b.wall],
+    ["轮廓最短边", fmt(a.ring)+" mm", fmt(b.ring)+" mm", a.ring!==b.ring],
+    ["房间面积下限", fmt(a.room)+" m²", fmt(b.room)+" m²", a.room!==b.room],
+  ];
+  const dd = el("div","diffs");
+  for (const [k, va, vb, ch] of rows){
+    const r = el("div","diff"+(ch?" chg":""));
+    r.append(el("span",null,k), el("span","dv",va), el("span",null,"→"),
+             el("span","dv",vb));
+    dd.append(r);
+  }
+  card.append(dd);
+  card.append(el("div","cnote","示意图按参数算；真件要重跑「建模」才变。"));
+  return card;
+}
+
+/* ── 可拖的数 ── */
+function knobsBox(stage){
+  const box = el("div","knobs");
+  const head = el("div","khead");
+  head.append(el("h3",null,"可以改的数"));
+  if (!stage.knobs.length){
+    box.append(head, el("div","kempty","这一段没有可改的数（自动跑）。"));
+    return box;
+  }
+  head.append(el("span","tip","拖一下，右边马上看改前改后"));
+  box.append(head);
+  for (const k of stage.knobs){
+    const cur = knobValue(k);
+    const row = el("div","knob");
+    const top = el("div","krow");
+    const nm = el("span","kn", k.name);
+    const q = el("button","kq","?");
+    q.type = "button";
+    const val = el("span","kv", fmt(cur)+" "+k.unit);
+    top.append(nm, q, el("span","ktag "+k.tag, k.tag), val);
+    const why = el("div","kwhy");
+    why.append(el("div", null, plain(k.why)));
+    if (k.source) why.append(el("div","src", "依据：" + plain(k.source)));
+    q.onclick = () => why.classList.toggle("on");
+    const sl = el("input");
+    sl.type = "range";
+    sl.min = k.min; sl.max = k.max; sl.step = k.step; sl.value = cur;
+    // ★ 只换「改前/改后」那张卡，不重画整个右栏 —— 否则拖到一半滑块被自己销毁
+    sl.oninput = () => {
+      const v = Number(sl.value);
+      EDITS[k.path] = v;
+      val.textContent = fmt(v)+" "+k.unit;
+      if (CMP){
+        const next = cmpCard();
+        CMP.replaceWith(next);
+        CMP = next;
+      }
+      const rb = document.querySelector(".trial .run");
+      if (rb && !TRIAL_BUSY) rb.disabled = false;
+    };
+    row.append(top, sl, why);
+    box.append(row);
+  }
+  return box;
+}
+
+function renderStage(){
+  const s = ST.stages[CUR];
+  const box = document.getElementById("stage");
+
+  const fig = el("figure","figure");
+  const wrap = el("div","imgwrap");
+  if (s.visual){
+    const img = el("img");
+    img.src = s.visual; img.alt = s.name;
+    wrap.append(img);
+  } else if (s.ledger && s.ledger.length){
+    wrap.append(gateLedger(s.ledger));
+  } else if (s.files && s.files.length){
+    wrap.append(sheetGrid(s.files));
+  } else {
+    wrap.append(el("div",null,"没有可看的图"));
+  }
+  fig.append(wrap);
+  const cap = el("figcaption");
+  cap.append(el("span","figtag","第 "+s.n+" 步 · "+s.name));
+  cap.append(document.createTextNode(s.visual_caption || "这一步的产物是文件"));
+  fig.append(cap);
+
+  const read = el("div","read");
+  const h2 = el("h2");
+  h2.append(document.createTextNode(s.name));
+  const info = el("button","info","i");
+  info.type = "button";
+  info.title = "这一步做什么";
+  info.onclick = () => openInfo(s);
+  h2.append(info);
+  read.append(el("div","kicker","第 "+s.n+" 步 / 共 "+ST.stages.length+" 步"), h2,
+              el("p","one", s.one));
+
+  const stats = el("div","stats");
+  for (const [k,v] of s.stats) stats.append(statNode(k,v));
+  read.append(stats);
+
+  read.append(knobsBox(s));
+  CMP = cmpCard();
+  read.append(CMP);
+  read.append(trialBox());
+
+  if ((s.pages||[]).length){
+    const pb = el("div","pgs");
+    pb.append(el("h3", null, "这一段的专项页"));
+    for (const pg of s.pages){
+      const a = el("a", null, pg.title);
+      a.href = pg.href; a.target = "_blank"; a.title = pg.asked || "";
+      pb.append(a);
+    }
+    read.append(pb);
+  }
+
+  if ((s.gates||[]).length){
+    const g = el("div","gates");
+    g.append(el("h3",null,"守着这一步的检查"));
+    for (const it of s.gates){
+      const row = el("div","gate");
+      row.append(el("span","pill "+it.state, MARK[it.state]||it.state),
+                 el("span",null,it.title+" · "+it.n+" 条"),
+                 el("span","gid",it.id));
+      g.append(row);
+    }
+    read.append(g);
+  }
+  box.replaceChildren(fig, read);
+}
+
+/* ── 真跑一遍（沙盒 build3d；不动真源与交付包） ── */
+function knobName(path){
+  const k = (ST.knobs || []).find(x => x.path === path);
+  return k ? k.name : path;
+}
+
+async function runTrial(){
+  TRIAL_BUSY = true; TRIAL = null; renderStage();
+  try {
+    const r = await fetch("/api/try", {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({edits: EDITS})});
+    TRIAL = await r.json();
+    if (!r.ok) TRIAL = {error: TRIAL.error || ("HTTP " + r.status)};
+  } catch (e) {
+    TRIAL = {error: e.message};
+  }
+  TRIAL_BUSY = false;
+  renderStage();
+}
+
+function trialResult(r){
+  const out = el("div","tout");
+  if (r.error){ out.append(el("div","terr", "没跑成：" + r.error)); return out; }
+  if (r.rc !== 0){
+    out.append(el("div","terr", "真跑失败 rc=" + r.rc + "（真源未动）"));
+    if (r.log_tail) out.append(el("pre", null, r.log_tail.slice(-800)));
+    return out;
+  }
+  const b = r.build || {};
+  const rows = [
+    ["主体高", b.top_m != null ? fmt(b.top_m) + " m" : "—"],
+    ["最高点", b.z_max_m != null ? fmt(b.z_max_m) + " m" : "—"],
+    ["女儿墙（真建）", b.attach && b.attach.parapet_m != null
+        ? fmt(b.attach.parapet_m) + " m" : "—"],
+    ["逐层层高", (b.floor_h_m || []).join(" / ")],
+    ["试算件", b.glb_bytes ? mb(b.glb_bytes) : "—"],
+    ["用时", r.cached ? "同一组数，直接读上次结果" : r.seconds + " s"],
+  ];
+  for (const [k,v] of rows){
+    const row = el("div","trow");
+    row.append(el("span",null,k), el("b",null,String(v)));
+    out.append(row);
+  }
+  out.append(el("div","cnote", "试算目录：" + r.dir + "（只留最近 6 次）"));
+  if ((r.skipped || []).length){
+    const names = r.skipped.map(x => knobName(x.path)).join("、");
+    out.append(el("div","twarn",
+      "这几个数**这一段还没接重跑**，只参与上面的示意比较：" + names));
+  }
+  return out;
+}
+
+function trialBox(){
+  const box = el("div","trial");
+  const b = el("button","run", TRIAL_BUSY ? "真跑中…（约 1 分钟）" : "按这些数重跑建模");
+  b.type = "button";
+  b.disabled = TRIAL_BUSY || !Object.keys(EDITS).length;
+  b.onclick = runTrial;
+  box.append(b);
+  box.append(el("span","tsub", "沙盒里跑 build3d；交付包与真源不动。"));
+  if (TRIAL) box.append(trialResult(TRIAL));
+  return box;
+}
+
+function openInfo(s){
+  const box = document.getElementById("modalBox");
+  box.replaceChildren();
+  box.append(el("h3",null,s.name), el("div","sub","第 "+s.n+" 步 · "+s.sub));
+  box.append(el("h4",null,"这一步做什么"));
+  const u1 = el("ul"); for (const t of s.did) u1.append(el("li",null,t)); box.append(u1);
+  box.append(el("h4",null,"对成图的影响"));
+  const u2 = el("ul"); for (const t of s.impact) u2.append(el("li",null,t)); box.append(u2);
+
+  const st = ST.standards || {};
+  if ((s.std || []).length){
+    box.append(el("h4",null,"本段用到的规范（从参数出处里现读）"));
+    const u3 = el("ul");
+    for (const c of s.std) u3.append(el("li",null,c.code + " · " + c.n + " 个参数引它"));
+    u3.append(el("li", null,
+      "每个值是新是旧，看「可改的数」旁的标注：实测 / 假设 / 待坐实 / 旧规范。"));
+    box.append(u3);
+  }
+  if ((s.clauses || []).length){
+    box.append(el("h4",null,"外部质检口径（正本已逐条核过）"));
+    const u5 = el("ul");
+    for (const c of s.clauses){
+      u5.append(el("li", null,
+        c.id + " · " + c.section + " · 正本第 " + c.page + " 页 · " + c.apply));
+    }
+    box.append(u5);
+  }
+  const withSrc = (s.knobs || []).filter(k => k.source);
+  if (withSrc.length){
+    box.append(el("h4",null,"可改的数，各自的依据"));
+    const u4 = el("ul");
+    for (const k of withSrc){
+      const li = el("li");
+      li.append(plain(k.name) + "（" + (k.tag || "未标") + "）：" + plain(k.source).slice(0, 160));
+      u4.append(li);
+    }
+    box.append(u4);
+  }
+  if (st.n){
+    const note = el("div","cnote",
+      "标准正本已核 " + st.verified + "/" + st.n + " 条；没正本的只作方向引用，不引条款号。");
+    box.append(note);
+    const a = el("a", null, "打开规范绑定表");
+    a.href = "/files/" + encodeURIComponent("规范/标准绑定.md");
+    a.target = "_blank";
+    a.style.cssText = "font-size:12.5px;color:var(--blue);text-decoration:none;display:inline-block;margin-top:4px";
+    box.append(a);
+  }
+  const c = el("button","close","知道了"); c.onclick = closeModal; box.append(c);
+  document.getElementById("modal").classList.add("on");
+}
+function closeModal(){ document.getElementById("modal").classList.remove("on"); }
+document.getElementById("modal").addEventListener("click", e => {
+  if (e.target.id === "modal") closeModal();
+});
+
+/* ── 全量参数（折叠里的老列表） ── */
+function renderParams(){
+  const board = document.getElementById("pboard");
+  const q = (document.getElementById("q").value||"").trim().toLowerCase();
+  board.replaceChildren();
+  const hit = p => !q || (p.name+" "+p.path+" "+p.effect).toLowerCase().includes(q);
+  let shown = 0;
+  for (const g of GROUPS){
+    const rows = ST.params.filter(p=>p.group===g && hit(p));
+    if (!rows.length) continue;
+    shown += rows.length;
+    const sec = el("div","pgroup");
+    sec.append(el("h3",null,g+" · "+rows.length+" 条"));
+    const grid = el("div","pgrid");
+    for (const p of rows){
+      const c = el("div","pcard");
+      c.append(el("span","pname",p.name),
+               el("span","pval", (p.value==null?"—":String(p.value))+(p.unit?" "+p.unit:"")),
+               el("span","peffect",plain(p.effect)||"—"));
+      grid.append(c);
+    }
+    sec.append(grid);
+    board.append(sec);
+  }
+  const other = ST.params.filter(p=>!GROUPS.includes(p.group) && hit(p));
+  if (other.length){
+    shown += other.length;
+    const sec = el("div","pgroup");
+    sec.append(el("h3",null,"其它 · "+other.length+" 条"));
+    const grid = el("div","pgrid");
+    for (const p of other){
+      const c = el("div","pcard");
+      c.append(el("span","pname",p.name),
+               el("span","pval",(p.value==null?"—":String(p.value))+(p.unit?" "+p.unit:"")),
+               el("span","peffect",plain(p.effect)||"—"));
+      grid.append(c);
+    }
+    sec.append(grid);
+    board.append(sec);
+  }
+  if (!shown) board.append(el("div","kempty","没有匹配的参数。"));
+}
+
+document.getElementById("q").addEventListener("input", renderParams);
+load().catch(e => {
+  document.getElementById("stage").replaceChildren(el("div","err","读不到 /api/state："+e.message));
+});
+</script>
+</body>
+</html>

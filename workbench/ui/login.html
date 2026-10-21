@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1218">
+  <title>登录 · 营造 · 成都理工大学</title>
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+  <main class="login-shell">
+    <div class="hero" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="/login" aria-label="营造 · 成都理工大学">
+        <img src="/assets/logo.svg" alt="" width="48" height="48">
+        <span class="brand-copy">
+          <strong>营造 <i>·</i> 成都理工大学</strong>
+          <small>CHENGDU UNIVERSITY OF TECHNOLOGY</small>
+        </span>
+      </a>
+      <div class="topbar-note">
+        <span></span>
+        ARCHITECTURE · CAMPUS DIGITAL TWIN
+      </div>
+    </header>
+
+    <section class="intro">
+      <p class="eyebrow">YINGZAO / CAMPUS 3D</p>
+      <h1>让校园建筑<br><em>被看见，也被理解。</em></h1>
+      <p class="intro-copy">成都理工大学建筑管理系统<br>三维模型浏览与建筑空间管理平台</p>
+      <div class="index-line"><span>01</span><i></i><span>ARCHITECTURE MANAGEMENT</span></div>
+    </section>
+
+    <section class="card-wrap" aria-labelledby="login-title">
+      <div class="card-glow" aria-hidden="true"></div>
+      <form id="login-form" class="login-card" novalidate>
+        <div class="card-head">
+          <p class="eyebrow">SIGN IN / 访问系统</p>
+          <h2 id="login-title">欢迎回来</h2>
+          <p>进入成都理工大学建筑三维管理平台</p>
+        </div>
+
+        <label class="field">
+          <span>账号</span>
+          <span class="field-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input id="username" name="username" type="text" autocomplete="username" placeholder="请输入账号" required autofocus>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>密码</span>
+          <span class="field-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required>
+            <button class="eye" id="toggle-password" type="button" aria-label="显示密码">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+          </span>
+        </label>
+
+        <p id="login-error" class="error" role="alert" aria-live="polite"></p>
+        <button id="submit" class="submit" type="submit">
+          <span>进入系统</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="card-foot">
+          <span>仅限授权用户访问</span>
+          <span>CDUT · 2026</span>
+        </div>
+      </form>
+    </section>
+
+    <footer class="footer">
+      <span>营造 · 成都理工大学</span>
+      <span>建筑管理系统 / 三维模型浏览</span>
+    </footer>
+  </main>
+  <script src="/login.js"></script>
+</body>
+</html>

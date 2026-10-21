@@ -22,7 +22,7 @@
                   "z0": 0.0, "z1": 0.12 } ] }
 
 用法（**必须用 Blender 无头跑**，本文件不能被 CPython import）：
-  blender -b --python tools/prism_blender.py -- --in _gen/solid_input.json --out _gen/solid.glb
+  blender -b --python tools/prism_blender.py -- --in 过程/_gen/solid_input.json --out 过程/_gen/solid.glb
 """
 import json
 import sys

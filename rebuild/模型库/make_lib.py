@@ -33,9 +33,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))          # D:/项目/cdut3d
 sys.path.insert(0, HERE)
 
-from obj_text_metrics import metrics, parse_group    # noqa: E402
+from obj_text_metrics import metrics, parse_group, parse_obj_name    # noqa: E402
 
-GOOD = os.path.join(ROOT, "rebuild", "06_su", "c006_su.obj")
+# ★ 2026-10-20：好件跟**交付件**走，不跟退路走。
+#   交付路径 2026-10-17 已换 FreeCAD（`rebuild/06_su/流程.md` 头）⇒ 交付件本体是
+#   `c006_fc.obj`（`fc_obj_to_glb.py` 由它出 `packs/cdut-main/c006/model/*.glb`）。
+#   SU 那条链仍在盘上、仍能跑（`CDUT_PACK_SRC=su`），但它是**退路**，不是出件主语
+#   （铁律 196：收口共用函数时主语被悄悄换掉）。
+GOOD = os.path.join(ROOT, "rebuild", "06_su", "c006_fc.obj")
 SCALE = 25.4                      # 英寸→毫米，SU 那条老坑的倍数（见 06_su/README.md §3）
 TOL_REL = 1e-6
 
@@ -61,8 +66,12 @@ def transform(src: str, dst: str, kind: str) -> dict:
     in_lintel = False
     with open(src, "rb") as fi, open(dst, "wb") as fo:
         for raw in fi:
-            if raw.startswith(b"g "):
-                _lay, cls = parse_group(raw[2:].decode("utf-8", "replace").strip())
+            if raw.startswith(b"g ") or raw.startswith(b"o "):
+                # ★ 两种分组写法：SU 的 `g Mesh41 G_1__DOOR Model` 与 FreeCAD 的 `o floor0__DOOR`
+                if raw.startswith(b"g "):
+                    _lay, cls = parse_group(raw[2:].decode("utf-8", "replace").strip())
+                else:
+                    _lay, cls = parse_obj_name(raw[2:].decode("utf-8", "replace").strip())
                 in_lintel = (cls == "LINTEL")
                 if kind == "drop_lintel" and in_lintel:
                     n_g_drop += 1
@@ -92,8 +101,12 @@ def count_lintel(path: str) -> tuple:
     in_lintel = False
     with io.open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
-            if line.startswith("g "):
-                _lay, cls = parse_group(line[2:].strip())
+            if line.startswith("g ") or line.startswith("o "):
+                # 与 `transform` 同一口径：`g`（SU）与 `o`（FreeCAD）都是分组行
+                if line.startswith("g "):
+                    _lay, cls = parse_group(line[2:].strip())
+                else:
+                    _lay, cls = parse_obj_name(line[2:].strip())
                 in_lintel = (cls == "LINTEL")
                 if in_lintel:
                     n_g += 1
@@ -156,7 +169,8 @@ def main() -> int:
                  "bbox_min": [good["bbox_min"][0], good["bbox_min"][2], good["bbox_min"][1]],
                  "bbox_max": [good["bbox_max"][0], good["bbox_max"][2], good["bbox_max"][1]], **counts},
         "必须抓到": [{"量具": "blender/three/文本", "字段": "size",
-                      "为什么": "必须报出 size=…×45000×84000（高度 45000 不在第 3 分量）"},
+                      "为什么": "必须报出 size=%s（高度 %s 不在第 3 分量）"
+                                % ([gs[0], gs[2], gs[1]], gs[2])},
                      {"量具": "本仓朝向判据", "字段": "高度落在哪根轴",
                       "为什么": "包围盒尺子只能说「数变了」，判「轴错」得靠朝上轴判据（06_su/README §6）"}],
     })

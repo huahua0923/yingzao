@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>建模工作台 · cdut3d</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+
+<aside class="rail">
+  <div class="mark">
+    <div class="mark-n">CDUT<span>3D</span></div>
+    <div class="mark-t">建模工作台</div>
+  </div>
+  <nav aria-label="主导航">
+    <a href="#/" data-nav="overview"><b>01</b><span>总览 · 判据矩阵</span></a>
+    <a href="#/params" data-nav="params"><b>02</b><span>参数 · 依据</span></a>
+    <a href="#/run" data-nav="run"><b>03</b><span>执行 · 重跑</span></a>
+    <a href="#/flow" data-nav="flow"><b>04</b><span>流程 · 依据链</span></a>
+    <a href="#/model" data-nav="model"><b>05</b><span>立体 · 模型</span></a>
+    <a href="#/draw" data-nav="draw"><b>06</b><span>图纸库 · 每层 DXF</span></a>
+    <a href="#/rooms" data-nav="rooms"><b>07</b><span>房间库 · 统计与分析</span></a>
+    <a href="#/photo" data-nav="photo"><b>08</b><span>照片 · 与影像比对</span></a>
+  </nav>
+  <div class="rail-foot">
+    <div id="rail-time">—</div>
+    <div class="rail-note">每个数现场从盘上读<br>不手打 · 不缓存</div>
+  </div>
+</aside>
+
+<main id="main" tabindex="-1"></main>
+
+<dialog id="dlg" aria-labelledby="dlg-t">
+  <form method="dialog" id="dlg-form">
+    <h2 id="dlg-t">改一个值</h2>
+    <p id="dlg-sub" class="sub"></p>
+    <label id="dlg-label">值
+      <input id="dlg-input" autocomplete="off">
+    </label>
+    <div id="dlg-hint" class="hint"></div>
+    <div class="dlg-actions">
+      <button value="cancel" class="btn ghost" formnovalidate>取消</button>
+      <button value="ok" class="btn primary" id="dlg-ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>

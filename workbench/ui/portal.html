@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cdut3d · 第六教学楼（逸夫楼）</title>
+<!--
+  2026-10-20 用户令：「合成一个入口」⇒ 本页是**唯一入口**：
+    http://127.0.0.1:8150/  一页六个标签：首页 / 楼房 / 工作台 / 流程台 / 对照 / 判据。
+
+  ★ 六个标签各自同源 iframe 托管**原页**，不重写、不复制：
+      · 首页  `/demo/building.html`（全屏三维 + 浮层，内嵌查看器 `demo/index.html`）
+      · 工作台 `/admin`（`workbench/ui/index.html`，它用自己的 `/app.js`、`/style.css`）
+      · 流程台 `/pipeline`（原 8800，已并入同一进程）
+      · 对照  `/compare`（一页两标签：同机位对照 / 分层显隐）
+      · 判据  `/criteria`（`criteria.html`：18 个检测器并成 8 组问句，每张卡带插图，
+                             读数由 `/api/criteria` 扫 `gates/_out` 现算）
+    判据打开的是**原页**（例如 `J-10.10-09` 开 `demo/layers.html`），
+    所以这一层只做「换个入口」，量具看到的字节不变。
+  ★ 懒加载：首页先装；其余标签**第一次切到才装**，装过的保活。三份 glb 约 174 MB，
+    四个标签一进来全加载会把首屏拖死。
+-->
+<style>
+  :root{ --bg:#0a0e13; --panel:#0e1520; --line:#233040; --ink:#d7e2ee; --muted:#7d8fa3;
+         --accent:#4ea1ff; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:13px/1.5 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;overflow:hidden}
+  #bar{display:flex;align-items:center;gap:18px;height:46px;padding:0 14px;
+    background:var(--panel);border-bottom:1px solid var(--line)}
+  #bar .brand{font-weight:600;letter-spacing:.02em;white-space:nowrap}
+  #bar .brand span{color:var(--accent)}
+  .tabs{display:flex;gap:6px;margin-left:8px}
+  .tabs button{appearance:none;border:1px solid var(--line);background:transparent;color:var(--muted);
+    padding:6px 16px;border-radius:6px;font:inherit;cursor:pointer}
+  .tabs button:hover{color:var(--ink);border-color:#33455c}
+  .tabs button[aria-selected="true"]{color:#08111c;background:var(--accent);border-color:var(--accent);font-weight:600}
+  #where{margin-left:auto;color:var(--muted);font-family:"Cascadia Mono",Consolas,monospace;
+    font-size:12px;white-space:nowrap}
+  #panes{position:absolute;inset:46px 0 0 0}
+  #panes iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg);
+    display:none}
+  #panes iframe.on{display:block}
+</style>
+</head>
+<body>
+<div id="bar">
+  <span class="brand">CDUT<span>3D</span> · 第六教学楼（逸夫楼）</span>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-home"     aria-selected="true"  aria-controls="pane-home">首页</button>
+    <button role="tab" id="tab-buildings" aria-selected="false" aria-controls="pane-buildings">楼房</button>
+    <button role="tab" id="tab-admin"    aria-selected="false" aria-controls="pane-admin">工作台</button>
+    <button role="tab" id="tab-pipeline" aria-selected="false" aria-controls="pane-pipeline">流程台</button>
+    <button role="tab" id="tab-compare"  aria-selected="false" aria-controls="pane-compare">对照</button>
+    <button role="tab" id="tab-criteria" aria-selected="false" aria-controls="pane-criteria">判据</button>
+  </div>
+  <span id="where">/demo/building.html</span>
+</div>
+<div id="panes">
+  <iframe id="pane-home" class="on" title="首页" src="/demo/building.html"></iframe>
+  <iframe id="pane-buildings" title="楼房状态矩阵" data-src="/buildings"></iframe>
+  <iframe id="pane-admin"    title="建模工作台" data-src="/admin"></iframe>
+  <iframe id="pane-pipeline" title="图纸到模型" data-src="/pipeline"></iframe>
+  <iframe id="pane-compare"  title="对照与分层" data-src="/compare"></iframe>
+  <iframe id="pane-criteria" title="判据科普" data-src="/criteria"></iframe>
+</div>
+<script>
+(function(){
+  const ids = ['home','buildings','admin','pipeline','compare','criteria'];
+  const where = {home:'/demo/building.html', buildings:'/buildings', admin:'/admin',
+                 pipeline:'/pipeline', compare:'/compare', criteria:'/criteria'};
+  const tab = k => document.getElementById('tab-' + k);
+  const pane = k => document.getElementById('pane-' + k);
+  const whereEl = document.getElementById('where');
+
+  function show(which){
+    for (const k of ids) {
+      const on = k === which;
+      tab(k).setAttribute('aria-selected', on ? 'true' : 'false');
+      pane(k).classList.toggle('on', on);
+      const p = pane(k);
+      if (on && p.dataset.src) { p.src = p.dataset.src; delete p.dataset.src; }
+    }
+    whereEl.textContent = where[which];
+    try { history.replaceState(null, '', '#' + which); } catch (e) { /* file:// 下不管 */ }
+  }
+  for (const k of ids) tab(k).addEventListener('click', () => show(k));
+
+  // 地址里的 `#admin` 之类可以直接落到某个标签（刷新/分享不丢）
+  const first = (location.hash || '').replace('#','');
+  if (ids.includes(first)) show(first);
+})();
+</script>
+</body>
+</html>

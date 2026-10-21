@@ -31,16 +31,18 @@ from ezdxf.math import Matrix44
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+import building as B                                                    # noqa: E402
 import sheet_windows as SW                                            # noqa: E402
 
+# ★ 2026-10-17：数据根与图层白名单改从楼栋档案读（不设环境变量 = c006，行为不变）。
+ROOT = B.ROOT
 OUTDIR = os.path.join(ROOT, "01_cad", "raw")
 
 # 搬哪些层：几何 + 轴线 + 房间标注（读图要用的）。排除图框/尺寸/表格等出图元素。
-KEEP = {"4.2墙体", "4.1结构柱", "3轴线", "Defpoints",
-        "5面积", "6房间号", "7用途", "8单位"}
-DROP = {"1图框", "2注释", "0", "WINDOW_TEXT", "9搬迁"}
+_PROF = B.profile()
+KEEP = set(_PROF["keep_layers"])
+DROP = set(_PROF.get("drop_layers") or [])
 
 
 def pick(doc, w):

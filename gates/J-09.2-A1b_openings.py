@@ -44,7 +44,7 @@ import ezdxf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-A1 = os.path.join(ROOT, "a1")
+A1 = os.path.join(ROOT, "过程/a1")
 sys.path.insert(0, A1)
 import openings as OP                # noqa: E402
 import batch_openings as BO          # noqa: E402

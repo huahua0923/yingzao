@@ -37,7 +37,7 @@ import trimesh
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CDUT = os.path.dirname(HERE)
-A1 = os.path.join(CDUT, "a1")
+A1 = os.path.join(CDUT, "过程/a1")
 sys.path.insert(0, A1)
 import sheet_grid as SG       # noqa: E402
 
@@ -418,7 +418,7 @@ def main():
             "room_codes": ["6-C-D1-01", "6-C-D1-02"],
             "how_counted": "图纸集 12 格**全部占满**（99.7% 实体落在格内）；地下那格（R 列第 5 行）房号只有 D1；"
                            "全文件按类型扫文本 1137 条，`D2` **零命中**（_scratch/dxf_text_census.py、"
-                           "_scratch/dxf_floor_codes.py）。",
+                           "过程/_scratch/dxf_floor_codes.py）。",
             "unknown_because": "本判据只证「**源图里**地下只画了一层」，证不了「实物只有一层」——"
                                "若 B2 图另在某册、或本册就没出，此处**看不见缺失**。",
             "open": "★ 用户 2026-10-12 说「地下室还有一层」。**源图里没有第二层地下的图可依**："

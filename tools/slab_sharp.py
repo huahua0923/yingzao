@@ -25,7 +25,7 @@
 输出：**规范化棱柱表**（米），交给 `tools/prism_blender.py` 用 Blender 精确拉伸。
 
 用法:
-  python tools/slab_sharp.py [--out _gen/slab_prisms.json] [--floors 1] [--report _gen/slab_sharp_report.json]
+  python tools/slab_sharp.py [--out 过程/_gen/slab_prisms.json] [--floors 1] [--report 过程/_gen/slab_sharp_report.json]
 """
 import argparse
 import json
@@ -70,7 +70,7 @@ def v7_slab_band(k):
 
 JOIN_STYLE = 2          # mitre：只在**凹角**留直角。1=round（旧行为，弧）
 MITRE_LIMIT = 1.0       # ★ 隐藏变量：默认 5.0 时 floor7 会塌成 5 块 1560 m²（实测），
-                        #   1.0 才既保住单块（5350 m²）又保住直角（见 _scratch/_diag_close.py）
+                        #   1.0 才既保住单块（5350 m²）又保住直角（见 过程/_scratch/_diag_close.py）
 LEAK_TOL_MM2 = 1.0e3    # 「墙 − 板」容许量 = 1e-3 m²（1000 mm²）。板可以比墙大，不能比墙小
 # build7 列表到 1500 为止；本脚本**往上续**到 2000 供「补足」搜索用（见 footprint 末段）
 RADII = (200.0, 300.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0,
@@ -151,9 +151,9 @@ def _leak(u, parts):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(CDUT, "_gen", "slab_prisms.json"))
+    ap.add_argument("--out", default=os.path.join(CDUT, "过程/_gen", "slab_prisms.json"))
     ap.add_argument("--floors", default="all", help="all 或逗号分隔的层号（1..11）")
-    ap.add_argument("--report", default=os.path.join(CDUT, "_gen", "slab_sharp_report.json"))
+    ap.add_argument("--report", default=os.path.join(CDUT, "过程/_gen", "slab_sharp_report.json"))
     a = ap.parse_args()
 
     ks = list(range(1, N_FLOOR + 1)) if a.floors == "all" else [int(x) for x in a.floors.split(",")]

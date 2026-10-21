@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>楼房状态矩阵 · cdut3d</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#0a0e13;--panel:#0e1520;--line:#233040;--ink:#d7e2ee;--muted:#7d8fa3;
+  --ok:#4cc38a;--bad:#e5645f;--warn:#e0b341;--acc:#4ea1ff;
+  --mono:"Cascadia Mono",Consolas,ui-monospace,monospace;
+  --ui:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:13px/1.5 var(--ui)}
+body{padding:18px}
+h1{margin:0 0 4px;font-size:20px;letter-spacing:.02em}
+.sub{color:var(--muted);margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.card b{display:block;font:600 21px/1.2 var(--mono);margin-top:3px}
+.card span{color:var(--muted);font-size:11px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.toolbar input{background:#0c1117;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:240px}
+.toolbar button{background:#0e141b;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
+.toolbar button.on{color:#cfe9ff;border-color:var(--acc);background:#123049}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-height:0}
+.tablebox{max-height:calc(100vh - 215px);overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:#111a24;color:var(--muted);font-weight:600;text-align:left;z-index:1}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#131b24}
+tbody tr.sel{background:#12293c}
+td.title{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.g{background:var(--ok)}.r{background:var(--bad)}.u{background:var(--warn)}
+.mark{font-family:var(--mono);text-align:center}
+.mark.g{color:var(--ok);background:none}.mark.r{color:var(--bad);background:none}.mark.u{color:var(--warn);background:none}
+.detail{padding:12px;max-height:calc(100vh - 215px);overflow:auto}
+.detail h2{margin:0 0 2px;font-size:16px}
+.muted{color:var(--muted)}
+.kv{display:grid;grid-template-columns:92px 1fr;gap:4px 8px;margin:10px 0;font-size:12px}
+.kv b{color:var(--muted);font-weight:400}
+.gate{border-top:1px solid var(--line);padding:9px 0}
+.gate .gh{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.gate .bad{color:var(--bad)}.gate .unk{color:var(--warn)}.gate .ok{color:var(--ok)}
+.item{margin:5px 0 0;padding:6px 8px;background:#111820;border-left:2px solid var(--bad);border-radius:4px;color:#c9d4df;font-size:11.5px;white-space:normal}
+.empty{color:var(--muted);padding:20px}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(3,1fr)}.wrap{grid-template-columns:1fr}.tablebox,.detail{max-height:none}}
+</style>
+</head>
+<body>
+<h1>楼房状态矩阵</h1>
+<div class="sub">每栋楼独立看：模型包、原始 DXF 叠加、轮廓、形体、构件类、房间台账。红色不是“待确认”，是当前实测未过。</div>
+<div class="cards" id="cards"></div>
+<div class="toolbar">
+  <input id="q" placeholder="搜楼栋 ID / 名称 / 状态">
+  <button data-f="all" class="on">全部</button>
+  <button data-f="red">只看红</button>
+  <button data-f="unknown">只看没量到</button>
+  <button data-f="green">只看绿</button>
+  <span class="muted" id="count"></span>
+</div>
+<div class="wrap">
+  <div class="panel tablebox">
+    <table>
+      <thead><tr><th>状态</th><th>楼栋</th><th>名称</th><th>层</th><th>房间</th><th>轮廓</th><th>形体</th><th>DXF</th><th>构件</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="panel detail" id="detail"><div class="empty">点左侧一栋楼看明细。</div></div>
+</div>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  let data = null, rows = [], filter = 'all', selected = null;
+  const statusText = {green:'绿', red:'红', unknown:'没量到'};
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const mb = (n) => (n / 1048576).toFixed(1) + ' MB';
+  const mark = (c) => c?.pass === true ? '<span class="mark g">✔</span>' : c?.pass === false ? '<span class="mark r">✗</span>' : '<span class="mark u">?</span>';
+  function drawCards() {
+    const s = data.summary;
+    $('#cards').innerHTML = [
+      ['楼栋总数', s.total], ['绿', s.green], ['红', s.red], ['没量到', s.unknown],
+      ['DXF 叠加通过', s.overlay_pass], ['房间总数', s.rooms]
+    ].map(([k,v]) => `<div class="card"><span>${k}</span><b>${v}</b></div>`).join('');
+  }
+  function drawRows() {
+    const q = $('#q').value.trim().toLowerCase();
+    const visible = rows.filter(r => {
+      if (filter !== 'all' && r.status !== filter) return false;
+      if (!q) return true;
+      return (r.id + ' ' + r.title + ' ' + statusText[r.status]).toLowerCase().includes(q);
+    });
+    $('#count').textContent = `${visible.length} / ${rows.length}`;
+    $('#rows').innerHTML = visible.map(r => `<tr data-id="${r.id}" class="${selected===r.id?'sel':''}">
+      <td><span class="dot ${r.status[0]}"></span>${statusText[r.status]}</td>
+      <td class="mark">${r.id}</td><td class="title" title="${esc(r.title)}">${esc(r.title)}</td>
+      <td>${r.floors ?? '?'}</td><td>${r.rooms}</td>
+      <td>${mark(r.gates['J-10.8-00'])}</td><td>${mark(r.gates['J-10.8-01'])}</td>
+      <td>${mark(r.gates['J-10.8-04'])}</td><td>${mark(r.gates['J-10.9-07'])}</td>
+    </tr>`).join('') || '<tr><td colspan="9" class="empty">没有匹配的楼栋</td></tr>';
+    document.querySelectorAll('#rows tr[data-id]').forEach(tr => tr.onclick = () => open(tr.dataset.id));
+  }
+  function open(id) {
+    selected = id; drawRows();
+    const r = rows.find(x => x.id === id);
+    if (!r) return;
+    const gates = data.gates.map(g => {
+      const c = r.gates[g] || {};
+      const label = { 'J-10.8-00':'轮廓可喂 SU','J-10.8-01':'白模形体','J-10.8-04':'原始 DXF 叠加','J-10.9-07':'构件类闭合' }[g] || g;
+      const cls = c.pass === true ? 'ok' : c.pass === false ? 'bad' : 'unk';
+      const txt = c.pass === true ? '通过' : c.pass === false ? `判红 · ${c.red ?? ''}` : `没量到${c.unmeasured ? ' · '+c.unmeasured : ''}`;
+      const items = (r.red_gates.find(x => x.gate === g)?.items || []).map(it => `<div class="item">${esc(it.text)}</div>`).join('');
+      return `<div class="gate"><div class="gh"><span>${esc(label)} <span class="muted">${g}</span></span><span class="${cls}">${txt}</span></div>${items}</div>`;
+    }).join('');
+    const issues = r.audit_issues.length ? r.audit_issues.map(x => `<div class="item">${esc(x)}</div>`).join('') : '<span class="muted">无模型头/哈希/房间台账问题</span>';
+    $('#detail').innerHTML = `<h2>${esc(r.title)}</h2><div class="muted">${r.id} · ${statusText[r.status]}</div>
+      <div class="kv">
+        <b>层数</b><span>${r.floors ?? '?'} 层 / 层高 ${r.floor_h_m ?? '?'} m</span>
+        <b>模型包</b><span>${mb(r.model_bytes)}，QC ${r.qc ?? '?'}，房间 ${r.rooms}</span>
+        <b>模型头</b><span>node ${r.glb.nodes ?? '?'} / mesh ${r.glb.meshes ?? '?'} / 三角面 ${r.glb.triangles ?? '?'}</span>
+        <b>SHA-256</b><span>${r.model_sha_ok ? '与 manifest 一致' : '不一致或没量到'}</span>
+        <b>生成时间</b><span>${esc(r.created_at || '—')}</span>
+      </div>
+      <div class="gate"><div class="gh"><span>模型包审计</span></div>${issues}</div>
+      ${gates}`;
+  }
+  document.querySelectorAll('.toolbar button').forEach(b => b.onclick = () => {
+    filter = b.dataset.f;
+    document.querySelectorAll('.toolbar button').forEach(x => x.classList.toggle('on', x === b));
+    drawRows();
+  });
+  $('#q').oninput = drawRows;
+  fetch('/building-status.json', {cache:'no-store'}).then(r => r.json()).then(d => {
+    data = d; rows = d.buildings; drawCards(); drawRows();
+    if (rows.length) open(rows[0].id);
+  }).catch(e => {
+    $('#detail').innerHTML = `<div class="empty">状态文件没读成：${esc(e)}</div>`;
+  });
+})();
+</script>
+</body>
+</html>

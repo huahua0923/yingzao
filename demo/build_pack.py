@@ -134,11 +134,22 @@ def main():
     #   rebuild/tools/recognize.py 的 260 mm 形态学闭运算 + build3d 的「桥洞口→填洞」出。
     # ★ **本步不建任何几何**：只把**已落盘**的正式件量一遍、登记一遍。
     #   铁律 017：源码改了这里不改，下次跑这个脚本会把改动**静默冲掉**。
-    _su_glb = os.path.join(CDUT, "rebuild", "06_su", "c006_su.glb")
+    # ★ 2026-10-17 换链：正式件由 **SketchUp** 换成 **FreeCAD**（用户令「现在开工换 FreeCAD」，
+    #   目的是可复现：同一份 contours 连跑两趟，OBJ **逐字节相同**）。
+    #   两条件按 (层,类) 逐件比过：c006 **88/88 件**、c005 **25/25 件**，包围盒偏差 **0.000 m**。
+    #   SU 件仍留在盘上作退路，但**不静默回退**：要它得显式 `CDUT_PACK_SRC=su`；
+    #   缺件就报错停（铁律 199：「崩了」与「没量到」不许同形）。
+    _src = (os.environ.get("CDUT_PACK_SRC") or "fc").lower()
+    _glb_name = "c006_fc.glb" if _src == "fc" else "c006_su.glb"
+    _su_glb = os.path.join(CDUT, "rebuild", "06_su", _glb_name)
     if not os.path.exists(_su_glb):
         print("★ 缺正式件 %s" % _su_glb)
-        print("   ⇒ 先跑 rebuild/tools/su_obj_to_glb.py（OBJ→GLB，自带两把尺子），再打这个包")
+        if _src == "fc":
+            print("   ⇒ 先跑 rebuild/tools/run_freecad.py，再 rebuild/tools/fc_obj_to_glb.py")
+        else:
+            print("   ⇒ 先跑 rebuild/tools/su_obj_to_glb.py（OBJ→GLB，自带两把尺子），再打这个包")
         return 4
+    print("件源    : %s（CDUT_PACK_SRC=%s）" % (_glb_name, _src))
     import trimesh                                              # noqa: E402
     _sc = trimesh.load(_su_glb, force="scene")
     _lay = {}
@@ -177,10 +188,13 @@ def main():
     _z_roof = max([v for k, v in _f10.items() if k in _MAIN_CLS] or [max(_f10.values())])
     _z_podium = _lay["floor6"]["hi_m"]
     _z_parapet = _f10.get("PARAPET") or _z_roof
-    _z_stair = _f10.get("ROOF_STAIR") or _z_roof
+    # ★ 2026-10-19：类名 `ROOF_STAIR` 已并入 `ROOF_ROOM`（export_contours.py:207）。
+    #   旧名取不到 ⇒ 退化成 `or _z_roof`，会把屋面高度**冒充**成楼梯房顶（比 null 更坏）。
+    _z_stair = _f10.get("ROOF_ROOM") or _z_roof
     # ★ 2026-10-15：层高**不许在本文件里手打**（铁律 103/018：两个地方写同一个数证明不了它是对的）。
-    #   原先这里写死 `4.0` 加一串「11×4.0 + 3.0 ⇒ 顶 47.0 m」的散文 —— 用户 2026-10-15 明令
-    #   层高改 3.5 m 之后，**页面会照旧印 4.0 / 47.0**（`demo/index.html:682` 直接读 `floor_h_m`）
+    #   原先这里写死 `4.0` 加一串「11×4.0 + 3.0 ⇒ 顶 47.0 m」的散文 —— 口径一改
+    #   （2026-10-15 曾令 3.5 m、2026-10-16 用户裁定「按甲定案 · 重算整条链」回 4.0 m），
+    #   **页面就会照旧印那个写死的数**（`demo/index.html` 直接读 `floor_h_m`）
     #   ⇒ 交付页上那个数就成了假数，而且不会有任何判据响。
     #   改成**从落盘件现算**：相邻两个层节点 `hi_m` 之差的中位（floor0..floor9 无附属件，
     #   floor10 带女儿墙/楼梯房 ⇒ 排除），再与参数表 `共用/层高` 对一次；两边不一致就**说出来**
@@ -202,9 +216,14 @@ def main():
         "schema": "cdut3d-layering/1", "building_id": BUILDING,
         "method": "整栋 = **正式件**原样搬入；层节点 floorK ↔ 第 K+1 层（0 基），B1 = 地下 1 层。"
                   "**本包不建几何、不做坐标搬运** —— 这一件就是重建链自己的交付件。",
-        "source_model": "rebuild/06_su/c006_su.glb",
-        "source_note": "由 rebuild/tools/su_obj_to_glb.py 从 c006_su.obj 转来（只转格式、不动顶点；"
-                       "该步自带 polys_in == polys_out 断言与两把独立尺子）。",
+        "source_model": "rebuild/06_su/" + _glb_name,
+        "source_note": ("由 rebuild/tools/fc_obj_to_glb.py 从 c006_fc.obj 转来（只转格式、不动顶点；"
+                        "该步自带 polys_in == polys_out 断言与两把独立尺子）。"
+                        "上游建件机 = **FreeCAD 1.1**（contours_to_fc.py，无 GUI、可复现）；"
+                        "同一条链原来用的是 SketchUp，两条件逐 (层,类) 比过 88/88 件、包围盒差 0.000 m。")
+                       if _src == "fc" else
+                       ("由 rebuild/tools/su_obj_to_glb.py 从 c006_su.obj 转来（只转格式、不动顶点；"
+                        "该步自带 polys_in == polys_out 断言与两把独立尺子）。"),
         "up_axis": "y",
         "n_floors": len(_upper), "floor_h_m": _floor_h,
         "floor_h_note": "**现算自落盘件**：floor0..floor9 相邻层节点 `hi_m` 之差的中位（%d 个带，"
@@ -219,7 +238,8 @@ def main():
         "layers": _layers,
         "lossless_check": {"faces_sum": _faces_total,
                            "note": "逐 (层,类) 子节点的面数**直接取自落盘件**（拆开再相加）。"
-                                   "su_obj_to_glb.py 另有一条 polys_in == polys_out 的断言。"},
+                                   "上游转格式那一步（su_obj_to_glb / fc_obj_to_glb）"
+                                   "另有一条 polys_in == polys_out 的断言。"},
         "top_features": {"台阶屋面_m": _z_podium, "主屋面_m": _z_roof,
                          "女儿墙顶_m": _z_parapet, "顶楼楼梯房顶_m": _z_stair,
                          "note": "全部由落盘件的 (层,类) 子节点包围盒现算，不手打。"},
@@ -260,7 +280,7 @@ def main():
     #   若照抄，读者会以为**交付的这件**错了 6.7 m（实际 0.0 mm）。
     #   ⇒ 本步用**同一支尺**（a1/gauge_layer_shift.py，与判据 J-10.2-02 同一段代码）在**交付件本身**上
     #     重算「相邻层水平位移」，逐条标 复现/不复现。★ 数取自实跑，不手打（铁律 018）。
-    sys.path.insert(0, os.path.join(CDUT, "a1"))
+    sys.path.insert(0, os.path.join(CDUT, "过程/a1"))
     import gauge_layer_shift as GLS                                      # noqa: E402
     _rows = GLS.measure(_b1_glb)
     _v = GLS.vertical_axis(_rows)
@@ -278,7 +298,7 @@ def main():
     _SHIFT_M = 3.0            # = gym3d `qa_defect_census.SHIFT_M`（原定义：相邻层质心位移 >3 m 判错位）
     _max_pair = max(_pairs, key=lambda p: p["shift_mm"]) if _pairs else None
     for _r in qc["known_defects"]:
-        _rd = {"gauge": "a1/gauge_layer_shift.py（交付件 GLB 逐层包围盒中心水平位移）",
+        _rd = {"gauge": "过程/a1/gauge_layer_shift.py（交付件 GLB 逐层包围盒中心水平位移）",
                "gate_m": _SHIFT_M * 1000.0,
                "evidence_out": "floor_shift_recheck；判据 gates/J-10.2-02_floorshift.py"}
         _hit = [f for f in (_r.get("flags") or []) if str(f).startswith("层错位")]
@@ -300,7 +320,7 @@ def main():
     qc["floor_shift_recheck"] = {
         "schema": "cdut3d-floorshift/1",
         "why": "证件与模型**不同源**：evidence 量 gym3d 网格，model 由 libs3d/c006 逐层件建。",
-        "gauge": "a1/gauge_layer_shift.py（读交付件 GLB；竖直轴由数据定，不写死）",
+        "gauge": "过程/a1/gauge_layer_shift.py（读交付件 GLB；竖直轴由数据定，不写死）",
         "gate_m": _SHIFT_M * 1000.0, "vertical_axis": "XYZ"[_v], "n_nodes": len(_rows),
         "comparable_pairs": _pairs,
         "max_comparable_mm": _max_pair["shift_mm"] if _max_pair else None,
@@ -357,7 +377,7 @@ def main():
 
     # ---- ③.5 精细度声明 lod：**全部抄标准正本**，不造等级名（规范 §2.1）----
     #   正本 =《实景三维中国建设城市三维模型（LOD1.3 级）快速构建技术规定（试行）》，
-    #   新型基础测绘与实景三维中国建设技术文件—12，2023-09（本机存 _scratch/_std/3c381d22.pdf，67 页）。
+    #   新型基础测绘与实景三维中国建设技术文件—12，2023-09（本机存 过程/_scratch/_std/3c381d22.pdf，67 页）。
     #   ★ 该规定只定义 **LOD1.3（棱柱体体块）** 与 **高精细度建筑模型**；LOD2/LOD3 不在其中
     #     ⇒ 本包**不自称 LOD2/LOD3**，只声明**不低于 LOD1.3 的精细度**。
     #   ★ 平面/高程精度表是**卫星立体影像测图**口径（正本注：「0.5（不含）-0.8 m 卫星立体影像…放宽 1 倍」），
@@ -438,6 +458,14 @@ def main():
         m = json.load(f)
     print("包指纹  :", m["package_sha256"][:24], "…")
     print("包大小  : %.1f MB" % (sum(a["bytes"] for a in m["artifacts"]) / 1e6))
+    # ---- ⑤ 楼栋清单（展示页 `demo/building.html` 的楼栋下拉读的就是它）----
+    # ★ 为什么放在**打包之后**：清单里每一格（指纹/字节数/件数）都该是刚写进盘的那一份，
+    #   早一步调就会记下**上一版**包的读数（铁律 187：基线与期望值要来自两次不同读数）。
+    # ★ 为什么**不**反过来让 `build_index.py` 重打包：那个脚本**只读包**，跑完包内一件都不许变
+    #   （它自带 `--check` 专验这一条）—— 重打一遍会让包指纹变、把一串绿判据顶红。
+    # ★ 铁律 017：将来重打这个包，清单一并刷新 ⇒ 页面上**不会**留着上一版包的指纹。
+    import build_index                                                  # noqa: E402
+    build_index.refresh()
     return 0
 
 

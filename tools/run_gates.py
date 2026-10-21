@@ -129,7 +129,20 @@ if not want:
     #     要它们报就跑 `--dxf` / `--cad`（串行）/ `--full`。放进**周期性全量**，不进日常循环。
     want.add("quick")
 
-names = sorted(f for f in os.listdir(GATES) if f.endswith(".py"))
+_ALL_PY = sorted(f for f in os.listdir(GATES) if f.endswith(".py"))
+# ★ 2026-10-20：下划线开头的是**共用件/编排件**，不是判据 —— 不许进档位。
+#   实测：`_runner.py`（判据矩阵编排器，自己按楼栋跑一遍全部闸）被 `tier_of` 的默认值
+#   判成 `other` 混进来 ⇒ 每趟 other 多跑 **505 s**，而且它的 rc 含义是「有楼有红」，
+#   与「这条判据红了」**同形**（铁律 199）；`_items.py` / `_verdict.py` 是模块，
+#   当脚本跑 rc=0，也是假条目。
+#   ★ 代价（铁律 28）：真判据若起名下划线，会**不跑**。所以下面不静默 —— 点名印出来。
+_HELPERS = [f for f in _ALL_PY if f.startswith("_")]
+names = [f for f in _ALL_PY if not f.startswith("_")]
+if _HELPERS:
+    print("（非判据，下划线开头 · 不进档位：%s）" % ", ".join(_HELPERS))
+if not names:
+    print("★ 没量到：gates/ 里除共用件外一条判据都没有 ⇒ rc=4")
+    sys.exit(4)
 if picks:
     hit = [f for f in names if any(p.lower() in f.lower() for p in picks)]
     if not hit:
@@ -259,4 +272,16 @@ if os.path.exists(_lp):
 with open(_lp, "w", encoding="utf-8") as fh:
     json.dump(led, fh, ensure_ascii=False, indent=1)
 
-sys.exit(0 if n0 == len(results) else 1)
+# ★ 2026-10-20：收口的 rc 也必须分三态（铁律 199）。
+#   原来 `n0 == len(results) else 1` 把「有闸没量到（rc=4）」也报成 1 ——
+#   于是 other 档「21 绿 + 1 没量到」读起来与「有闸红了」同形，看日志的人分不出
+#   该不该去查件。现在：任何非 {0,4} 的 rc ⇒ 1；只有 4 ⇒ 4；全 0 ⇒ 0。
+_nfail = sum(1 for rc, _, _ in results.values() if rc not in (0, 4))
+_nskip = sum(1 for rc, _, _ in results.values() if rc == 4)
+if _nfail:
+    print("★ 本档 rc=1：%d 条量到不对（另有 %d 条没量到 —— 两者不是一回事）" % (_nfail, _nskip))
+    sys.exit(1)
+if _nskip:
+    print("★ 本档 rc=4：%d 条没量到，其余 %d 条全绿 —— 「没量到」不算过，也不当红" % (_nskip, n0))
+    sys.exit(4)
+sys.exit(0)

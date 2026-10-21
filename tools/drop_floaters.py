@@ -59,8 +59,8 @@ import trimesh  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EDIT = os.path.join(REPO, "_edit")
-REPAIR = os.path.join(REPO, "_repair")
-CLEAN = os.path.join(REPO, "_clean")
+REPAIR = os.path.join(REPO, "过程/_repair")
+CLEAN = os.path.join(REPO, "过程/_clean")
 
 # ★ 1.0 m² —— 实测算出的阈值（铁律 103），依据见本文件 docstring 的普查表。
 #   真件最小 11.5936、悬浮物最大 0.0598 ⇒ 阈值落在两者之间，两边各留一个数量级。

@@ -30,7 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GATES = os.path.join(ROOT, "gates")
 GOUT = os.path.join(GATES, "_out")
-A1 = os.path.join(ROOT, "a1")
+A1 = os.path.join(ROOT, "过程", "a1")
 TOOLS = os.path.join(ROOT, "tools")
 DEMO = os.path.join(ROOT, "demo")
 OUT = os.path.join(DEMO, "sys.html")
@@ -104,7 +104,12 @@ ZONG_RE = re.compile(r"总判\s*[:：]?\s*(PASS|FAIL)")
 #    **「—（run.txt 里没有判词行）」** —— 把「我不认识这个判词」说成了「它没有判词」。
 #    与 FAIL 同形与否要分开写（铁律 199）；这里只是**让那一格如实显示**，
 #    归类的判断仍由 `judge()` 里 `rc==4` 那一支与 `got` 决定（vr 进不了 got 的 PASS/FAIL 集合）。
-VERD_RE = re.compile(r"(?m)^[ \t]*(PASS|FAIL|NO-GAUGE|SKIP)\b")
+        # ★ 2026-10-20：闸把判词写成 `判词：PASS —— …` / `结论：全绿…` 的也认。
+#   原先只认行首裸 PASS/FAIL ⇒ `J-10.9-09`（判词：PASS）与 `J-10.9-06`（结论：全绿）
+#   在台账页上被印成「run.txt 里没有判词行」，并进一步被归成「没量到」——
+#   那是**看的人不认识这种写法**，不是闸没判（铁律 158：量具的否定判词先声明盲区）。
+VERD_RE = re.compile(r"(?m)^[ \t]*(?:判词\s*[:：]\s*)?(PASS|FAIL|NO-GAUGE|SKIP)\b"
+                     r"|^[ \t]*结论\s*[:：]\s*(全绿)")
 
 
 def doc_first_line(path):
@@ -144,6 +149,12 @@ def resolve(stem, suffixes, present):
         for suf in suffixes:
             if c + suf in present:
                 return c + suf, i
+            # ★ 2026-10-20：第三种落名 `<编号>_<楼栋>.json`（`J-10.9-09_c006.json`）。
+            #   旧候选只认 `<编号>.json`，于是 `J-10.9-09` 明明有产物、判词也写着 PASS，
+            #   台账页印的却是「没量到 ——（没产物）」。量具只认一种落名 ⇒ 对另一种**静默**
+            #   （铁律 158）。主楼栋固定 c006（其余楼栋归矩阵页，不归这一页）。
+            if c + "_c006" + suf in present:
+                return c + "_c006" + suf, i
     return None, None
 
 
@@ -220,6 +231,14 @@ def tag_at(name):
             return " <span class='dir'>目录</span><span class='w2'>%s</span>" % where
         if os.path.isfile(p):
             return " <span class='pass'>文件</span><span class='w2'>%s</span>" % where
+    # ★ 第四档：**扫到的名字不是文件名、是格式模板**（源码里写 `"_out", "%s_叠加.png" % GID`）。
+    #   实测（`J-10.10-08`，2026-10-16）本页对它印「这两个 _out 下都没有这个名字」——
+    #   而那个文件**在盘上、525 746 字节**。⇒ 拿一把**按字面查盘**的尺子去查模板，
+    #   必然「找不到」，而这句话读起来像结论（铁律 158：否定判词必须声明量具对哪几类元素不盲）。
+    #   模板一律不许印成「没有」——它连「该存在的东西」都不是。
+    if "%" in name:
+        return (" <span class='w2'>（这是个 <b>格式模板</b>，不是文件名 ⇒ 本尺子<b>解不出</b>它落盘叫什么；"
+                "「查不到」在这里<b>不代表没产出</b>）</span>")
     return " <span class='w2'>（这两个 _out 下都没有这个名字）</span>"
 
 
@@ -265,6 +284,12 @@ def collect_gates():
     rows = []
     for p in sorted(glob.glob(os.path.join(GATES, "*.py"))):
         stem = os.path.basename(p)[:-3]
+        if stem.startswith("_"):
+            # ★ 2026-10-20：`_verdict.py` / `_items.py` / `_runner.py` 是共用件与编排器，
+            #   不是判据。它们被 `tier_of` 的默认值判成 `other` 后混进台账页，
+            #   印成「没跑过 / 没量到」—— 看页的人会以为有三条闸坏了。
+            #   与 `run_gates.py`、`build_gates_index.py` 同一口径（`_` 开头 = 非判据）。
+            continue
         jn, jrule = resolve(stem, [".json"], present)
         rn, rrule = resolve(stem, [".run.txt", ".log", ".console.txt"], present)
         jp = os.path.join(GOUT, jn) if jn else None
@@ -283,7 +308,9 @@ def collect_gates():
             "jn": jn, "rn": rn, "jrule": jrule, "rrule": rrule,
             "rcs": sorted(set(int(x) for x in RC_RE.findall(rt))),
             "zong": sorted(set(ZONG_RE.findall(rt))),
-            "verd": sorted(set(VERD_RE.findall(rt))),
+            # 两个捕获组：`PASS/FAIL/…` 与 `全绿`；`全绿` 是闸自己的 PASS 写法，归成 PASS。
+            "verd": sorted({(m.group(1) or "PASS")
+                            for m in VERD_RE.finditer(rt)}),
             "writes": out_writes(p), "crash": "Traceback" in rt,
         })
     return rows
@@ -694,7 +721,9 @@ json。Python 的 <code>json.loads</code> <b>默认吃</b> <code>NaN</code> ⇒ 
 <footer>生成器 <code>tools/build_sys_page.py</code>。判据的产物在
 <code>{{OUTDIR}}</code>；判据本身在 <code>gates/</code>。★ 只报不判的格子在页上写明了；
 ★ 这页只负责<em>看得见</em>，判的仍是各判据自己的读数。<br>
-演示页：<code>demo/index.html</code>（模型包查看器）· <code>demo/wallclose.html</code>（墙层闭合接进链）。</footer>
+演示页：<code>demo/index.html</code>（模型包查看器）· <code>demo/wallclose.html</code>（墙层闭合接进链）·
+<code>demo/building.html</code>（楼栋展示页：父页选楼栋 + 同源 iframe 托管 <code>index.html</code>，
+清单读 <code>packs/index.json</code>，判据走孩子页的握手口 <code>__cdut3d</code>）。</footer>
 </main>
 """
 

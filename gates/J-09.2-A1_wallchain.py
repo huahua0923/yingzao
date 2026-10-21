@@ -37,7 +37,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 import ezdxf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-A1 = os.path.join(os.path.dirname(HERE), "a1")
+A1 = os.path.join(os.path.dirname(HERE), "过程", "a1")
 TOOLS = os.path.join(os.path.dirname(HERE), "tools")
 sys.path.insert(0, A1)
 sys.path.insert(0, TOOLS)

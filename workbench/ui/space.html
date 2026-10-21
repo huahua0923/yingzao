@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>房屋信息 · 营造 · 成都理工大学</title>
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/space.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <img src="/assets/logo.svg" alt="">
+      <span><strong>营造 <i>·</i> 成都理工大学</strong><small>ARCHITECTURE MANAGEMENT</small></span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="/">三维浏览</a>
+      <a href="/info" class="on">房屋信息</a>
+    </nav>
+    <div class="right">
+      <span class="user">已登录：<b>cdut2026</b></span>
+      <button class="logout" id="logout" type="button">退出登录</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <aside class="buildings" aria-label="楼栋列表">
+      <div class="aside-head">
+        <p class="eyebrow">BUILDING INDEX</p>
+        <h1>楼栋索引</h1>
+        <p id="building-total">正在读取…</p>
+      </div>
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input id="building-search" type="search" placeholder="搜索楼名或编号" autocomplete="off">
+      </label>
+      <div id="building-list" class="building-list"></div>
+    </aside>
+
+    <main id="main">
+      <section id="loading" class="state"><span></span>正在装载建筑数据…</section>
+      <section id="empty" class="state" hidden>没有找到楼栋数据</section>
+
+      <div id="content" hidden>
+        <section class="hero-card">
+          <div class="hero-copy">
+            <p class="eyebrow">BUILDING PROFILE / <span id="hero-id">—</span></p>
+            <h2 id="hero-title">—</h2>
+            <p id="hero-sub">—</p>
+            <div class="hero-tags" id="hero-tags"></div>
+          </div>
+          <div class="hero-stamp">
+            <span>YINGZAO</span>
+            <strong id="hero-status">—</strong>
+            <small>成都理工大学</small>
+          </div>
+        </section>
+
+        <section class="metrics" id="metrics"></section>
+
+        <section class="charts">
+          <article class="chart-card wide">
+            <div class="card-title"><div><p class="eyebrow">FLOOR AREA</p><h3>各层建筑面积</h3></div><span id="area-unit">m²</span></div>
+            <div id="floor-chart" class="floor-chart"></div>
+          </article>
+          <article class="chart-card">
+            <div class="card-title"><div><p class="eyebrow">USE MIX</p><h3>用途构成</h3></div></div>
+            <div id="use-chart" class="use-chart"></div>
+          </article>
+          <article class="chart-card">
+            <div class="card-title"><div><p class="eyebrow">TOP ROOMS</p><h3>面积前八</h3></div></div>
+            <div id="top-rooms" class="top-rooms"></div>
+          </article>
+        </section>
+
+        <section class="floors-card">
+          <div class="card-title"><div><p class="eyebrow">FLOOR DIRECTORY</p><h3>楼层信息</h3></div><button type="button" id="floor-all" class="text-btn on">全部楼层</button></div>
+          <div id="floor-list" class="floor-list"></div>
+        </section>
+
+        <section class="rooms-card">
+          <div class="rooms-head">
+            <div class="card-title"><div><p class="eyebrow">ROOM DIRECTORY</p><h3>房间明细</h3></div><span id="room-count">—</span></div>
+            <label class="search room-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input id="room-search" type="search" placeholder="搜索房间号、用途或单位" autocomplete="off">
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>楼层</th><th>房间号</th><th>用途</th><th>单位</th><th class="num">面积 / m²</th><th>备注</th></tr></thead>
+              <tbody id="room-body"></tbody>
+            </table>
+          </div>
+          <div id="room-empty" class="room-empty" hidden>当前条件下没有房间</div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="/space.js"></script>
+</body>
+</html>

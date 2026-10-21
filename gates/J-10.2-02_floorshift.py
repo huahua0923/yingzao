@@ -66,7 +66,7 @@ def _load(name, path):
     return mod
 
 
-G = _load("gauge_layer_shift", os.path.join(ROOT, "a1", "gauge_layer_shift.py"))
+G = _load("gauge_layer_shift", os.path.join(ROOT, "过程/a1", "gauge_layer_shift.py"))
 
 
 def pairs(rows):

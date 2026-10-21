@@ -14,9 +14,12 @@ r"""`contours/*.json` → **逐块清单** `c006_catalog.json`（给网页点选
 坐标系（与包内件一致，**别记反**）：
   模型坐标 mm：X = 平面向右，Y = 平面进深，**Z = 竖直**（地下 1 层 −3500 → 顶上三件顶）。
   GLB（Y 朝上、glTF 惯例）：glb.x = X，glb.y = Z，glb.z = −Y。
-  实测复核：GLB 包围盒平面 129.3 × 84.0（不随层高变），高度 −3.5 → **build.json 的 z_max_m**
-  （2026-10-15 用户令层高 3.5 m ⇒ **41.5 m**；原先 4.0 m 口径下是 47.0 m）。
-  ★ 上面那句「→ 顶 47000」是**旧口径**的字面量，已改成现算（见下面的 `_zb/_zt`）。
+  实测复核：GLB 包围盒平面 129.3 × 84.0（不随层高变），高度 −3.5 → **build.json 的 z_max_m**。
+  ★ 2026-10-16 用户裁定「**按甲定案 · 重算整条链**」⇒ 层高回到 **4.0 m**：
+    层表范围 **−3.5 → 44.0 m**（11 × 4.0），含顶上三件 ⇒ 顶 **47.0 m**（＝ `build.json::z_max_m`）。
+    旧口径（2026-10-15 用户令 3.5 m）下是 41.5 m / 44.5 m —— 那两个数**已作废**，别再引用。
+  ★ `frame` 里的范围**现算**（见下面的 `_zb/_zt`），且**取的是层表**（`floors[].z0_mm/h_mm`）——
+    不取 `blocks[].z`（那是**层内局部标高**，跨层取 min/max 会印出一个假数，见那段注释）。
 
 格式（`schema = cdut3d-blocks/1`）：
   floors[] : {name, node, z0_mm, h_mm, push_mm, counts{类:条数}, blocks[]}
@@ -35,14 +38,23 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CONT = os.path.join(ROOT, "rebuild", "06_su", "contours")
-OUT = os.path.join(ROOT, "rebuild", "06_su", "c006_catalog.json")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))    # `-I` 不预置脚本目录
+import building as B                                              # noqa: E402
+# ★ 2026-10-17：路径与件名原先写死 c006。做理化楼（c005）时必须按楼栋走
+#   （`CDUT_BUILDING`/`CDUT_REBUILD_ROOT`），否则 c005 的清单会写进 c006 的件名上、
+#   把 c006 那一份**静默冲掉**（铁律 017）。c006 不设环境变量时逐字同一路径。
+CONT = os.path.join(B.ROOT, "06_su", "contours")
+OUT = os.path.join(B.ROOT, "06_su", "%s_catalog.json" % B.BID)
 
 # 层名 → GLB 里的节点名。这张表**必须**与 su_obj_to_glb.py 的两条正则同口径
 # （楼上成 `floorK`、地下室成 `B1`）：网页是拿节点名去认层的，错一个字符就点不上。
-FID = {"地下1层": "B1"}
-for _i in range(1, 12):
-    FID["%d层" % _i] = "floor%d" % (_i - 1)
+# ★ 2026-10-17 C105：地下室名**不是**写死的「地下1层」—— c105 的标题栏叫 **D1**。
+#   原来写死 ⇒ `FID.get("D1")` 落空、退回原名 ⇒ 清单里的节点叫 `D1`，而 GLB 里叫 `B1`
+#   （`fc_obj_to_glb` 一律把地下室成 `B1`）⇒ 网页按节点名配不上那一层（色块/点选静默丢层）。
+_bm = B.profile().get("basement")
+FID = ({_bm: "B1"} if _bm else {})
+for _i, _nm in enumerate(B.floor_names(), 1):
+    FID[_nm] = "floor%d" % (_i - 1)
 
 
 def _flat(ring):
@@ -106,16 +118,37 @@ def main():
         tot += len(blocks)
         tot_pts += sum(len(b["ring"]) // 2 for b in blocks)
 
+    # ★★ 2026-10-18（用户「房屋使用的那个面和房间错开了」）：上面按**文件名**取层（`sorted(glob)`），
+    #   而文件名是「10层/11层/1层…」⇒ **字典序**把 10、11 层排到了 1 层前面（c006 实测：
+    #   `['10层','11层','1层',…,'9层','地下1层']`）。查看器 `nodeOfFloor(k)` 是**按下标**取
+    #   `floors[k].node`，于是一层房间的全部色块被铺到十层的板面上（高 9 层、且十层塔楼平面
+    #   只有 46×23 m ⇒ 色块挂在大楼外），症状正是「面和房间错开」。
+    #   ⇒ `floors[]` 一律**自下而上按标高**排（不是按名字、不是按目录序），下标即层序。
+    floors.sort(key=lambda fl: fl["z0_mm"])
+
     # ★ 2026-10-15：`frame` 里的标高**现算**（原先写死「顶 47000」—— 用户令层高 4.0→3.5 之后
     #   它就成了假数，而没有任何判据会响：铁律 103/018「手打数不能当期望值」）。
-    _zb = min((b["z"] for fl in floors for b in fl["blocks"]), default=0.0)
-    _zt = max((b["z"] + b["h"] for fl in floors for b in fl["blocks"]), default=0.0)
+    # ★★ 2026-10-16 修这一处的**取值来源**：第一版拿 `blocks[].z` 跨层取 min/max，
+    #   而 **`blocks[].z` 是「层内局部标高」**（实测取值 0.0 / 153.8 / 159.1 …，是踏步高），
+    #   于是印出「地下1层 -3500 → 顶 7000」—— 与模型真实范围（-3500 → 47000）**毫无关系**。
+    #   症状不是报错，是**一个看起来像结论的假数**（铁律 018）。⇒ 改成由**层表**（z0_mm/h_mm）现算：
+    #   层表是 SU 真吃的那个口径，才是「模型范围」的真源。
+    _zb = min((fl["z0_mm"] for fl in floors), default=0.0)
+    _zt = max((fl["z0_mm"] + fl["h_mm"] for fl in floors), default=0.0)
+    # ★ 顶上三件（女儿墙/楼梯房/台阶屋面板）在层表里是 **11 层的 push**，不算进 z0+h
+    #   ⇒ 层表范围（-3500 → 44000）**小于**模型真实范围；两个数都印，别让读者把前者当后者。
+    _push_top = 0.0
+    for fl in floors:
+        for cls, pz in (fl.get("push_mm") or {}).items():
+            if cls in ("ROOF_STAIR", "PARAPET"):
+                _push_top = max(_push_top, float(pz or 0.0))
     cat = {
         "schema": "cdut3d-blocks/1",
         "units": "mm",
-        "frame": ("模型坐标：X 平面向右 / Y 平面进深 / Z 竖直（地下1层 %.0f → 顶 %.0f，"
-                  "**由本表逐块 z/h 现算**）。"
-                  "GLB(Y 朝上) 里 glb.x=X, glb.y=Z, glb.z=-Y。" % (_zb, _zt)),
+        "frame": ("模型坐标：X 平面向右 / Y 平面进深 / Z 竖直（层表范围 %.0f → %.0f，"
+                  "**由本表 floors[].z0_mm/h_mm 现算**）；★ 顶上三件（女儿墙/楼梯房/台阶屋面板）"
+                  "是 11 层的 push，**不含**在这个范围里（含它 ⇒ 顶 %.0f；权威值见 build.json::z_max_m）。"
+                  "GLB(Y 朝上) 里 glb.x=X, glb.y=Z, glb.z=-Y。" % (_zb, _zt, _zt + _push_top)),
         "source": "rebuild/06_su/contours/*.json（export_contours.py 的产物）",
         "floors": floors,
     }

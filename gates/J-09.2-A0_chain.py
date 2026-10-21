@@ -31,7 +31,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-CHAIN = os.path.join(ROOT, "chain")
+CHAIN = os.path.join(ROOT, "过程/chain")
 sys.path.insert(0, CHAIN)
 
 import chain  # noqa: E402

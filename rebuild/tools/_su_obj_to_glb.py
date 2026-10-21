@@ -46,7 +46,7 @@ def merge(objs, name):
     me.update()
     return me
 
-NODES = ["B1"] + ["floor%d" % k for k in range(11)]
+NODES = ["B1", "floor0", "floor1", "floor2", "floor3", "floor4", "floor5", "floor6", "floor7", "floor8", "floor9", "floor10"]
 scene = bpy.context.scene.collection
 empties = {}
 for n in NODES:

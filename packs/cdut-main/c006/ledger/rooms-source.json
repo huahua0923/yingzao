@@ -1,0 +1,250 @@
+{
+ "schema": "cdut3d-roomledger/1",
+ "building_id": "c006",
+ "source": "rebuild/c006/01_cad/raw/<层>.dxf（切图后的逐层图幅，非原始整图）",
+ "tol_mm": 1500.0,
+ "n_rows": 222,
+ "per_sheet": [
+  {
+   "sheet": "地下1层",
+   "level": 0,
+   "n_rows": 2,
+   "stats": {
+    "n_id": 2,
+    "n_area_text": 9,
+    "n_parsed": 2,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 2,
+    "n_unit_text": 2,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 2,
+    "n_unit": 2,
+    "n_joined": 2
+   }
+  },
+  {
+   "sheet": "1层",
+   "level": 1,
+   "n_rows": 33,
+   "stats": {
+    "n_id": 33,
+    "n_area_text": 33,
+    "n_parsed": 33,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 33,
+    "n_unit_text": 31,
+    "n_use_far": 0,
+    "n_unit_far": 2,
+    "n_use_from_unit": 0,
+    "n_use": 33,
+    "n_unit": 31,
+    "n_joined": 33
+   }
+  },
+  {
+   "sheet": "2层",
+   "level": 2,
+   "n_rows": 34,
+   "stats": {
+    "n_id": 34,
+    "n_area_text": 34,
+    "n_parsed": 34,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 34,
+    "n_unit_text": 34,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 34,
+    "n_unit": 34,
+    "n_joined": 34
+   }
+  },
+  {
+   "sheet": "3层",
+   "level": 3,
+   "n_rows": 30,
+   "stats": {
+    "n_id": 30,
+    "n_area_text": 30,
+    "n_parsed": 30,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 30,
+    "n_unit_text": 30,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 30,
+    "n_unit": 30,
+    "n_joined": 30
+   }
+  },
+  {
+   "sheet": "4层",
+   "level": 4,
+   "n_rows": 30,
+   "stats": {
+    "n_id": 30,
+    "n_area_text": 30,
+    "n_parsed": 30,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 30,
+    "n_unit_text": 31,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 30,
+    "n_unit": 30,
+    "n_joined": 30
+   }
+  },
+  {
+   "sheet": "5层",
+   "level": 5,
+   "n_rows": 31,
+   "stats": {
+    "n_id": 31,
+    "n_area_text": 31,
+    "n_parsed": 31,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 31,
+    "n_unit_text": 28,
+    "n_use_far": 0,
+    "n_unit_far": 3,
+    "n_use_from_unit": 0,
+    "n_use": 31,
+    "n_unit": 28,
+    "n_joined": 31
+   }
+  },
+  {
+   "sheet": "6层",
+   "level": 6,
+   "n_rows": 30,
+   "stats": {
+    "n_id": 30,
+    "n_area_text": 30,
+    "n_parsed": 30,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 30,
+    "n_unit_text": 31,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 30,
+    "n_unit": 30,
+    "n_joined": 30
+   }
+  },
+  {
+   "sheet": "7层",
+   "level": 7,
+   "n_rows": 6,
+   "stats": {
+    "n_id": 6,
+    "n_area_text": 6,
+    "n_parsed": 6,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 6,
+    "n_unit_text": 6,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 6,
+    "n_unit": 6,
+    "n_joined": 6
+   }
+  },
+  {
+   "sheet": "8层",
+   "level": 8,
+   "n_rows": 6,
+   "stats": {
+    "n_id": 6,
+    "n_area_text": 6,
+    "n_parsed": 6,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 6,
+    "n_unit_text": 6,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 6,
+    "n_unit": 6,
+    "n_joined": 6
+   }
+  },
+  {
+   "sheet": "9层",
+   "level": 9,
+   "n_rows": 7,
+   "stats": {
+    "n_id": 7,
+    "n_area_text": 7,
+    "n_parsed": 7,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 7,
+    "n_unit_text": 7,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 7,
+    "n_unit": 7,
+    "n_joined": 7
+   }
+  },
+  {
+   "sheet": "10层",
+   "level": 10,
+   "n_rows": 6,
+   "stats": {
+    "n_id": 6,
+    "n_area_text": 6,
+    "n_parsed": 6,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 6,
+    "n_unit_text": 7,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 6,
+    "n_unit": 6,
+    "n_joined": 6
+   }
+  },
+  {
+   "sheet": "11层",
+   "level": 11,
+   "n_rows": 7,
+   "stats": {
+    "n_id": 7,
+    "n_area_text": 7,
+    "n_parsed": 7,
+    "n_far": 0,
+    "n_nonnum": 0,
+    "n_use_text": 7,
+    "n_unit_text": 7,
+    "n_use_far": 0,
+    "n_unit_far": 0,
+    "n_use_from_unit": 0,
+    "n_use": 7,
+    "n_unit": 7,
+    "n_joined": 7
+   }
+  }
+ ],
+ "blind_spot": "本台账只有文字属性（房间号/面积/用途/使用单位）；房间**面片**在 baseline/floors/floor<k>.json 的 rooms（来自 redraw 分区），两份不合并。"
+}

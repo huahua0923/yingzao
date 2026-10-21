@@ -64,7 +64,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(REPO, "tools")
 OUTDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_out")
-WORK = os.path.join(REPO, "_scratch", "_gate_reality")
+WORK = os.path.join(REPO, "过程/_scratch", "_gate_reality")
 
 sys.path.insert(0, TOOLS)
 import editable_to_tiles as E2T  # noqa: E402 —— 只借**常量与已量过的原语**，不借它的结论

@@ -105,7 +105,7 @@ def main():
 
     # C5 正本文件不存在
     def c5(b):
-        b["正本"][0]["文件"] = "_scratch/_std/不存在.pdf"
+        b["正本"][0]["文件"] = "过程/_scratch/_std/不存在.pdf"
     mut("C5 正本文件不在", c5)
 
     # C6 条款引不存在的正本 id

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>近景白模 / 远景实景 —— 步 5 ② 分层（对应方案 §7.4.1）</title>
+<style>
+  :root{
+    --ground:#0c0f14; --panel:#141a23; --panel2:#1b2230; --line:#28313f;
+    --ink:#e9edf4; --dim:#8b95a6; --dim2:#5d6778;
+    --amber:#e0a458; --mint:#57c98a; --coral:#f2705e; --sky:#6fb2e8; --violet:#c08bd8;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+    --cjk:"Source Han Sans SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--cjk);
+    font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--sky);text-decoration:none;border-bottom:1px dotted #3d5266}
+  code{font-family:var(--mono);font-size:12.5px;background:#0a0d12;border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;color:#c8d3e2}
+  .wrap{max-width:1640px;margin:0 auto;padding:0 22px 90px}
+  header{padding:34px 0 16px;border-bottom:1px solid var(--line);margin-bottom:18px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:10px}
+  h1{margin:0 0 10px;font-size:29px;line-height:1.22;letter-spacing:-.012em;font-weight:700}
+  h1 em{font-style:normal;color:var(--amber)}
+  h1 .sub{display:block;margin-top:7px;font-size:14.5px;font-weight:400;color:var(--dim);letter-spacing:0}
+  .lede{color:var(--dim);margin:0;max-width:110ch;font-size:14.5px}
+  .lede b{color:var(--ink)}
+
+  .bar{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;margin:18px 0 0;background:var(--panel)}
+  .bar>div{flex:1 1 132px;padding:10px 14px;border-right:1px solid var(--line)}
+  .bar>div:last-child{border-right:0}
+  .bar .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2)}
+  .bar .v{font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;margin-top:3px}
+  .bar .s{font-size:11px;color:var(--dim2);margin-top:1px}
+  .ok{color:var(--mint)} .no{color:var(--coral)} .wr{color:var(--amber)} .mut{color:var(--dim2)}
+  .vi{color:var(--violet)}
+
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start;margin-top:18px}
+  @media(max-width:1180px){.cols{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+  .card>h2{margin:0;padding:11px 14px;background:var(--panel2);border-bottom:1px solid var(--line);
+    font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card>h2 .hint{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim2);font-weight:400}
+  .pad{padding:13px 14px}
+
+  .stage{position:relative;height:min(72vh,760px);background:#0a0d12}
+  #view{width:100%;height:100%;display:block;touch-action:none}
+  .hud{position:absolute;left:12px;top:12px;background:rgba(12,15,20,.82);border:1px solid var(--line);
+    border-radius:8px;padding:9px 12px;font-family:var(--mono);font-size:12px;min-width:216px;
+    backdrop-filter:blur(6px)}
+  .hud .row{display:flex;justify-content:space-between;gap:14px;line-height:1.75}
+  .hud .row .kk{color:var(--dim2)}
+  .hud .row .vv{font-variant-numeric:tabular-nums}
+  .hud .big{font-size:15px;font-weight:600;letter-spacing:.02em}
+  .tag{position:absolute;right:12px;top:12px;background:rgba(12,15,20,.82);border:1px solid var(--line);
+    border-radius:8px;padding:8px 12px;font-size:12.5px;backdrop-filter:blur(6px)}
+  .tag .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+
+  .ctl{display:flex;flex-direction:column;gap:12px}
+  .grp{border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:11px 12px}
+  .grp .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--dim2);margin-bottom:8px}
+  label.opt{display:flex;gap:9px;align-items:flex-start;padding:5px 0;cursor:pointer;font-size:13.5px}
+  label.opt input{margin:3px 0 0;accent-color:var(--amber)}
+  label.opt .d{color:var(--dim2);font-size:11.5px;display:block;font-family:var(--mono)}
+  input[type=range]{width:100%;accent-color:var(--amber)}
+  table.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.kv td{padding:2px 0;vertical-align:top}
+  table.kv td.v{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  table.kv td.h{color:var(--dim2);font-size:11px;padding-bottom:5px}
+  .foot{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;color:var(--dim);
+    font-size:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px 26px}
+  .foot h4{margin:0 0 5px;font-size:13px;color:var(--ink)}
+  .foot ul{margin:0;padding-left:17px}
+  .foot li{margin:3px 0}
+  .miss{border:1px solid #4a2b2b;background:#1d1517;border-radius:8px;padding:9px 12px;color:#e6b0a6;
+    font-size:13px;margin:12px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">cdut3d · §10.10 倾斜摄影实景 · 步 5 ② · 对应建设方案 §7.4.1 分层</div>
+  <h1>近景换成白模，远景仍是实景
+    <span class="sub">航拍实景在近处是「糊面」—— 镜头贴近就由 CAD 白模顶上；退远了再看实景。</span></h1>
+  <p class="lede">
+    两层是<b>同一栋楼、同一个坐标帧</b>里的两套几何：<span class="vi">白模</span>（高度基准 ±0.000 来自 CAD）
+    与 <span class="sky">实景</span>（来自 2024 航拍瓦片）。实景按<b>模型 1 层轮廓多边形</b>切成两半 ——
+    <b>轮廓内</b>那一半是「糊面」，近景时被白模顶替；<b>轮廓外</b>那一半是楼四周的街景与地面，永远留着。
+    换的只是<b>楼身上那一层</b>，不是把实景整个藏掉。
+  </p>
+  <div class="bar" id="bar"></div>
+</header>
+
+<div class="miss" id="miss" hidden></div>
+
+<div class="cols">
+  <div class="card">
+    <h2>三维视图 <span class="hint">拖＝转 ｜ 滚轮＝缩放 ｜ 右键＝平移（three.js 官方 OrbitControls）</span></h2>
+    <div class="stage">
+      <canvas id="view"></canvas>
+      <div class="hud" id="hud"></div>
+      <div class="tag" id="tag"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>控制台 <span class="hint">数一律现算</span></h2>
+    <div class="pad ctl">
+      <div class="grp">
+        <div class="t">分层</div>
+        <label class="opt"><input type="radio" name="mode" value="auto" checked>
+          <span>自动<span class="d">按镜头到楼心的距离切换</span></span></label>
+        <label class="opt"><input type="radio" name="mode" value="near">
+          <span>锁定近景<span class="d">白模显示、糊面不渲染</span></span></label>
+        <label class="opt"><input type="radio" name="mode" value="far">
+          <span>锁定远景<span class="d">糊面显示、白模不显示</span></span></label>
+      </div>
+
+      <div class="grp">
+        <div class="t">切换阈值</div>
+        <input type="range" id="thr" min="20" max="600" step="5" value="180">
+        <div style="font-family:var(--mono);font-size:12px;margin-top:4px">
+          当前 <span id="thr-v">—</span> ｜ 默认 <span id="thr-default">—</span></div>
+        <div style="font-size:11.5px;color:var(--dim2);margin-top:4px">
+          默认值不是手挑的：<code>阈值 = 2 × 白模高</code>，右面那个数也从载进来的几何<b>现算</b>。
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="t">竖向锚（★ 由人裁，页面不替你定）</div>
+        <label class="opt"><input type="radio" name="anc" value="ground" checked>
+          <span>地面锚<span class="d">模型 ±0.000 落在实景地面上</span></span></label>
+        <label class="opt"><input type="radio" name="anc" value="roof">
+          <span>裙房顶锚<span class="d">改让裙房顶对齐（整层抬 <span id="delta-txt">—</span> m）</span></span></label>
+        <div style="font-size:11.5px;color:var(--dim2);margin-top:6px" id="anc-note"></div>
+      </div>
+
+      <div class="grp">
+        <div class="t">出处档读数</div>
+        <table class="kv" id="tbl"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot" id="foot"></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ★ 纪律：本页数**只有两个来源**，且**永远当场读**。
+     ① 出处档 `../过程/_layers/layers_c006/layers_c006.json`（落位器写的账本）
+     ② **真的把三份 glb 载进 three.js**，读它自己的几何（面数、包围盒、高度）
+   ★ 二者**不是可互替的两个估计器**（铁律 194）：账本里写「远景 N 面」不等于
+     **盘上这个文件**现在打开还是 N 面。所以凡是「盘上到底有多少」的量一律取 ②；
+     ①只用来报「落位时记的是什么」。载不动就印「载不动」，不拿 ① 的数顶上。
+   ════════════════════════════════════════════════════════════════════════════ */
+
+const DIR = '../过程/_layers/layers_c006/';
+const PROV = DIR + 'layers_c006.json';
+const $ = s => document.querySelector(s);
+const S = (v,d=2) => (v===null||v===undefined||Number.isNaN(+v)) ? '—'
+      : Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const I = v => (v===null||v===undefined||Number.isNaN(+v)) ? '—' : Number(v).toLocaleString('en-US');
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ── 三维：一律用 three.js 官方件（OrbitControls / GLTFLoader），不自己写控件 ── */
+const canvas = $('#view');
+let renderer=null, scene=null, camera=null, controls=null;
+const gFar   = new THREE.Group();    // 实景·远景层（轮廓外）
+const gFill  = new THREE.Group();    // 实景·近景糊面层（轮廓内）
+const gWhite = new THREE.Group();    // 白模层
+window.__layers = {loaded:false};
+
+function initGL(){
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0d12);
+  camera = new THREE.PerspectiveCamera(45, 1, 0.05, 12000);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x1b2733, 2.2));
+  const l1 = new THREE.DirectionalLight(0xffffff, 1.6); l1.position.set(1.2,2.2,1.6); scene.add(l1);
+  const l2 = new THREE.DirectionalLight(0x87a8ff, 0.7); l2.position.set(-1.4,1.0,-1.2); scene.add(l2);
+  scene.add(new THREE.GridHelper(600, 200, 0x1d2632, 0x141b25));
+  scene.add(gFar); scene.add(gFill); scene.add(gWhite);
+  controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.screenSpacePanning = true;
+  controls.minDistance = 4; controls.maxDistance = 4000;
+  controls.maxPolarAngle = Math.PI - 0.06;
+  controls.autoRotateSpeed = 0.5;
+  controls.update();
+  tick();
+}
+function onResize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if(w && h && (canvas.width!==w || canvas.height!==h)) renderer.setSize(w,h,false);
+  if(w && h && camera){ camera.aspect = w/h; camera.updateProjectionMatrix(); }
+}
+
+/* ══════════════ 分层状态机（本页唯一会改 visible 的地方） ══════════════ */
+const ST = {mode:'auto', thr:180, thrDefault:180, anc:'ground', delta:0,
+            dist:null, switches:0, layer:'—', counts:null, center:null};
+
+function applyLayer(){
+  // ★ 唯一一处决定「谁渲染」：近景 ⇒ 糊面不渲染、白模渲染；远景 ⇒ 反过来。
+  const near = (ST.mode === 'near') ||
+               (ST.mode === 'auto' && ST.dist !== null && ST.dist <= ST.thr);
+  const want = near ? 'near' : 'far';
+  gWhite.visible = near;
+  gFill.visible  = !near;      // ★ 近景时糊面**真的不渲染**
+  gFar.visible   = true;       //   远景永远在（楼四周的街景/地面）
+  if(ST.layer !== want){ ST.layer = want; ST.switches++; }
+  renderHUD();
+}
+function renderHUD(){
+  const c = ST.counts || {};
+  const rows = [
+    ['镜头到楼心', ST.dist===null ? '—' : S(ST.dist,1)+' m', ''],
+    ['切换阈值',   S(ST.thr,0)+' m', ''],
+    ['切换次数',   I(ST.switches), ''],
+    ['白模', (gWhite.visible?'渲染':'不显示')+(c.white?' · '+I(c.white)+' 面':''), gWhite.visible?'vi':'mut'],
+    ['近景糊面', (gFill.visible?'渲染':'不渲染')+(c.fill?' · '+I(c.fill)+' 面':''), gFill.visible?'ok':'mut'],
+    ['远景实景', '渲染'+(c.far?' · '+I(c.far)+' 面':''), ''],
+  ];
+  $('#hud').innerHTML =
+    '<div class="big" style="margin-bottom:5px" id="cur-layer">'+
+      (ST.layer==='near' ? '<span class="vi">近景 · 白模</span>'
+                         : '<span style="color:var(--sky)">远景 · 实景</span>')+'</div>'+
+    rows.map(r=>'<div class="row"><span class="kk">'+esc(r[0])+'</span>'+
+                '<span class="vv '+r[2]+'" data-k="'+esc(r[0])+'">'+esc(r[1])+'</span></div>').join('');
+  const near = ST.layer==='near';
+  $('#tag').innerHTML = '<span class="dot" style="background:'+(near?'#c08bd8':'#6fb2e8')+'"></span>'+
+    (near? '白模顶上 ＋ 实景糊面已撤' : '实景（含近景糊面）');
+  // ★ 给判据读的机器可读锚：**渲染后的 DOM 属性**，不是源码里的字符串。
+  document.body.dataset.layer = ST.layer;
+  document.body.dataset.whiteVisible = String(gWhite.visible);
+  document.body.dataset.fillVisible  = String(gFill.visible);
+  document.body.dataset.farVisible   = String(gFar.visible);
+  document.body.dataset.anchor = ST.anc;
+  document.body.dataset.whiteY = gWhite.position.y.toFixed(9);
+}
+function tick(){
+  onResize();
+  if(controls) controls.update();
+  if(camera && ST.center) ST.dist = camera.position.distanceTo(ST.center);
+  if(ST.mode==='auto') applyLayer();
+  if(renderer&&scene&&camera) renderer.render(scene,camera);
+  requestAnimationFrame(tick);
+}
+
+/* ══════════════ 载件 ══════════════ */
+const loader = new GLTFLoader();
+function jget(u){
+  return fetch(encodeURI(u)+'?t='+Date.now()).then(r=>{
+    if(!r.ok) throw new Error('HTTP '+r.status+' ← '+u); return r.json(); });
+}
+function countFaces(g){
+  let n=0; g.traverse(o=>{ if(o.isMesh && o.geometry){
+    const ix=o.geometry.index;
+    n += ix ? ix.count/3 : ((o.geometry.attributes.position||{}).count||0)/3; }});
+  return Math.round(n);
+}
+function loadInto(url, group){
+  return new Promise((res,rej)=>loader.load(encodeURI(url)+'?t='+Date.now(),
+    g=>{ group.add(g.scene); res(g); }, undefined, rej));
+}
+
+async function boot(){
+  initGL();
+  let P;
+  try{ P = await jget(PROV); }
+  catch(e){ fail('读不到出处档 <code>'+esc(PROV)+'</code>：'+esc(e.message)+
+    '<br>先把 <code>tools/place_white_model.py</code> 跑一遍。'); return; }
+  ST.delta = +(P.vertical_anchor && P.vertical_anchor.delta_m || 0);
+  try{
+    await loadInto(DIR+'reality_local.glb', gFar);
+    await loadInto(DIR+'reality_fill_local.glb', gFill);
+    await loadInto(DIR+'white_local.glb', gWhite);
+  }catch(e){ fail('载不动 glb：'+esc(e.message)); return; }
+
+  // ★ 三个数**全部现算自载进来的几何**，不取账本。
+  ST.counts = {far:countFaces(gFar), fill:countFaces(gFill), white:countFaces(gWhite)};
+  const bb = new THREE.Box3().setFromObject(gWhite);
+  ST.center = bb.getCenter(new THREE.Vector3());
+  const hWhite = bb.max.y - bb.min.y;
+  ST.thrDefault = Math.round(2*hWhite);
+  ST.thr = ST.thrDefault;
+  $('#thr').value = ST.thr;
+
+  // 镜头：站远一点先看「远景」，好让人一进来就看到切换前的样子
+  const sz = bb.getSize(new THREE.Vector3());
+  const r = Math.max(sz.x, sz.y, sz.z)*1.6 + 30;
+  controls.target.copy(ST.center);
+  camera.position.copy(ST.center).add(new THREE.Vector3(r*0.85, r*0.62, r*0.85));
+  controls.update();
+  wire(P);
+  window.__layers = {loaded:true, prov:P, counts:ST.counts,
+    get state(){ return {mode:ST.mode, layer:ST.layer, dist:ST.dist, thr:ST.thr, anc:ST.anc,
+      whiteVisible:gWhite.visible, fillVisible:gFill.visible, farVisible:gFar.visible,
+      switches:ST.switches, whiteY:gWhite.position.y}; }};
+  renderBar(P);
+  renderTable(P, hWhite);
+  renderFoot(P);
+  applyLayer();
+}
+function fail(html){
+  const m=$('#miss'); m.hidden=false; m.innerHTML='<b>页面没能起来。</b> '+html;
+  window.__layers = {loaded:false, error:html.replace(/<[^>]+>/g,' ')};
+  document.body.dataset.layer='error';
+  document.body.dataset.whiteVisible='false';
+  document.body.dataset.fillVisible='false';
+  document.body.dataset.farVisible='false';
+}
+
+/* ══════════════ 控件 ══════════════ */
+function wire(P){
+  document.querySelectorAll('input[name=mode]').forEach(el=>el.addEventListener('change',()=>{
+    ST.mode = el.value; ST.switches = 0;
+    document.body.dataset.mode = ST.mode; applyLayer(); }));
+  const thr = $('#thr');
+  thr.addEventListener('input',()=>{
+    ST.thr = +thr.value; $('#thr-v').textContent = S(ST.thr,0)+' m';
+    document.body.dataset.threshold = String(ST.thr); applyLayer(); });
+  document.querySelectorAll('input[name=anc]').forEach(el=>el.addEventListener('change',()=>{
+    ST.anc = el.value;
+    // ★ 换锚 = 白模整层**纯 Y 平移** delta（逐位精确，不是重新落位）
+    gWhite.position.y = (ST.anc==='roof') ? ST.delta : 0;
+    applyLayer(); syncAnc(); }));
+  $('#delta-txt').textContent = S(ST.delta,3);
+  document.body.dataset.mode = ST.mode;
+  document.body.dataset.delta = ST.delta.toFixed(9);
+  document.body.dataset.threshold = String(ST.thr);
+  syncAnc();
+}
+function syncAnc(){
+  const P = window.__layers.prov; if(!P) return;
+  const v = P.vertical_anchor, item3 = v.item3 || {};
+  $('#anc-note').innerHTML =
+    '地面锚 <b>'+S(v.h0_ground_m,3)+' m</b> ／ 裙房顶锚 <b>'+S(v.h0_roof_m,3)+' m</b>，'+
+    '差 <b>'+S(v.delta_m,3)+' m</b>。<br>'+
+    '★ 这个差<b>恒等于</b> ③「台阶屋面高」的偏差（实测 '+S(item3.read,3)+' − 声明 '+S(item3.decl,1)+
+    ' = '+S(v.delta_m,3)+' m）—— 它是<b>同一件事的两个说法</b>，不是两条独立证据（铁律 018）。'+
+    '到底该用哪个，<b>由人裁，页面不替你定</b>。';
+}
+
+/* ══════════════ 各块 ══════════════ */
+function renderBar(P){
+  const c = ST.counts, r = P.reality;
+  const items = [
+    ['白模 · 面', I(c.white), '现读自 white_local.glb'],
+    ['实景 · 远景面', I(c.far), '轮廓外，带纹理，永远渲染'],
+    ['实景 · 糊面', I(c.fill), '轮廓内，近景时被白模顶替'],
+    ['裁剪后实景合计', I(r.faces_kept), '远景 ＋ 糊面 ＝ 裁剪盒内全部'],
+    ['白模落位残差', S(P.model_placement.selfcheck_max_err_m,9)+' m', '复算 vs 盘上存的轮廓'],
+    ['竖向两解之差', S(P.vertical_anchor.delta_m,3)+' m', '★ 由人裁'],
+  ];
+  $('#bar').innerHTML = items.map(it=>'<div><div class="k">'+esc(it[0])+'</div>'+
+    '<div class="v">'+it[1]+'</div><div class="s">'+esc(it[2])+'</div></div>').join('');
+}
+function renderTable(P, hWhite){
+  const mp = P.model_placement, r = P.reality, a = P.tileset_anchor || {};
+  const rows = [
+    ['白模高（现算）', S(hWhite,2)+' m', '默认阈值 = 2 × 它'],
+    ['θ 落位转角', S(mp.theta_deg,2)+'°', '来自 regbest_1层.json'],
+    ['IoU（对外比 DOM）', S(mp.best_iou,4), 'J-10.8-01'],
+    ['边界中位差', S(mp.boundary_median_m,3)+' m', '对 2024 DOM 轮廓'],
+    ['帧原点 E / N / h', S(P.local_frame.origin_en_h[0],2)+' / '+
+      S(P.local_frame.origin_en_h[1],2)+' / '+S(P.local_frame.origin_en_h[2],3), '公共局部帧'],
+    ['瓦片锚 E / N / h', S(a.E4544,1)+' / '+S(a.N4544,1)+' / '+S(a.h,3), 'tileset 反解'],
+    ['实景块', String((r.blocks||[]).length)+' 块',
+      (r.blocks||[]).map(b=>b.block).join(' ')],
+    ['裁剪盒四角覆盖', I(r.corners_covered)+' / 4', '含 '+S(r.margin_m,0)+' m 边距'],
+  ];
+  $('#tbl').innerHTML = rows.map(x=>'<tr><td>'+esc(x[0])+'</td><td class="v">'+x[1]+
+    '</td></tr><tr><td colspan="2" class="h">'+esc(x[2])+'</td></tr>').join('');
+}
+function renderFoot(P){
+  const vendor = 'three.js <b>r185</b>（<code>REVISION</code> 实测；与 gym3d 的 '+
+    '<code>node_modules/three/build/three.core.js</code> 逐位相同，'+
+    '两者 <code>sha256</code> 前 12 位都＝<code>3718df126d69</code>）＋ 官方 '+
+    '<code>GLTFLoader</code> ＋ 官方 <code>OrbitControls</code>';
+  $('#foot').innerHTML = [
+    '<div><h4>用的都是成熟件，没自己造</h4><ul>'+
+      '<li>'+vendor+'</li>'+
+      '<li>落位/裁剪＝<code>tools/place_white_model.py</code>（trimesh 5.1 ＋ 本仓 '+
+        '<code>reality_placement.py</code>）</li>'+
+      '<li><b>不依赖</b> <code>3d-tiles-renderer</code>：本页的件是<b>普通 glb</b>，'+
+        '官方 GLTFLoader 就是对口工具</li>'+
+    '</ul></div>',
+    '<div><h4>这页<b>不做</b>什么</h4><ul>'+
+      '<li><b>不写网页网格编辑器</b>：给千万面级网格做网页编辑器是数月级产品；'+
+        '编辑器＝本地软件 GUI ＋ 工程模板</li>'+
+      '<li>不改几何、不改贴图 —— 这里只决定<b>哪一层渲染</b></li>'+
+      '<li>白模<b>没有 UV、没有贴图</b>：本层是几何层，不解决白模上色</li>'+
+    '</ul></div>',
+    '<div><h4>做不到、如实说的</h4><ul>'+
+      '<li>换掉的只是<b>楼身上那一层糊面</b>；楼四周的实景永远在，'+
+        '所以近景时仍会看到实景地面</li>'+
+      '<li>两层是<b>两个独立来源</b>：实景 h 来自瓦片锚、白模 h 来自 h0。'+
+        '本页保证<b>同帧</b>，<b>不保证同高</b></li>'+
+      '<li>竖向锚<b>两个候选差 '+S(P.vertical_anchor.delta_m,3)+' m，由人裁</b>；'+
+        '本页只把两个都摆出来</li>'+
+    '</ul></div>',
+  ].join('');
+}
+
+boot();
+</script>
+</body>
+</html>

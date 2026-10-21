@@ -27,8 +27,14 @@ from ezdxf import bbox
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
-SRC = r"D:\项目\gym3d\材料\dxf_output\C006-第六教学楼（逸夫楼）.dxf"
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import building as B                                                    # noqa: E402
+
+# ★ 2026-10-17：源件/数据根/层名改从楼栋档案读（`rebuild/构件库/楼栋.json`）。
+#   不设环境变量时 = c006，行为与改之前一字不差。
+SRC = B.profile()["src_dxf"]
+ROOT = B.ROOT
 OUT = os.path.join(ROOT, "windows.json")
 
 # 两列各自的 x 走廊（取自实测：L 列图框 x∈[996705,1158705]，R 列 x∈[1465480,1629280]，
@@ -43,9 +49,59 @@ SHEETS = ([("地下1层", "R", 5)]
           + [("7层", "R", 0)]
           + [("%d层" % i, "R", i - 7) for i in range(8, 12)])
 
-WALL_LAYER = "4.2墙体"
-LABEL_LAYER = "5面积"
+# ★ 2026-10-17：与 recognize/redraw/build_rooms 同一份认定（墙层别写死）
+WALL_LAYER = B.layer("wall", "4.2墙体")
+LABEL_LAYER = B.keep_layer("面积", "5面积")
 MIN_WALL = 1          # 窗口内墙层实体数下限；低于此判「没量到」
+
+# ★ 2026-10-17：切图方式从楼栋档案读。
+#   grid2col = c006 的两列 × 6 行写死网格（`frame_bands` + `SHEETS`）；
+#   auto     = 复用 `a1/sheet_grid.py` 的通用尺子：找图框层 → 并内外框 → 分标准图幅 → 按 y 升序。
+MODE = B.profile().get("sheet_mode", "grid2col")
+A1 = os.path.join(os.path.dirname(B.REBUILD), "过程", "a1")
+
+
+def frames_auto(doc, src):
+    """图幅 → 楼层。先按**标题栏语义**排，读不到再退回几何排序。
+
+    返回 (图框层, [{"bbox","floor"?}], 非楼层图幅数, 用哪把尺子)。
+
+    ★ 2026-10-17：优先 `floor_from_title`（ACAD_TABLE 的「楼层」格 + 按楼层号排序）。
+      原因：几何排序对**多列排布**会把上下层串开（C105 三列）；楼层号是图上写死的语义。
+    ★ 两种「没读到」分开报（铁律 199）：
+        title=0 张 ⇒ 标题栏不是 ACAD_TABLE（该尺盲区①）⇒ 退回几何尺，并**明说**退回了；
+        title>0 张 ⇒ 用语义顺序；非楼层图幅（总平面/说明）按张数如实报出。
+    """
+    if A1 not in sys.path:
+        sys.path.insert(0, A1)
+    import sheet_grid as SG                                            # noqa: E402
+    import floor_from_title as FT                                      # noqa: E402
+
+    msp = doc.modelspace()
+    layer = SG.find_frame_layer(msp, None)
+    if not layer:
+        raise AssertionError("找不到图框层 ⇒ a1/sheet_grid 对本图全盲（盲区①）")
+
+    res = FT.read_sheets(src, layer, content_score=lambda bb: counts(doc, bb)[0])
+    if res["n_with_floor"]:
+        # ★★ 2026-10-17 C022 实测：图里有**冒牌的「1层」图幅** —— 只有图框+标题栏、
+        #   一张墙线都没有（x[1041765,1124565]，与真 1 层同面积 1122.12m、同楼层号），
+        #   而 `read_sheets` 按面积去重、两张一样大 ⇒ 先到先得 ⇒ 拿到的是那张空壳，
+        #   于是真 1 层根本没进窗口（症状：`1` 窗口 0 条墙，rc=4）。
+        #   判据用**内容**：窗口里没有墙线的图幅不是平面图（与末尾 MIN_WALL 同一把尺子）。
+        keep = [s for s in res["sheets"] if counts(doc, s["bbox"])[0] >= MIN_WALL]
+        drop = [s for s in res["sheets"] if counts(doc, s["bbox"])[0] < MIN_WALL]
+        if drop:
+            print("★ 丢掉 %d 张没有墙线的图幅（冒牌/样板标题栏）：%s"
+                  % (len(drop), [(s.get("floor"), [round(v) for v in s["bbox"]])
+                                 for s in drop]))
+        return layer, keep, res["n_sheets"] - res["n_with_floor"], "title"
+
+    sheets = SG.merge_pairs(SG.collect_frames(msp, layer))
+    modal, std, others = SG.classify(sheets)
+    std = sorted(std, key=lambda s: (s["bbox"][1], s["bbox"][0]))   # 自下而上 = 1层起
+    print("★ 标题栏尺子读到 0 层（ACAD_TABLE 盲区①）⇒ 退回几何排序，%d 张" % len(std))
+    return layer, [{"bbox": s["bbox"]} for s in std], len(others), "grid"
 
 
 def frame_bands(doc):
@@ -94,14 +150,32 @@ def counts(doc, band):
 
 def build(src=SRC):
     doc = ezdxf.readfile(src)
-    bands = frame_bands(doc)
     out = []
-    for name, col, row in SHEETS:
-        x0, y0, x1, y1 = bands[col][row]
-        nw, nl = counts(doc, (x0, y0, x1, y1))
-        out.append({"name": name, "col": col, "row": row,
-                    "x0": x0, "y0": y0, "x1": x1, "y1": y1,
-                    "wall": nw, "label": nl})
+    if MODE == "auto":
+        layer, std, n_other, how = frames_auto(doc, src)
+        base = B.profile().get("basement")
+        want = ([base] if base else []) + B.floor_names()
+        if len(std) != len(want):
+            raise AssertionError("图幅 %d 张 ≠ 档案层数 %d（%s；图上读到 %s）"
+                                 % (len(std), len(want), want,
+                                    [s.get("floor") for s in std]))
+        for i, (name, s) in enumerate(zip(want, std)):
+            x0, y0, x1, y1 = s["bbox"]
+            nw, nl = counts(doc, (x0, y0, x1, y1))
+            out.append({"name": name, "col": "C", "row": i,
+                        "x0": x0, "y0": y0, "x1": x1, "y1": y1,
+                        "wall": nw, "label": nl,
+                        "title_floor": s.get("floor")})
+        print("图框层 %s ｜ 图幅 %d（尺子=%s）｜ 非楼层图幅 %d"
+              % (layer, len(std), how, n_other))
+    else:
+        bands = frame_bands(doc)
+        for name, col, row in SHEETS:
+            x0, y0, x1, y1 = bands[col][row]
+            nw, nl = counts(doc, (x0, y0, x1, y1))
+            out.append({"name": name, "col": col, "row": row,
+                        "x0": x0, "y0": y0, "x1": x1, "y1": y1,
+                        "wall": nw, "label": nl})
     return {"units": "mm", "src": src, "n": len(out), "sheets": out}
 
 
@@ -116,6 +190,7 @@ def main():
         print("★ 没量到：%s 窗口内墙层实体 < %d"
               % ([s["name"] for s in bad], MIN_WALL))
         return 4                                    # 没量到 ≠ 判红
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(r, f, ensure_ascii=False, indent=1)
     print("写 %s：%d 层" % (OUT, r["n"]))

@@ -102,6 +102,7 @@ r"""实景瓦片的**落位**——把瓦片里的局部坐标落到 EPSG:4544 �
 from __future__ import annotations
 
 import json
+import math
 import os
 
 import numpy as np
@@ -283,6 +284,123 @@ def sample_dsm(path: str, E, N):
             v = a[r[ok] - r0, c[ok] - c0]
             out[ok] = np.where(v <= nod + 1.0, np.nan, v)
     return out
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ★★★ 模型（CAD / 白模）一侧的落位 —— 步 5 ②「近景白模叠远景实景」的同帧前提
+#
+# ★ 为什么放在**本件**而不是新起一件：本件已经是「落位」这件事的唯一来源
+#   （docstring 开头那句「三处都要用它，抄三份就是三份会各自漂的副本」）。
+#   模型落位与实景落位必须**同帧**才谈得上叠加 ⇒ 两者放在一起才守得住这条。
+#
+# ★★ 与实景落位（B）的关系：**不是同一个变换，来源也不同**。
+#   · 实景侧的落位来自**瓦片自己的 tileset**（`root.transform` ⇒ 锚点），
+#     **不与 DSM 配准**；读数由 `RP.anchor()` 现解。
+#   · 模型侧的落位来自 **`rebuild/_work/regbest_1层.json`** ——
+#     它是 `reg_search.py` 把**模型 1 层轮廓**拿去和 **2024 DOM 真值轮廓**做
+#     180° 转角 × 全平移 穷举搜出来的（`J-10.8-01`：IoU 0.7487、边界中位 2.06 m）。
+#     **参照物是 DOM ⇒ 对外，不是自证**。
+#   ⇒ 两侧各自独立落到 4544 上；叠起来对不对，是**两个来源比对**，不是同义反复。
+#
+# ★★★ 竖向（h）**不在 2D 配准里**，本件**不猜**：2D 配准只定平面四自由度，
+#   模型 `y`（＝相对 ±0.000 的高度，米）要变成椭球高还得**再加一个锚** `h0`。
+#   本件**只提供两个候选锚的读数**，由调用方（`tools/place_white_model.py` / 判据）显式选，
+#   并把两个锚的差印出来。原因：这两个锚给出的答案**差 3.60 m**，而
+#   **「层高其实是 4.0 m」与「模型 ±0.000 不在实测地面上」给出同一个读数**（铁律 018）——
+#   那不是本件能裁的，`gates/J-10.10-08` 已把这条单列为**必须由用户裁**。
+# ══════════════════════════════════════════════════════════════════════════════
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_FP = os.path.join(REPO, "rebuild", "_work", "model_footprint_c006.json")
+REGBEST = os.path.join(REPO, "rebuild", "_work", "regbest_1层.json")
+WHITE_GLB = os.path.join(REPO, "rebuild", "05_build", "c006_white.glb")
+J101008 = os.path.join(REPO, "gates", "_out", "J-10.10-08.json")
+_PLACEMENT_TOL_M = 1e-6            # 与 J-10.10-08 同一口径：复算 max 差的上限
+
+
+def model_placement(key: str = "1层") -> dict:
+    """**模型一侧的 2D 落位**：读 `regbest_1层.json` + `model_footprint_c006.json`，
+    复算 `outline_en` 并**当场逐位核对**。算不过就抛 `ValueError`，**不返回半个答案**。
+
+        (E, N) = R(θ) · (P − P̄) + tr_en        P ＝ `outline_mm` / 1000（米）
+        h      = h0 + y                        h0 由调用方给（见本节抬头 ★★★）
+
+    ★ `θ` **只从盘上读**（`theta_deg`），**不手打 110**；`tr_en` **不读存好的数**，
+      而是用「P 已按自身质心居中 ⇒ 整体平移就等于目标质心」这条恒等式**现算**
+      （`P̄` 居中后恒为 0 ⇒ 无需反解线性系统）。两条都落盘可核。
+    ★ 自证：复算出的 `outline_en` 与盘上那份的最大逐点差必须 ≤ 1e-6 m。
+      这是**同一件事的两条路**（存下来的轮廓 vs 现算的刚体变换），不是自说自话。
+    """
+    with open(REGBEST, encoding="utf-8") as f:
+        R = json.load(f)
+    with open(MODEL_FP, encoding="utf-8") as f:
+        MF = json.load(f)[key]
+    P = np.asarray(MF["outline_mm"], dtype=float) / 1000.0     # 米；(x, −z) 平面
+    oe = np.asarray(R["outline_en"], dtype=float)
+    if P.shape != oe.shape:
+        raise ValueError("outline_mm 与 outline_en 点数不一致：%s vs %s" % (P.shape, oe.shape))
+    th = math.radians(float(R["theta_deg"]))
+    Rm = np.array([[math.cos(th), -math.sin(th)], [math.sin(th), math.cos(th)]])
+    ctr = P.mean(0)
+    tr = oe.mean(0)                                            # ＝ reg_search 的模板平移
+    err = float(np.abs((P - ctr) @ Rm.T + tr - oe).max())
+    if not (err <= _PLACEMENT_TOL_M):
+        raise ValueError("模型落位复算不上：theta=%.4f° 复算 outline_en 最大差 %.3e m > %.0e "
+                         "⇒ regbest 与 model_footprint 不是同一对（拒绝出数）"
+                         % (R["theta_deg"], err, _PLACEMENT_TOL_M))
+    return {"key": key, "theta_deg": float(R["theta_deg"]), "yflip": R.get("yflip"),
+            "R": Rm, "plan_ctr_m": ctr, "tr_en": tr, "outline_en": oe,
+            "best_iou": float(R["best_iou"]),
+            "boundary_median_m": float(R["boundary_median_m"]),
+            "boundary_p90_m": float(R["boundary_p90_m"]),
+            "selfcheck_max_err_m": err,
+            "src": {"regbest": os.path.relpath(REGBEST, REPO).replace("\\", "/"),
+                    "model_footprint": os.path.relpath(MODEL_FP, REPO).replace("\\", "/")}}
+
+
+def model_glb_to_en(v, mp: dict):
+    """**白模 glb 顶点 → (E, N, y)**。`y` 仍是**相对 ±0.000** 的米，**不是椭球高**。
+
+    ★ 模型的 glb 与瓦片的 glb **同为 `gltfUpAxis:Y`**（实测：模型 bbox 的 y 跨 **−3.5…47.0 m**
+      ＝ 4.0 m 口径，2026-10-16 用户裁定「按甲定案 · 重算整条链」后重跑读数；
+      与 `catalog` 的「地下1层 z0=−3500 / 1层 z0=0」逐位对上）⇒ 平面轴是 `(x, z)`，
+      而 `model_footprint` 的轮廓用的是 `(x, −z)`（实测：`outline_mm[:,1]` 跨 15.155…98.855，
+      而 glb 的 z 跨 −99…−15 ⇒ 二者互为相反数）。
+    ⇒ **`(x, y, z) → 平面 (x, −z)`，高度取 `y`**。这一步**不许调用方自己拼**
+      （拼错就是铁律 183 的现场：一处改了、兄弟没改，两个量躺在同一个 JSON 里还不报错）。
+    """
+    v = np.asarray(v, dtype=float)
+    plan = np.c_[v[:, 0], -v[:, 2]]
+    en = (plan - mp["plan_ctr_m"]) @ mp["R"].T + mp["tr_en"]
+    return en[:, 0], en[:, 1], v[:, 1].copy()
+
+
+def vertical_anchors() -> dict:
+    """**竖向锚的两个候选读数**，全部从 `gates/_out/J-10.10-08.json` 现读，**不手打**。
+
+        h0_地面 : 模型 ±0.000 落在**实景地面估计值**上        ＝ `ground_median_m`
+        h0_裙房顶: 模型 ±0.000 落在**让裙房顶对齐**的那个高度上
+                  ＝ h0_地面 + (③ 的实测读数 − ③ 的声明)
+
+    ★ 两个锚的差**恒等于** `J-10.10-08` 里 ③ 的偏差（本函数**断言**这条恒等式）——
+      它是同一件事的两个说法，不是两个独立证据（铁律 018）。
+    ★ 本函数**不挑**。挑哪一个是**用户的裁决**（见 `J-10.10-08` 的判词与盲区）。
+    """
+    with open(J101008, encoding="utf-8") as f:
+        J = json.load(f)
+    it = [x for x in J["items"] if x.get("no") == "③"]
+    if not it:
+        raise ValueError("J-10.10-08.json 里找不到 ③（台阶屋面高）⇒ 竖向锚无来源，拒绝出数")
+    it = it[0]
+    if it.get("read") is None or it.get("decl") is None:
+        raise ValueError("J-10.10-08.json 的 ③ 读数/声明为空 ⇒ 竖向锚无来源，拒绝出数")
+    g = float(J["ground_median_m"])
+    delta = float(it["read"]) - float(it["decl"])
+    return {"h0_ground_m": g, "h0_roof_m": g + delta,
+            "delta_m": delta, "ground_spread_m": float(J.get("ground_spread_m") or 0.0),
+            "item3": {"no": it["no"], "read": float(it["read"]), "decl": float(it["decl"]),
+                      "tol": float(it["tol"]), "verdict": it.get("verdict")},
+            "src": os.path.relpath(J101008, REPO).replace("\\", "/")}
 
 
 if __name__ == "__main__":

@@ -50,7 +50,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-A1 = os.path.join(ROOT, "a1")
+A1 = os.path.join(ROOT, "过程/a1")
 sys.path.insert(0, A1)
 import rooms as R                    # noqa: E402
 import batch_rooms as BR             # noqa: E402
@@ -146,10 +146,13 @@ def main():
         fails.append("C 对照① 平移 10km 仍配到 %d（应 0）" % st1["n_joined"])
 
     # ---- D 对照②：把距离闸拿掉，喂已知错的刺激 ----
-    print("\n== D 对照②（C001 把配对闸 1500→1e9 ⇒ 用途/单位配到数必须上升）==")
+    # ★ 2026-10-18：用途/单位不再共用 `tol`（面积 1500），改成 `PAIR_MAX_MM`=3500 + 必须互为最近
+    #   ⇒ 对照必须拧**真正的那两个旋钮**。只拧 `tol` 时配对数一字不变，判据会误报「闸没有分辨力」
+    #   （本条自己逮到的一次：被测物换了，尺子还按老地方拧）。
+    print("\n== D 对照②（C001 拿掉用途/单位两道闸（pairmax→1e9、不要求互为最近）⇒ 配到数必须上升）==")
     p1 = R.collect(C001)
     _, dn = R.join(p1)
-    _, du = R.join(p1, tol=UNBOUND_TOL)
+    _, du = R.join(p1, pairmax=UNBOUND_TOL, mutual=False)
     print("   有闸 单位配到 %d ⇒ 无闸 %d   （差 %d 个是**凭空贴上去**的）"
           % (dn["n_unit"], du["n_unit"], du["n_unit"] - dn["n_unit"]))
     print("   有闸 用途配到 %d ⇒ 无闸 %d" % (dn["n_use"], du["n_use"]))

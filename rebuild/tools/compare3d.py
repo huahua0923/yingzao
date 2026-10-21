@@ -51,7 +51,11 @@ SU_OBJ = os.path.join(OUTDIR, "c006_su.obj")
 
 # ★ 次序是判据的一部分：归类是「**第一个子串命中**」，而 `ROOF_STAIR` 里含 `STAIR`
 #   ⇒ 长的必须排在短的**前面**，否则楼梯房的组会被数成楼梯（静默错，两列都还像个数）。
-KINDS = ("WALL", "COL", "LIFT", "SLAB", "DOOR", "PARAPET", "ROOF_STAIR", "ROOF_STEP", "ROOF", "STAIR", "LINTEL")
+KINDS = ("WALL", "COL", "LIFT", "SLAB", "DOOR", "PARAPET", "ROOF_STAIR", "ROOF_STEP",
+         "ROOF_ROOM", "ROOF", "STAIR", "LINTEL")
+# ★★ 2026-10-19 补 `ROOF_ROOM`（出屋面楼梯间+电梯机房），**必须排在 `ROOF` 之前** ——
+#   下面按 `if k in nm` 子串匹配、先命中先 break，`ROOF` 放前面会把 `__ROOF_ROOM`
+#   全数成 `ROOF`（与上一条 `ROOF_STAIR/ROOF_STEP` 同一个坑，铁律 174）。
 # ★ `ROOF` 必须排在 `ROOF_STAIR` / `ROOF_STEP` **之后**：下面按 `if k in nm` **子串匹配、
 #   先命中先 break** ⇒ 放前面会把那两类的组全数成 `ROOF`（铁律 174 那一类：两个同名的量）。
 #   2026-10-15 加它（塔楼屋面板，用户「楼板要画」）。

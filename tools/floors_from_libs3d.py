@@ -7,7 +7,7 @@
   实测 3F–6F 各多铺 3400–3660 m²，合计约 **1.4 万 m² 幽灵楼板**
   ⇒ 就是「每一层的楼板又出来了」「八角厅的楼顶被盖住」「楼板在转角的地方突出了」。
   libs3d 那条链的楼板是**按本层墙网闭合出来的**(板/外接矩形 ≈ 54%、随层收进)，
-  这正是用户说「前面 libs3d 解决了的」那一版。见 _scratch/slab_compare.py 的实测两列表。
+  这正是用户说「前面 libs3d 解决了的」那一版。见 过程/_scratch/slab_compare.py 的实测两列表。
 
 ★ 本脚本**不建几何**：只做坐标搬运(毫米→米、Z 上→Y 上、libs3d 全局原点 → 包原点)。
   变换与 `tools/pack_d1.py` 对 B1 用的是**同一个**(同一函数 xform、同一原点口径)，
@@ -323,7 +323,7 @@ def main():
             "why": "那条链的楼板是整块矩形（板/整栋外接矩形 ≈87% 且四层不变），"
                    "3F–6F 各多铺 3400–3660 m²、合计约 1.4 万 m² 幽灵楼板 —— 用户三条判词"
                    "（逐层楼板又出来 / 八角厅楼顶被盖住 / 转角突出）全指这里。",
-            "gauge": "_scratch/probe_slabs.py + slab_compare.py 的实测对照（朝上水平面按标高对齐）",
+            "gauge": "过程/_scratch/probe_slabs.py + slab_compare.py 的实测对照（朝上水平面按标高对齐）",
             "replaces_nodes": ["floor0..floor10", "roof"],
             "now_nodes": ["floor0..floor10"],
             "note": "原 roof 节点不再单列：libs3d 那条链的 11 层板就是各层自己的天花板，"

@@ -56,7 +56,7 @@ import trimesh  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EDIT = os.path.join(REPO, "_edit")
-REPAIR = os.path.join(REPO, "_repair")
+REPAIR = os.path.join(REPO, "过程/_repair")
 
 # ★ 0.1 mm —— 实测算出的容差（铁律 103），依据见本文件 docstring 的对照表。
 DIGITS = 4

@@ -19,9 +19,21 @@
  .fp{margin-left:auto;font:12px/1.5 var(--mono);color:var(--hi);
    border:1px solid #3b3520;background:#1b1811;border-radius:3px;padding:4px 9px}
  main{display:grid;grid-template-columns:minmax(0,1fr) 470px;height:calc(100% - 55px)}
+/* ★★ 2026-10-17 用户令：「右侧栏给了很多的解释和说明，这些对我这个展示页面没什么用。
+   我就要刚才那种演示页面的展示」。
+   父页 `demo/building.html` **一直在传** `?embed=building`，而这一页从来没读过这个参数
+   （grep 全文件：`embed` 只出现在这一处新增里）⇒ 嵌进展示页时，右边那 470 px 的 <aside>
+   （图层控制 / 包身份 / 质检 / 平面图 / ID 台账 / 件清单 / 接缝证明 / 盲区 八块）照样铺满。
+   现在认它：**只加一个 <html> 类、全部用 CSS 收掉**，不动一个 DOM 节点、不动任何哨位名。
+   ★ 这必须成立：本页单开（`demo/index.html`，判据 J-09.1.1 / J-09.2-A1e / J-10.9-04 /
+     J-10.9-07 一律**不带 embed** 打开，见 gates/J-09.1.1-viewer.py:319）时版面**逐像素不变**。 */
+.embed aside{display:none}
+.embed main{grid-template-columns:minmax(0,1fr)}
+.embed header .sub{display:none}
+.embed #hint{display:none}   /* ★ 2026-10-19 用户令「这个页面有很多的解释，都先不要」：嵌进展示页时不再显示操作提示 */
  #stage{position:relative;min-width:0}
  #gl{width:100%;height:100%;display:block;touch-action:none;
-   background:radial-gradient(120% 90% at 50% 6%,#1c1b19,#0f0e0d 64%,#0a0a09)}
+    background:radial-gradient(90% 86% at 50% 8%,#273844 0%,#111b23 45%,#070c11 76%,#05080b 100%)}
  #postag{position:absolute;left:14px;bottom:12px;font:11.5px/1.7 var(--mono);
    color:var(--dim);background:#0d0c0b99;border:1px solid var(--line);border-radius:3px;padding:6px 10px}
  #postag b{color:var(--hi);font-weight:600}
@@ -72,7 +84,11 @@
  .layrow .pv{width:38px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
  .laybar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0}
  .laybar input[type=range]{flex:1;accent-color:var(--hi)}
-</style></head><body>
+</style>
+<!-- 嵌入模式：写在 <head> 里（**必须早于首次绘制**，放到 <body> 后面会先照原样闪一帧再收，
+     那一下正是「版面在跳」的样子）。只认参数、不认来源 —— 谁带 embed 就收谁的右侧栏。 -->
+<script>if(new URLSearchParams(location.search).get('embed'))document.documentElement.classList.add('embed');</script>
+</head><body>
 
 <header>
   <h1>cdut3d · 模型包查看器</h1>
@@ -183,23 +199,57 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const PACK = '../packs/cdut-main/c006';      // ★ 唯一入口：包目录
+// ★ 唯一入口：包目录。默认仍是写死的那一份；**展示页 `building.html` 用 `?pack=` 驱动它**
+//   （2026-10-16 用户令「要一个像 gym3d `#/building` 那样的展示页」⇒ 父页管选楼栋，本页管画）。
+//   ★★ 只放行 `<场区>/<楼栋>` 两段、每段 `[A-Za-z0-9._-]` 且不许 `.`/`..` 整段：
+//     没有这条白名单，`?pack=../../something` 就能让**本页**替调用方去 fetch 同源下任意目录
+//     （路径穿越；同族教训见「SPA 兜底=任意文件读」）。不合法 ⇒ 落回默认值 + 页面上说出来，
+//     **不静默**（静默会把「参数写错了」显示成「包就是这份」）。
+const PACK_DEFAULT = '../packs/cdut-main/c006';
+const PACK = (() => {
+  const q = new URLSearchParams(location.search).get('pack');
+  if (!q) return PACK_DEFAULT;
+  const seg = q.split('/');
+  if (seg.length === 2 && seg.every(s => /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/.test(s)))
+    return '../packs/' + seg.join('/');
+  window.__cdutPackBad = q;
+  return PACK_DEFAULT;
+})();
 const LOADS = [];                             // ★ 实际取过的 URL（接缝证明）
+// ★★ 2026-10-16 握手口（形状照 gym3d `frontend/building.html` 的 `window.__gym3d`）：
+//   父页（`demo/building.html`）与判据探针靠它判「几何到位没有」，**不靠读文字猜**。
+//   与既有的 `__cdutView/__cdutWheelK/__cdutPick/__cdutBlocks/__cdutWho` **并存不改**
+//   （那批是 `gates/J-09.1.1-viewer.py` 钉住的哨位名，动它们等于让那条闸变瞎）。
+window.__cdut3d = { pack: PACK, pack_default: PACK_DEFAULT, phase: 'loading', piece: null,
+                    tris: null, kids: null, layers: 0, note: '', buildToken: 0,
+                    builtToken: 0, error: null, bad_pack: window.__cdutPackBad || null };
 
 async function getJSON(url){
   LOADS.push(url);
-  const r = await fetch(url);
+  // ★ 2026-10-18 实测：装包器重跑后，浏览器**默认缓存**还会把上一版 manifest 给页面
+  //   （c006：盘上 12 份基线层带 `node`，页面拿到 11 份、`node` 全 null ⇒ 楼层条没有
+  //   「地下1层」、B1 永远零色块，而文件其实已经是对的）。
+  //   `no-cache` = 每次都向服务器验一次（命中 304 仍可复用），不会把旧包当新包用。
+  const r = await fetch(url, {cache:'no-cache'});
   if(!r.ok) throw new Error(r.status + ' ' + url);
   return r.json();
 }
 
 // ── 读包 ───────────────────────────────────────────────
-const man = await getJSON(PACK + '/manifest.json');
+// ★ 2026-10-21：manifest 加时间戳。旧标签页只 refresh 子页时，浏览器仍可能复用
+//   上一版 manifest（同名、同路径）⇒ 模型 SHA、包指纹和几何全是旧的。
+const man = await getJSON(PACK + '/manifest.json?v=' + Date.now());
 const byRel = Object.fromEntries(man.artifacts.map(a => [a.path, a]));
 function declared(rel){ return Object.prototype.hasOwnProperty.call(byRel, rel); }
 
 const qc = await getJSON(PACK + '/' + man.qc.path);
-const ids = await getJSON(PACK + '/ledger/c006-ids.json');
+// ★★ 2026-10-17 用户令「一个页面多个建筑」/「理化楼是完全按照 cdut3d 的线路生成」：
+//   这份 ID 台账**只有 c006 有**（文件名里就带着楼栋号）。原来写死取 `ledger/c006-ids.json`
+//   ⇒ 换成理化楼 c005 时这里 404，整页在装载前就抛错（症状是白屏，看起来像「件坏了」）。
+//   改成**按 manifest 声明取**：没有这件就 null，下面 ④ 段照实写「本包没有 ID 台账」，
+//   不假装 0 条（铁律 199：量不到与「就是 0」不是一回事）。
+const ids = declared('ledger/c006-ids.json')
+  ? await getJSON(PACK + '/ledger/c006-ids.json') : null;
 const lay = await getJSON(PACK + '/meta/layering.json');
 // ★ 逐块清单（2026-10-14，答用户「**给每各块一个名字，我就可以快速定位和你说**」）：
 //   包内件里**每层每类只合成一个 mesh**（`su_obj_to_glb.py` 按 (node, cls) 合并）⇒ 点在墙上
@@ -207,6 +257,10 @@ const lay = await getJSON(PACK + '/meta/layering.json');
 //   `contours/*.json` 的 `id`/`name` **原样搬**进包（不另造一套名字，两套必然漂移）。
 //   读不到就 null（老包没有这件）——下面一律按「没有清单」处理，**不假装能点选**。
 const cat = declared('meta/blocks.json') ? await getJSON(PACK + '/meta/blocks.json') : null;
+// 房间台账（`ledger/rooms.json`，**人写的**一房间一行）：三维里的房间地垫只用它补「使用单位」。
+//   ★ 与 `baseline/floors/floor<k>.json` 的 `rooms`（**图纸多边形**）是两个来源，**不合并** ——
+//     合并了就分不出「台账写错了」还是「多边形画错了」。包内件；缺了只是少一列，不报错。
+const rled = declared('ledger/rooms.json') ? await getJSON(PACK + '/ledger/rooms.json') : null;
 // 包里的说明串用 markdown 的 **粗体**。先转义再翻译，免得数据里的尖括号当标签跑。
 // ★ 这三个必须定义在**用它们的那块之前**：`const` 有暂时性死区，放到后面会让那段直接抛 ReferenceError。
 //
@@ -274,17 +328,30 @@ document.getElementById('qc').innerHTML = `
   </tbody></table>`;
 
 // ③ 几何基线层
+// ★★ 2026-10-18（用户「地下一楼也没有出来」）：manifest 的基线层条目现在带 **`node`**
+//   = 模型里的层节点名（`B1` / `floorK`），由装包器按模型层序现写。**有它就以它为准**，
+//   文件序号只当排序键 —— 原来只认文件序号、再靠下面 `nodeOfFloor` 的启发式盖错位，
+//   有地下室的楼 B1 永远没有基线（c006 实测：11 份基线 / 12 个模型层节点）。
+//   老包没有 `node` 字段 ⇒ `node` 为 null，仍走旧的序号口径（向后兼容）。
 const floors = man.artifacts.filter(a=>a.role==='baseline_floor')
-  .map(a=>({rel:a.path, n:+(a.path.match(/floor(\d+)\.json/)||[])[1]}))
+  .map(a=>({rel:a.path, node:a.node||null,
+            n:+(a.path.match(/floor(\d+)\.json/)||[])[1]}))
   .sort((x,y)=>x.n-y.n);
 const flBox = document.getElementById('floors');
 const svg = document.getElementById('plan');
 let curFloor = null;
+// 按钮文字：有 `node` 就按节点名现算（`floorK` ⇒ F(K+1)，`B1` 原样），
+//   没有才退回「文件序号 + 1」的老口径。
+const floorLabel = f => {
+  if (f.node){
+    const m = /^floor(\d+)$/.exec(f.node);
+    return m ? ('F' + (+m[1] + 1)) : f.node;
+  }
+  return 'F' + (f.n + 1);
+};
 floors.forEach((f,i)=>{
   const b = document.createElement('button');
-  // ★ baseline/floors/floor<k>.json = **地上第 k+1 层**（gym3d 的层号是 0 基，原始交付件里
-  //   根本没有地下层 —— 原注释：本模型不建地下层）。地下一层是另一个节点 `B1`。
-  b.textContent = 'F' + (f.n + 1);
+  b.textContent = floorLabel(f);
   b.onclick = ()=>showFloor(f, b);
   flBox.appendChild(b);
   if(i===0) setTimeout(()=>b.click(), 0);
@@ -294,25 +361,58 @@ async function showFloor(f, btn){
   curFloor = f;
   const d = await getJSON(PACK + '/' + f.rel);
   const walls = d.walls || [];
+  // ★ 房间地板面片：与墙**同源**（都在 baseline/floors/floorN.json 里），出自「面积容量生长」。
+  //   交通空间另存一环 `circulation` —— 不并进 `rooms`，否则上面的「房间 N 间」会被走廊灌水。
+  const rooms = d.rooms || [], circ = d.circulation || [];
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   for(const w of walls) for(const [x,y] of w.poly||[]){
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  for(const r of rooms.concat(circ)) for(const [x,y] of r.poly||[]){
     if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
   const pad = 1.5, w = (x1-x0)+2*pad, h = (y1-y0)+2*pad;
   const s = Math.max(w,h);
   svg.setAttribute('viewBox', `${x0-pad-((s-w)/2)} ${-(y1+pad)-((s-h)/2)} ${s} ${s}`);
-  svg.innerHTML = walls.map(ww=>{
-    const pts = (ww.poly||[]).map(([x,y])=>x+','+(-y)).join(' ');
-    const t = ww.type==='outer' ? '#c9a227' : '#5d5952';
-    return `<polygon points="${pts}" fill="${t}" fill-opacity="${ww.type==='outer'?0.85:0.55}"
-             stroke="#0f0e0d" stroke-width="0.06"/>`;
-  }).join('');
+  // 环 → path（带洞、evenodd）；y 取负 = 图纸 y 朝上
+  const ring = pts => pts.map(([x,y],i)=>(i?'L':'M')+x+','+(-y)).join(' ')+'Z';
+  const dOf  = r => [r.poly||[]].concat(r.holes||[]).map(ring).join(' ');
+  const hue  = s => { let h=0; for(const ch of String(s)) h=(h*31+ch.charCodeAt(0))%360; return h; };
+  svg.innerHTML =
+    circ.map(r=>`<path class="face" fill-rule="evenodd" d="${dOf(r)}"
+        fill="#2b2a28" fill-opacity="0.30" stroke="none"></path>`).join('') +
+    rooms.map(r=>{
+      const t = `${r.number||'（无房号）'} ${r.purpose||''} ${r.area_m2??''} m²`
+              + (r.situation ? ` · ${r.situation}` : '')
+              + (r.trimmed_m2 ? ` · 贴边裁掉 ${r.trimmed_m2} m²` : '');
+      const ccs = rcolorR(r.purpose || '未标', r.number);   // ★ 与三维色块同一式（`rcolorR`）
+      return `<path class="face" data-k="${esc(t)}" fill-rule="evenodd" d="${dOf(r)}"
+        fill="${ccs}" fill-opacity="0.62"
+        stroke="${ccs.replace('58%, 60%', '45%, 30%')}" stroke-width="0.04"><title>${esc(t)}</title></path>`;
+    }).join('') +
+    walls.map(ww=>{
+      const pts = (ww.poly||[]).map(([x,y])=>x+','+(-y)).join(' ');
+      const t = ww.type==='outer' ? '#c9a227' : '#5d5952';
+      return `<polygon points="${pts}" fill="${t}" fill-opacity="${ww.type==='outer'?0.85:0.55}"
+               stroke="#0f0e0d" stroke-width="0.06"/>`;
+    }).join('');
+  svg.onclick = e => {                                   // 点一块地板 ⇒ 报它是哪一间
+    const k = e.target && e.target.dataset ? e.target.dataset.k : null;
+    if(k) document.getElementById('plancap').innerHTML = `<b style="color:#c9a227">选中</b> ${esc(k)}`;
+  };
   document.getElementById('plancap').innerHTML =
     `<b>F${f.n+1}</b>（地上）· 层高 ${esc(d.layer_height)} m · 墙 ${walls.length} 条 ·
-     房间 ${(d.rooms||[]).length} 间 · 门 ${(d.doors||[]).length} 樘 · 窗 ${(d.windows||[]).length} 扇 ·
-     柱 ${(d.columns||[]).length} 根 · 来自 <code>${esc(f.rel)}</code>`;
+     房间地板 ${rooms.length} 片 · 交通 ${circ.length} 片 · 门 ${(d.doors||[]).length} 樘 ·
+     窗 ${(d.windows||[]).length} 扇 · 柱 ${(d.columns||[]).length} 根 · 来自 <code>${esc(f.rel)}</code>`;
 }
 
 // ④ ID 台账
+// ★ 2026-10-17：这件只有 c006 有，其他楼栋（如 c005）没有 ⇒ 照实说「本包没有」，
+//   不印 0 条、不印空表（那会把「没做」说成「做了但一条都没有」，铁律 199）。
+if(!ids){
+document.getElementById('ids').innerHTML = `
+  <div class="note">本包**没有** ID 台账（<code>ledger/c006-ids.json</code> 是按楼栋出件的，
+  目前只有 c006 有）。这一格是**量不到**，不是「0 条」。<br>
+  件清单见下一段 ⑤；包内实际有的台账以 <code>manifest.json</code> 的 artifacts 为准。</div>`;
+}else{
 const kinds = Object.entries(ids.counts).sort((a,b)=>b[1]-a[1]);
 const samples = Object.keys(ids.items).filter(k=>k.includes(':wall:')).slice(0,4);
 document.getElementById('ids').innerHTML = `
@@ -327,6 +427,7 @@ document.getElementById('ids').innerHTML = `
   <div class="note">★ ID = <code>校区:楼栋:类型:sha256(身份)[:16]</code>。<b>不是</b>位置号。
   用位置号（<code>w0-4</code> 这种）的话，前面插一堵墙，后面 142 条会<b>静默改指</b>，
   而 id 集合只多一个 —— 集合差看不见脱锚，只能按 id 对齐再比内容。</div>`;
+}
 
 // ⑤ 件清单
 document.getElementById('arts').innerHTML = man.artifacts.map(a=>`
@@ -338,7 +439,47 @@ document.getElementById('arts').innerHTML = man.artifacts.map(a=>`
 document.getElementById('blind').innerHTML =
   '<ul class="blind">' + qc.blind_spots.map(b=>`<li>${md(b)}</li>`).join('') +
   `<li>本页是<b>演示</b>：只证明「一个包能被独立消费」，<b>没有</b>验证模型几何对不对（那是 §10.1 的活）。</li>
-   <li>三维视图由浏览器实时渲染，<b>量不到</b>帧率与贴地的合规性（WebGL 画布读回是空的，得截屏量）。</li></ul>`;
+   <li>三维视图由浏览器实时渲染，<b>量不到</b>帧率与贴地的合规性（WebGL 画布读回是空的，得截屏量）。</li>
+   <li>★ <b>带 <code>embed</code> 打开时，本页比不带时多两样东西：一层房间地垫 + 一张白色表</b>（803 片地垫、
+       <code>#cbRooms</code>、<code>#cbWallT</code>；外加 <code>EMBED_STYLE</code> 白族，）
+       ⇒ <b>展示页看到的场景 ≠ 闸/审计页看到的场景</b>（本条就是那份代价的声明）。不带 <code>embed</code> 时这一层
+       <b>根本不建</b>：实测 <code>tris</code> 207502、<code>#cbRooms</code>/<code>#cbWallT</code> 都不存在、
+       <code>#floors</code> 恰好 11 个 <code>BUTTON</code>（无末尾开关），与加这段之前逐字节相同。</li>
+   <li>★★ <b>本页把墙体换成白色，代价是「门头墙」这类目视判据在展示页上失效</b>（2026-10-17 用户令
+       「墙体就不要是红色的，白色就可以了」）：砖红族当初是为<b>找问题</b>下的外衣（冷灰 <code>LINTEL</code> vs
+       砖红 <code>WALL</code> 一眼挑出补出来的门头墙），展示页两边现在都是白 ⇒
+       <b>这块缺陷在展示页上看不见</b>，只能回审计页（非 <code>embed</code>）看。
+       白族<b>只在 <code>embed</code> 生效</b>（<code>styleOf()</code>：非 embed 走原 <code>CLASS_STYLE</code>，
+       一个字节没动 —— <code>gates/J-10.9-07</code> ⑦ 的「11 类全等」因此不受影响）。</li>
+   <li>★ <b>色块与模型原来不在同一个坐标系</b>（2026-10-17 用户令「色块和模型要完全叠在一起」时实测）：
+       包内 <code>baseline/floors/*.json</code> 是<b>包自己的居中帧</b>（x −64.3…64.3、y −36.1…43.3 m），
+       模型在<b>场地帧</b>（X 17.2…146.6、Y 15.0…99.0 m）—— 差一个<b>平移</b>，所以色块整片飘在楼外。
+       本页**现求**这个平移（不写死常数）：拿两边每层都有的<b>柱心</b>**按下标配对**（按最近邻会配错，
+       实测残差中位 <b>39.8 m</b>，全是假配对 —— 铁律 194），每层自证「条数相等 + 残差 ≤ 5 mm」，
+       取多数派 ⇒ 本次 <b>+81.900 / +52.199 m，10 层同意</b>（残差中位 0.0 / 最大 0.4 mm）；
+       <b>F7</b>（＝ <code>floor6</code>，本页标签 <code>'F'+(f.n+1)</code>）因包 14 根 / 模型 30 根判为<b>对不上</b>、
+       不参与投票（<b>记名</b>，不静默丢）。
+       一层都过不了就<b>一块也不铺</b> —— 宁可没有色块，不给一层飘着的。</li>
+   <li>★ <b>房间色块铺在楼内，被外立面挡住</b>：<b>关着</b>「墙体半透明」时 80 点网格抽样只有 <b>18</b> 点命中房间面
+       （2026-10-17 让路改动后实测；改前同口径 <b>11</b>）⇒ <b>「色块铺上了」不等于「每个房间都点得到」</b>。
+       半透明只管<b>看</b>——<b>射线照样先打到墙</b>。用户令「<b>选中时，不要再选中墙体，要直接选中地板</b>」⇒
+       本页现在<b>无条件</b>让外壳那一族（<code>WALL</code>/<code>LINTEL</code>/<code>PARAPET</code>）给房间地垫让路
+       （<code>identifyAt</code> 里那三行），<b>与「墙体半透明」开关无关</b>；挡路的若是楼梯/竖井/门洞照旧报它。
+       ★ 代价：<b>展示页上点不到墙、门头墙、女儿墙本身了</b>（要量它们请回非 embed 的审计页）。</li>
+   <li>★★ <b>逐层核实的结果（2026-10-17 用户令「各个地板的样子还是不太正确，你再一个个核实一下」）</b>：
+       用<b>另写的一把尺子</b><code>rebuild/tools/pad_plan_sheet.py</code>（只读包、不改包）把每层地垫与模型墙环
+       画进同一张平面图，并量了一条硬判据 ——「<b>地垫的长边贴不贴墙</b>」：取每片地垫<b>长于 1 m</b> 的边，
+       量边中点到该层模型墙环的最近距离，<b>> 0.30 m</b> 记「悬空」。实测：
+       塔楼那几层（<code>floor7</code>–<code>floor10</code>）长边 122–125 条，悬空 <b>26 条（21%）</b>，最长 2.30 m；
+       裙房（<code>floor0</code>–<code>floor6</code>）悬空 <b>11%–21%</b>，最长到 <b>5.66 m</b>（离最近墙 2.72 m）——
+       <b>这些长边不是墙</b>：色块之间那条分界是<b>分区算出来的直线</b>，模型上并没有对应构件。
+       ★ 量具的盲区：<b>短于 1 m 的边全不看</b>（房间边界那些 ~10 cm 的轴对齐台阶因而量不到），
+       且只拿<b>模型自己的墙</b>当参照物 —— 模型没建的内隔墙，在这里也会读成「悬空」。
+       ★ <code>B1</code>（地下一层）模型里有 <b>22 道墙 / 814 m</b>，但包里<b>没有</b>
+       <code>baseline/floors/B1.json</code> ⇒ 该层<b>一片地垫也铺不出来</b>（识别侧 <code>rebuild/02_recognize/地下1层.json</code> 是有的）。</li>
+   <li>★ 房间配色是用台账 <code>purpose</code> 字段<b>按哈希算的 hue</b>（<code>(h*31+首字码)%360</code>），
+       是<b>本页合成的配色</b>，不是图纸自带颜色；交通空间的标签「交通空间」同样是<b>本页合成的</b>，
+       不是图纸用词（图纸上那些环没有房号）。台账与图纸<b>两个来源不合并</b>，本页只按台账读。</li></ul>`;
 
 // ⑧ 接缝证明
 function paintNet(){
@@ -361,8 +502,15 @@ const cv = document.getElementById('gl');
 const MAIN = document.querySelector('main');
 const renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x070c11, 1);
 renderer.shadowMap.enabled = true;            // ★ 接地阴影：没有它模型像悬空，转起来分不清上下
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// ★★ 2026-10-20 用户令「可以，你做吧」：剖切面（`docs/threejs-在本系统能做什么.md` 的 A1）。
+//   值只有一个：**「不要穿模 / 不要没有门 / 不要没有屋顶」这三类缺陷在整栋轴测图里看不见**，
+//   剖到某一层就立刻现形（与「对照」页那张 2D 叠图同高一刀）。
+//   做法：局部裁剪 + **一个全局共享**的 `THREE.Plane`（法向朝下 ⇒ 保留 y ≤ constant）。
+//   ★ 滑杆只改 `constant`，**不重编材质**；只有开 / 关才付一次 `needsUpdate`（见 `applyClipping`）。
+renderer.localClippingEnabled = true;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 6000);
 
@@ -387,6 +535,12 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),
 ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
 const root = new THREE.Group(); scene.add(root);
+// ★ 2026-10-17：这两个原来声明在模块**末尾**（`layerState` 约 L1287、`curRoot` 约 L1403）。
+//   而 `setRooms(true)` 在 `if (EMBED)` 段里**同步**执行、`buildRooms()` 里的 `await` 也可能
+//   在模块求值走完之前就续上 ⇒ 一读就撞 `const/let` 的暂时性死区（实测：TDZ ReferenceError，
+//   症状是「三维一直装载中」、握手口根本没有）。提到这里：声明必须在**第一个读者之前**。
+const layerState = [];       // {name, node, mats:[], on, opacity}
+let curRoot = null;          // 当前挂在 root 下的那一件（换件时要摘干净）
 // ⓪ 逐块定位的高亮框。**必须定义在这里**：`loadPiece()` 在 828 行就被调了一次，
 //   它在同步段里要把它藏起来（换件时旧框指的还是上一件的位置）—— 用 const 放晚了会撞暂时性死区。
 //   `depthTest:false` ⇒ 框永远压在几何之上（框住的块在里层时也看得见）；用 `EdgesGeometry` 而不是
@@ -396,6 +550,945 @@ const pickBox = new THREE.LineSegments(
   new THREE.LineBasicMaterial({color:0xffd24a, depthTest:false, transparent:true, opacity:0.95}));
 pickBox.visible = false; pickBox.renderOrder = 998;
 scene.add(pickBox);
+
+// ── ⑨b 剖切面（2026-10-20 用户令「可以，你做吧」）────────────────────────────
+//   `CLIP_PLANE` **全场只有这一个实例**：所有材质共享同一个 `THREE.Plane` ⇒ 滑杆拖动时
+//   只改 `constant` 一个数，`three` 每帧现取，**不触发材质重编**。
+//   法向 (0,-1,0) ⇒ `normal·p + constant > 0` ⇔ `y < constant` ⇒ **切掉高度以上**，
+//   留下的正是「从下往上剖开看这一层」。`1e9` = 不切（初始值）。
+const CLIP_PLANE = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e9);
+let clipOn = false;
+let clipY = null;          // 当前剖切标高（米，世界坐标）。量不到包围盒时是 null ⇒ 滑杆禁用。
+// ★★ 2026-10-20 用户令：「点击显示每层的时候，那个墙就只显示 60cm 高」。
+//   「显示每层」= 只勾开一层的 `solo` 态（双击图层名 `isolate`、父页点楼层按钮都走这里）。
+//   做法：**每层一个裁剪面**（`y ≤ 该层底标高 + LOW_WALL_M`），挂在那一层的墙族材质上。
+//   不能复用 `CLIP_PLANE`：那是**全场一条**，而矮墙是**逐层不同标高**的。
+//   门槛按类名认（`WALL`/`LINTEL`/`PARAPET`/`DOOR`）：墙砍短而门洞块留全高，
+//   屏上就是几根孤零零的竖板 —— 「砍了墙」看起来会像「模型坏了」。
+//   ★ 2026-10-20 用户令「墙高 60 太矮了，增加到 1 米 5，就是在半透明状态下」：
+//    60 cm → **1.5 m**；并且**墙体半透明**开着时也按矮墙处理（半透明就是为了看进室内，
+//    25% 的外壳照样挡视线）。两个状态都要，条件是「或」不是「且」。
+const LOW_WALL_M = 1.5;
+const LOWWALL_CLASS = new Set(['WALL', 'LINTEL', 'PARAPET', 'DOOR']);
+const lowWallPlane = new Map();   // 墙族材质 → 该层的矮墙裁剪面（buildLayers 里现建）
+let lowWallsOn = false;
+
+function setLowWalls(on){
+  const v = !!on;
+  if (v === lowWallsOn) return;
+  lowWallsOn = v;
+  _syncClipPlanes();
+}
+const CLIP_MATS_SKIP = new Set();   // 不参与剖切的材质（高亮框：它是标注不是件）
+
+function _clipRange(){
+  const b = fitBox || (root.children.length ? new THREE.Box3().setFromObject(root) : null);
+  if (!b || !isFinite(b.min.y) || !isFinite(b.max.y) || b.max.y <= b.min.y) return null;
+  return [b.min.y, b.max.y];
+}
+
+function _syncClipPlanes(){
+  // 一个材质可能同时被两条规则裁：① 剖切面（全局，一条 `CLIP_PLANE`）；
+  //   ② 只看一层时的「矮墙」（**每层一个面**，见 `setLowWalls`）。两条都开 ⇒ 平面数组里两条都在。
+  scene.traverse(o => {
+    if (!o.material) return;
+    const ms = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of ms){
+      if (!m || !m.isMaterial || CLIP_MATS_SKIP.has(m)) continue;
+      const ps = [];
+      if (clipOn) ps.push(CLIP_PLANE);
+      const lp = lowWallPlane.get(m);
+      if (lp && lowWallsOn) ps.push(lp);
+      const has = !!(Array.isArray(m.clippingPlanes) && m.clippingPlanes.length);
+      if (has === !!ps.length){ if (ps.length) m.clippingPlanes = ps; continue; }
+      m.clippingPlanes = ps.length ? ps : null;
+      // ★ 只有**平面条数变了**才 needsUpdate（着色器要重编）；滑杆拖动走的是下面那个函数，
+      //   改的只是同一个 Plane 的 constant ⇒ 不该重编。
+      m.needsUpdate = true;
+    }
+  });
+  renderer.shadowMap.needsUpdate = true;
+}
+
+function applyClipping(){
+  _syncClipPlanes();
+  const v = document.getElementById('clipV');
+  if (v) v.textContent = clipOn ? ('≤ ' + (clipY == null ? '—' : clipY.toFixed(1)) + ' m') : '关';
+}
+
+function setClipHeight(y){
+  clipY = y;
+  if (clipOn){ CLIP_PLANE.constant = y; renderer.shadowMap.needsUpdate = true; }
+  const v = document.getElementById('clipV');
+  if (v) v.textContent = clipOn ? ('≤ ' + y.toFixed(1) + ' m') : '关';
+}
+
+function setClip(on){
+  clipOn = !!on;
+  const rg = _clipRange();
+  if (clipOn && rg){
+    // ★ 第一次打开时**默认切到半高**，不留在件顶：留在顶 = 画面一点没变 ⇒ 按下去的判词是
+    //   「没反应」（「没做」与「做了」同形，铁律 199）。半高一眼就能看出「切开了」。
+    if (clipY == null) clipY = rg[0] + 0.5 * (rg[1] - rg[0]);
+    CLIP_PLANE.constant = clipY;
+  } else {
+    CLIP_PLANE.constant = 1e9;
+  }
+  applyClipping();
+  const s = document.getElementById('cbClipH');
+  if (s && rg) s.value = String(Math.round(1000 * (clipY - rg[0]) / (rg[1] - rg[0])));
+}
+CLIP_MATS_SKIP.add(pickBox.material);
+
+// ── ⑨ 房间地垫（2026-10-17 用户令「三维里的房间铺上，只展示页开」）───────────────
+// ★★ **只在带 `embed` 参数打开时建**（父页 `demo/building.html:339` 一直传 `&embed=building`）。
+//    `gates/J-09.1.1-viewer.py` 等四条闸开的是 `?gate=...`（**不带 embed**）⇒ 这一整段在闸里
+//    根本不执行，闸看到的场景 / `tris` / 拾取结果**逐字节不变**。
+//    ★ 代价（用户已知悉并择定）：展示页与审计页的**场景不再一致** —— 已写进两页的盲区声明。
+const EMBED = document.documentElement.classList.contains('embed');
+
+// 每层地垫的标高 = **该层 SLAB 顶面 + 60 mm**，从 `meta/blocks.json` **现算**（不手打）。
+//   ★ 为什么不用 `meta/layering.json` 的 `lo_m`：那是**层带**的下沿（≈ 板底），照它铺会
+//     **陷进板里** —— 板厚 120 mm > 留的 60 mm，从外面看就是「根本没铺」，而这个症状
+//     与「这段代码没跑」一模一样（铁律 199：两种坏法不许同形）。
+//   ★ 量不到 SLAB 的层**不铺**，把层号照实报出来 —— 不猜一个标高。
+const ROOM_PAD_M = 0.06;
+
+// ── 房间标牌（2026-10-20 用户令）────────────────────────────────────────
+//   「可以以悬浮的方式显示，上面就是个小标牌，悬浮在每个房间的上方。不管房间怎么转动，
+//    这个标牌永远是冲着我的正方向的」；「信息可以分几行来显示：第一行：使用人 / 第二行：面积 /
+//    第三行：用途等」。
+//   ⇒ 用 `THREE.Sprite`：它**天生永远正对相机**（billboard），不需要每帧手写 lookAt；
+//     文字画在 canvas 上（多行、底半透明），一个房间一张贴图，挂在**它那一层的子 Group** 里
+//     —— 层关掉时标牌跟着关（`syncRoomVis` 管组，本段只管「这一片要不要显示」）。
+//   ★ 默认**关**：一间一牌，几百间会糊满屏。入口是父页图例标题旁那个「每层标牌」勾选。
+//   ★ 标牌读数与色块**同源**（都是 `baseline/floors` 的同一行），使用人那一行取台账按房号 join
+//     进来的 `dept`（见 `buildRooms` 里那张 `dept` 表）—— 不另算一份。
+let tagsOn = false;
+const TAG_PX = 34;              // 画布字号（px）
+const TAG_M_PER_PX = 0.013;     // 贴图 → 世界尺寸：34px 的字 ≈ 0.44 m 高
+const TAG_LIFT_M = 0.6;         // 标牌底边离色块面的高度
+
+function _tagTexture(lines){
+  const pad = 14;
+  const c = document.createElement('canvas');
+  let g = c.getContext('2d');
+  const font = '600 ' + TAG_PX + 'px "Microsoft YaHei","PingFang SC",sans-serif';
+  g.font = font;
+  const w = Math.max(120, Math.ceil(Math.max(...lines.map(t => g.measureText(t).width))) + pad * 2);
+  const lh = Math.round(TAG_PX * 1.35);
+  const h = lh * lines.length + pad * 2;
+  c.width = w; c.height = h;              // ★ 改尺寸会重置 2D 上下文状态 ⇒ 下面要**重设 font**
+  g = c.getContext('2d');
+  g.font = font; g.textBaseline = 'middle';
+  // 2026-10-21 用户令「标签不好看，不要黑底白字，换舒服一点的」：
+  // 暖米白纸牌 + 棕金细边 + 深褐色字，和校园的夜景/砖红/木色体系一致。
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,0.30)';
+  g.shadowBlur = 10;
+  g.shadowOffsetY = 3;
+  g.fillStyle = 'rgba(247,242,231,0.96)';
+  const r = 10;
+  g.beginPath();
+  g.moveTo(r, 0); g.lineTo(w - r, 0); g.quadraticCurveTo(w, 0, w, r);
+  g.lineTo(w, h - r); g.quadraticCurveTo(w, h, w - r, h);
+  g.lineTo(r, h); g.quadraticCurveTo(0, h, 0, h - r);
+  g.lineTo(0, r); g.quadraticCurveTo(0, 0, r, 0);
+  g.closePath(); g.fill();
+  g.restore();
+  g.strokeStyle = 'rgba(166,124,62,0.58)'; g.lineWidth = 2; g.stroke();
+  g.fillStyle = '#332d25';
+  lines.forEach((t, i) => g.fillText(t, pad, pad + lh * i + lh / 2));
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;     // 不做 mipmap：文字在小尺寸下会糊
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.SRGBColorSpace;  // canvas 像素是 sRGB；不声明会被当线性色，字发灰
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: false,   // ★ 标牌是**读数**：穿过墙体也要看得见
+    depthWrite: false,
+  }));
+  sp.scale.set(w * TAG_M_PER_PX, h * TAG_M_PER_PX, 1);
+  sp.center.set(0.5, 0);                  // 锚点在底边中心 ⇒ 标牌整个悬在色块**上方**
+  sp.renderOrder = 20;
+  return sp;
+}
+
+// 平面环的面积重心（鞋带公式）。⚠ 忽略洞：洞很小（井道/柱缝），偏不超过半间房。
+function _polyCentroid(pts){
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0, n = pts.length; i < n; i++){
+    const p = pts[i], q = pts[(i + 1) % n];
+    const f = p.x * q.y - q.x * p.y;
+    a += f; cx += (p.x + q.x) * f; cy += (p.y + q.y) * f;
+  }
+  if (!(Math.abs(a) > 1e-9)) return null;   // 退化环：不摆标牌（比摆到原点强）
+  a *= 0.5;
+  return {x: cx / (6 * a), y: cy / (6 * a)};
+}
+
+function setRoomTags(on){
+  tagsOn = !!on;
+  let n = 0;
+  for (const me of roomMeshes){
+    const sp = me.userData.tag;
+    if (!sp) continue;
+    sp.visible = tagsOn && me.visible;
+    if (sp.visible) n++;
+  }
+  return {ok: true, on: tagsOn, shown: n, total: roomMeshes.length, built: roomsBuilt};
+}
+
+// ★★ **「墙体半透明」** —— 2026-10-17 用户令「要和三维模型重叠，要能半透明」＋「我给你的参考页面」。
+//   参考页＝`http://127.0.0.1:8140/building.html`（本机 gym3d 那个），它的原话（行 330/341/344）：
+//     `let wallsTransparent = false; const WALL_TRANSPARENT_OPACITY = 0.25;`
+//     `wallOuterMat.transparent = wallsTransparent; wallOuterMat.opacity = wallsTransparent ? WALL_TRANSPARENT_OPACITY : 1;`
+//   ⇒ 常数 0.25 **照抄**（同一个数两处写、一致也证不了对，但这里是「照它做」不是「各写各的」，故意保留同值）。
+//   作用对象＝**外壳那一族**（墙 / 门楣 / 女儿墙）。参考页只有 `wallOuterMat`/`wallInnerMat` 两个材质；
+//   本页的墙是**每层克隆**的一堆独立材质，所以要在 `buildLayers` 的逐 mesh 循环里现收（见 `wallMats.push`）。
+//   ★ 不含 `SLAB/STAIR/LIFT/DOOR` —— 楼板压暗一层就看不见房间了，梯井门本来也不挡视线。
+//   ★ 2026-10-19 用户令「半透明的时候，柱子也不要显示了」：`COL` 一族**不是调透明度，是整族不画**
+//     （方柱在视线上是实心的，25% 也一样挡）。开关一关就恢复 —— 判据在 `applyVisibility`，不在按钮里
+//     （换件/双击只看一层/全关都会重跑 `applyVisibility`，写在按钮里那几路就漏了）。
+//   ★ 与「层透明度」滑条（`setLayerOpacity`）**共写同一批材质**：后动的那一个赢。不合并是有意的
+//     —— 合并要引入「两个旋钮的最小值」这种谁也没要的语义，且合并后「谁在管这个数」就说不清了。
+const WALL_CLASS = new Set(['WALL', 'LINTEL', 'PARAPET']);
+const WALL_TRANSPARENT_OPACITY = 0.25;
+let wallsTransparent = false;
+let wallMats = [];            // 由 `buildLayers` 逐 mesh 收集；每次重建（换件）时清空
+
+function setWallsTransparent(on){
+  wallsTransparent = !!on;
+  for (const m of wallMats){
+    m.transparent = wallsTransparent;
+    m.opacity = wallsTransparent ? WALL_TRANSPARENT_OPACITY : 1;
+    // ★ `needsUpdate` 只在**这一次点击**上付：three 会重编一遍着色器，但墙材质是同一个 program
+    //   （颜色不进 cache key）⇒ 实际只重编一两个，不是几百个。
+    m.needsUpdate = true;
+  }
+  // ★ 2026-10-19 用户令「半透明的时候，柱子也不要显示了」：柱子的显隐**统一由 `applyVisibility` 管**
+  //   —— 那里有 `wallsTransparent` 这一条判据。别在这里再写一遍 `ch.visible = …`（两处写同一个决定，
+  //   换件/只看一层那几路只重跑 `applyVisibility`，就会把柱子留在半透明里）。
+  applyVisibility();
+  renderer.shadowMap.needsUpdate = true;
+  const cb = document.getElementById('cbWallT');
+  if (cb) cb.checked = wallsTransparent;
+}
+const slabTopOf = (() => {
+  const m = new Map();
+  for (const f of ((cat && cat.floors) || [])){
+    const s = (f.blocks || []).filter(b => b.layer === 'SLAB');
+    if (!f.node || !s.length) continue;
+    m.set(f.node, (f.z0_mm + Math.max(...s.map(b => b.z + b.h))) / 1000);
+  }
+  return m;
+})();
+
+// ★★ 2026-10-17 C105 实测：`baseline/floors/floor<k>.json` 的 k 是**文件序号**（自下而上第 k 个），
+//   而 GLB 的层节点名是 `B1` + `floor0..N`。**有地下室的包，文件 0 是 D1 ⇒ 节点叫 `B1`**，
+//   直接拼 `'floor'+k` 就整栋错一位（c105：floor0.json 是 D1 的 155 根柱，却拿去比 floor0 节点
+//   ＝1 层，0 根柱 ⇒ 每层「缺柱」、配准失败、一块不铺；标签只报「缺标高 F6」，看着像少一层）。
+//   ⇒ 有逐块清单时按**清单的层序**取节点名（`meta/blocks.json` 与 baseline 都是自下而上，
+//   同一趟链出的）；没有清单（整栋单网格包）才退回文件序号的老口径。
+// ★★ 2026-10-18（用户「房屋使用的那个面和房间错开了」）：旧口径是 `cat.floors[k].node` ——
+//   默认 `meta/blocks.json` 的 floors[] **自下而上**。c006 实际是 `['10层','11层','1层',…,'地下1层']`
+//   （`mk_catalog` 按文件名做字典序）⇒ `nodeOfFloor(0)` 给的是**十层**：baseline `floor0.json`
+//   （一层，201 根柱）被拿去比十层（22 根柱）⇒ 一层的房间色块全铺在十层板面上（高九层，
+//   而十层塔楼平面只有 46×23 m ⇒ 色块挂到大楼外）。症状就是「面和房间错开」。
+//   ⇒ 不信任数组原始顺序：**一律按 z0_mm 自下而上排**再取下标；层数比基线文件多时，
+//   多出来的只可能是**没有基线件的地下层**（c006 的 B1 没有 floor 文件；c105 的 D1 有，
+//   两边层数相等 ⇒ 原样不动）。排序是判据、不是猜测：下标与标高同时对上才铺。
+const nodeOfFloor = (() => {
+  // ★★ 2026-10-18：manifest 的基线条目**逐份写了 `node`** ⇒ 直接按名字取，不再猜。
+  //   这一支是判据不是猜测：基线件自己说「我是哪一层」，就拿那一层的标高铺色块。
+  //   下面的旧启发式只留给**没有 `node` 字段的老包**（向后兼容，不是新口径）。
+  if (floors.length && floors.every(f => f.node))
+    return k => (floors[k] && floors[k].node) || ('floor' + k);
+  const cf = ((cat && cat.floors) || []).slice()
+    .sort((a, b) => (a.z0_mm || 0) - (b.z0_mm || 0));
+  if (!cf.length) return k => ('floor' + k);
+  const n = floors.length;
+  let arr = cf;
+  if (n && cf.length > n){
+    const above = cf.filter(f => (f.z0_mm || 0) >= 0);
+    arr = (above.length === n) ? above : cf.slice(cf.length - n);
+  }
+  return k => (arr[k] && arr[k].node) || ('floor' + k);
+})();
+
+// ★ 配色与父页 `demo/building.html` 的 `hue()` **逐字同式**（`h*31+charCodeAt` 取模 360）——
+//   两处各写一套必然漂，而漂了看不出来（铁律 018：两个地方写同一个数，一致证明不了它是对的）。
+//   两级共享的量只有 H，格式各自适配（父页是 CSS 的 `hsl(H 58% 60%)`，这里是 THREE 吃的逗号式）。
+//   **要改色，两处一起改** —— 这行注释就是留给下一个动手的人。
+const RHUE = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const rcolor = s => 'hsl(' + RHUE(s) + ', 58%, 60%)';
+
+// ★ 2026-10-20 用户令「很多楼栋的房间用途的颜色没有加上」⇒ 采纳「按房间号分色，图例标『源图无用途』」。
+//   根子：有 11 栋楼的源图**没有 `8用途` 图层**（只有 `6房间号` + `5面积`），台账 `purpose` 是空串，
+//   全栋落进同一个「未标」色 ⇒ 看上去就是「没上色」。这里**不改数据**（不编造用途），只改取色：
+//   用途为空时用 **房间号** 取色，于是每间能分开；图例仍按用途分类（`未标` 单列一类，可筛选）。
+//   同一式在父页 `demo/building.html::pcolorR`，**两处一起改**（铁律 018）。
+//   ★ 取色用**黄金角**（137.508°）摊房间号的尾数，不能用 `hue()` 直接吃房间号：
+//     `hue` 是逐字符 `h*31+c`，`43-01-01`/`43-01-02` 只差 1 ⇒ 色相差 1°，肉眼全是一个色
+//     （2026-10-20 实测：154 间排开全是同一个绿的相邻色）。黄金角保证相邻号拉得最开。
+const GOLD = 137.508;
+const numTail = s => { const m = /(\d+)\s*$/.exec(String(s == null ? '' : s)); return m ? +m[1] : null; };
+const rckey = (purpose, number) => (purpose && purpose !== '未标')
+  ? purpose : '未标#' + (number == null ? '' : number);   // 用途有值就用用途（色键 = 用途名）
+const rcolorR = (purpose, number) => {
+  if (purpose && purpose !== '未标') return rcolor(purpose);
+  const t = numTail(number);
+  return 'hsl(' + (t == null ? 200 : Math.round((t * GOLD) % 360)) + ', 58%, 60%)';
+};
+
+const CIRC_PURPOSE = '交通空间';      // `circulation` 环**没有** purpose 字段 ⇒ 这个标签是本页**合成**的
+const roomGroup = new THREE.Group();
+roomGroup.visible = false;
+root.add(roomGroup);
+const roomMats = new Map();           // 色串 → 材质（**不 dispose**：颜色是纯函数，来回切不涨显存）
+const roomMeshes = [];
+let roomsBuilt = false, roomsOn = false;
+// ★ 这一段定义在**模块前部**（比 `let curId` 早），所以**不许读 `curId`** —— 那段 `let` 还在
+//   暂时性死区里，读它会让**整个模块**在求值期抛 ReferenceError（连 `loadPiece` 都跑不到，
+//   症状是「三维一直『装载中』」）。这里自己记一件：当前挂的是不是交付包模型。
+//   2026-10-17 实测踩过一次：`setRooms(true)` 在 `if (EMBED)` 里**同步执行** ⇒ 立刻炸。
+let roomsPiece = 'pack';
+const roomStat = {rooms: 0, circ: 0, skipped: 0, noSlab: []};
+
+// ★ 2026-10-20 用户令「房间用途可以选择，选择后的有颜色」。
+//   ★ 同日改口径（原话）：「不有在加新的对话框，已经有示列的，在上面做就行」
+//     ⇒ 本页**不建面板**。入口是父页 `demo/building.html` 里**既有**的「房间用途」图例
+//     `#rlegend`（它本来就会筛右侧房间表）；父页筛的时候顺带把这一项传进来。
+//   传法：父页调**既有握手口**上的 `__cdut3d.setPurpose(名字|null)`。`__cdut3d` 这个名字
+//     本来就在 `gates/J-09.1.1-viewer.py` 的名单里，这里只加一个**属性**，没有新哨位名。
+//   筛选只改 `mesh.visible`：**颜色仍由 `rcolor(purpose)` 现算**（父页 `pcolor` 同一式：
+//     同一个 hue 递推 + 58%/60%），不另存一份配色 —— 两处写同一个数，一致证明不了它对（铁律 174）。
+//   `purposePicked === null` = 没筛过（全显）；Set = 只显这些用途。
+let purposePicked = null;
+// ★ 2026-10-20 用途名对不上时的**第二条判据**：按房号（台账 vs 色块）。
+//   实测 c105：5 层楼的源图几乎没画内隔墙，一整片开敞区里落着 31 个房号 ⇒ baseline 只有 22 片色块、
+//   且全归「未标」，台账却有 12 类用途、147 行。用途名在色块里**一个都找不到**，
+//   但房号在（多号区带 `numbers`）⇒ 点图例时改按房号把这几片选出来，并**照实报**是这条判据命中的。
+let numPicked = null;
+function _meshHit(me){
+  if (purposePicked && !purposePicked.has(me.userData.purpose)) return false;
+  if (numPicked){
+    const u = me.userData;
+    const ns = (Array.isArray(u.numbers) && u.numbers.length) ? u.numbers : [u.number];
+    if (!ns.some(n => n != null && numPicked.has(String(n)))) return false;
+  }
+  return true;
+}
+function applyPurposeFilter(){
+  for (const me of roomMeshes){
+    const vis = _meshHit(me);
+    me.visible = vis;
+    // ★ 标牌跟着色块走：筛掉的房间，标牌也不许留在屏上（不然「筛了」与「没筛」同形）
+    const sp = me.userData.tag;
+    if (sp) sp.visible = vis && !!tagsOn;
+  }
+  setRoomLabel();          // ★ 读数跟着变：`#rbN` 印「筛后 n / 总 m 片」
+}
+function setPurposeFilter(list){          // 父页入口：null / [] = 全显
+  const want = (list == null) ? [] : (Array.isArray(list) ? list : [list]);
+  const total = roomMeshes.length;
+  if (!want.length){
+    purposePicked = null; numPicked = null; applyPurposeFilter();
+    return {ok: true, mode: 'purpose', name: null, shown: total, total: total};
+  }
+  // ★ 名字**先验命中**再动（铁律 137/199）：父页的用途名来自台账 `ledger/rooms.json`，
+  //   本页色块的用途名来自逐层面片 `baseline/floors` —— **两个来源**，名字不一定对得上。
+  //   命中 0 若照筛，整楼色块会全消失，而那与「色块没建出来」同形。
+  const hit = new Set();
+  for (const me of roomMeshes)
+    if (want.includes(me.userData.purpose)) hit.add(me.userData.purpose);
+  if (hit.size){
+    purposePicked = hit; numPicked = null;
+    applyPurposeFilter();
+    return {ok: true, mode: 'purpose', name: [...hit],
+            shown: roomMeshes.filter(m => hit.has(m.userData.purpose)).length, total: total};
+  }
+  // ★ 第二判据（2026-10-20 c105 实测）：用途名对不上，但**房号**对得上 —— 多号开敞区带 `numbers`。
+  //   只有在这一条也命中时才动；两条都不中 ⇒ 照旧一片不动、把原因写清。
+  const wantNums = new Set();
+  if (Array.isArray(rled))
+    for (const r of rled)
+      if (r && r.number != null && want.includes(r.purpose || '未标')) wantNums.add(String(r.number));
+  const got = new Set();
+  for (const me of roomMeshes){
+    const u = me.userData;
+    const ns = (Array.isArray(u.numbers) && u.numbers.length) ? u.numbers : [u.number];
+    for (const n of ns) if (n != null && wantNums.has(String(n))) got.add(String(n));
+  }
+  if (!got.size)
+    return {ok: false, mode: 'none',
+            why: '本页色块里没有「' + want.join('、') + '」这一类，台账里这些房号也都不在色块分区里'
+                 + '（这一层多半是源图没画隔墙的整片开敞区）',
+            shown: total, total: total, ledgerRooms: wantNums.size};
+  purposePicked = null; numPicked = got;
+  applyPurposeFilter();
+  return {ok: true, mode: 'number', name: [...got].slice(0, 6),
+          matched: got.size, ledgerRooms: wantNums.size,
+          shown: roomMeshes.filter(_meshHit).length, total: total};
+}
+window.__cdut3d.setPurpose = setPurposeFilter;
+window.__cdut3d.purposeNow = () => (purposePicked ? [...purposePicked] : null);
+// ★ 2026-10-20：悬浮标牌开关（父页图例标题旁那个勾选调它）。返回**现数**：开了几片、共几片。
+window.__cdut3d.setRoomTags = setRoomTags;
+window.__cdut3d.roomTagsNow = () => ({on: tagsOn, built: roomsBuilt});
+// ★ 每层一个子 Group，按**层节点名**（`floorK`，与 `slabTopOf` 同一套键、与 `layerState[].raw` 同名）
+//   回连 GLB 的层节点。没有这一层，`applyVisibility()` 就管不到地垫（见 `syncRoomVis` 上面那段）。
+const roomByFloor = new Map();
+const roomOrphan = new Set();
+// ★★ 2026-10-17：**平面索引**（点楼板 → 房间）。地垫只是「看得见的色块」，
+//   它可能被关掉、可能被别的片挡住；而「点地面看房间功能」不该依赖色块是否上屏。
+//   `buildRooms()` 铺的时候顺手把每一间的平面环记下来，`identifyAt` 点到楼板时按**点位**去查。
+let roomPlane = null;   // {dx, dy, by: Map('floorK' → [{pts, holes, d, area}])}
+
+function _ptInPoly(pts, x, y){
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++){
+    const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function _ptInRoom(it, x, y){
+  if (!_ptInPoly(it.pts, x, y)) return false;
+  for (const h of (it.holes || [])) if (_ptInPoly(h, x, y)) return false;
+  return true;
+}
+
+function setRoomLabel(){
+  const el = document.getElementById('rbN');
+  if (!el) return;
+  if (!EMBED){ el.textContent = ''; return; }
+  const nShown = purposePicked
+    ? roomMeshes.filter(m => purposePicked.has(m.userData.purpose)).length : 0;
+  el.textContent = roomsBuilt
+    ? (purposePicked ? nShown + '/' + roomMeshes.length : (roomStat.rooms + roomStat.circ)) + ' 片'
+      + (roomStat.frameOk ? ' · 配准 +' + (roomStat.frame.dx / 1000).toFixed(3)
+                            + '/' + (roomStat.frame.dy / 1000).toFixed(3) + 'm'
+                            + (roomStat.frame.method === 'measured'
+                                ? '（单网格量测：水平面积聚类 + 外包框）'
+                                : '（' + roomStat.frame.n + '层同意'
+                                  + (roomStat.frame.bad.length ? '，' + roomStat.frame.bad.join(' ') + '另计' : '') + '）')
+                          : '')
+      + (roomStat.skipped ? ' · 跳过 ' + roomStat.skipped : '')
+      + (roomStat.noSlab.length ? ' · 缺标高 ' + roomStat.noSlab.join('/') : '')
+      + (roomOrphan.size ? ' · 未匹配层 ' + [...roomOrphan].join('/') : '')
+    : '建中…';
+}
+
+// ★ 地垫的可见性 = 它那一层的可见性。**必须由 `applyVisibility()` 调用** —— 只在建完之后同步一次
+//   是不够的（用户勾层是后来的事）。认不出层节点的组**不显示**并记名：显示出来看着像「那层有房间」，
+//   其实坏的是这句匹配，两种坏法不许同形（铁律 199）。
+function syncRoomVis(){
+  // ★ 2026-10-17：**整栋单网格**的包（理化楼 c005）GLB 里没有 `floorK` 节点 ⇒ 层组按名字
+  //   永远配不上，全部落进「未匹配层」**被隐藏**（铺了等于没铺）。这一支改跟**整件**的可见性：
+  //   单网格包只有一行层控件，那一行关掉时色块一起关。逐层节点存在的包**照旧**按名字配。
+  const hasFloorNodes = layerState.some(s => /^floor\d+$/.test(s.raw));
+  const allOn = layerState.length ? layerState.every(s => s.node.visible) : true;
+  for (const [nodeName, g] of roomByFloor){
+    if (!hasFloorNodes){ g.visible = allOn; roomOrphan.delete(nodeName); continue; }
+    const st = layerState.find(s => s.raw === nodeName);
+    if (!st){ g.visible = false; roomOrphan.add(nodeName); continue; }
+    roomOrphan.delete(nodeName);
+    g.visible = !!st.node.visible;
+  }
+  if (roomOrphan.size) setRoomLabel();
+}
+
+// ★★★ **包帧 → 模型帧的平移**（2026-10-17 用户令「色块和模型要完全叠在一起」）。
+//   实测：色块（`baseline/floors/*.json`）在**包自己的居中帧**里（x −64.3…64.3、y −36.1…43.3 m），
+//   而模型（GLB，与 `meta/blocks.json` 同一套）在**场地帧**里（X 17.2…146.6、Y 15.0…99.0 m）。
+//   两边尺寸几乎一样（128.6×79.4 vs 129.4×84.0 m）⇒ **纯平移，不旋转不缩放**，但少了 81.9/52.2 m，
+//   所以色块整片飘在楼外面 —— 这正是「还没完全叠在一起」。
+//   求法：拿**两边都有、每层都有**的**柱心**做配准，**按下标配对**（铁律 194：两个估计器要按身份、
+//   不能按值 —— 按最近邻配时残差中位 39.8 m，全是假配对）；每层各算一次 Δ 并**自证**：
+//     ① 条数必须相等   ② 残差（离中位 Δ 最远那根）≤ `FRAME_TOL_MM`
+//   然后取**多数派**的 Δ，与多数派不符的层**记名**（不许静默丢掉）。
+//   ★ 为什么必须自证：F7（`floor6`）实测包 14 根 / 模型 30 根，按下标算出来的 Δ 是 59.1 m
+//     （不是 81.9）—— 不带自证就会**静默**把那一层铺偏 22.8 m，看着跟「这层房间就是歪的」同形。
+//   ★ 找不到任何一层通过 ⇒ **不铺**（`ok:false`），由标签报出来；宁可没有色块，不给一层飘着的。
+const FRAME_TOL_MM = 5.0;        // 实测通过的那 10 层：残差中位 0.0 / 最大 0.4 mm ⇒ 5 mm 留了 10 倍余量
+// ★★ 2026-10-17 C105：**条数不必相等**。两个量不是同一个量：基线 `columns` 是**柱实体**条数
+//   （D1 155 根），清单 `COL` 块是**投影多边形**条数（B1 173 块 —— 柱被墙/板切成多块就会多出来）。
+//   原来 `base.length !== mdl.length` 直接 `continue` ⇒ c105 唯一有柱的那层被跳过、一块都不铺，
+//   标签只报「配准失败(不铺)」，看着像「这栋楼没有房间数据」。
+//   新路径 = **投票求平移**：两两差值里真平移有 155 票、偶然对齐一票都没有 ⇒ 取票最多的 100 mm 桶，
+//   再在桶内取中位；然后逐根验「5 mm 内有没有对应柱」。命中率 < 90% 就**如实拒绝**。
+//   分辨力自证：真平移是精确的（纯平移，误差只来自取整），若第一段的 Δ 猜错，则一根都对不上，
+//   不可能「将就通过」；5 mm 相对最近柱距（c105 实测 ~0.55 m）是 1/110，配不歧义。
+const FRAME_VOTE_MM = 100;       // 投票桶：真平移全落在同一桶；偶然偏移散开，票数远低于柱数
+const FRAME_HIT_MIN = 0.9;       // 至少 90% 的基线柱要在 5 mm 内找到对应块
+function _frameByVote(bp, mc){
+  if (!bp.length || !mc.length) return null;
+  const buckets = new Map();
+  for (const [x, y] of bp){
+    for (const [mx, my] of mc){
+      const k = Math.round((mx - x) / FRAME_VOTE_MM) + '/' + Math.round((my - y) / FRAME_VOTE_MM);
+      let b = buckets.get(k);
+      if (!b){ b = []; buckets.set(k, b); }
+      b.push([mx - x, my - y]);
+    }
+  }
+  const win = [...buckets.values()].sort((a, b) => b.length - a.length)[0];
+  if (!win || win.length < bp.length * FRAME_HIT_MIN) return null;
+  const med = k => { const a = win.map(p => p[k]).slice().sort((x, y) => x - y); return a[a.length >> 1]; };
+  const dx0 = med(0), dy0 = med(1);
+  let hit = 0, worst = 0, acc = [0, 0];
+  for (const [x, y] of bp){
+    let best = Infinity, bj = null;
+    for (const [mx, my] of mc){
+      const d = Math.hypot(mx - x - dx0, my - y - dy0);
+      if (d < best){ best = d; bj = [mx - x, my - y]; }
+    }
+    if (best <= FRAME_TOL_MM){ hit++; acc[0] += bj[0]; acc[1] += bj[1]; }
+    else worst = Math.max(worst, best);
+  }
+  if (hit < bp.length * FRAME_HIT_MIN) return null;
+  return {dx: acc[0] / hit, dy: acc[1] / hit, worst, hit};
+}
+// ★ 无柱楼的退路：图纸外包框 ↔ 模型 WALL 外包框（详见调用处的说明）
+function frameByPlanBBox(datas){
+  if (!cat || !(cat.floors || []).length) return null;
+  let bx0 = 1e18, by0 = 1e18, bx1 = -1e18, by1 = -1e18, n = 0;
+  const eat = p => {
+    if (!Array.isArray(p) || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) return;
+    bx0 = Math.min(bx0, p[0]); bx1 = Math.max(bx1, p[0]);
+    by0 = Math.min(by0, p[1]); by1 = Math.max(by1, p[1]); n++;
+  };
+  for (const {d} of datas){
+    // 楼层给了 `plan_bbox`（所有楼板并集，米）就用它 —— 比 `outline`（只最大一块板）可靠
+    const pb = d && d.plan_bbox;
+    if (Array.isArray(pb) && pb.length === 4){
+      eat([pb[0], pb[1]]); eat([pb[2], pb[3]]); continue;
+    }
+    for (const k of ['outline', 'rooms', 'circulation']){
+      const v = d && d[k];
+      if (!Array.isArray(v)) continue;
+      if (k === 'outline') for (const p of v) eat(p);
+      else for (const r of v) for (const p of (r && r.poly) || []) eat(p);
+    }
+  }
+  if (!n || !(bx1 > bx0)) return null;
+  let mx0 = 1e18, my0 = 1e18, mx1 = -1e18, my1 = -1e18, m = 0;
+  for (const fl of cat.floors) for (const b of (fl.blocks || [])){
+    if (b.layer !== 'WALL' || !b.bbox) continue;
+    mx0 = Math.min(mx0, b.bbox[0]); mx1 = Math.max(mx1, b.bbox[2]);
+    my0 = Math.min(my0, b.bbox[1]); my1 = Math.max(my1, b.bbox[3]); m++;
+  }
+  if (!m || !(mx1 > mx0)) return null;
+  const pw = (bx1 - bx0) * 1000, ph = (by1 - by0) * 1000;
+  const mw = mx1 - mx0, mh = my1 - my0;
+  const close = (a, b) => Math.abs(a - b) <= 1000 + 0.02 * Math.max(a, b);
+  if (!close(pw, mw) || !close(ph, mh)) return null;      // 不是同一套坐标系 ⇒ 不铺
+  return { ok: true,
+           dx: (mx0 + mx1) / 2 - (bx0 + bx1) / 2 * 1000,
+           dy: (my0 + my1) / 2 - (by0 + by1) / 2 * 1000,
+           agree: [], bad: [], n: 0, method: 'bbox',
+           note: '无柱：图纸外包框中心 → 模型墙面外包框中心（宽深各差 ≤1 m 或 2%）' };
+}
+
+function roomFrame(datas){
+  const cands = new Map(), bad = [], agree = [];
+  for (const {f, d} of datas){
+    const base = d && d.columns;
+    const node = nodeOfFloor(f.n);
+    const blk = (cat && cat.floors || []).find(x => x.node === node);
+    const mdl = blk ? (blk.blocks || []).filter(b => b.layer === 'COL') : [];
+    const tag = 'F' + (f.n + 1);
+    if (!Array.isArray(base) || !base.length || !mdl.length){ bad.push(tag + '(缺柱)'); continue; }
+    let dx, dy, worst;
+    if (base.length === mdl.length){
+      // 快路径：条数相等 ⇒ 按下标配（铁律 194），c006 十层走这条，残差中位 0.0 / 最大 0.4 mm
+      const dd = base.map((c, i) => [ (mdl[i].bbox[0] + mdl[i].bbox[2]) / 2 - c.x * 1000,
+                                      (mdl[i].bbox[1] + mdl[i].bbox[3]) / 2 - c.y * 1000 ]);
+      const med = k => { const a = dd.map(p => p[k]).slice().sort((x, y) => x - y); return a[a.length >> 1]; };
+      dx = med(0); dy = med(1);
+      worst = 0;
+      for (const [x, y] of dd) worst = Math.max(worst, Math.hypot(x - dx, y - dy));
+    } else {
+      const bp = base.map(c => [c.x * 1000, c.y * 1000]);
+      const mc = mdl.map(b => [ (b.bbox[0] + b.bbox[2]) / 2, (b.bbox[1] + b.bbox[3]) / 2 ]);
+      const r = _frameByVote(bp, mc);
+      if (!r){ bad.push(tag + '(' + base.length + '≠' + mdl.length + ',投票未达 ' + (FRAME_HIT_MIN * 100) + '%)'); continue; }
+      dx = r.dx; dy = r.dy; worst = r.worst;
+    }
+    if (worst > FRAME_TOL_MM){ bad.push(tag + '(残差' + worst.toFixed(1) + 'mm)'); continue; }
+    agree.push(tag);
+    const key = Math.round(dx / 10) + '/' + Math.round(dy / 10);      // 10 mm 归并（实测层间差 ≤1 mm）
+    if (!cands.has(key)) cands.set(key, {dx: 0, dy: 0, n: 0});
+    const c = cands.get(key); c.dx += dx; c.dy += dy; c.n++;
+  }
+  if (!cands.size) return {ok: false, dx: 0, dy: 0, agree: [], bad};
+  const best = [...cands.values()].sort((a, b) => b.n - a.n)[0];
+  return {ok: true, dx: best.dx / best.n, dy: best.dy / best.n, agree, bad, n: best.n};
+}
+
+// ★★ 2026-10-17：**整栋单网格**的包（理化楼 c005）没有 `meta/blocks.json` ⇒ `slabTopOf`
+//   与 `roomFrame`（靠逐层 COL 块投票）都无从计算。这两样不再「量不到就不铺」，改成**从几何量**：
+//   ① 逐层完成面 = 水平三角面**面积**按 Y 聚类的峰（顶点计数会被窗台/过梁带骗：c005 的 1.1/2.6
+//      每个窗洞都有几万顶点，但水平面积只有几百 m²；楼板一根峰就是 2000 m² 量级）。
+//   ② 平面配准 = 图纸外包框中心 → 模型外包框中心（单网格没有逐层 COL，投不了票）。
+//      两轴宽度对不上（转轴/缩放/不是同一坐标系）就**返回 null 不铺**，并让调用方照实记「量不到」。
+//   ★ 这不是猜：两个量都从落盘的件上现算，且都有分辨力自证（峰间距必须 ≈ 层高；两轴宽度必须对得上）。
+function measureSingleMeshRooms(datas){
+  const h = Number(lay.floor_h_m), nF = Number(lay.n_floors);
+  if (!curRoot || !(h > 0) || !(nF > 0)) return null;
+  curRoot.updateMatrixWorld(true);
+  const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
+  const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nr = new THREE.Vector3();
+  const hist = new Map();                       // 厘米桶 → 水平面积 m²
+  curRoot.traverse(o=>{
+    const g = o.geometry, pos = g && g.attributes && g.attributes.position;
+    if (!pos) return;
+    const idx = g.index, mw = o.matrixWorld;
+    const nTri = idx ? idx.count / 3 : pos.count / 3;
+    const gi = t => idx ? idx.getX(t) : t;
+    for (let t = 0; t < nTri; t++){
+      A.fromBufferAttribute(pos, gi(t*3)).applyMatrix4(mw);
+      B.fromBufferAttribute(pos, gi(t*3+1)).applyMatrix4(mw);
+      C.fromBufferAttribute(pos, gi(t*3+2)).applyMatrix4(mw);
+      e1.subVectors(B, A); e2.subVectors(C, A); nr.crossVectors(e1, e2);
+      const len = nr.length();
+      if (!(len > 1e-9) || Math.abs(nr.y / len) < 0.9) continue;   // 只要水平面
+      const y = Math.round(((A.y + B.y + C.y) / 3) * 100);
+      hist.set(y, (hist.get(y) || 0) + len / 2);
+    }
+  });
+  if (!hist.size) return null;
+  const maxA = Math.max(...hist.values());
+  if (!(maxA > 1)) return null;
+  // 强峰 → 按 20 cm 间隔聚类（楼板顶面与完成面常差 5–20 cm，算**同一层**，取簇里最高的那条当行走面）
+  const ys = [...hist.keys()].sort((a,b)=>a-b);
+  const clusters = [];
+  for (const y of ys){
+    const ar = hist.get(y);
+    if (ar < maxA * 0.15) continue;             // 窗台/过梁那种几百 m² 的一律不算楼板
+    const cur = clusters[clusters.length - 1];
+    if (cur && y - cur.hi <= 20){ cur.hi = y; cur.top = y; }
+    else clusters.push({lo: y, hi: y, top: y});
+  }
+  if (clusters.length < nF) return null;
+  // 取前 nF 个簇，且相邻簇的顶面间距必须 ≈ 层高（差 > 10 cm ⇒ 这不是我们以为的那套楼层）
+  for (let k = 0; k < nF; k++){
+    if (k && Math.abs((clusters[k].top - clusters[k-1].top) / 100 - h) > 0.10) return null;
+  }
+  const bases = new Map();
+  for (let k = 0; k < nF; k++) bases.set('floor' + k, clusters[k].top / 100);
+  // ── 平面配准：图纸外包框 ↔ 模型外包框
+  let px0 = 1e9, py0 = 1e9, px1 = -1e9, py1 = -1e9;
+  for (const {d} of datas){
+    const ring = (d && d.outline) || [];
+    for (const p of ring){
+      if (!Array.isArray(p) || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
+      px0 = Math.min(px0, p[0]); px1 = Math.max(px1, p[0]);
+      py0 = Math.min(py0, p[1]); py1 = Math.max(py1, p[1]);
+    }
+  }
+  if (!(px1 > px0) || !(py1 > py0)) return null;
+  const bb = new THREE.Box3().setFromObject(curRoot);
+  const mcx = (bb.min.x + bb.max.x) / 2, mcz = (bb.min.z + bb.max.z) / 2;
+  const pcx = (px0 + px1) / 2, pcy = (py0 + py1) / 2;
+  // 分辨力自证：宽度对不上就是**另一套坐标系**（转轴/缩放），不铺
+  const mwX = bb.max.x - bb.min.x, mwZ = bb.max.z - bb.min.z;
+  const pwX = px1 - px0, pwY = py1 - py0;
+  if (Math.abs(mwX - pwX) > 1.0 + 0.02 * Math.max(mwX, pwX)) return null;
+  if (Math.abs(mwZ - pwY) > 1.0 + 0.02 * Math.max(mwZ, pwY)) return null;
+  return {
+    bases,
+    frame: {ok: true, dx: (mcx - pcx) * 1000, dy: -(pcy + mcz) * 1000,
+            agree: [], bad: [], n: 0, method: 'measured',
+            note: '单网格量测：水平面积聚类定层高面 + 外包框定平移'},
+  };
+}
+
+async function buildRooms(){
+  if (roomsBuilt || !EMBED) return;
+  roomsBuilt = true;                  // 先立旗：切两次件时不许建两遍（重量级：12 层 × 数十片）
+  const dept = new Map();
+  if (Array.isArray(rled))
+    for (const r of rled) if (r && r.number != null) dept.set(String(r.number), r.dept);
+  // ── 第 1 趟：先把每一层的件读齐（配准要用**全部**层投票，边读边铺就投不了票）
+  const datas = [];
+  for (const f of floors){
+    const base = slabTopOf.get(nodeOfFloor(f.n));
+    let d = null;
+    try { d = await getJSON(PACK + '/' + f.rel); }
+    catch (e){ roomStat.noSlab.push('F' + (f.n + 1) + '(读不动)'); continue; }
+    datas.push({f, base, d});
+  }
+  // ── 配准（**铺之前**求，铺的时候一处都不能猜）
+  let F = roomFrame(datas);
+  // ★★ 2026-10-17 理化楼 c005 这类**整栋单网格**的包：没有 `meta/blocks.json`
+  //   ⇒ 上面两条路全断（`slabTopOf` 空、`roomFrame` 找不到 COL 块）。但「量不到」不等于
+  //   「不能量」——**从几何本身量**：楼板是水平面，其面积按标高聚类就是每层的完成面；
+  //   平面外包框与模型外包框一比就能定配准。两轴宽度对不上就**放弃**（宁可不铺）。
+  if (datas.some(it=>it.base === undefined)){
+    // ★ 单网格包要靠**几何**量楼板标高 ⇒ 必须等 GLB 挂上。模块求值时 `setRooms(true)` 先跑，
+    //   那时 `curRoot` 还是 null ⇒ 这里**不能**记「量不到」，要把旗子退回、让装载回调再叫一次。
+    if (!curRoot){ roomsBuilt = false; return; }
+    const MS = measureSingleMeshRooms(datas);
+    if (MS){
+      for (const it of datas) if (it.base === undefined) it.base = MS.bases.get('floor' + it.f.n);
+      roomStat.frame = MS.frame; roomStat.frameOk = true;
+    } else {
+      for (const it of datas) if (it.base === undefined) roomStat.noSlab.push('F' + (it.f.n + 1));
+    }
+  }
+  const usable = datas.filter(it=>it.base !== undefined);
+  if (!roomStat.frameOk){
+    F = roomFrame(usable);
+    // ★★ 2026-10-17：**图上不画柱的楼**（教学/公寓里很常见：C017/C018/C028/C104 等 keep 层里
+    //   根本没有柱层）拿不到一根 COL 块投票 ⇒ 逐层都是「缺柱」、一块不铺。
+    //   退一步用**平面外包框**：图纸侧 = 该包 `outline` + `rooms` + `circulation` 的并集，
+    //   模型侧 = 清单 `WALL` 块的并集。两边都是「这栋楼的墙到墙」，**纯平移**。
+    //   自证：两轴宽度/进深必须对上（≤1 m 或 2%），对不上就照旧不铺（`ok:false`）。
+    //   它不是精确配准（墙厚/女儿墙会让外包框差半米内），但比「一块没有」强，且差多少有 c 可查。
+    if (!F.ok){
+      const FB = frameByPlanBBox(usable);
+      if (FB){ F = FB; }
+    }
+    roomStat.frame = F;
+  } else F = roomStat.frame;
+  if (!F.ok && !roomStat.frameOk){
+    roomStat.noSlab.push('★ 配准失败(不铺)');
+    setRoomLabel();
+    return;                       // ★ 一块也不铺：铺出来的是**飘在楼外**的色块，比没有更坏
+  }
+  datas.length = 0; for (const it of usable) datas.push(it);
+  const DXm = F.dx / 1000, DYm = F.dy / 1000;
+  roomStat.frameOk = true;
+  // ★ 平面索引：铺色块这一趟顺手建（同一份 `poly`，不重读、不另算坐标系）
+  roomPlane = {dx: DXm, dy: DYm, by: new Map()};
+  // ── 第 2 趟：铺
+  for (const {f, base, d} of datas){
+    // ★★ 2026-10-17 用户令：「地板标志颜色的，只是有功能需求的，像过道等不要标」
+    //   ⇒ `circulation`（走廊/门厅/梯井…）**不上色**。数据仍留在 floor 文件里
+    //   （2D 平面图按灰底画它、台账也用它），只是三维地垫不铺 —— 改数据会毁掉那些用途。
+    //   实测：c006 原铺 744 片（214 间房 + 530 片交通）⇒ 现在只铺 214 片。
+    const batches = [{list: d.rooms || [], circ: false}];
+    // 这一层的地垫装进自己的子 Group（名 = GLB 层节点名）⇒ 层关掉时地垫跟着关。
+    const fg = new THREE.Group();
+    fg.userData.node = nodeOfFloor(f.n);                 // 与 `slabTopOf` 的键、`layerState[].raw` 同名
+    roomByFloor.set(fg.userData.node, fg);
+    roomGroup.add(fg);
+    for (const bt of batches) for (const r of bt.list){
+      const poly = r && r.poly;
+      if (!Array.isArray(poly) || poly.length < 3){ roomStat.skipped++; continue; }
+      // 环**首尾同点**（实测 `floor1.json` 的 room 环 442 点、首尾重合）⇒ 去掉重复的收尾点，
+      //   不然 earcut 会拿到一个退化边。
+      const n = poly.length;
+      const last = (poly[0][0] === poly[n-1][0] && poly[0][1] === poly[n-1][1]) ? n - 1 : n;
+      const pts = [];
+      for (let i = 0; i < last; i++){
+        const p = poly[i];
+        if (Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+          pts.push(new THREE.Vector2(p[0], p[1]));
+      }
+      if (pts.length < 3){ roomStat.skipped++; continue; }
+      const a = parseFloat(r.area_m2);
+      const _purposeText = String(r.purpose || '').trim();
+      // 2026-10-21 用户令：一层未标注用途、面积较大的房间先按「花台/平台」看，
+      // 做成 20 cm 高体块。上限 300 m² 防止把整层大厅/室外大面误当花台。
+      const isPlanter = !bt.circ && f.n === 0 && (!_purposeText || _purposeText === '未标')
+        && Number.isFinite(a) && a >= 20 && a <= 300;
+      const purpose = bt.circ ? CIRC_PURPOSE : (isPlanter ? '花台 / 平台' : (r.purpose || '未标'));
+      let geo = null;
+      try {
+        const shape = new THREE.Shape(pts);
+        geo = isPlanter
+          ? new THREE.ExtrudeGeometry(shape, {depth: 0.20, bevelEnabled: false, steps: 1})
+          : new THREE.ShapeGeometry(shape);
+      }
+      catch (e){ roomStat.skipped++; continue; }
+      // 平面坐标（X 向右 / Y 进深，单位**米**）→ 世界坐标：`rotateX(-90°)` 把局部 (x,y,0) 映成
+      //   (x,0,−y)，与 GLB 的 `glb.z = −Y` 是**同一套**（见 loadPiece 上面那段坐标注释）。
+      geo.rotateX(-Math.PI / 2);
+      // ★ 材质缓存键必须是**颜色**不是用途：`未标` 一类里每间颜色不同，按用途缓存会全压成一个色。
+      const ck = isPlanter ? '#6f8f62' : rcolorR(purpose, r.number);
+      let mat = roomMats.get(ck);
+      if (!mat){
+        // ★ **色块保持不透明**（2026-10-17 用户令「要和三维模型重叠，要能半透明」＋「我给你的参考页面」
+        //   ⇒ 照参考页 `8140/building.html` 的做法）。参考页源码里那句写着：压暗用**颜色 lerp**
+        //   而不是 `material.opacity` —— 省掉透明通道、透明排序与随之而来的 draw call 抖动；
+        //   803 片全开透明会立刻变成 803 个排序对象。
+        //   「看穿外墙」由**另一条路**做：把**墙**变半透明（见 `setWallsTransparent`，照参考页的
+        //   `#wallTransparentToggle` / `WALL_TRANSPARENT_OPACITY = 0.25`）。两条路都试过 X 光
+        //   （`depthTest:false`）那一版：色块前后叠在一起、且与参考页不是一套，已撤。
+        mat = new THREE.MeshStandardMaterial({color: new THREE.Color(ck),
+                                              roughness: isPlanter ? 0.98 : 0.85,
+                                              metalness: 0, side: THREE.DoubleSide});
+        roomMats.set(ck, mat);
+      }
+      const ns = (Array.isArray(r.numbers) && r.numbers.length)
+        ? r.numbers.map(x => String(x)) : (r.number == null ? [] : [String(r.number)]);
+      // 使用人：本号有就取本号；开敞区（多号共用一区）取第一个有单位的号，并在标牌上注明「共N号」
+      let dp = (r.number != null && dept.has(String(r.number))) ? dept.get(String(r.number)) : null;
+      if (dp == null) for (const n1 of ns) if (dept.get(n1)) { dp = dept.get(n1); break; }
+      const me = new THREE.Mesh(geo, mat);
+      // ★ 色块的平面坐标加**同一套**配准平移（`geo.rotateX(-π/2)` 把 (px,py,0) 映成 (px,0,−py)，
+      //   ⇒ 世界 z 偏移是 **−DYm**）。少了这两项，色块整片飘在楼外 81.9/52.2 m（2026-10-17 实测）。
+      me.position.set(DXm, base + ROOM_PAD_M, -DYm);
+      me.castShadow = false; me.receiveShadow = false;   // 阴影图是**烘一次冻住**的，加进来也不会重算
+      me.userData = {
+        type: '房间', isCirc: !!bt.circ, floor: f.n,
+        number: (r.number == null ? null : String(r.number)),
+        // ★ 多号共用一区（开敞区）要把 `numbers` 带出来：用途筛选的第二判据按房号命中（见 setPurposeFilter）
+        numbers: (ns.length > 1 ? ns : null),
+        purpose, planter: isPlanter,
+        area_m2: (Number.isFinite(a) ? a : null),
+        stated_m2: (r.stated_m2 == null ? null : String(r.stated_m2)),
+        src: (r.src == null ? null : String(r.src)),
+        sid: (r.sid == null ? null : String(r.sid)),
+        dept: dp,
+      };
+      // ── 悬浮标牌（三行：使用人 / 面积 / 用途；多号区在用途那行补「共N号」）──
+      const _st = parseFloat(me.userData.stated_m2);      // 图上标注面积优先（人写的数）
+      const _ar = Number.isFinite(_st) ? _st + ' m²（图注）'
+                : (Number.isFinite(a) ? a.toFixed(1) + ' m²（实算）' : '面积 —');
+      const _tag = _tagTexture([
+        '使用人：' + (dp || '—'),
+        '面积：' + _ar,
+        '用途：' + purpose + (isPlanter ? '（首层未标注）' : '')
+          + (ns.length > 1 ? '（共 ' + ns.length + ' 个房号）' : ''),
+      ]);
+      const _ct = _polyCentroid(pts);
+      if (_ct){
+        _tag.position.set(_ct.x + DXm, base + ROOM_PAD_M + TAG_LIFT_M, -_ct.y - DYm);
+        _tag.visible = false;                    // 默认关；由 `setRoomTags(true)` 统一开
+        fg.add(_tag);
+        me.userData.tag = _tag;
+      }
+      fg.add(me); roomMeshes.push(me);
+      // ★ 平面索引（点楼板 → 这一间）。坐标是**图纸那份米制平面坐标**，与色块几何同源。
+      {
+        const k = fg.userData.node;
+        if (!roomPlane.by.has(k)) roomPlane.by.set(k, []);
+        roomPlane.by.get(k).push({
+          pts: pts.map(p => [p.x, p.y]),
+          holes: (r.holes || []).map(h => h.map(q => [q[0], q[1]])),
+          d: me.userData, area: me.userData.area_m2,
+        });
+      }
+      if (bt.circ) roomStat.circ++; else roomStat.rooms++;
+    }
+    // ★ 交通空间（走廊/门厅/梯井）**不上色**（用户令），但仍然可点：加进平面索引，
+    //   点楼板时照实报「交通空间」——「没铺色」不该等于「点了没东西」。
+    for (const r of (d.circulation || [])){
+      const poly = r && r.poly;
+      if (!Array.isArray(poly) || poly.length < 3) continue;
+      const pts2 = poly.filter(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+      if (pts2.length < 3) continue;
+      const k = fg.userData.node;
+      if (!roomPlane.by.has(k)) roomPlane.by.set(k, []);
+      roomPlane.by.get(k).push({
+        pts: pts2.map(p => [p[0], p[1]]),
+        holes: (r.holes || []).map(h => h.map(q => [q[0], q[1]])),
+        d: {type: '房间', isCirc: true, floor: f.n, number: null, purpose: CIRC_PURPOSE,
+            area_m2: Number.isFinite(parseFloat(r.area_m2)) ? parseFloat(r.area_m2) : null,
+            stated_m2: null, src: r.src || null, sid: null, dept: null},
+        area: Number.isFinite(parseFloat(r.area_m2)) ? parseFloat(r.area_m2) : Infinity,
+      });
+    }
+  }
+  setRoomLabel();
+  roomGroup.visible = roomsOn && roomsPiece === 'pack';
+  syncRoomVis();            // ★ 建完立刻按**当前**的层勾选同步一次（建之前勾过的层也算数）
+  applyPurposeFilter();     // ★ 重建出的 `roomMeshes` 全是 visible：父页已选的用途要**重新压上去**
+  // ★ 标牌同理：父页可能在色块建好之前就勾了「标牌」⇒ 建完要按当前状态补一次，
+  //   不补的话勾选框是勾着的、屏上一块牌都没有（「没做」与「做了」同形）。
+  if (tagsOn) setRoomTags(true);
+  // ★ 房间色块是**后建**的新材质（换件/首次铺色都会走到这里）⇒ 剖切开着时要补一次。
+  if (clipOn) applyClipping();
+}
+
+function setRooms(on){
+  roomsOn = !!on;
+  if (roomsOn && !roomsBuilt) buildRooms();
+  roomGroup.visible = roomsOn && roomsPiece === 'pack';
+  syncRoomVis();
+  const cb = document.getElementById('cbRooms');
+  if (cb) cb.checked = roomsOn;
+}
+
+// 报告点到的那个房间。**只写 `#pickinfo`** —— 与逐块点选**同一个出口**，父页两条路都读得到，
+//   不新造接口（这条出口不是哨位，哨位名单在 `gates/J-09.1.1-viewer.py` 里钉着，不许加）。
+function showRoom(o){
+  pickBox.visible = false;
+  const d = o.userData;
+  const area = (typeof d.area_m2 === 'number') ? d.area_m2.toFixed(2) + ' m²'
+             : (d.stated_m2 ? esc(d.stated_m2) : '—');
+  document.getElementById('pickinfo').innerHTML =
+    '<div><b>' + esc(d.number || '（无房号）') + '</b><span>' + esc(d.purpose) + '</span></div>'
+    + '<div><b>使用单位</b><span>' + esc(d.dept == null ? '—' : d.dept) + '</span></div>'
+    + '<div><b>面积</b><span>' + area + '</span></div>'
+    + '<div><b>层</b><span>F' + (d.floor + 1) + '</span></div>'
+    + '<div class="note" style="margin:6px 0 0">来源：'
+      + (d.isCirc ? '交通空间环 <code>circulation</code>（<b>本页合成的标签</b>，不是图纸用词）'
+                  : '图纸房间面片 <code>rooms</code>')
+      + (d.src ? ' · ' + esc(d.src) : '')
+      + (d.sid ? ' · sid ' + esc(d.sid) : '')
+      + '</div>';
+}
+
+// 开关：**只给展示页**（父页按 id 点它 —— 与楼层按钮同一套跨 DOM 联动，不新造接口）。
+//   ★ 追加在 `#floors` 的**末尾** ⇒ 前面 `children[0..N]` 的层按钮**一个都没挪位**
+//     （父页 `syncChildFloor(k)` 按下标回取，挪位会让它静默点到别的层上）。
+if (EMBED){
+  const fbox = document.getElementById('floors');
+  if (fbox){
+    const lb = document.createElement('label');
+    lb.className = 'rsw';
+    lb.title = '在三维里把每个房间铺成色块（点房间地面看用途 / 单位 / 面积）';
+    lb.innerHTML = '<input type="checkbox" id="cbRooms" checked> 房间色块 <b id="rbN">—</b>';
+    fbox.appendChild(lb);
+    lb.querySelector('#cbRooms').onchange = e => setRooms(e.target.checked);
+    setRooms(true);     // ★ 用户令：**只展示页默认开**（闸不带 embed ⇒ 这段在闸里不执行）
+
+    // ★ 2026-10-20 用途筛选**不在这里建面板**（用户：「不要加新的对话框，已经有列表的，
+    //   在上面做就行」）—— 入口是父页既有的 `#rlegend`，见本文件前部 `setPurposeFilter`。
+
+    // ★ 「墙体半透明」（照参考页 8140 的 `#wallTransparentToggle`）。**默认关** —— 参考页也是默认关
+    //   （它的按钮上写着「✗」）。同样只在这一支里建：闸不带 `embed` ⇒ 连这个控件都不存在。
+    const lbw = document.createElement('label');
+    lbw.className = 'rsw';
+    lbw.title = '把外墙/门楣/女儿墙调成 25% 半透明 —— 能看穿外壳看到楼内的房间色块';
+    lbw.innerHTML = '<input type="checkbox" id="cbWallT"> 墙体半透明';
+    fbox.appendChild(lbw);
+    lbw.querySelector('#cbWallT').onchange = e => setWallsTransparent(e.target.checked);
+
+    // ★ 剖切面（A1）。默认**关**。滑杆 0..1000 映射到 `[件的最低点, 件最高点]`，
+    //   范围在**每次载入**后按包围盒现算（不手打任何高度）。量不到包围盒 ⇒ 滑杆禁用并照实写
+    //   「量不到」（铁律 199：不让「没量到」长得像「关着」）。
+    const lbc = document.createElement('label');
+    lbc.className = 'rsw';
+    lbc.title = '沿高度把三维剖开：只保留标高以下的全部构件。剖到某一层，就能看清墙有没有接上、门洞有没有打穿、楼板有没有盖（与「对照」页的 2D 叠图同一刀）。';
+    lbc.innerHTML = '<input type="checkbox" id="cbClip"> 剖切'
+                  + '<input type="range" id="cbClipH" min="0" max="1000" value="1000" disabled>'
+                  + '<b id="clipV">关</b>';
+    fbox.appendChild(lbc);
+    lbc.querySelector('#cbClip').onchange = e => {
+      const rg = _clipRange();
+      const s = document.getElementById('cbClipH');
+      if (e.target.checked && !rg){
+        e.target.checked = false;
+        document.getElementById('clipV').textContent = '量不到包围盒';
+        return;
+      }
+      if (s) s.disabled = !e.target.checked;
+      setClip(e.target.checked);
+    };
+    lbc.querySelector('#cbClipH').oninput = e => {
+      const rg = _clipRange();
+      if (!rg) return;
+      const y = rg[0] + (rg[1] - rg[0]) * (Number(e.target.value) / 1000);
+      setClipHeight(y);
+    };
+  }
+}
+
 const LOOK = new THREE.Vector3(0, 18, 0);
 let radius = 130, theta = 0.72, phi = 1.02;
 let vTheta = 0, vPhi = 0;                     // 惯性（松手后继续转一段）
@@ -409,6 +1502,29 @@ const R_MIN_M = 0.6;
 //   原版双击只复位角度与距离，且 radius 取 rMax*0.34 ≠ 载入值 ⇒ 双击**回不到开场的取景**，
 //   平移更是没得复位。有了它，「双击复位」才是可判的（判据 J-09.1.1 的 G 条）。
 let HOME = null;
+// ★ 2026-10-20：开场取景要装得下**整件**（用户「模型会跑出屏幕」）。`fitBox` 记着载入那一件的
+//   世界包围盒，`frameRadius()` 按当前 `theta/phi/aspect` 现算最小半径；窗口形状变了在 `resize()` 里重算。
+let fitBox = null;
+function frameRadius(box){
+  // 相机基向量与 `apply()` 同一套球坐标约定：相机在 LOOK + radius·ẑ，看向 −ẑ。
+  const _tanY = Math.tan((camera.fov * Math.PI / 180) / 2);
+  const _tanX = _tanY * Math.max(camera.aspect, 1e-3);
+  const z = new THREE.Vector3(Math.sin(phi)*Math.sin(theta), Math.cos(phi), Math.sin(phi)*Math.cos(theta)).normalize();
+  const x = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), z).normalize();  // 屏幕右
+  const y = new THREE.Vector3().crossVectors(z, x).normalize();                           // 屏幕上
+  let need = 0;
+  const v = new THREE.Vector3();
+  for (const cx of [box.min.x, box.max.x])
+    for (const cy of [box.min.y, box.max.y])
+      for (const cz of [box.min.z, box.max.z]){
+        v.set(cx, cy, cz).sub(LOOK);
+        // 角点深度 = radius − v·ẑ ⇒ 要求 |v·x̂| ≤ (radius − v·ẑ)·tanX 且竖直同理
+        need = Math.max(need,
+                        v.dot(z) + Math.abs(v.dot(x)) / _tanX,
+                        v.dot(z) + Math.abs(v.dot(y)) / _tanY);
+      }
+  return need * 1.06;      // 6% 余量：贴画面边缘看着像「被切了一下」
+}
 
 function apply(){
   // ★★ 「无死角」的修正在这一行：phi 只避**正上/正下两个奇点**（各 0.06 rad），不再卡 87°。
@@ -430,6 +1546,12 @@ function apply(){
 function resize(){
   const w = cv.clientWidth, h = cv.clientHeight;
   renderer.setSize(w,h,false); camera.aspect = w/h; camera.updateProjectionMatrix();
+  // ★ 窗口形状变了 ⇒ 开场取景跟着重算。**只在用户没动过相机时**才动（此时四个量仍等于 HOME），
+  //   否则会把用户正看着的视角抢走。
+  if (fitBox && HOME && radius === HOME.radius && theta === HOME.theta && phi === HOME.phi){
+    radius = Math.max(rMin, Math.min(rMax, frameRadius(fitBox)));
+    HOME.radius = radius;
+  }
 }
 addEventListener('resize', resize);
 
@@ -617,8 +1739,10 @@ window.__cdutView = () => ({
 // ★ 2026-10-14 换链：包内件由 **正式件 06_su** 出（`rebuild/06_su/c006_su.glb`，OBJ 转来只转格式）。
 //   换链前那件标高只到 39.72 m、**顶部三样一个没有**（女儿墙 / 顶楼楼梯房 / 7→8 台阶屋面），
 //   与本包 manifest 第 19 行「塔楼 47.5 m …… 均按真实几何表示」的声明不符。
-//   ★ 2026-10-15 用户令层高按 3.5 m 走 ⇒ 现在件顶 = 11 × 3.5 + 楼梯房 3.0 = **41.5 m**
-//     （层高真源 = `构件库/参数.json::共用/层高`；本文件不复制这个数）。
+//   ★ 2026-10-16 用户裁定「按甲定案 · 重算整条链」⇒ 层高 **4.0 m** ⇒ 现在件顶
+//     = 11 × 4.0 + 楼梯房 3.0 = **47.0 m**（＝ `build.json::z_max_m`）。
+//     （层高真源 = `构件库/参数.json::共用/层高`；本文件不复制这个数。
+//      2026-10-15 那版 3.5 m ⇒ 41.5 m 已作废。）
 const MODELS = {
   // ★★ 2026-10-14：包内件的 URL 后面**必须挂件的 sha256 前 12 位**当版本号。
   //   换链那次我把 6.5 MB 的旧件换成了 9.8 MB 的新件，**文件名一个字没变**
@@ -664,29 +1788,45 @@ const _tf = lay.top_features || {};
 //   正是 build_pack.py 写进 meta/layering.json 的 `layers[*].classes`）⇒ 不用改件，
 //   页面上按类给色即可。配色是**语义**的（主体灰白 → 楼板压一档 → 柱再压一档，
 //   交通核给点缀色，门洞压暗把洞口读出来），不是彩虹。
+// ★★ 2026-10-16 用户口令「**我想把所有的建筑加个砖红色的外衣，这样知道哪里有问题**」：
+//   **建筑本体（墙族 + 屋面族）一律砖红**，**可疑件留对比色**（`LINTEL` 门头墙 / `DOOR` /
+//   `STAIR` / `LIFT` 都**不动**）—— 判据变成**看色相**：屏幕上**不砖红的建筑部件**
+//   就是「补出来的 / 待查的」，门头墙那块板一眼就能挑出来（原来墙是灰白、板是灰，
+//   撞在一起根本分不出）。砖红族内部仍保留原来的**压档**关系（女儿墙最亮 → 屋面 →
+//   墙 → 楼板 → 柱 → 台阶屋面最暗），不是一坨同色。
 const CLASS_STYLE = {
-  WALL:       {color: 0xbfbcb4, rough: 0.85},   // 主体墙
-  SLAB:       {color: 0x9d9a93, rough: 0.92},   // 楼板（压一档，水平面读得出来）
-  COL:        {color: 0x807d77, rough: 0.92},   // 柱（再压一档）
-  PARAPET:    {color: 0xd6d3ca, rough: 0.80},   // 女儿墙（略亮，把顶圈出来）
-  ROOF_STEP:  {color: 0x6f6c66, rough: 0.92},   // 台阶屋面
-  ROOF_STAIR: {color: 0x8a6f45, rough: 0.80},   // 出屋面的楼梯间
-  STAIR:      {color: 0xb08243, rough: 0.80},   // 楼梯（琥珀）
-  LIFT:       {color: 0x4d8f96, rough: 0.70},   // 竖井（青）—— 键名沿用 LIFT，件是竖井不是电梯
-  DOOR:       {color: 0x24282a, rough: 0.95},   // 门洞（压暗）
+  WALL:       {color: 0x9c4a34, rough: 0.85},   // 主体墙（砖红）
+  SLAB:       {color: 0x8a4230, rough: 0.92},   // 楼板（砖红压一档，水平面读得出来）
+  COL:        {color: 0x76392a, rough: 0.92},   // 柱（砖红再压一档）
+  PARAPET:    {color: 0xc0604a, rough: 0.80},   // 女儿墙（砖红最亮，把顶圈出来）
+  ROOF_STEP:  {color: 0x5e2d20, rough: 0.92},   // 台阶屋面（砖红最暗）
+  ROOF_STAIR: {color: 0x8a6f45, rough: 0.80},   // 出屋面的楼梯间（**不动**：属楼梯琥珀族）
+  // ★★ 2026-10-19 补：`ROOF_ROOM`（出屋面楼梯间+电梯机房，第 12 类，`export_contours.py`
+  //   2026-10-18 起就在发）。与 LINTEL/ROOF 同一条坑：表里少一行 ⇒ `sty` 为 undefined
+  //   ⇒ 整段跳过、保持件自带的灰 ⇒ 与墙撞色、不在图例里，且**页面不报错**。
+  //   取色：与 `ROOF_STAIR` 同族（橙黄）—— 它本来就是同一批顶部附属房。
+  ROOF_ROOM:  {color: 0x8a6f45, rough: 0.80},   // 屋面附属用房（出屋面楼梯间/电梯机房）
+  STAIR:      {color: 0xb08243, rough: 0.80},   // 楼梯（琥珀，**不动**）
+  LIFT:       {color: 0x4d8f96, rough: 0.70},   // 竖井（青，**不动**）—— 键名沿用 LIFT，件是竖井不是电梯
+  // ★ 2026-10-18 用户令「不要黑色的门，要棕色的」：原值 0x24282a（近黑）是给**审计**用的
+  //   「压暗把洞口读出来」，展示时门扇整片糊成黑块。改木棕 0x8b5a2b：与砖红墙族（0x9c4a34）
+  //   靠**更深的明度**分开，与琥珀楼梯（0xb08243）靠**更深更红**分开。
+  //   ★ 展示页（`?embed=`）的 `EMBED_STYLE` **没有** DOOR 键 ⇒ 自动落到本表 ⇒ 两页同时变棕。
+  DOOR:       {color: 0x8b5a2b, rough: 0.75},   // 门扇/门洞（木棕）
   // ★ 2026-10-15 补：`LINTEL`（门头墙 = 洞口正上方那段墙）是当天新加的第 10 类。
   //   它必须先在这张表里**有一行**，否则 `_classOf` 认出类名却查不到样式 ⇒ `sty` 为 undefined
   //   ⇒ 整段跳过、**保持件自带的灰**（:753 那个 if），跟墙体撞成一个色、又不在图例里（:677 按
   //   `Object.keys` 现印）⇒ 用户点开「门头墙补上了没有」看不见，且**不报错**。
-  //   取色理由：与 DOOR 同族（门洞压暗）但浅一档 —— 在洞口上沿读得出「这里补过一块」，
-  //   又不会被当成主体墙（WALL 0xbfbcb4 明显更亮）。
-  LINTEL:     {color: 0x565c60, rough: 0.90},   // 门头墙（洞口上方，与门洞同族、浅一档）
+  //   ★ 2026-10-16 改判：原来是「与 DOOR 同族、浅一档」，靠**明度**跟主体墙分开；
+  //     现在主体墙是砖红 ⇒ 它靠**色相**分开（冷灰 vs 砖红），对比反而更硬：**不砖红的**
+  //     就是补出来的板。冷灰 = 绿蓝通道 ≥ 红的通道，与砖红族（红通道最高）反向。
+  LINTEL:     {color: 0x565c60, rough: 0.90},   // 门头墙（冷灰，**不动** —— 故意的对比色）
   // ★ 2026-10-15 补：`ROOF`（塔楼屋面板）是同日新加的第 11 类（用户「楼板要画」）。
   //   与 `LINTEL` 同一条坑：这张表里少一行 ⇒ `_classOf` 认出类名却查不到样式 ⇒
   //   `sty` 为 undefined ⇒ 整段跳过、保持件自带的灰 ⇒ **跟楼板撞成一个色、还不在图例里**，
   //   而页面**不报错**。取色理由：与 SLAB 同族（都是水平板）但**亮一档**，
-  //   读成「顶面」而不是某个楼层的楼板；比 WALL 略暗，不与竖墙抢。
-  ROOF:       {color: 0xb0aca3, rough: 0.88},   // 塔楼屋面板（与楼板同族、亮一档）
+  //   读成「顶面」而不是某个楼层的楼板（2026-10-16 起随 SLAB 一起进砖红族）。
+  ROOF:       {color: 0xa8503a, rough: 0.88},   // 塔楼屋面板（砖红，比楼板亮一档）
 };
 // 从 mesh 往上找**第一个带 `__` 的节点名**，取后半段当类名。找不到就返回空串 ⇒ 不上色。
 // （参照件 `rebuild/05_build/c006_white.glb` 的节点名是 `1层_wall` 这种**没有 `__`** 的，
@@ -697,19 +1837,53 @@ const _classOf = o => {
   return '';
 };
 
+// ★ 2026-10-17 用户令「**现在这个页面，墙体就不要是红色的，白色就可以了**」。
+//   砖红族是 2026-10-16 为**找问题**下的令（「加个砖红色的外衣，这样知道哪里有问题」）——
+//   那是**审计**用的外衣，不是**展示**页要的样子。两者不再共用一张表：展示页（`?embed=`）换白族。
+//   ★ 压档关系**照抄砖红那套的次序**（女儿墙最亮 → 屋面 → 墙 → 楼板 → 柱 → 台阶屋面最暗）：
+//     平屋顶上女儿墙 / 屋面 / 楼板否则糊成一张白纸，层次全丢（10-16 那条令的原话就是「不是一坨同色」）。
+//   ★ **只在本页改**：非 embed（四条闸 + 审计页）走的仍是 `CLASS_STYLE`，一个字节没动
+//     —— `gates/J-10.9-07` ⑦ 那条「11 类全等」扫的是 `const CLASS_STYLE = {` 到**第一个** `}`，
+//     本表在它**之后**，闸看不见（这也是「不改 CLASS_STYLE、另开一张」的理由）。
+//   ★ 楼梯（琥珀）/ 竖井（青）/ 门洞（暗）**不属墙族**、本来就不是「红的那一片」，不动。
+//   ★★ 代价（写进两页的盲区）：审计页靠「**冷灰 vs 砖红**」一眼挑出补出来的门头墙（`LINTEL`）；
+//     展示页两边都是白 ⇒ **这块缺陷在展示页上看不见**。要看它，回非 embed 那页看。
+const EMBED_STYLE = {
+  PARAPET:    {color: 0xfbfbfa, rough: 0.80},   // 女儿墙（最亮）
+  ROOF:       {color: 0xe8e8e5, rough: 0.88},   // 塔楼屋面板
+  WALL:       {color: 0xf2f2f0, rough: 0.85},   // 主体墙
+  LINTEL:     {color: 0xf2f2f0, rough: 0.90},   // 门头墙（本页随主体墙）
+  SLAB:       {color: 0xdcdcd8, rough: 0.90},   // 楼板
+  COL:        {color: 0xc9c9c5, rough: 0.90},   // 柱
+  ROOF_STEP:  {color: 0xb9b9b6, rough: 0.90},   // 台阶屋面（最暗）
+};
+const styleOf = cls => (EMBED && EMBED_STYLE[cls]) || CLASS_STYLE[cls];
+
 const LAYNOTE_PACK =
   `每「层」= 模型包 GLB 里的一个<b>楼层节点</b>（<code>floorK</code> = 第 K+1 层，<code>B1</code> = 地下 1 层），`
-  + `共 <b>${(lay.layers || []).length}</b> 层、面合计 <b>${(lay.lossless_check || {}).faces_sum}</b>。`
+  // ★ 2026-10-17：`layers` 为空**不等于「0 层」**。c005 是整栋单网格 ⇒ 分层这一格量不到，
+  //   但 `n_floors` 是有的（取自 floors/floor<k>.json 的层数）。把「量不到」印成「0 层」
+  //   会让用户以为件是空的（铁律 199）。
+  + ((lay.layers || []).length
+      ? `共 <b>${lay.layers.length}</b> 层、面合计 <b>${(lay.lossless_check || {}).faces_sum}</b>。`
+      : `本包模型是<b>整栋单网格</b>（无逐层节点）⇒ 分层这一格<b>量不到</b>；`
+        + `图纸侧记 <b>${lay.n_floors}</b> 层，面合计 <b>${(lay.lossless_check || {}).faces_sum}</b>。`)
   + `层高 <b>${lay.floor_h_m} m</b>（${md(lay.floor_h_note || '')}），标高 `
   + `<b>${(lay.elevation_m || []).join(' – ')} m</b>。`
-  + `<br>顶部三样按落盘件的 (层,类) 包围盒现算：台阶屋面 <b>${_tf['台阶屋面_m']} m</b>、`
-  + `主屋面 <b>${_tf['主屋面_m']} m</b>、女儿墙顶 <b>${_tf['女儿墙顶_m']} m</b> / `
-  + `顶楼楼梯房顶 <b>${_tf['顶楼楼梯房顶_m']} m</b>。件来源 <code>${lay.source_model}</code>。`
+  // ★ 2026-10-17：`top_features` 只有 c006 有（按 (层,类) 包围盒现算的四样屋面部件的标高）。
+  //   理化楼 c005 是**整栋单网格** ⇒ 这一包**量不到**这四样（不是 0 m）。原来直接取值会印
+  //   「undefined m」—— 读起来像件坏了。没有就照实说没有（铁律 199）。
+  + (Object.keys(_tf).length
+      ? `<br>顶部三样按落盘件的 (层,类) 包围盒现算：台阶屋面 <b>${_tf['台阶屋面_m']} m</b>、`
+        + `主屋面 <b>${_tf['主屋面_m']} m</b>、女儿墙顶 <b>${_tf['女儿墙顶_m']} m</b> / `
+        + `顶楼楼梯房顶 <b>${_tf['顶楼楼梯房顶_m']} m</b>。件来源 <code>${lay.source_model}</code>。`
+      : `<br><b>屋顶四样的标高这一包量不到</b>（<code>top_features</code> 为空：模型是整栋单网格，`
+        + `没有逐 (层,类) 节点可拆）。件来源 <code>${lay.source_model}</code>。`)
   + `<br><b>颜色 = 这一页按 (层,类) 给的</b>（件自己没有材质）：`
   + Object.keys(CLASS_STYLE).map(k =>
       `<span style="display:inline-flex;align-items:center;gap:4px;margin:1px 9px 1px 0;white-space:nowrap">`
       + `<i style="width:10px;height:10px;border-radius:2px;display:inline-block;background:#${
-          CLASS_STYLE[k].color.toString(16).padStart(6, '0')}"></i><code>${esc(k)}</code></span>`).join('')
+          styleOf(k).color.toString(16).padStart(6, '0')}"></i><code>${esc(k)}</code></span>`).join('')
   + `<br>勾选控制显示；行内滑块控制该层的透明度；<b>双击层名 = 只看这一层</b>。`;
 const LAYNOTE_FULL = '每「行」= GLB 的一个<b>顶层节点</b> = <b>某层的某类构件</b>（<code>1层_wall</code>、'
                    + '<code>10层_col</code>…），共 <b>76</b> 行 —— 不是楼层。勾选控制显示、行内滑块控制该行透明度。';
@@ -722,7 +1896,7 @@ document.getElementById('piece').addEventListener('click', e => {
 // ── 分层与透明 ─────────────────────────────────────────
 // 每「层」= GLB 顶层节点（建链里 scene.add_geometry(node_name="c{col}r{row}") 一个图幅一个节点）。
 // ★ 材质必须**逐 mesh 克隆**：GLB 里多个 mesh 常共用同一个材质实例，不克隆的话调一层透明度会全变。
-const layerState = [];       // {name, node, mats:[], on, opacity}
+// ★★ `layerState` 已提到模块前部（L515）声明：`syncRoomVis` 会在模块求值中途读它（TDZ 实测踩过）。
 let opAll = 1.0;
 
 function setLayerOpacity(st, v){
@@ -737,6 +1911,50 @@ function setLayerOpacity(st, v){
 }
 function applyVisibility(){
   for(const st of layerState) st.node.visible = st.on && opAll > 0.001;
+  // ★ 2026-10-17 用户令「现在单层的时候，最上面一层不要显示屋顶」：
+  //   **只开一层**时把这一层自己的 `ROOF` 类子节点藏掉 —— 屋顶板就是这层的天花板，
+  //   留着它从上面看下去是一片板，等于看不见室内。**按类名认，不按下标**（铁律：字段位置不是定义）。
+  //   只藏 `ROOF`：`ROOF_STAIR`（楼梯房）、`ROOF_STEP`（台阶屋面）不在用户这句话的射程里，
+  //   动了它们会变成我没被要求做的事。认不出类名 ⇒ 一个也不动（不猜）。
+  //   ★ 只在「开了正好一层、且不止一层可开」时生效；全开/全关/多层都不动。
+  //
+  // ★ 2026-10-20 用户令「**半透明的时候，屋顶不要**」：半透明是为了看穿外壳看室内，
+  //   而屋顶（含出屋面小间/台阶屋面）正好是俯视时挡在眼前的最后一块板 ⇒ 半透明态下整族不画。
+  //   与上面那条「只看一层藏这层 ROOF」**同一步算**（两个旋钮都要，不能后写的把先写的覆盖掉）：
+  //     ROOF 族 visible = 非半透明 **且** 不是被单独打开的那一层。
+  //   ★ 按类名认（`floor2__ROOF` / `floor2__ROOF_ROOM` …），不按下标；认不出 ⇒ 一个也不动。
+  //   ★ 判据只写这一处 —— 换件 / 双击只看一层 / 全开全关都会走 `applyVisibility`；
+  //     写进 `setWallsTransparent` 的按钮里，那几路就会漏（屋顶留在屏幕上）。
+  {
+    const on = layerState.filter(s => s.on);
+    const solo = (on.length === 1 && layerState.length > 1) ? on[0] : null;
+    const ROOF_RE = /__ROOF(_ROOM|_STAIR|_STEP)?$/;
+    for (const st of layerState){
+      (st.node.children || []).forEach(ch => {
+        if (ch && ch.name && ROOF_RE.test(ch.name))
+          ch.visible = !wallsTransparent && (st !== solo);
+      });
+    }
+    // ★ 2026-10-20 用户令「点击显示每层的时候，那个墙就只显示 60cm 高」＋同日后一句
+    //   「墙高 60 太矮了，增加到 1 米 5，就是在半透明状态下」：
+    //   **只有** `wallsTransparent`（墙体半透明）⇒ 墙族按各层底标高+1.5 m 裁掉上半截。
+    //   2026-10-21 用户令「不是半透明时，选择某一层，墙高是原始的」⇒ `solo` 不再触发矮墙。
+    //   `wallsTransparent` 这一支的判据就在这里，
+    //   `setWallsTransparent` 末尾会回来调 `applyVisibility`，别在按钮里再写一遍。
+    //   判据只写这一处 —— 双击图层名、父页点楼层按钮、手动勾选框都会走 `applyVisibility`。
+    setLowWalls(wallsTransparent);
+  }
+  // ★ 2026-10-19 用户令「半透明的时候，柱子也不要显示了」：`__COL` 一族**整族不画**
+  //   （不是调 25% —— 方柱在视线上是实心的，半透仍然挡）。
+  //   ★ 判据只写这一处：换件、双击只看一层、全开全关都会走 `applyVisibility`；
+  //     写进 `setWallsTransparent` 的按钮回调里，那几路就会漏（柱子留在半透明里）。
+  //   ★ 按类名认（`floor7__COL`），不按下标；认不出类名 ⇒ 一个也不动，不猜。
+  for (const st of layerState){
+    (st.node.children || []).forEach(ch => {
+      if (ch && ch.name && /__COL$/.test(ch.name)) ch.visible = !wallsTransparent;
+    });
+  }
+  syncRoomVis();      // ★ 地垫跟着它那一层走（roomGroup 与层节点是两棵枝，不带上这句就会全飘着）
   renderer.shadowMap.needsUpdate = true;      // 隐藏/半透的层变了 ⇒ 阴影图得重烘一次（否则冻的是旧影子）
 }
 function isolate(st){
@@ -758,6 +1976,9 @@ function buildLayers(rootObj){
   });
   const wrap = document.getElementById('layers');
   wrap.innerHTML = '';
+  wallMats = [];       // ★ 重建（换件）时旧材质已 dispose，名单必须跟着清 —— 留着就是一堆野指针
+  lowWallPlane.clear(); // 同上：矮墙裁剪面绑的是旧材质
+
   // 层名 `floorK` → F{K+1}，`roof` → 屋面；按**从上到下**排（屋面在最上，与眼睛看到的顺序一致）
   const items = [...map.entries()].map(([node, meshes])=>{
     const raw = node.name || '';
@@ -782,12 +2003,21 @@ function buildLayers(rootObj){
         me.material.side = THREE.DoubleSide;
         // 按 (层,类) 上色。认得出类名才动 —— 认不出（参照件那种 `1层_wall`）就保持件自带的材质，
         // ★ 别「兜底上一个灰」：那样参照件会被我刷成一片灰，还看着像本来就该这样。
-        const sty = CLASS_STYLE[_classOf(me)];
+        const cls = _classOf(me);
+        const sty = styleOf(cls);      // 展示页走白族，非 embed 走砖红族（见 EMBED_STYLE 那段）
         if(sty && me.material.color){
           me.material.color.setHex(sty.color);
           me.material.roughness = sty.rough;
           me.material.metalness = 0.0;
         }
+        // ★ 外壳那一族的材质**另收一份**给「墙体半透明」用（`setWallsTransparent`）。
+        //   只能在这里收：材质是**每层克隆**出来的，出了这个循环就再也拿不到「哪个材质是墙」——
+        //   `mats` 是按层混装的，`layerState[].mats` 里墙和楼板柱梯混在一个数组，分不出来。
+        if(WALL_CLASS.has(cls)) wallMats.push(me.material);
+        // ★ 矮墙：这一层墙族的裁剪面 = 该层底面 + 0.6 m（`lo` 是**这一层**的包围盒下沿，
+        //   在 mesh 循环外现量，不是手打的层高）。只给墙族建，楼板/梯/柱不受影响。
+        if(LOWWALL_CLASS.has(cls))
+          lowWallPlane.set(me.material, new THREE.Plane(new THREE.Vector3(0, -1, 0), lo + LOW_WALL_M));
         mats.push(me.material);
       }
     }
@@ -808,7 +2038,24 @@ function buildLayers(rootObj){
     };
     row.querySelector('.nm').ondblclick = () => isolate(st);
   });
+  // ★★ 2026-10-17：**整栋单网格**的包（理化楼 c005）里没有 `xxx__WALL` 这种类名 ⇒
+  //   上面一圈 `WALL_CLASS` 一个都收不到，`wallMats` 空 ⇒「墙体半透明」按下去**什么都没发生**，
+  //   而按钮显示着「开」—— 那是「没做」伪装成「做了」（铁律 199）。这一支改成**整件**进名单：
+  //   分辨不出外墙与楼板，就一起调，并让标签照实写「整栋」（见 `wallN` 的写法）。
+  if (!wallMats.length && layerState.length === 1)
+    for (const st of layerState) wallMats.push(...st.mats);
   applyVisibility();
+  // ★ 新材质要跟上**当前**的开关状态（换过一次件之后，`wallsTransparent` 还是用户点过的那个值，
+  //   但 `wallMats` 里已经全是新克隆 —— 不补这一句，开关显示着「开」而墙上什么也没发生）。
+  //   ★ 只在**开着**的时候补：关着时新材质本来就是不透明的（默认值），再去写一遍
+  //     `transparent=false / opacity=1 / needsUpdate=true` 就是**非 embed 路径上白多出的副作用**
+  //     —— 四条闸看着没差，但「不带 embed 与改前逐字节相同」这句话就不敢说了。
+  if (wallsTransparent) setWallsTransparent(true);
+  // ★ 剖切同理：换件后材质全是新克隆的（`clippingPlanes` 默认 null），把当前状态补上。
+  //   ★ 只在**开着**的时候补 —— 与上面同一条理由，关着时新材质本来就是不裁的。
+  if (clipOn) applyClipping();
+  // ★ 矮墙同理：`lowWallsOn` 没变（还是 true）⇒ `setLowWalls` 会提前返回，新材质就**拿不到**裁剪面。
+  if (lowWallsOn) _syncClipPlanes();
 }
 
 document.getElementById('opAll').oninput = e => {
@@ -824,10 +2071,17 @@ document.getElementById('allOn').onclick  = () => { layerState.forEach(s=>{ s.on
 document.getElementById('allOff').onclick = () => { layerState.forEach(s=>{ s.on=false; const c=document.getElementById('cb'+s.i); if(c) c.checked=false; }); applyVisibility(); };
 document.getElementById('soloOff').onclick = () => isolate(null);
 
-let curRoot = null;                       // 当前挂在 root 下的那一件（换件时要摘干净）
+// ★★ `curRoot` 已提到模块前部（L516）声明：`measureSingleMeshRooms` 在模块求值中途读它。
 function loadPiece(id){
   const M = MODELS[id] || MODELS.pack;
   curId = id;
+  // ★ 相位先落 'loading'、令牌先 +1：父页据此判「这一刻画的是**哪一趟**」——
+  //   没有令牌，父页读到的可能是**上一件**的残影（gym3d 那条 `builtToken` 就是为这个）。
+  const HS = window.__cdut3d;
+  HS.buildToken++; HS.phase = 'loading'; HS.error = null; HS.piece = id;
+  // ★ 这一趟的**身份**（不是值）：连着切两次件时，先发的那次回调会**后到** ⇒ 只拿
+  //   `buildToken` 的**值**去判会把它认成当前那趟（铁律 194：同名的两个估计器按身份过滤）。
+  const _tok = HS.buildToken;
   [...document.querySelectorAll('#piece button')].forEach(b => b.classList.toggle('on', b.dataset.pid === id));
   document.getElementById('mpath').textContent = (id === 'pack') ? modelArt.path : M.url();
   document.getElementById('msha').textContent  = (id === 'pack') ? (modelArt.sha256.slice(0,12) + '…') : '包外件';
@@ -839,14 +2093,21 @@ function loadPiece(id){
       (Array.isArray(o.material) ? o.material : [o.material]).forEach(m=>m && m.dispose()); } });
     curRoot = null;
   }
+  // 房间地垫只属于**交付包模型**：切到「参照件」时收起来（那件是包外的重建件，与台账对不上号）。
+  //   ★ 只把「这一趟是哪一件」记进 `roomsPiece`，**不在这里读 `curId`** —— 理由见那段 ★（TDZ）。
+  roomsPiece = id;
+  roomGroup.visible = roomsOn && roomsPiece === 'pack';
   layerState.length = 0;                  // 上一件的 76/12 行不清掉，会与新件叠成两套控件
   document.getElementById('layers').innerHTML = '';
   // ⓪ 换件时把高亮框与上一件的结果清掉（框指的还是上一件的位置，留着就是假读数）
   pickBox.visible = false;
-  document.getElementById('pickinfo').innerHTML = (id === 'pack')
+  // ★ 2026-10-19 用户令「这个页面有很多的解释，都先不要」：embed（展示页）里这块初始文案
+  //   会被父页 `mirrorChild()` 镜像成右上角浮层 ⇒ 什么都没点也挂着一段「怎么用」。
+  //   展示页改成**空**：点中一块后由下面的点选逻辑照常写入；非 embed（四条闸）一字不动。
+  document.getElementById('pickinfo').innerHTML = EMBED ? '' : ((id === 'pack')
     ? '<div><b>怎么用</b><span>在左边模型上<b>单击</b>任意一块 ⇒ 这里报出它的名字（如 <code>6层-门-007</code>）。</span></div>'
     : '<div><b>这是参照件</b><span>重建链出的<b>包外</b>比对件，<b>不在包内</b> ⇒ 没有 <code>meta/blocks.json</code> '
-      + '那份逐块清单，点选报不出名字。切回「交付包模型」再点。</span></div>';
+      + '那份逐块清单，点选报不出名字。切回「交付包模型」再点。</span></div>');
   LOADS.push(M.url());                    // ★ ⑥ 接缝证明：默认这条必在包内；切参照件时如实记下包外那条
   new GLTFLoader().load(M.url(), gltf=>{
     gltf.scene.traverse(o=>{ if(o.isMesh) o.material.side = THREE.DoubleSide; });
@@ -878,12 +2139,23 @@ function loadPiece(id){
     dl.shadow.camera.updateProjectionMatrix();
     const _diag = _sz.length();
     rMax = _diag * 2.6; rMin = R_MIN_M;        // ★ 2026-10-12：原 = _diag*0.12 ≈ 19.2 m ⇒ 贴不到墙
-    radius = _diag * 0.62;
+    // ★ 2026-10-20 用户「看三维的时候，模型会跑出屏幕」：
+    //   原式 `radius = 对角 × 0.62` **既不看视口、也不看俯仰角**。扁而宽的楼（c007 103.9×58.6×21.2）
+    //   在开场俯仰（phi≈1.02）下，前后进深投影到竖直方向 ⇒ **竖直方向先顶出画面**
+    //   （实测开场帧右侧与下沿都被切掉；换窄窗口更早切）。
+    //   ⇒ 改成按**八个角点精确算**：相机基向量取与 `apply()` 同一套球坐标约定，
+    //     每个角点要求 `radius ≥ v·ẑ + max(|v·x̂|/tan(fovX/2), |v·ŷ|/tan(fovY/2))`，取最大者再留 6%。
+    //     窗口形状变了由 `resize()` 重算（只在用户没动过相机时动，不抢他的视角）。
+    fitBox = box.clone();
+    radius = frameRadius(box);
     // ★ 阴影**只烘一次就冻住**：场景是静态的、只有相机在动 ⇒ 每帧重算 2048² 阴影图等于白烧
     //   63 万面的代价，正好把用户要的「顺畅」赔进去。改了分层可见性/透明度时再手动置 needsUpdate。
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
     apply();
+    // ★ 2026-10-17：单网格包（理化楼 c005）的房间色块要**从几何量**楼板标高 ⇒ 模块求值时
+    //   那次 `buildRooms()` 会因 `curRoot` 为 null 主动退出（见那里）⇒ 几何挂上这里补叫一次。
+    if (EMBED && roomsOn && !roomsBuilt) buildRooms();
     // ★ 复位基准在**这里**存：LOOK 刚被设成模型中心、radius 刚过完 rMin/rMax 钳制 ⇒ 记下的
     //   就是开场取景本身（不是「另算一个默认值」）。双击复位即回到这一帧。
     HOME = {look: LOOK.clone(), theta, phi, radius};
@@ -899,8 +2171,20 @@ function loadPiece(id){
       + (_flat ? ` <b style="color:#c62828">⚠ 躺倒了：高度 ${_ext[1].toFixed(2)} m 不是三轴最小`
                  + `（${_ext[0].toFixed(1)} × ${_ext[1].toFixed(1)} × ${_ext[2].toFixed(1)}）`
                  + `—— 别开 <code>zup</code>，去量朝向</b>` : '');
+    // ★ 握手：**几何真的挂上去了**才置 'ready'（这里是 `root.add(gltf.scene)` 之后、且已
+    //   `apply()` 过一帧的位置）⇒ 父页看到 'ready' 时场景里确实有件，不是「下载完了」。
+    //   ★ 但**要先认身份**：上面切件那一段可能已经把那件摘掉、换了新的一趟 ⇒ 这一趟过期了
+    //     就只把自己标成 'superseded'，**不许**把父页的相位改回 'ready'（否则父页会把
+    //     上一趟的读数当成这趟的）。
+    if (HS.buildToken !== _tok){ HS.note = '过期回调 buildToken=' + _tok; return; }
+    HS.phase = 'ready'; HS.piece = id; HS.layers = layerState.length;
+    HS.kids = scene.children.length; HS.tris = renderer.info.render.triangles;
+    HS.builtToken = HS.buildToken;
   }, undefined, err=>{
     document.getElementById('postag').textContent = '模型装载失败：' + err;
+    // ★★ 失败必须**换相位**：`#postag` 是给人看的文本，父页不该去猜文字 ⇒ 读得到 'failed'。
+    if (HS.buildToken !== _tok) return;               // 同上：过期那趟的失败不是当前的失败
+    HS.phase = 'failed'; HS.error = String((err && err.message) || err);
   });
 }
 loadPiece(curId);
@@ -978,13 +2262,43 @@ function nodeOf(o){
 }
 const _fmtM = v => (v/1000).toFixed(2);
 
-function showBlock(b, extraHtml){
+function showBlock(b, extraHtml, hit){
+  // ★ 2026-10-17 用户令「选择以后不要再选成块体了」：**框点到的那个面**，不再框整块。
+  //   一堵墙块能长十几米（c005 最长的 WALL 块 14 m），整块一框，看起来像「选中了一个大块」，
+  //   而用户要的是「我点的就是这一点」。⇒ 拿命中三角面的**世界包围盒**当框（最小 12 cm）。
+  //   读数照旧报那一块的身份：**框 = 你点到哪儿，清单 = 那是谁**，两件事不混。
+  //   没有命中三角形（例如从「并列候选」列表里点名字换一块）时，退回整块包围盒 —— 那是另一条路。
+  let tight = false;      // ★ 记住这一趟走的是哪条路；上一次的 pickBox.visible 不能拿来当判据
+  if (hit && hit.face && hit.object && hit.object.geometry &&
+      hit.object.geometry.attributes && hit.object.geometry.attributes.position){
+    const pos = hit.object.geometry.attributes.position, f = hit.face;
+    const vs = [f.a, f.b, f.c].filter(i => i != null && i < pos.count).map(i =>
+      new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(hit.object.matrixWorld));
+    if (vs.length === 3){
+      const mn = new THREE.Vector3(Math.min(vs[0].x,vs[1].x,vs[2].x),
+                                   Math.min(vs[0].y,vs[1].y,vs[2].y),
+                                   Math.min(vs[0].z,vs[1].z,vs[2].z));
+      const mx = new THREE.Vector3(Math.max(vs[0].x,vs[1].x,vs[2].x),
+                                   Math.max(vs[0].y,vs[1].y,vs[2].y),
+                                   Math.max(vs[0].z,vs[1].z,vs[2].z));
+      pickBox.position.copy(mn.clone().add(mx).multiplyScalar(0.5));
+      pickBox.scale.set(Math.max(mx.x-mn.x, 0.12), Math.max(mx.y-mn.y, 0.12),
+                        Math.max(mx.z-mn.z, 0.12));
+      pickBox.visible = true;
+      tight = true;
+    }
+  }
+  // ★ 2026-10-17：`x0..y1` 必须**在 if 外面**取 —— 下面那段 `pickinfo` 的「平面包围盒」
+  //   也要用它们。上一版把它们写在 `if (!tight)` 块里，于是**点到真三角面（tight=true）时**
+  //   整块面板抛 `ReferenceError: x0 is not defined`，看起来就是「点了没反应」。
   const [x0, y0, x1, y1] = b.bb;
-  pickBox.position.copy(mm2v((x0+x1)/2, (y0+y1)/2, (b.zlo+b.zhi)/2));
-  pickBox.scale.set(Math.max((x1-x0)/1000, 0.12),
-                    Math.max((b.zhi-b.zlo)/1000, 0.12),
-                    Math.max((y1-y0)/1000, 0.12));
-  pickBox.visible = true;
+  if (!tight){
+    pickBox.position.copy(mm2v((x0+x1)/2, (y0+y1)/2, (b.zlo+b.zhi)/2));
+    pickBox.scale.set(Math.max((x1-x0)/1000, 0.12),
+                      Math.max((b.zhi-b.zlo)/1000, 0.12),
+                      Math.max((y1-y0)/1000, 0.12));
+    pickBox.visible = true;
+  }
   document.getElementById('pickinfo').innerHTML = [
     ['这一块', '<b style="color:var(--hi)">' + b.name + '</b>'],
     ['编号 id', b.id],
@@ -1018,19 +2332,67 @@ function identifyAt(cx, cy){
   _ray.setFromCamera(_ndc, camera);
   // ★ 这里**另起一次**求交（不复用 `pickAt`）：`pickAt` 只回传命中点、不回传**命中的那块 mesh**，
   //   而类名必须从 mesh 的节点名取。也不动 `_pickN` —— J-09.1.1 拿那个计数核「限流生效」，别污染它。
-  const hits = _ray.intersectObject(root, true);
+  // ★★ 2026-10-17：**raycaster 不认 `visible`** —— 层关掉之后网格还在场景里，
+  //   `intersectObject` 照样打得到它。实测：只勾 F1 时点楼面，报的是 F4/F2 的墙。
+  //   ⇒ 命中列表按「自己与全部祖先都 visible」过滤一遍（与画面看到的一致）。
+  //   ★ 2026-10-20 剖切面同理：raycaster 也不认 `clippingPlanes`，被剖掉的那半截网格仍在场景里。
+  //     不过滤 ⇒ 点画面里空白的地方，报的是**已经被切掉**的那块（两种坏法同形，铁律 199）。
+  const hits = _ray.intersectObject(root, true).filter(h => {
+    for (let o = h.object; o; o = o.parent) if (o.visible === false) return false;
+    if (clipOn && h.point.y > CLIP_PLANE.constant) return false;
+    return true;
+  });
   if (!hits.length){
     IN.innerHTML = '<div><b>没点到块</b><span>射线没打到模型（点到天空或地面了）。把指针放到墙、板、楼梯上再单击。</span></div>';
     pickBox.visible = false; return;
   }
-  const [X, Y, Z] = v2mm(hits[0].point);
-  const cls = _classOf(hits[0].object);
-  const nm = faceNormalMM(hits[0]);
+  // ★ 房间地垫（只在 **embed 版**里存在）**先接住**：它铺在楼板顶上方 60 mm，点到房间时命中的就是它。
+  //   这类片**不在** `meta/blocks.json` 的逐块清单里 ⇒ 不接住的话会掉进下面那句「这一块没在清单里」，
+  //   把「点到的是房间面」错报成「件与轮廓对不上」—— 两种坏法**同形**（铁律 199）。
+  // ★★ 外壳给房间地板**让路**（2026-10-17 用户令「**选中时，不要再选中墙体，要直接选中地板**」）。
+  //   墙是**壳**，永远在相机与楼内之间 ⇒ 不让路的话，点在楼面上永远只能拿到墙，
+  //   而「想点地板」在这里是常态、不是例外（原先只在 `wallsTransparent` 为真时让路，
+  //   那是把「看得见」当成了条件；用户要的是**点得到**，与看不看得穿无关）。
+  //   ★ 只让**外壳那一族**的路：挡路的若是楼梯 / 竖井 / 门洞（本来就在楼内、不是壳），照旧报它，
+  //     否则站在楼里点楼梯会莫名其妙变成「某个房间」。
+  //   ★ 非 embed 那条路（四条闸）**没有房间地垫** ⇒ `find` 返回 undefined ⇒ 这段是空操作，判据没动。
+  let h0 = hits[0];
+  {
+    const roomHit = hits.find(h => h.object.userData && h.object.userData.type === '房间');
+    // ★ 2026-10-17 用户令「可以点击地面显示该房间的功能等」：楼板（SLAB）也算「地面」。
+    //   只放 SLAB 一个类进来 —— 柱子/楼梯/门洞照旧报它们自己（站在楼里点楼梯不该变成房间）。
+    const _c0 = _classOf(h0.object);
+    if (roomHit && (WALL_CLASS.has(_c0) || _c0 === 'SLAB')) h0 = roomHit;   // 只有挡路的**是外壳/楼板**才让路
+  }
+  if (h0.object.userData && h0.object.userData.type === '房间'){
+    showRoom(h0.object); return;
+  }
+  // ★★ 2026-10-17 用户令「可以点击地面显示该房间的功能等」——**点楼板**这条路不依赖色块：
+  //   色块可能被关掉、也可能这一处根本没铺（交通空间不上色）⇒ 按命中点去**平面索引**里查。
+  //   只对 SLAB 生效：墙/柱/梯照旧报自己（站在楼里点楼梯，不该变成某个房间）。
+  if (roomPlane && _classOf(h0.object) === 'SLAB'){
+    const mm = v2mm(h0.point);
+    const m = /^floor(\d+)__/.exec(nodeOf(h0.object) || '');
+    const list = m ? roomPlane.by.get('floor' + m[1]) : null;
+    if (list && list.length){
+      const px = mm[0] / 1000 - roomPlane.dx, py = mm[1] / 1000 - roomPlane.dy;
+      let best = null, bestA = Infinity;
+      for (const it of list){
+        if (!_ptInRoom(it, px, py)) continue;
+        const a = Number.isFinite(it.area) ? it.area : Infinity;
+        if (a < bestA){ bestA = a; best = it; }
+      }
+      if (best){ showRoom({userData: best.d}); return; }
+    }
+  }
+  const [X, Y, Z] = v2mm(h0.point);
+  const cls = _classOf(h0.object);
+  const nm = faceNormalMM(h0);
   const at = '<div><b>点到的坐标</b><span>' + _fmtM(X) + ', ' + _fmtM(Y) + ', ' + _fmtM(Z) + ' m</span></div>';
   // ★ 用「沿 −法线退 20 mm 的那点」把共边的邻块排掉（见 whoIs 上面那段）。法线错了就自动退回原判。
   const got = whoIs(X, Y, Z, cls, X - nm[0]*INSIDE_MM, Y - nm[1]*INSIDE_MM);
   if (!got.length){
-    IN.innerHTML = '<div><b>这一块没在清单里</b><span>打到 <code>' + esc(nodeOf(hits[0].object)) + '</code>（类 '
+    IN.innerHTML = '<div><b>这一块没在清单里</b><span>打到 <code>' + esc(nodeOf(h0.object)) + '</code>（类 '
       + esc(cls || '认不出') + '）' + at.replace(/^<div><b>/, '，') + '</span></div>'
       + '<div class="note" style="margin:6px 0 0">★ <b>报不出名字本身就是读数</b>：清单里没有哪一块 '
       + esc(cls || '同类') + ' 盖住这个点 ⇒ 这一处的<b>件与轮廓对不上</b>。把这块的位置说给我，我按它去查。</div>';
@@ -1049,7 +2411,7 @@ function identifyAt(cx, cy){
       + '盖在一起（<b>件本身的毛病</b>，不是尺子的错）。报的是其中<b>最小</b>那块；'
       + '点任一个名字就改框那一块：<br>' + nm + (got.length > 8 ? ' …' : '') + '</div>';
   }
-  showBlock(b, extra);
+  showBlock(b, extra, h0);
 }
 
 // ── 单击 = 点选（与左键拖拽旋转区分：位移 < 5 px 且按下 < 500 ms 才算「单击」）──
@@ -1130,6 +2492,19 @@ document.getElementById('qclear').onclick = () => { qIn.value = ''; renderQ(); }
   flr.addEventListener('click', pick); cls.addEventListener('click', pick);
 }
 renderQ();
+// ★★ 2026-10-16：`?pack=` 写错时**页面上要看得见**。不吭声的话，读者会把「参数写错了」
+//    当成「这个包就长这样」—— 那正是「判据错过了却不出声」那一类。
+if (window.__cdutPackBad){
+  const _p = document.getElementById('postag');
+  if (_p) _p.textContent = '？pack 参数不合法（应为 <场区>/<楼栋>）：' + window.__cdutPackBad
+                           + ' ⇒ 已落回默认包 ' + PACK_DEFAULT;
+}
+// 只读探针（**展示页/父页用**）：**当场**取一次，不读可能过期的快照。
+//   `renderer.info.render.triangles` 是**上一帧**的数 ⇒ 快照里那格天生滞后一帧；
+//   父页判「件挂上了 / 画面在动」时应当调这个，而不是读 `__cdut3d.tris`。
+window.__cdut3dLive = () => Object.assign({}, window.__cdut3d,
+  { tris: renderer.info.render.triangles, kids: scene.children.length,
+    layers: layerState.length, frame: renderer.info.render.frame });
 // 只读探针（判据用）：清单条数、以及「给一个模型坐标能报出哪些块名」—— 让上面这套可被外部量
 window.__cdutBlocks = () => BLOCKS.length;
 window.__cdutWho = (x, y, z, cls) => whoIs(x, y, z, cls || '').map(b => b.name);
@@ -1142,6 +2517,36 @@ window.__cdutIdentify = (x, y) => {
 // 带面法线的版本：判据按「打在面上的点 + 面法线」走**页面同一条**路径（含 −n·20 mm 那一步）
 window.__cdutWhoN = (x, y, z, cls, nx, ny) =>
   whoIs(x, y, z, cls || '', x - nx*INSIDE_MM, y - ny*INSIDE_MM).map(b => b.name);
+// 只读探针：柱子（`__COL` 一族）的显隐账。判据用 —— 「半透明时柱子不显示」这件事
+// 没有别的可读量：截图上分不清「柱没了」与「柱被墙挡住」，只数得到数就得数。
+// 不改任何状态（与 `__cdutView/__cdutBlocks` 同一族）。
+window.__cdutColVis = () => {
+  let n = 0, vis = 0;
+  for (const st of layerState)
+    (st.node.children || []).forEach(ch => {
+      if (ch && ch.name && /__COL$/.test(ch.name)) { n++; if (ch.visible) vis++; }
+    });
+  return { cols: n, visible: vis, wallsTransparent: wallsTransparent };
+};
+
+// 剖切面的**读写探针**（展示页用：本页那条滑杆在父页，父页只调这里，不自己算一份）。
+//   `__cdutClip()` 读：`{on, y, lo, hi}`；`__cdutClip({on})` / `{y}` / `{pct}` 写。
+//   ★ 为什么做成探针而不是让父页直接点子页的控件：子页那两个控件（`cbClip`/`cbClipH`）
+//     在 embed 下被搬进了**隐藏的 aside**（`display:none`，父页的按钮是它自己画的）——
+//     父页点不到，也不该点（铁律 018：两处各算一套必然漂）。
+window.__cdutClip = spec => {
+  const rg = _clipRange();
+  if (spec && typeof spec === 'object'){
+    if ('on' in spec) setClip(spec.on);
+    if ('y' in spec && Number.isFinite(+spec.y)) setClipHeight(+spec.y);
+    if ('pct' in spec && rg && Number.isFinite(+spec.pct)){
+      setClipHeight(rg[0] + (rg[1] - rg[0]) * (+spec.pct));
+    }
+    const s = document.getElementById('cbClipH');
+    if (s && rg && clipY != null) s.value = String(Math.round(1000 * (clipY - rg[0]) / (rg[1] - rg[0])));
+  }
+  return { on: clipOn, y: clipY, lo: rg ? rg[0] : null, hi: rg ? rg[1] : null };
+};
 
 function tick(){
   // 惯性：松手后按上一步的速度继续转、每帧衰减 8%。没有这一条，拖拽是「一松就死」的僵硬感

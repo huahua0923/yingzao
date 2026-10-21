@@ -62,7 +62,7 @@ import ezdxf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-A1 = os.path.join(ROOT, "a1")
+A1 = os.path.join(ROOT, "过程/a1")
 LIBS3D = r"D:\项目\libs3d\c006"
 sys.path.insert(0, A1)
 sys.path.insert(0, LIBS3D)
@@ -197,7 +197,7 @@ def main():
 
     # ---------- C 正对照②：只喂踏步线 ⇒ 足迹 >0 且 < 含踏步 ----------
     print("\n== C 正对照②：只拿检出集里的线建墙 ==")
-    gj = os.path.join(ROOT, "a1", "_out", "c006_grid.json")
+    gj = os.path.join(ROOT, "过程/a1", "_out", "c006_grid.json")
     rc_area = None
     if nm0.startswith("C006") and os.path.isfile(gj):
         g = load_g03()

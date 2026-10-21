@@ -2,7 +2,7 @@
  "schema": "cdut3d-modelpack/1",
  "campus_id": "cdut-main",
  "building_id": "c006",
- "created_at": "2026-10-16T00:16:54+08:00",
+ "created_at": "2026-10-21T08:45:46+08:00",
  "no_raw_imagery": true,
  "lod": {
   "schema": "cdut3d-lod/1",
@@ -13,161 +13,166 @@
    "tier": "国家级技术文件（正本 67 页，已逐条核对）"
   },
   "level": ">=LOD1.3",
-  "relation": "**超出适用范围**：本包是**构件级白模**（墙 / 门 / 梯 / 竖井 / 楼板逐层分件），精细度高于该规定的 LOD1.3（棱柱体体块）⇒ 声明为正本等级串里没有的、**不低于** LOD1.3 的精细度；**不**自称 LOD2/LOD3（其定义不在本规定内）。",
+  "relation": "本包是**构件级白模**（墙 / 柱 / 梯 / 楼板逐层分件，共 12 个层节点），精细度高于该规定的 LOD1.3（棱柱体体块）⇒ 声明为正本等级串里没有的、**不低于** LOD1.3 的精细度；**不**自称 LOD2/LOD3（其定义不在本规定内）。",
   "satisfies": {
-   "基底面凹凸": "正本：普通建筑物基底面 ≥1.5 m 凹凸变化应正确表示。本包墙线按 DXF 实际墙厚建（门头骑墙中线、三个竖井认全）⇒ 分辨力在墙厚级，远细于 1.5 m。",
-   "顶部高差": "正本：顶部高差 >3 m 且变化部分基底面积 >12 m² 的高度变化应正确表示。本包按**落盘件实测**的三个阶段：台阶屋面 25.4 m、主屋面 39.4 m、女儿墙顶 39.7 m / 顶楼楼梯房顶 41.5 m（数取自件本身的 (层,类) 包围盒，不手打；先前的 19.6 / 27.9 / 47.5 m 是倾斜 DSM 对**真楼**的实测，与件不是同一个量，换链后不再引用）。"
+   "基底面凹凸": "正本：普通建筑物基底面 ≥1.5 m 凹凸变化应正确表示。本包墙线按 DXF 实际墙厚（240 mm）建 ⇒ 分辨力在墙厚级，远细于 1.5 m。",
+   "顶部高差": "正本：顶部高差 >3 m 且变化部分基底面积 >12 m² 的高度变化应正确表示。本包按**落盘件实测**：主屋面 44.0 m、女儿墙顶 45.2 m、顶楼楼梯房顶 47.62 m（数取自件本身的 (层,类) 包围盒，不手打）。"
   },
   "citations": {
-   "external": "CH/T 9024-2014《三维地理信息模型数据产品质量检查与验收》（该规定「引用文件」所列，原文核过）",
-   "national_check": "GB/T 18316-2008《数字测绘成果质量检查与验收》（该规定参考文献 [4]）",
-   "lineage": "CH/T 9009.1-2013《基础地理信息数字成果 数字线划图 第 1 部分》（该规定「引用文件」所列）—— 对上本包的 DXF 图纸来源",
-   "process": "两级检查（各 100%）+ 一级验收 + 成果核验（分级抽样详查，正本第六章）。本包现处**自检层**，未走外部质检 ⇒ 不声明「已验收」。"
+   "external": "CH/T 9024-2014《三维地理信息模型数据产品质量检查与验收》（正本引用文件）",
+   "national_check": "GB/T 18316-2008《数字测绘成果质量检查与验收》（正本参考文献 [4]）",
+   "lineage": "CH/T 9009.1-2013《基础地理信息数字成果 数字线划图 第 1 部分》—— 对上本包的 DXF 图纸来源",
+   "process": "两级检查（各 100%）+ 一级验收 + 成果核验（正本第六章）。本包现处**自检层**，未走外部质检 ⇒ 不声明「已验收」。"
   },
   "not_applicable": [
-   "平面/高程精度表：卫星立体影像测图口径，本包源自图纸 DXF ⇒ 不套用；本包精度另按同口径 IoU（真值=DXF 墙线）与尺寸判据度量。",
-   "数据格式表（OBJ/JPG/SHP/XLS）与元数据 XLS：城市级汇交口径，且正本要求「数据单元不得以单个建筑物为单位」；本包是两平台接缝的中间件（GLB+JSON），非汇交成果。",
-   "本包无属性矢量文件（SHP）与元数据（XLS）—— 汇交件里有，本包按接缝口径只带 JSON 台账。"
+   "平面/高程精度表：卫星立体影像测图口径，本包源自图纸 DXF ⇒ 不套用。",
+   "数据格式表（OBJ/JPG/SHP/XLS）与元数据 XLS：城市级汇交口径，本包是两平台接缝的中间件。"
   ],
   "blind_spots": [
-   "LOD2 / LOD3 的定义**不在**本规定内（正本只定义 LOD1.3 与「高精细度建筑模型」，并称分级见另行发布的《基础地理实体数据成果规范》）⇒ 本包不评价自己是否达到那两级。",
-   "本规定面向**城市级、棱柱体快速构建**；本包是**单体构件级**，两者的精度表/格式表不可互评。"
+   "LOD2 / LOD3 的定义**不在**本规定内 ⇒ 本包不评价自己是否达到那两级。",
+   "本规定面向城市级棱柱体快速构建；本包是单体构件级，两者的精度表/格式表不可互评。"
   ]
  },
  "artifacts": [
   {
    "role": "model",
    "path": "model/c006-building.glb",
-   "bytes": 13725100,
-   "sha256": "8ecc94e145eb4a818d5ee04fa947473f6654eba4c8ce8f575270cc666555cc01"
+   "bytes": 6981624,
+   "sha256": "a1d7f971092e6fe613814f8f4e2fe073fde118a8a0cb18c5540b9bff9a58f877"
   },
   {
    "role": "ledger",
    "path": "ledger/rooms.json",
-   "bytes": 376885,
-   "sha256": "a20161bb7a96d783adf166beb11d6e7dc85556a0a9fc53694364e6c8f0e8b359"
+   "bytes": 51149,
+   "sha256": "5933800497af25024746ad08aafd64a580ce8485f4aea13200c845b7179da13a"
   },
   {
-   "role": "id_ledger",
-   "path": "ledger/c006-ids.json",
-   "bytes": 239437,
-   "sha256": "213e20152bd679faed5f6e7243686f4548fe7790d21a2b2dc3e24e9725e47049"
-  },
-  {
-   "role": "evidence",
-   "path": "evidence/c006-audit.json",
-   "bytes": 4056,
-   "sha256": "c100bc4b569b5473827336f11ad19bd782b9fd25c849ca73b6d85a8df5ec8c5d"
+   "role": "meta",
+   "path": "ledger/rooms-source.json",
+   "bytes": 4443,
+   "sha256": "6d829620037fb3f609adf3ea6c474de765470b4f6260b0d70926557cef78a855"
   },
   {
    "role": "meta",
    "path": "meta/profile.json",
-   "bytes": 7395,
-   "sha256": "6152d7449910d7a6d2fd6244df3e58a77316dd4cbb4216a8c8905635cd112020"
-  },
-  {
-   "role": "meta",
-   "path": "meta/spec.json",
-   "bytes": 1198,
-   "sha256": "970b77698b351b95593065bdb94d4f0895cdbef08baf833076e50d9895de7d2e"
+   "bytes": 237,
+   "sha256": "c30ed2bc9907679c01407f637a537439d5da6c4ecb5dfc747c9d8e0e7fc3e214"
   },
   {
    "role": "meta",
    "path": "meta/layering.json",
-   "bytes": 8575,
-   "sha256": "62732e9c95b2b43e00a2797266343be92fd020c4d4f77879361b916e1adb7828"
+   "bytes": 7406,
+   "sha256": "eac30c750f1272d2bb000c89b3b577a8e70f2b8190aafc4a5e5ffd0cc96a3ab3"
   },
   {
    "role": "catalog",
    "path": "meta/blocks.json",
-   "bytes": 2644228,
-   "sha256": "f49ed28cecfa8f5d391046cb6cadb56f6da2f5957e2e58a50934624c74c0db14"
+   "bytes": 1280807,
+   "sha256": "d52b06ff23816e32b22d062418371e4cf3cde9bacf0c54b367218cf2698d2d6e"
   },
   {
    "role": "evidence",
-   "path": "evidence/c006_v8_walls_score8_lift.json",
-   "bytes": 2768,
-   "sha256": "d4ca4feefe2fd5813875e3f88caa2799ae56c8c66b0b8585806da9e7fb489c0e"
+   "path": "evidence/c006-qc-control.json",
+   "bytes": 1096,
+   "sha256": "ba673de786977a828f27e3b3e9c681fdb66cb7c39cc696210fa03cfe7c1b963e"
   },
   {
    "role": "evidence",
-   "path": "evidence/c006_v4ctrl_walls_score8_lift.json",
-   "bytes": 2604,
-   "sha256": "9307ec64eca9fdba717e452753d855391254258a04bd383684cb190671032712"
+   "path": "evidence/c006-chain.json",
+   "bytes": 4436,
+   "sha256": "d0e1bd06e37400c1920be5c113d155115474855f6491e29af530d786d4623a4a"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor0.json",
-   "bytes": 181761,
-   "sha256": "82fff804609d826f646581839245ad5b60c678945d863de71c96c059dba56abd"
+   "bytes": 37895,
+   "sha256": "4910efa6ca88e4d58604f3a2e21221727da2a32d89e890bcea06ed726026b367",
+   "node": "B1"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor1.json",
-   "bytes": 192853,
-   "sha256": "3999864a3e3bd7747d91022d82fe2be49221324b30de0fedca67ce7b28e5bb35"
-  },
-  {
-   "role": "baseline_floor",
-   "path": "baseline/floors/floor10.json",
-   "bytes": 40532,
-   "sha256": "0240d543e5ffe006e0e4c0b893391a6997d05038679bdde85609e56b85d1d315"
+   "bytes": 358015,
+   "sha256": "501c785646b23ae8eea4c3789da3406d01c746386aa4b8d0e78ac7309aee21ea",
+   "node": "floor0"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor2.json",
-   "bytes": 187885,
-   "sha256": "34ae253266757c4cee6afdef59d173b80a902957a3d627feaebd5e3c4d32165b"
+   "bytes": 252093,
+   "sha256": "caecfee9c79f52c27225ffee83f77ede17eba1cb59d5994953d84c99c8289b08",
+   "node": "floor1"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor3.json",
-   "bytes": 173890,
-   "sha256": "466f91ad39846d5625f037a39d312b2742374b796fc81685805c14f551ad33b1"
+   "bytes": 245967,
+   "sha256": "5d97a888baec72a354f7a7df034f7473a57a9cdadc8d86e76ce4ea95a3495a03",
+   "node": "floor2"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor4.json",
-   "bytes": 158889,
-   "sha256": "b16abb41e848fbeef110b98e23eb8c69d84971ba9e3120413f4c0e820a5f9051"
+   "bytes": 245859,
+   "sha256": "1d3bbe14ec673a262b173f31d1782b29f1aedeaa1abaefa557f119a99aab8ca1",
+   "node": "floor3"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor5.json",
-   "bytes": 155639,
-   "sha256": "d621702cb5d8637dea57be9426e3dfc626a38e88f438b1eb3d4a14e18333f3e5"
+   "bytes": 224019,
+   "sha256": "7c0e55f5da65832014a157c57c218e37b04af04e2f49942332cfe81b151afa59",
+   "node": "floor4"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor6.json",
-   "bytes": 46381,
-   "sha256": "01a06a31c7540ffb6f6548b9479a7143af3b08c38700d8c91300e7ce66354a4e"
+   "bytes": 224618,
+   "sha256": "55c521990022bc689188d6f11f8d352d6eca2c63e02ec7126d99eeaf0ea7982b",
+   "node": "floor5"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor7.json",
-   "bytes": 41385,
-   "sha256": "db1c564b714c13b21e3bf0d4a1a856c57e92d2ec3fa0208dbdd9e8c899a6e296"
+   "bytes": 58431,
+   "sha256": "bd29b3b478d6314e4bcea6acf7f5ef262b9e63354020e42b01d57dc49b93b504",
+   "node": "floor6"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor8.json",
-   "bytes": 45231,
-   "sha256": "67203b5d699f820105b8ba55002229b2af4a39a2f19d0d3d0dadcddd54565c28"
+   "bytes": 53883,
+   "sha256": "52b214390c69f03547e80d050d11ae6d2c36b4c3558022eefb3233726765f35e",
+   "node": "floor7"
   },
   {
    "role": "baseline_floor",
    "path": "baseline/floors/floor9.json",
-   "bytes": 41385,
-   "sha256": "e72e40a696733b4f2acd62d91cba79b8f9c302db803cb6f461cbf27fd235966c"
+   "bytes": 54325,
+   "sha256": "7abb9f4f1bf4a9abd46be0c448e7a9f016a5dbc0eb8f8592684300b74f70d7bb",
+   "node": "floor8"
+  },
+  {
+   "role": "baseline_floor",
+   "path": "baseline/floors/floor10.json",
+   "bytes": 53897,
+   "sha256": "c3fe73673ada1e130370532caaebdeb2f6b1928710b4817344816245def9fad9",
+   "node": "floor9"
+  },
+  {
+   "role": "baseline_floor",
+   "path": "baseline/floors/floor11.json",
+   "bytes": 54306,
+   "sha256": "83e7e510ffe961c4e6b15cf8b5a3bd88e4badbce4614d91d09b2c74c8d5ca3c7",
+   "node": "floor10"
   }
  ],
  "qc": {
   "path": "qc/c006-qc.json",
   "schema": "cdut3d-qc/1",
-  "level": "WARN",
-  "bytes": 5501,
-  "sha256": "15e0063f3b3f5ca9556fae36f5e5c719a9689f5c015d70addddd8620b4c5a8a9"
+  "level": "PASS",
+  "bytes": 1454,
+  "sha256": "cf4185ec9d0773a84de5597a519cc31910f7593adb0c2f083a082ab3435d3505"
  },
- "package_sha256": "be382ea4ef29e7175bcd464c8c1646137a5d610c9d6f453c0d231cfc9779d1fa"
+ "package_sha256": "09879b9e16affbaa5d71ace83871c9055e27801b9cffa35c6a7b489a69a7eda4"
 }

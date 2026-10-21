@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第六教学楼 · 流程总览</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ink:#17181c; --muted:#6c6f76; --paper:#f3f0e8; --card:#fffdf7;
+    --line:#d9d2c2; --line2:#e8e3d7; --red:#b1342b; --green:#2f6b46;
+    --amber:#9a6a12; --blue:#2450b8;
+    --mono:ui-monospace,Consolas,"Courier New",monospace;
+    --serif:"Songti SC","SimSun","Noto Serif SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:15px/1.55 -apple-system,"Segoe UI","Noto Sans SC",sans-serif}
+  .mast{background:#14161b;color:#f2efe6}
+  .mast-in{max-width:1600px;margin:0 auto;padding:16px 30px;display:flex;
+           align-items:baseline;gap:16px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:#a8a294}
+  h1{font-family:var(--serif);font-size:25px;margin:0}
+  .mnav{display:flex;gap:0;margin-left:auto;align-self:center}
+  .mnav a{color:#c9c3b5;text-decoration:none;font-size:12.5px;padding:5px 11px;
+          border:1px solid #2c3038;border-left:0}
+  .mnav a:first-child{border-left:1px solid #2c3038}
+  .mnav a:hover{color:#fff;border-color:#5b6270;background:#1c1f25}
+  main{max-width:1600px;margin:0 auto;padding:18px 30px 70px}
+  .lead{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .board{display:grid;grid-template-columns:repeat(5,minmax(250px,1fr));gap:0;
+         border:1px solid var(--line);background:var(--line2)}
+  .col{background:var(--card);display:flex;flex-direction:column;min-width:0;
+       border-right:1px solid var(--line)}
+  .col:last-child{border-right:0}
+  .col.redo .hd{background:#1c1f25;color:#f2efe6}
+  .hd{padding:10px 13px;border-bottom:1px solid var(--line);background:#fbf9f2}
+  .hd .n{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.1em}
+  .col.redo .hd .n{color:#a8a294}
+  .hd h2{font-family:var(--serif);font-size:20px;margin:1px 0 2px}
+  .hd .sub{font-size:11.5px;color:var(--muted)}
+  .col.redo .hd .sub{color:#c9c3b5}
+  .blk{padding:9px 13px;border-bottom:1px solid var(--line2)}
+  .blk:last-child{border-bottom:0}
+  .blk h3{margin:0 0 5px;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+          color:var(--muted);font-family:var(--mono);font-weight:600}
+  .dir{display:flex;gap:7px;align-items:baseline;font-size:12px;padding:2px 0}
+  .dir .p{font-family:var(--mono);color:var(--ink);overflow:hidden;text-overflow:ellipsis;
+          white-space:nowrap;flex:1}
+  .dir .v{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+  .tool{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 6px;
+        margin:0 4px 4px 0;border:1px solid var(--line);color:var(--ink);background:#fbf9f2}
+  .tool.gone{color:#bdb6a7;text-decoration:line-through}
+  .kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0}
+  .kv b{font-family:var(--mono);font-weight:600}
+  .gate{display:flex;justify-content:space-between;font-size:11.5px;padding:2px 0}
+  .gate .st{font-family:var(--mono);font-size:10.5px}
+  .ok{color:var(--green)} .bad{color:var(--red)} .unmeasured{color:var(--amber)}
+  .none{color:#bdb6a7}
+  .lt{display:block;font-size:12px;color:var(--blue);text-decoration:none;padding:1px 0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lt:hover{text-decoration:underline}
+  .err{padding:40px;color:var(--red);font-family:var(--mono)}
+  footer{max-width:1600px;margin:0 auto;padding:0 30px 34px;color:var(--muted);font-size:12px}
+  @media (max-width:1200px){
+    .board{grid-template-columns:repeat(2,minmax(240px,1fr))}
+    .col{border-bottom:1px solid var(--line)}
+  }
+  @media (max-width:680px){
+    .mast-in,main,footer{padding-left:13px;padding-right:13px}
+    .board{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="mast-in">
+    <div>
+      <div class="brand">C006 · 第六教学楼（逸夫楼）</div>
+      <h1>流程总览</h1>
+    </div>
+    <nav class="mnav">
+      <a href="/pipeline" target="_blank">流程</a>
+      <a href="/pipeline/flow" target="_blank">总览</a>
+      <a href="/pipeline/floors" target="_blank">每层一页</a>
+      <a href="/pipeline/pages" target="_blank">全部页面</a>
+      <a href="http://127.0.0.1:8150/" target="_blank">工作台</a>
+      <a href="/files/demo/building.html#/building/cdut-main/c006" target="_blank">三维</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <p class="lead" id="lead">读取中…</p>
+  <div class="board" id="board"></div>
+</main>
+<footer>
+  每段的输入/产出目录与工具名是固定表（<code>server.py::FLOW_DIRS/FLOW_TOOLS</code>）；
+  文件数、体积、时间、闸门读数全部现扫现算。
+</footer>
+
+<script>
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+const mb = n => n >= 1048576 ? (n/1048576).toFixed(1)+" MB"
+             : n >= 1024 ? (n/1024).toFixed(0)+" KB" : n+" B";
+
+function dirRow(d){
+  const r = el("div","dir");
+  r.append(el("span","p", d.path), el("span","v", d.files + " 件 · " + mb(d.bytes)));
+  r.title = d.newest ? "最新一件：" + d.newest : "目录不存在或为空";
+  return r;
+}
+function blk(title, nodes){
+  const b = el("div","blk");
+  b.append(el("h3", null, title));
+  for (const n of nodes) b.append(n);
+  return b;
+}
+
+function col(s){
+  const c = el("div", "col" + (s.id === "revise" ? " redo" : ""));
+  const hd = el("div","hd");
+  hd.append(el("div","n", "第 " + s.n + " 段"), el("h2", null, s.name),
+            el("div","sub", s.sub || ""));
+  c.append(hd);
+
+  if ((s.dirs_in||[]).length)
+    c.append(blk("输入", s.dirs_in.map(dirRow)));
+  if ((s.dirs_out||[]).length)
+    c.append(blk("产出", s.dirs_out.map(dirRow)));
+
+  if ((s.tools||[]).length){
+    const w = el("div");
+    for (const t of s.tools){
+      const x = el("span", "tool" + (t.exists ? "" : " gone"), t.name);
+      x.title = t.exists ? ("改于 " + t.newest) : "仓库里没有这个文件";
+      w.append(x);
+    }
+    c.append(blk("工具", [w]));
+  }
+
+  if ((s.stats||[]).length){
+    const w = el("div");
+    for (const kvp of s.stats){
+      const r = el("div","kv");
+      r.append(el("span", null, kvp[0]), el("b", null, String(kvp[1])));
+      w.append(r);
+    }
+    c.append(blk("读数", [w]));
+  }
+
+  const gates = (s.gates||[]);
+  const led = (s.ledger||[]);
+  if (gates.length || led.length){
+    const w = el("div");
+    const src = led.length ? led : gates;
+    const cnt = {ok:0, bad:0, unmeasured:0, none:0};
+    for (const g of src) cnt[g.state] = (cnt[g.state]||0) + 1;
+    const head = el("div","kv");
+    head.append(el("span", null, led.length ? "全部检查" : "本段检查"),
+                el("b", null, src.length + " 条"));
+    w.append(head);
+    for (const g of src.slice(0, 8)){
+      const r = el("div","gate");
+      r.append(el("span", null, g.id), el("span","st " + g.state, g.state));
+      r.title = g.title + (g.when ? " · " + g.when : "");
+      w.append(r);
+    }
+    if (src.length > 8){
+      const more = el("a","lt", "还有 " + (src.length-8) + " 条 →");
+      more.href = "/files/demo/gates-params.html"; more.target = "_blank";
+      w.append(more);
+    }
+    c.append(blk("闸门 · 合格 " + (cnt.ok||0) + " / 红 " + (cnt.bad||0)
+                 + " / 没测到 " + (cnt.unmeasured||0), [w]));
+  }
+
+  if ((s.pages||[]).length){
+    const w = el("div");
+    for (const p of s.pages){
+      const a = el("a","lt", p.title);
+      a.href = p.href; a.target = "_blank"; a.rel = "noopener"; a.title = p.asked || "";
+      w.append(a);
+    }
+    c.append(blk("专项页", [w]));
+  }
+  return c;
+}
+
+fetch("/api/state?t=" + Date.now())
+  .then(r => r.json())
+  .then(st => {
+    const stages = st.stages || [];
+    document.getElementById("board").replaceChildren(...stages.map(col));
+    const bad = stages.reduce((n,s) =>
+      n + ((s.ledger||s.gates||[]).filter(g => g.state === "bad").length), 0);
+    document.getElementById("lead").textContent =
+      stages.length + " 段："
+      + stages.map(s => s.name).join(" → ")
+      + "；红 " + bad + " 条。";
+  })
+  .catch(e => {
+    document.getElementById("board").replaceChildren(
+      el("div","err", "读不到 /api/state：" + e.message));
+  });
+</script>
+</body>
+</html>

@@ -16,7 +16,7 @@ r"""J-10.10-02 · 修模第一刀（**焊接顶点**）**无损**
   ★ **本闸自己用 trimesh 重算**，**不采信** `_repair/_index.json` 里工具的自评数（铁律 187）。
   ★ 阈值 `MAX_LOST_PER_PIECE = 1` 是**实测算出来的**，不是理论值 —— 见【正对照】与
     `_scratch/_probe_修模.json`：digits=4 时 5 片里 4 片丢 0 个、1 片丢 1 个。
-    重测方法：`python _scratch/_probe_修模.py master --weld`，看 `n_verts_lost` 那一列。
+    重测方法：`python 过程/_scratch/_probe_修模.py master --weld`，看 `n_verts_lost` 那一列。
 
 【量具盲区】★ 本闸**只判「无损」，不判「焊得对不对」**：
   · 0.1 mm 内的两点**该不该**合并，本闸**没有任何独立依据** —— 它只保证「吸了就吸了、没碰别的」。
@@ -53,13 +53,13 @@ import trimesh  # noqa: E402
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_out")
 EDIT = os.path.join(REPO, "_edit")
-REPAIR = os.path.join(REPO, "_repair")
+REPAIR = os.path.join(REPO, "过程/_repair")
 
 GID = "J-10.10-02"
 RC_PASS, RC_FAIL, RC_NOGAUGE = 0, 1, 4
 
 # ★ 实测算出的上限（铁律 103）：digits=4（0.1 mm）时，5 片里 4 片丢 0 个位置、1 片丢 1 个。
-#   重测：`python _scratch/_probe_修模.py master --weld` → 看 `n_verts_lost` 列。
+#   重测：`python 过程/_scratch/_probe_修模.py master --weld` → 看 `n_verts_lost` 列。
 MAX_LOST_PER_PIECE = 1
 # ★ 焊过头那一档（正对照丙）：digits=2 = 10 mm。实测洞数回升。
 DIGITS_TOO_COARSE = 2

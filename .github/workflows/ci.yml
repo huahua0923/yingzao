@@ -1,0 +1,21 @@
+name: cdut3d-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.4"
+      - run: uv sync --all-extras
+      - run: uv run python -m compileall -q workbench pipeline deploy/scripts tests
+      - run: uv run ruff check deploy/scripts tests tools/cleanup_system.py tools/build_building_status.py tools/archive_ops_artifacts.py
+      - run: uv run ruff format --check deploy/scripts tests tools/cleanup_system.py tools/build_building_status.py tools/archive_ops_artifacts.py
+      - run: uv run pytest
+      - run: uv run python tests/负例_cdut3d.py
+

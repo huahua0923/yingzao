@@ -48,8 +48,8 @@ import trimesh  # noqa: E402
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_out")
 EDIT = os.path.join(REPO, "_edit")
-REPAIR = os.path.join(REPO, "_repair")
-CLEAN = os.path.join(REPO, "_clean")
+REPAIR = os.path.join(REPO, "过程/_repair")
+CLEAN = os.path.join(REPO, "过程/_clean")
 
 sys.path.insert(0, REPO)
 from tools.drop_floaters import (  # noqa: E402

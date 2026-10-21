@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>c006 白模 × 实景 —— 同机位对照 / 分层显隐</title>
+<!--
+  2026-10-20 用户令：
+    「http://127.0.0.1:8451/demo/compare_c006.html 和
+      http://127.0.0.1:8451/demo/layers.html 合成一个放在后台」
+  ⇒ 本页 = **一页两个标签**（用户选的形态：一页两个标签）。
+
+  ★ 两个标签各自 iframe 托管**原页**，不重写里面的 WebGL 代码：
+    · 原页是成熟件，判据 `J-10.10-09` 直接打开 `demo/layers.html` 量屏幕读数，
+      重画一遍等于把判据的量具与件同时换掉。
+    · 同源 iframe（都从本服务器发），父页不读子页内部状态 —— 只做切换，不猜文字。
+  ★ 懒加载：三份 glb 合起来约 174 MB，两个标签一进来就都加载会把首屏拖死；
+    首次切到某个标签时才开始装，装过的保活（来回切不重下）。
+-->
+<style>
+  :root{ --bg:#0a0e13; --panel:#0e1520; --line:#233040; --ink:#d7e2ee; --muted:#7d8fa3;
+         --accent:#4ea1ff; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:13px/1.5 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;overflow:hidden}
+  #bar{display:flex;align-items:center;gap:18px;height:44px;padding:0 14px;
+    background:var(--panel);border-bottom:1px solid var(--line)}
+  #bar .name{font-weight:600;letter-spacing:.02em;white-space:nowrap}
+  #bar .name b{color:var(--accent);font-weight:600}
+  .tabs{display:flex;gap:6px;margin-left:6px}
+  .tabs button{appearance:none;border:1px solid var(--line);background:transparent;color:var(--muted);
+    padding:6px 14px;border-radius:6px;font:inherit;cursor:pointer}
+  .tabs button:hover{color:var(--ink);border-color:#33455c}
+  .tabs button[aria-selected="true"]{color:#08111c;background:var(--accent);border-color:var(--accent);font-weight:600}
+  #hint{margin-left:auto;color:var(--muted);white-space:nowrap}
+  #panes{position:absolute;inset:44px 0 0 0}
+  #panes iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg);
+    display:none}
+  #panes iframe.on{display:block}
+</style>
+</head>
+<body>
+<div id="bar">
+  <span class="name">c006 · 白模 <b>×</b> 实景</span>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-compare" aria-selected="true" aria-controls="pane-compare">同机位对照</button>
+    <button role="tab" id="tab-layers"  aria-selected="false" aria-controls="pane-layers">分层显隐</button>
+  </div>
+  <span id="hint">左键旋转 · 滚轮缩放 · 右键平移</span>
+</div>
+<div id="panes">
+  <iframe id="pane-compare" class="on" title="同机位对照"
+          src="/demo/compare_c006.html"></iframe>
+  <iframe id="pane-layers" title="分层显隐"
+          data-src="/demo/layers.html"></iframe>
+</div>
+<script>
+(function(){
+  const tabs = {compare: document.getElementById('tab-compare'),
+                layers:  document.getElementById('tab-layers')};
+  const panes = {compare: document.getElementById('pane-compare'),
+                 layers:  document.getElementById('pane-layers')};
+
+  function show(which){
+    for (const k of ['compare','layers']) {
+      const on = k === which;
+      tabs[k].setAttribute('aria-selected', on ? 'true' : 'false');
+      panes[k].classList.toggle('on', on);
+      // 懒加载：首次切到才装；装过的不重下（data-src 清掉）
+      const p = panes[k];
+      if (on && p.dataset.src) { p.src = p.dataset.src; delete p.dataset.src; }
+    }
+  }
+  tabs.compare.addEventListener('click', () => show('compare'));
+  tabs.layers .addEventListener('click', () => show('layers'));
+})();
+</script>
+</body>
+</html>
