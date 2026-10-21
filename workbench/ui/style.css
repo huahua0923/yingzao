@@ -34,7 +34,7 @@
   --shadow:0 1px 2px 0 rgba(0,0,0,.03),0 1px 6px -1px rgba(0,0,0,.02),0 2px 4px 0 rgba(0,0,0,.02);
   --shadow-up:0 6px 16px 0 rgba(0,0,0,.08),0 3px 6px -4px rgba(0,0,0,.12),0 9px 28px 8px rgba(0,0,0,.05);
 
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","Microsoft YaHei","PingFang SC",sans-serif;
+  --sans:"Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC",sans-serif;
   --mono:"Cascadia Mono","Consolas","SFMono-Regular",monospace;
   --rail:224px;
 }

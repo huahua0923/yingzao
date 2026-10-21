@@ -64,10 +64,10 @@ button,input{font:inherit}
 .brand img{filter:drop-shadow(0 8px 24px rgba(0,0,0,.4))}
 .brand-copy{display:flex;flex-direction:column;gap:2px}
 .brand-copy strong{
-  font-family:"STZhongsong","Songti SC","SimSun",serif;
+  font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
   font-size:21px;
-  font-weight:600;
-  letter-spacing:.13em;
+  font-weight:700;
+  letter-spacing:.08em;
 }
 .brand-copy strong i{font-style:normal;color:var(--gold);padding:0 .15em}
 .brand-copy small{
@@ -100,11 +100,11 @@ button,input{font:inherit}
 }
 .intro h1{
   margin:0;
-  font-family:"STZhongsong","Songti SC","SimSun",serif;
-  font-size:clamp(42px,5.15vw,82px);
+  font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+  font-size:clamp(40px,4.9vw,78px);
   line-height:1.18;
-  font-weight:500;
-  letter-spacing:.035em;
+  font-weight:700;
+  letter-spacing:.01em;
   text-shadow:0 16px 46px rgba(0,0,0,.34);
 }
 .intro h1 em{font-style:normal;color:var(--gold-bright)}
@@ -159,10 +159,10 @@ button,input{font:inherit}
 }
 .card-head h2{
   margin:0;
-  font-family:"STZhongsong","Songti SC","SimSun",serif;
+  font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;
   font-size:34px;
-  font-weight:500;
-  letter-spacing:.08em;
+  font-weight:700;
+  letter-spacing:.03em;
 }
 .card-head p:last-child{margin:10px 0 42px;color:var(--muted);font-size:13px;letter-spacing:.03em}
 .field{display:block;margin-bottom:24px}
